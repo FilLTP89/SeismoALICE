@@ -37,8 +37,8 @@ pip install -r requirements.txt
 Three Deep-Convolutional Adversarial AutoEncoders (DCAAE) can be trained and tested, according to the reconstruction frequency band:
     
  1. `broadband` (`bb`) seismic signals (0-30 Hz)
- 2. `filtered` (`fl`) seismic signals (0-$`f_C`$ Hz, where fc can be set via `--cutoff` option
- 3. `hybrid` (`hb`) seismic signals (0-$`f_C`$ + $`f_C`$-30 Hz)
+ 2. `filtered` (`fl`) seismic signals (0-<img src="https://rawgit.com/in	git@github.com:FilLTP89/SeismoALICE/master/svgs/6351b053cd3fdab4b400a9c29ea5f732.svg?invert_in_darkmode" align=middle width=18.28248014999999pt height=22.831056599999986pt/> Hz, where fc can be set via `--cutoff` option
+ 3. `hybrid` (`hb`) seismic signals (0-<img src="https://rawgit.com/in	git@github.com:FilLTP89/SeismoALICE/master/svgs/6351b053cd3fdab4b400a9c29ea5f732.svg?invert_in_darkmode" align=middle width=18.28248014999999pt height=22.831056599999986pt/> + <img src="https://rawgit.com/in	git@github.com:FilLTP89/SeismoALICE/master/svgs/6351b053cd3fdab4b400a9c29ea5f732.svg?invert_in_darkmode" align=middle width=18.28248014999999pt height=22.831056599999986pt/>-30 Hz)
 
 Each `DCAAE` can undergo three different ``actions`` (to be listed in the `actions.txt` file [True/False])
 
@@ -64,6 +64,6 @@ To train/test the different `DCAAE`, an extraction of 5000 signals from the [STE
 `nzd`: latent space channels (`broadband`)
 `nzf`: latent space channels (`filtered`)
 
-![Figure 1: Hypocentral distance $`R_{hyp}`$ , magnitude $`M_W`$ and depth distribution of the earthquake sources](imgs/MRD_eqk_scatter.pdf)
+![Figure 1: Hypocentral distance <img src="https://rawgit.com/in	git@github.com:FilLTP89/SeismoALICE/master/svgs/edbea06fa9ac9eaccb817fe2c7b9cffc.svg?invert_in_darkmode" align=middle width=34.03358474999999pt height=22.465723500000017pt/> , magnitude <img src="https://rawgit.com/in	git@github.com:FilLTP89/SeismoALICE/master/svgs/2db8f6f5d25f02b568c2f7ac4b2efdfe.svg?invert_in_darkmode" align=middle width=30.080018099999986pt height=22.465723500000017pt/> and depth distribution of the earthquake sources](imgs/MRD_eqk_scatter.pdf)
 
 ## 
