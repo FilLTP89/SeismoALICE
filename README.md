@@ -37,8 +37,8 @@ pip install -r requirements.txt
 Three Deep-Convolutional Adversarial AutoEncoders (DCAAE) can be trained and tested, according to the reconstruction frequency band:
     
  1. `broadband` (`bb`) seismic signals (0-30 Hz)
- 2. `filtered` (`fl`) seismic signals (0-fc Hz, where fc can be set via `--cutoff` option
- 3. `hybrid` (`hb`) seismic signals (0-fc + fc-30 Hz)
+ 2. `filtered` (`fl`) seismic signals (0-$f_C$ Hz, where fc can be set via `--cutoff` option
+ 3. `hybrid` (`hb`) seismic signals (0-$f_C$ + $f_c$-30 Hz)
 
 Each `DCAAE` can undergo three different ``actions`` (to be listed in the `actions.txt` file [True/False])
 
@@ -54,6 +54,16 @@ Each action implies the choice of a corresponding `strategy` (to be specified in
 Extra keywords can be added as column's headers in the `strategy.txt` file: they are needed for comparison purposes and/or to test the discriminator performances.
 ### Signal Databases
 
-To train/test the different `DCAAE`, an extraction of the [STEAD database](https://github.com/smousavi05/STEAD/) is provided in the `database` folder.
+To train/test the different `DCAAE`, an extraction of 5000 signals from the [STEAD database](https://github.com/smousavi05/STEAD/) is provided in the `database` folder. Seismic signals are 40.96 s-long, sampled at 100 Hz (`nt`=4096 time steps).
 
+ - `ths_trn_nt4096_ls128_nzf8_nzd32.pth`: training set (80%)
+ - `ths_tst_nt4096_ls128_nzf8_nzd32.pth`: testing set  (10%)
+ - `ths_vld_nt4096_ls128_nzf8_nzd32.pth`: validation set (10%)
 
+`ls` : latent space vector size
+`nzd`: latent space channels (`broadband`)
+`nzf`: latent space channels (`filtered`)
+
+![Figure 1: Hypocentral distance $R_{hyp}$ , magnitude $M_W$ and depth distribution of the earthquake sources](imgs/MRD_eqk_scatter.pdf)
+
+## 
