@@ -65,7 +65,7 @@ To train/test the different `DCAAE`, an extraction of 5000 signals from the [STE
 `nzf`: latent space channels (`filtered`)
 
 <p align="center">
-  <img src="MRD_eqk_scatter.png" width="350" title="Figure 1: Hypocentral distance $R_{hyp}$ , magnitude $M_W$ and depth distribution of the earthquake sources">
+  <img src="MRD_eqk_scatter.png" title="Figure 1: Hypocentral distance $R_{hyp}$ , magnitude $M_W$ and depth distribution of the earthquake sources">
 </p>
 
 ## 
