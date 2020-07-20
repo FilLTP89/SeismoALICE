@@ -37,8 +37,8 @@ pip install -r requirements.txt
 Three Deep-Convolutional Adversarial AutoEncoders (DCAAE) can be trained and tested, according to the reconstruction frequency band:
     
  1. `broadband` (`bb`) seismic signals (0-30 Hz)
- 2. `filtered` (`fl`) seismic signals (0-$f_C$ Hz, where fc can be set via `--cutoff` option
- 3. `hybrid` (`hb`) seismic signals (0-$f_C$ + $f_c$-30 Hz)
+ 2. `filtered` (`fl`) seismic signals (0-$`f_C`$ Hz, where fc can be set via `--cutoff` option
+ 3. `hybrid` (`hb`) seismic signals (0-$`f_C`$ + $`f_C`$-30 Hz)
 
 Each `DCAAE` can undergo three different ``actions`` (to be listed in the `actions.txt` file [True/False])
 
@@ -64,6 +64,6 @@ To train/test the different `DCAAE`, an extraction of 5000 signals from the [STE
 `nzd`: latent space channels (`broadband`)
 `nzf`: latent space channels (`filtered`)
 
-![Figure 1: Hypocentral distance $R_{hyp}$ , magnitude $M_W$ and depth distribution of the earthquake sources](imgs/MRD_eqk_scatter.pdf)
+![Figure 1: Hypocentral distance $`R_{hyp}`$ , magnitude $`M_W`$ and depth distribution of the earthquake sources](imgs/MRD_eqk_scatter.pdf)
 
 ## 
