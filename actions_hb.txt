@@ -1,0 +1,4 @@
+tract,trplt,trcmp,trdis
+broadband,False,False,False,False
+filtered,False,False,False,False
+hybrid,True,False,False,False
