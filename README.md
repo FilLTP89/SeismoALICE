@@ -29,7 +29,19 @@ Before getting started, some prerequisites must be installed via `pip`:
 pip install -r requirements.txt
 ```
 
-Before running the scripts, it is necessary to add `./src` to the `<img src="/tex/b7452a8881e0573e8d6762d22999a46f.svg?invert_in_darkmode&sanitize=true" align=middle width=700.2746371499999pt height=205.4794533pt/>f_C<img src="/tex/cfed927318607b97df6c19701998a1d5.svg?invert_in_darkmode&sanitize=true" align=middle width=559.05124605pt height=24.65753399999998pt/>f_C<img src="/tex/6a002a74a5ee480c7afc837060622a1f.svg?invert_in_darkmode&sanitize=true" align=middle width=12.785434199999989pt height=19.1781018pt/>f_C$-30 Hz)
+Before running the scripts, it is necessary to add `./src` to the `\$PYTHONPATH`:
+
+```
+export PYTHONPATH="./src"
+```
+
+## Getting Started
+
+Three Deep-Convolutional Adversarial AutoEncoders (DCAAE) can be trained and tested, according to the reconstruction frequency band:
+    
+ 1. `broadband` (`bb`) seismic signals (0-30 Hz)
+ 2. `filtered` (`fl`) seismic signals (0-<img src="/tex/6351b053cd3fdab4b400a9c29ea5f732.svg?invert_in_darkmode&sanitize=true" align=middle width=18.28248014999999pt height=22.831056599999986pt/> Hz, where fc can be set via `--cutoff` option
+ 3. `hybrid` (`hb`) seismic signals (0-<img src="/tex/6351b053cd3fdab4b400a9c29ea5f732.svg?invert_in_darkmode&sanitize=true" align=middle width=18.28248014999999pt height=22.831056599999986pt/> + <img src="/tex/6351b053cd3fdab4b400a9c29ea5f732.svg?invert_in_darkmode&sanitize=true" align=middle width=18.28248014999999pt height=22.831056599999986pt/>-30 Hz)
 
 Each `DCAAE` can undergo three different ``actions`` (to be listed in the `actions.txt` file [True/False])
 
