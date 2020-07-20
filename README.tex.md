@@ -54,7 +54,7 @@ Each action implies the choice of a corresponding `strategy` (to be specified in
 Extra keywords can be added as column's headers in the `strategy.txt` file: they are needed for comparison purposes and/or to test the discriminator performances.
 ### Signal Databases
 
-To train/test the different `DCAAE`, an extraction of 5000 signals from the [STEAD database](https://github.com/smousavi05/STEAD/) is provided in the `database` folder. Seismic signals are 40.96 s-long, sampled at 100 Hz (`nt`=4096 time steps).
+To train/test the different `DCAAE`, an extraction of 100 signals from the [STEAD database](https://github.com/smousavi05/STEAD/) is provided in the `database` folder. Seismic signals are 40.96 s-long, sampled at 100 Hz (`nt`=4096 time steps).
 
  - `ths_trn_nt4096_ls128_nzf8_nzd32.pth`: training set (80%)
  - `ths_tst_nt4096_ls128_nzf8_nzd32.pth`: testing set  (10%)
@@ -65,7 +65,7 @@ To train/test the different `DCAAE`, an extraction of 5000 signals from the [STE
 `nzf`: latent space channels (`filtered`)
 
 <p align="center">
-  <img src="MRD_eqk_scatter.png" width="350" height="350" title="Figure 1: Hypocentral distance $R_{hyp}$, magnitude $M_W$ and depth distribution of the earthquake sources">
+  <img src="MRD_eqk_scatter.png" width="350" height="233" title="Figure 1: Hypocentral distance, magnitude and depth distribution of the earthquake sources">
 </p>
 
 ## 
