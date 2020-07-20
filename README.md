@@ -29,7 +29,7 @@ Before getting started, some prerequisites must be installed via `pip`:
 pip install -r requirements.txt
 ```
 
-Before running the scripts, it is necessary to add `./src` to the `\$PYTHONPATH`:
+Before running the scripts, it is necessary to add `./src` to the `PYTHONPATH`:
 
 ```
 export PYTHONPATH="./src"
@@ -89,4 +89,10 @@ In the following, basics command line examples are provided to train each `DCAAE
  - `filtered`:
  ```
 python3 ./src/aae_drive_bbfl.py --dataroot='./' --dataset='nt4096_ls128_nzf8_nzd32.pth'  --cutoff=1. --imageSize=4096 --latentSize=128  --niter=5000 --cuda --ngpu=1 --nzf=8 --rlr=0.0001 --glr=0.0001 --outf='./imgs' --workers=8 --nsy=100 --batchSize=100 --actions='./actions_fl.txt' --strategy='./strategy_fl.txt' 
+ ```
+
+ - `hybrid`
+ ```
+python3 ./src/aae_drive_hb.py --dataroot='./database/stead' --dataset='nt4096_ls128_nzf8_nzd32.pth' --cutoff=1. --imageSize=4096 --latentSize=128  --niter=3000 --cuda --ngpu=1 --nzd=32 --rlr=0.0001 --glr=0.0001 --outf='./imgs' --workers=8 --nsy=100 --batchSize=10 --actions='./actions_hb.txt' --strategy='./strategy_hb.txt'
+
  ```
