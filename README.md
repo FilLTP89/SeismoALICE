@@ -20,8 +20,8 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-    * Computer with Linux or OSX
-    * Torch
+- Computer with Linux or OSX
+- Torch
 
 For training, an NVIDIA GPU is strongly recommended for speed. CPU is supported but training is very slow. GPU-based version was tested on `cuda 9.0`, `cuda 9.2`.
 ### Installing dependencies
@@ -36,8 +36,8 @@ pip install -r requirements.txt
 
 Three Deep-Convolutional Adversarial AutoEncoders (DCAAE) can be trained and tested, according to the reconstruction frequency band:
     
-    1. `broadband` (`bb`) seismic signals (0-30 Hz)
-    2. `filtered` (`fl`) seismic signals (0-fc Hz, where fc can be set via `--cutoff` option
+ 1. `broadband` (`bb`) seismic signals (0-30 Hz)
+ 2. `filtered` (`fl`) seismic signals (0-fc Hz, where fc can be set via `--cutoff` option
     3. `hybrid` (`hb`) seismic signals (0-fc + fc-30 Hz)
 
 Each `DCAAE` can undergo three different ``actions`` (to be listed in the `actions.txt` file [True/False])
