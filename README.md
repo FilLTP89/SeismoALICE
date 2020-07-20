@@ -3,12 +3,32 @@
 Adversarially Learned Inference (ALI) + Conditional Entropy (CE) for prediction of seismic signals based on Physics-Based numerical simulations.
 
 > [Gatti, F.](https://github.com/FilLTP89) and Clouteau, D. (2020). "Towards blending Physics-Based numerical simulations and seismic databases using Generative Adversarial Network". Submitted at Computer Methods in Applied Mechanics and Engineering, Special Issue: "AI in Computational Mechanics and Engineering Sciences". 
+This work was inspired by the following original works:
+
+[Adversarially Learned Inference with Conditional Entropy (ALICE)](https://github.com/ChunyuanLI/ALICE)
+"ALICE: Towards Understanding Adversarial Learning for Joint Distribution Matching". Chunyuan Li, Hao Liu, Changyou Chen, Yunchen Pu, Liqun Chen, Ricardo Henao, Lawrence Carin
+Duke University. NIPS, 2017.
+
+[DCGAN.torch: Train your own image generator](https://github.com/soumith/dcgan.torch)
+"Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks". Alec Radford, Luke Metz, Soumith Chintala
+ICLR 2016
+
+[ANN2BB: NN-based broadband ground motion generator from 3D earthquake simulations](https://github.com/FilLTP89/ANN2BB.git)
+["Broadband Ground Motions from 3D Physics-Based Numerical Simulations Using Artificial Neural Networks"
+Roberto Paolucci, Filippo Gatti, Maria Infantino, Chiara Smerzini, Ali Güney Özcebe, and Marco Stupazzini
+BSSA, 2018](https://doi.org/10.1785/0120170293)
 
 ## Getting Started
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. 
 
-### Installing
+### Prerequisites
+
+    - Computer with Linux or OSX
+    - Torch
+
+For training, an NVIDIA GPU is strongly recommended for speed. CPU is supported but training is very slow. GPU-based version was tested on `cuda 9.0`, `cuda 9.2`.
+### Installing dependencies
 
 Before getting started, some prerequisites must be installed via `pip`:
 
@@ -16,8 +36,28 @@ Before getting started, some prerequisites must be installed via `pip`:
 pip install -r requirements.txt
 ```
 
-GPU-based version was tested on `cuda 9.0`.
+## Overview
 
-## Running the tests
+Three Deep-Convolutional Adversarial AutoEncoders (DCAAE) can be trained and tested, according to the reconstruction frequency band:
+    
+    1. `broadband` (`bb`) seismic signals (0-30 Hz)
+    2. `filtered` (`fl`) seismic signals (0-fc Hz, where fc can be set via `--cutoff` option
+    3. `hybrid` (`hb`) seismic signals (0-fc + fc-30 Hz)
 
-[TODO]
+Each `DCAAE` can undergo three different ``actions`` (to be listed in the `actions.txt` file [True/False])
+
+    1. `tract`: train 
+    2. `trplt`: plot/generate
+    3. `trcmp`: compare with ANN2BB
+
+Each action implies the choice of a corresponding `strategy` (to be specified in the `strategy.txt` file) for keywords `encoder`,`decoder` (...and others, see below) corresponding to the desired network (from scratch template or pre-trained model). For each keyword, two alternatives are possible:
+    
+    1. `None`: a generic `CNN` will be created, with random weights
+    2. The path to pre-trained models (under `.pth` format) to be used in the analysis
+
+Extra keywords can be added as column's headers in the `strategy.txt` file: they are needed for comparison purposes and/or to test the discriminator performances.
+### Signal Databases
+
+To train/test the different `DCAAE`, an extraction of the [STEAD database](https://github.com/smousavi05/STEAD/) is provided in the `database` folder.
+
+
