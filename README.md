@@ -20,8 +20,8 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-    - Computer with Linux or OSX
-    - Torch
+    * Computer with Linux or OSX
+    * Torch
 
 For training, an NVIDIA GPU is strongly recommended for speed. CPU is supported but training is very slow. GPU-based version was tested on `cuda 9.0`, `cuda 9.2`.
 ### Installing dependencies
