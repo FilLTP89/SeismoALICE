@@ -38,18 +38,18 @@ Three Deep-Convolutional Adversarial AutoEncoders (DCAAE) can be trained and tes
     
  1. `broadband` (`bb`) seismic signals (0-30 Hz)
  2. `filtered` (`fl`) seismic signals (0-fc Hz, where fc can be set via `--cutoff` option
-    3. `hybrid` (`hb`) seismic signals (0-fc + fc-30 Hz)
+ 3. `hybrid` (`hb`) seismic signals (0-fc + fc-30 Hz)
 
 Each `DCAAE` can undergo three different ``actions`` (to be listed in the `actions.txt` file [True/False])
 
-    1. `tract`: train 
-    2. `trplt`: plot/generate
-    3. `trcmp`: compare with ANN2BB
+ 1. `tract`: train 
+ 2. `trplt`: plot/generate
+ 3. `trcmp`: compare with ANN2BB
 
 Each action implies the choice of a corresponding `strategy` (to be specified in the `strategy.txt` file) for keywords `encoder`,`decoder` (...and others, see below) corresponding to the desired network (from scratch template or pre-trained model). For each keyword, two alternatives are possible:
     
-    1. `None`: a generic `CNN` will be created, with random weights
-    2. The path to pre-trained models (under `.pth` format) to be used in the analysis
+ 1. `None`: a generic `CNN` will be created, with random weights
+ 2. The path to pre-trained models (under `.pth` format) to be used in the analysis
 
 Extra keywords can be added as column's headers in the `strategy.txt` file: they are needed for comparison purposes and/or to test the discriminator performances.
 ### Signal Databases
