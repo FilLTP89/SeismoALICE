@@ -29,7 +29,7 @@ Before getting started, some prerequisites must be installed via `pip`:
 pip install -r requirements.txt
 ```
 
-Before running the scripts, it is necessary to add `./src` to the `$PYTHONPATH`
+Before running the scripts, it is necessary to add `./src` to the `\$PYTHONPATH`:
 
 ```
 export PYTHONPATH="./src"
