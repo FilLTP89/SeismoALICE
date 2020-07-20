@@ -6,17 +6,13 @@ Adversarially Learned Inference (ALI) + Conditional Entropy (CE) for prediction 
 This work was inspired by the following original works:
 
 [Adversarially Learned Inference with Conditional Entropy (ALICE)](https://github.com/ChunyuanLI/ALICE)
-"ALICE: Towards Understanding Adversarial Learning for Joint Distribution Matching". Chunyuan Li, Hao Liu, Changyou Chen, Yunchen Pu, Liqun Chen, Ricardo Henao, Lawrence Carin
-Duke University. NIPS, 2017.
+> Li, C. et al. (2017). "ALICE: Towards Understanding Adversarial Learning for Joint Distribution Matching". Duke University. NIPS, 2017. [https://arxiv.org/abs/1709.01215](https://arxiv.org/abs/1709.01215)
 
 [DCGAN.torch: Train your own image generator](https://github.com/soumith/dcgan.torch)
-"Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks". Alec Radford, Luke Metz, Soumith Chintala
-ICLR 2016
+> Radford, A. et al. (2015). "Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks". ICLR 2016. [https://arxiv.org/abs/1511.06434](https://arxiv.org/abs/1511.06434)
 
 [ANN2BB: NN-based broadband ground motion generator from 3D earthquake simulations](https://github.com/FilLTP89/ANN2BB.git)
-["Broadband Ground Motions from 3D Physics-Based Numerical Simulations Using Artificial Neural Networks"
-Roberto Paolucci, Filippo Gatti, Maria Infantino, Chiara Smerzini, Ali Güney Özcebe, and Marco Stupazzini
-BSSA, 2018](https://doi.org/10.1785/0120170293)
+> Paolucci, R., Gatti, F. et al. (2018). "Broadband Ground Motions from 3D Physics-Based Numerical Simulations Using Artificial Neural Networks". BSSA, 2018 [htt    ps://doi.org/10.1785/0120170293](https://doi.org/10.1785/0120170293)
 
 ## Getting Started
 
