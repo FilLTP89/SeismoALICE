@@ -87,7 +87,7 @@ In the following, basics command line examples are provided to train each `DCAAE
  ```
 
 <p align="center">
-  <img src="aae_bb_example.eps" width="350" height="525" title="Figure 2: Example of reconstructed broadband signal">
+  <img src="aae_bb_example.png" width="350" height="525" title="Figure 2: Example of reconstructed broadband signal">
 </p>
 
 
