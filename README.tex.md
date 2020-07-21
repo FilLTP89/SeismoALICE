@@ -43,6 +43,8 @@ Three Deep-Convolutional Adversarial AutoEncoders (DCAAE) can be trained and tes
  2. `filtered` (`fl`) seismic signals (0-$f_C$ Hz, where fc can be set via `--cutoff` option
  3. `hybrid` (`hb`) seismic signals (0-$f_C$ + $f_C$-30 Hz)
 
+The original contribution of this paper is `hybrid` `DCAAE`, which takes a low-frequency signal (0-$f_C$ Hz) and reconstructs the broad-band one.
+
 Each `DCAAE` can undergo three different ``actions`` (to be listed in the `actions.txt` file [True/False])
 
  1. `tract`: train 
@@ -87,7 +89,7 @@ In the following, basics command line examples are provided to train each `DCAAE
  ```
 
 <p align="center">
-  <img src="aae_bb_example.png" width="350" height="525" title="Figure 2: Example of reconstructed broadband signal">
+  <img src="aae_bb_example.png" width="350" height="500" title="Figure 2: Example of reconstructed broadband signal">
 </p>
 
 
@@ -96,8 +98,18 @@ In the following, basics command line examples are provided to train each `DCAAE
 python3 ./src/aae_drive_bbfl.py --dataroot='./' --dataset='nt4096_ls128_nzf8_nzd32.pth'  --cutoff=1. --imageSize=4096 --latentSize=128  --niter=5000 --cuda --ngpu=1 --nzf=8 --rlr=0.0001 --glr=0.0001 --outf='./imgs' --workers=8 --nsy=100 --batchSize=100 --actions='./actions_fl.txt' --strategy='./strategy_fl.txt' 
  ```
 
+<p align="center">
+  <img src="aae_fl_example.png" width="350" height="500" title="Figure 2: Example of reconstructed filtered signal">
+</p>
+
+
  - `hybrid`
  ```
 python3 ./src/aae_drive_hb.py --dataroot='./database/stead' --dataset='nt4096_ls128_nzf8_nzd32.pth' --cutoff=1. --imageSize=4096 --latentSize=128  --niter=3000 --cuda --ngpu=1 --nzd=32 --rlr=0.0001 --glr=0.0001 --outf='./imgs' --workers=8 --nsy=100 --batchSize=10 --actions='./actions_hb.txt' --strategy='./strategy_hb.txt'
 
  ```
+
+<p align="center">
+  <img src="aae_hb_example.png" width="350" height="500" title="Figure 3: Example of reconstructed hybrid signal">
+</p>
+
