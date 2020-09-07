@@ -628,25 +628,7 @@ class trainer(object):
     def train_broadband(self):
         print('Training on broadband signals') 
         globals().update(self.cv)
-        globals().update(opt.__dict__)
-        #nsy = trn_loader.dataset.dataset.inpZ[:,0,0].view(-1).data.numpy().size 
-        #kk=0
-        #import pdb
-        #pdb.set_trace()
-        #for train_idx, test_idx in k_folds(n_splits=5,subjects=nsy,frames=1):
-        #    idx=range(train_idx.size)
-        #    inpX=trn_loader.dataset.dataset.inpX[train_idx,:,:].clone().detach() 
-        #    inpY=trn_loader.dataset.dataset.inpY[train_idx,:,:].clone().detach()
-        #    inpZ=trn_loader.dataset.dataset.inpZ[train_idx,:,:].clone().detach()
-        #    tar=trn_loader.dataset.dataset.tar[train_idx,:].clone().detach()
-        #    trn_loader_p_out = thsTensorData(inpX,inpY,inpZ,tar,idx)
-
-        #    _,trn_loader_p_out = random_split(trn_loader_p_out,[len(train_idx),0,0])
-        #    params = {'batch_size':opt.batchSize,\
-        #        'shuffle': True,'num_workers':int(opt.workers)}
-        #    trn_loader_p_out,_,_ =  trn_loader_p_out
-        #    trn_loader_p_out,_,_ = \
-        #        dataset2loader(trn_loader_p_out,trn_loader_p_out,trn_loader_p_out,**params)   
+        globals().update(opt.__dict__)   
         for epoch in range(niter):
             for b,batch in enumerate(trn_loader):
                 # Load batch
@@ -663,6 +645,19 @@ class trainer(object):
             str = 'epoch: {:>d} --- '.format(epoch)
             str = str + ' | '.join(str1)
             print(str)
+            if epoch%save_checkpoint==0:
+                tsave({'epoch':epoch,'model_state_dict':self.Fed.state_dict(),
+                       'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},
+                       './scratch/Fed_{}.pth'.format(epoch))
+                tsave({'epoch':epoch,'model_state_dict':self.Gdd.state_dict(),
+                       'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},
+                       './scratch/Gdd_{}.pth'.format(epoch))    
+                tsave({'model_state_dict':self.Dszd.state_dict(),
+                       'optimizer_state_dict':self.oDdxz.state_dict()},'./scratch/Dszd_bb_{}.pth'.format(epoch))
+                tsave({'model_state_dict':self.DsXd.state_dict(),
+                       'optimizer_state_dict':self.oDdxz.state_dict()},'./scratch/DsXd_bb_{}.pth'.format(epoch))    
+                tsave({'model_state_dict':self.Ddxz.state_dict(),
+                       'optimizer_state_dict':self.oDdxz.state_dict()},'./scratch/Ddxz_bb_{}.pth'.format(epoch))
         plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_classic',outf=outf)
         tsave({'epoch':niter,'model_state_dict':self.Fed.state_dict(),
             'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'Fed.pth')
@@ -693,6 +688,19 @@ class trainer(object):
             str = 'epoch: {:>d} --- '.format(epoch)
             str = str + ' | '.join(str1)
             print(str)
+            if epoch%save_checkpoint==0:
+                tsave({'epoch':epoch,'model_state_dict':self.Fef.state_dict(),
+                       'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
+                       './scratch/Fef_{}.pth'.format(epoch))
+                tsave({'epoch':epoch,'model_state_dict':self.Gdf.state_dict(),
+                       'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
+                       './scratch/Gdf_{}.pth'.format(epoch))    
+                tsave({'model_state_dict':self.Dszf.state_dict(),
+                       'optimizer_state_dict':self.oDfxz.state_dict()},'./scratch/Dszd_fl_{}.pth'.format(epoch))
+                tsave({'model_state_dict':self.DsXf.state_dict(),
+                       'optimizer_state_dict':self.oDfxz.state_dict()},'./scratch/DsXd_fl_{}.pth'.format(epoch))    
+                tsave({'model_state_dict':self.Dfxz.state_dict(),
+                       'optimizer_state_dict':self.oDfxz.state_dict()},'./scratch/Ddxz_fl_{}.pth'.format(epoch))
         plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_filtered',outf=outf)
         tsave({'epoch':niter,'model_state_dict':self.Fef.state_dict(),
             'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},'Fef.pth')
@@ -719,6 +727,19 @@ class trainer(object):
             str = 'epoch: {:>d} --- '.format(epoch)
             str = str + ' | '.join(str1)
             print(str)
+            if epoch%save_checkpoint==0:
+                tsave({'epoch':epoch,'model_state_dict':self.Fef.state_dict(),
+                       'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
+                       './scratch/Fef_{}.pth'.format(epoch))
+                tsave({'epoch':epoch,'model_state_dict':self.Gdf.state_dict(),
+                       'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
+                       './scratch/Gdf_{}.pth'.format(epoch))    
+                tsave({'model_state_dict':self.Dszf.state_dict(),
+                       'optimizer_state_dict':self.oDfxz.state_dict()},'./scratch/Dszd_fl_{}.pth'.format(epoch))
+                tsave({'model_state_dict':self.DsXf.state_dict(),
+                       'optimizer_state_dict':self.oDfxz.state_dict()},'./scratch/DsXd_fl_{}.pth'.format(epoch))    
+                tsave({'model_state_dict':self.Dfxz.state_dict(),
+                       'optimizer_state_dict':self.oDfxz.state_dict()},'./scratch/Ddxz_fl_{}.pth'.format(epoch))
         plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_filtered',outf=outf)
         tsave({'epoch':niter,'model_state_dict':self.Fef.state_dict(),
             'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses},'Fef.pth')
