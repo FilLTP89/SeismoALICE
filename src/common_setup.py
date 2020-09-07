@@ -60,11 +60,6 @@ def setup():
     parser.add_argument('--b1', type=float, default=0.5, help='beta1 for Adam. default=0.5')
     parser.add_argument('--cuda', action='store_true', help='enables cuda')
     parser.add_argument('--ngpu', type=int, default=2, help='number of GPUs to use')
-    parser.add_argument('--Pdc', default='', help="path to Pdc (to continue training)")
-    parser.add_argument('--Qec', default='', help="path to Qec (to continue training)")
-    parser.add_argument('--style', default='dcgaae', help="Style of training") 
-    parser.add_argument('--train', default='', help="flag for training") #./dsae_trained.pth
-    parser.add_argument('--feat', action='store_true', help="flag for store features")
     parser.add_argument('--plot', action='store_true', help="flag for plotting")
     parser.add_argument('--outf', default='./imgs', help='folder to output images and model checkpoints')
     parser.add_argument('--manualSeed', type=int, help='manual seed')
@@ -75,6 +70,7 @@ def setup():
     parser.add_argument('--sst',type=int,default=1,help='site')
     parser.add_argument('--scl',type=int,default=1,help='scale [1]')
     parser.add_argument('--nsy',type=int,default=83,help='number of synthetics [1]')
+    parser.add_argument('--save_checkpoint',type=int,default=1,help='Number of epochs for each checkpoint')
     parser.set_defaults(stack=False,ftune=False,feat=False,plot=True)
     opt = parser.parse_args()
 
