@@ -676,16 +676,16 @@ class trainer(object):
             if epoch%save_checkpoint==0:
                 tsave({'epoch':epoch,'model_state_dict':self.Fed.state_dict(),
                        'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},
-                       './scratch/Fed_{}.pth'.format(epoch))
+                       'Fed_{}.pth'.format(epoch))
                 tsave({'epoch':epoch,'model_state_dict':self.Gdd.state_dict(),
                        'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},
-                       './scratch/Gdd_{}.pth'.format(epoch))    
+                       'Gdd_{}.pth'.format(epoch))    
                 tsave({'model_state_dict':self.Dszd.state_dict(),
-                       'optimizer_state_dict':self.oDdxz.state_dict()},'./scratch/Dszd_bb_{}.pth'.format(epoch))
+                       'optimizer_state_dict':self.oDdxz.state_dict()},'Dszd_bb_{}.pth'.format(epoch))
                 tsave({'model_state_dict':self.DsXd.state_dict(),
-                       'optimizer_state_dict':self.oDdxz.state_dict()},'./scratch/DsXd_bb_{}.pth'.format(epoch))    
+                       'optimizer_state_dict':self.oDdxz.state_dict()},'DsXd_bb_{}.pth'.format(epoch))    
                 tsave({'model_state_dict':self.Ddxz.state_dict(),
-                       'optimizer_state_dict':self.oDdxz.state_dict()},'./scratch/Ddxz_bb_{}.pth'.format(epoch))
+                       'optimizer_state_dict':self.oDdxz.state_dict()},'Ddxz_bb_{}.pth'.format(epoch))
         plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_classic',outf=outf)
         tsave({'epoch':niter,'model_state_dict':self.Fed.state_dict(),
             'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'Fed.pth')
@@ -719,16 +719,16 @@ class trainer(object):
             if epoch%save_checkpoint==0:
                 tsave({'epoch':epoch,'model_state_dict':self.Fef.state_dict(),
                        'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
-                       './scratch/Fef_{}.pth'.format(epoch))
+                       'Fef_{}.pth'.format(epoch))
                 tsave({'epoch':epoch,'model_state_dict':self.Gdf.state_dict(),
                        'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
-                       './scratch/Gdf_{}.pth'.format(epoch))    
+                       'Gdf_{}.pth'.format(epoch))    
                 tsave({'model_state_dict':self.Dszf.state_dict(),
-                       'optimizer_state_dict':self.oDfxz.state_dict()},'./scratch/Dszd_fl_{}.pth'.format(epoch))
+                       'optimizer_state_dict':self.oDfxz.state_dict()},'Dszd_fl_{}.pth'.format(epoch))
                 tsave({'model_state_dict':self.DsXf.state_dict(),
-                       'optimizer_state_dict':self.oDfxz.state_dict()},'./scratch/DsXd_fl_{}.pth'.format(epoch))    
+                       'optimizer_state_dict':self.oDfxz.state_dict()},'DsXd_fl_{}.pth'.format(epoch))    
                 tsave({'model_state_dict':self.Dfxz.state_dict(),
-                       'optimizer_state_dict':self.oDfxz.state_dict()},'./scratch/Ddxz_fl_{}.pth'.format(epoch))
+                       'optimizer_state_dict':self.oDfxz.state_dict()},'Ddxz_fl_{}.pth'.format(epoch))
         plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_filtered',outf=outf)
         tsave({'epoch':niter,'model_state_dict':self.Fef.state_dict(),
             'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},'Fef.pth')
@@ -758,16 +758,16 @@ class trainer(object):
             if epoch%save_checkpoint==0:
                 tsave({'epoch':epoch,'model_state_dict':self.Fef.state_dict(),
                        'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
-                       './scratch/Fef_{}.pth'.format(epoch))
+                       'Fef_{}.pth'.format(epoch))
                 tsave({'epoch':epoch,'model_state_dict':self.Gdf.state_dict(),
                        'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
-                       './scratch/Gdf_{}.pth'.format(epoch))    
+                       'Gdf_{}.pth'.format(epoch))    
                 tsave({'model_state_dict':self.Dszf.state_dict(),
-                       'optimizer_state_dict':self.oDfxz.state_dict()},'./scratch/Dszd_fl_{}.pth'.format(epoch))
+                       'optimizer_state_dict':self.oDfxz.state_dict()},'Dszd_fl_{}.pth'.format(epoch))
                 tsave({'model_state_dict':self.DsXf.state_dict(),
-                       'optimizer_state_dict':self.oDfxz.state_dict()},'./scratch/DsXd_fl_{}.pth'.format(epoch))    
+                       'optimizer_state_dict':self.oDfxz.state_dict()},'DsXd_fl_{}.pth'.format(epoch))    
                 tsave({'model_state_dict':self.Dfxz.state_dict(),
-                       'optimizer_state_dict':self.oDfxz.state_dict()},'./scratch/Ddxz_fl_{}.pth'.format(epoch))
+                       'optimizer_state_dict':self.oDfxz.state_dict()},'Ddxz_fl_{}.pth'.format(epoch))
         plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_filtered',outf=outf)
         tsave({'epoch':niter,'model_state_dict':self.Fef.state_dict(),
             'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses},'Fef.pth')

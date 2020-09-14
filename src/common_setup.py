@@ -196,9 +196,13 @@ def setup():
                     pass
                 if flag:
                     optt.__dict__[k] = opt.__dict__[k]
-                if k not in optt.__dict__:
-                    optt.__dict__[k]=opt.__dict__[k]
                     
+        for k,v in opt.__dict__.items():
+            flag=False
+            if k not in optt.__dict__:    
+                flag=True
+            if flag:
+                optt.__dict__[k] = opt.__dict__[k]
         opt = optt
     
     elif opt.dataset == 'deepbns':
