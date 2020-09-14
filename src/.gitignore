@@ -1,2 +1,7 @@
+*.eps
+*.png
+*.p
+.*
+*.pth
 *.pyc
 __pycache__

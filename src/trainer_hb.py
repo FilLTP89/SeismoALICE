@@ -58,7 +58,28 @@ acts['WGAN']  = {'Fed' :[LeakyReLU(1.0,inplace=True) for t in range(nly)]+[Leaky
                  'Drz' :[LeakyReLU(1.0,inplace=True) for t in range(2)],
                  'Ddxz':[LeakyReLU(1.0,inplace=True) for t in range(2)],
                  'DhXd':[LeakyReLU(1.0,inplace=True) for t in range(3)]}
-    
+
+nlayers = {'Fed':5,'Gdd':5,
+           'Fef':5,'Gdf':5,
+           'Ghz':3,
+           }
+kernels = {'Fed':4,'Gdd':4,
+           'Fef':4,'Gdf':4,
+           'Ghz':3,
+           }
+strides = {'Fed':2,'Gdd':2,
+           'Fef':2,'Gdf':2,
+           'Ghz':1,
+           }
+padding = {'Fed':0,'Gdd':0,
+           'Fef':0,'Gdf':0,
+           'Ghz':1,
+           }
+outpads = {'Gdd':0,
+           'Gdf':0,
+           'Ghz':1,
+           }
+
 class trainer(object):
     '''Initialize neural network'''
     @profile
