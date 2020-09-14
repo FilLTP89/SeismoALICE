@@ -39,10 +39,10 @@ import pandas as pd
 
 def setup():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--actions', default='actions_hb_cmp.txt',help='define actions txt')
-    parser.add_argument('--strategy', default='strategy_hb_cmp.txt',help='define strategy txt')
-    parser.add_argument('--dataset', default='ann2bb',help='folder | synth | pth | stead | ann2bb | deepbns')
-    parser.add_argument('--dataroot', default='/home/filippo/Data/Filippo/aeolus/ann2bb_as4_',help='Path to dataset') # '/home/filippo/Data/Filippo/aeolus/ann2bb_as4_') # '/home/filippo/Data/Filippo/aeolus/STEAD/waveforms_11_13_19.hdf5',help='path to dataset')
+    parser.add_argument('--actions', default='../actions_bb.txt',help='define actions txt')
+    parser.add_argument('--strategy', default='../strategy_bb.txt',help='define strategy txt')
+    parser.add_argument('--dataset', default='nt4096_ls128_nzf8_nzd32.pth',help='folder | synth | pth | stead | ann2bb | deepbns')
+    parser.add_argument('--dataroot', default='../database/stead',help='Path to dataset') # '/home/filippo/Data/Filippo/aeolus/ann2bb_as4_') # '/home/filippo/Data/Filippo/aeolus/STEAD/waveforms_11_13_19.hdf5',help='path to dataset')
     parser.add_argument('--inventory',default='RM07.xml,LXRA.xml,SRN.xml',help='inventories')
     parser.add_argument('--workers', type=int, help='number of data loading workers', default=2)
     parser.add_argument('--batchSize', type=int, default=5, help='input batch size')
@@ -132,7 +132,7 @@ def setup():
                 pickle.dump(md,handle)
         handle.close()
         with open('opt.p', 'wb') as handle:
-                pickle.dump(opt,handle)
+            pickle.dump(opt,handle)
         handle.close()
 
     elif opt.dataset == 'folder':
@@ -196,6 +196,8 @@ def setup():
                     pass
                 if flag:
                     optt.__dict__[k] = opt.__dict__[k]
+                if k not in optt.__dict__:
+                    optt.__dict__[k]=opt.__dict__[k]
                     
         opt = optt
     

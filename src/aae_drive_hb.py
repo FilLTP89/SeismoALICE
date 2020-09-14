@@ -6,7 +6,7 @@ import warnings
 warnings.filterwarnings("ignore")
 from profile_support import profile
 import common_setup as cs
-import walice_trainer_new as aat
+import trainer_hb as aat
 
 u'''General informations'''
 __author__ = "Filippo Gatti & Didier Clouteau"

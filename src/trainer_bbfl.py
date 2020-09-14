@@ -43,7 +43,6 @@ acts['ALICE'] = {'Fed' :[LeakyReLU(1.0,inplace=True) for t in range(nly)]+[Leaky
                  'Fef' :[LeakyReLU(1.0,inplace=True) for t in range(4)]+[LeakyReLU(1.0,inplace=True)],
                  'Gdf' :[ReLU(inplace=True) for t in range(4)]+[Tanh()],
                  'Ghz' :[ReLU(inplace=True) for t in range(2)]+[LeakyReLU(1.0,inplace=True)],
-                 'Phz' :[ReLU(inplace=True) for t in range(1)]+[LeakyReLU(1.0,inplace=True)],
                  'Dsx' :[LeakyReLU(1.0,inplace=True),LeakyReLU(1.0,inplace=True)],
                  'Dsz' :[LeakyReLU(1.0,inplace=True),LeakyReLU(1.0,inplace=True)],
                  'Drx' :[LeakyReLU(1.0,inplace=True),Sigmoid()],
@@ -56,14 +55,34 @@ acts['WGAN']  = {'Fed' :[LeakyReLU(1.0,inplace=True) for t in range(nly)]+[Leaky
                  'Fef' :[LeakyReLU(1.0,inplace=True) for t in range(4)]+[LeakyReLU(1.0,inplace=True)],
                  'Gdf' :[ReLU(inplace=True) for t in range(4)]+[Tanh()],
                  'Ghz' :[ReLU(inplace=True) for t in range(2)]+[LeakyReLU(1.0,inplace=True)],
-                 'Phz' :[ReLU(inplace=True) for t in range(1)]+[LeakyReLU(1.0,inplace=True)],
                  'Dsx' :[LeakyReLU(1.0,inplace=True),LeakyReLU(1.0,inplace=True)],
                  'Dsz' :[LeakyReLU(1.0,inplace=True),LeakyReLU(1.0,inplace=True)],
                  'Drx' :[LeakyReLU(1.0,inplace=True) for t in range(2)],
                  'Drz' :[LeakyReLU(1.0,inplace=True) for t in range(2)],
                  'Ddxz':[LeakyReLU(1.0,inplace=True) for t in range(2)],
                  'DhXd':[LeakyReLU(1.0,inplace=True) for t in range(3)]}
-    
+
+nlayers = {'Fed':5,'Gdd':5,
+           'Fef':5,'Gdf':5,
+           'Ghz':3,
+           }
+kernels = {'Fed':4,'Gdd':4,
+           'Fef':4,'Gdf':4,
+           'Ghz':3,
+           }
+strides = {'Fed':2,'Gdd':2,
+           'Fef':2,'Gdf':2,
+           'Ghz':1,
+           }
+padding = {'Fed':0,'Gdd':0,
+           'Fef':0,'Gdf':0,
+           'Ghz':1,
+           }
+outpads = {'Gdd':0,
+           'Gdf':0,
+           'Ghz':1,
+           }
+
 class trainer(object):
     '''Initialize neural network'''
     @profile
@@ -100,12 +119,17 @@ class trainer(object):
             n = self.strategy['broadband']
             print("Loading broadband generators")
             # Encoder broadband Fed
-            self.Fed = Encoder(ngpu=ngpu,dev=device,nz=nzd,nzcl=0,nch=2*nch_tot,
-                               ndf=ndf,szs=md['ntm'],nly=nly,ker=4,std=2,\
-                               pad=0,dil=1,grp=1,dpc=0.0,act=act['Fed']).to(device)
+            self.Fed = Encoder(ngpu=ngpu,dev=device,nz=nzd,nzcl=0,
+                               nch=2*nch_tot,ndf=ndf,szs=md['ntm'],
+                               nly=nlayers['Fed'],ker=kernels['Fed'],
+                               std=strides['Fed'],pad=padding['Fed'],
+                               dil=1,grp=1,dpc=0.0,act=act['Fed']).to(device)
             # Decoder broadband Gdd
-            self.Gdd = Decoder(ngpu=ngpu,nz=2*nzd,nch=nch_tot,ndf=ndf//(2**(5-nly)),nly=nly,ker=4,std=2,pad=0,\
-                               opd=0,dpc=0.0,act=act['Gdd']).to(device)
+            self.Gdd = Decoder(ngpu=ngpu,nz=2*nzd,nch=nch_tot,
+                               ndf=ndf//(2**(5-nlayers['Gdd'])),
+                               nly=nlayers['Gdd'],ker=kernels['Gdd'],
+                               std=strides['Gdd'],pad=padding['Gdd'],\
+                               opd=outpads['Gdd'],dpc=0.0,act=act['Gdd']).to(device)
             if self.strategy['tract']['broadband']:
                 if None in n:
                     self.FGd = [self.Fed,self.Gdd]
@@ -143,12 +167,15 @@ class trainer(object):
             flagF = True
             n = self.strategy['filtered']
             print("Loading filtered generators")
-            self.Fef = Encoder(ngpu=ngpu,dev=device,nz=nzf,nzcl=0,nch=2*nch_tot,
-                               ndf=ndf,szs=md['ntm'],nly=5,ker=4,std=2,\
-                               pad=0,dil=1,grp=1,dpc=0.0,\
-                               act=act['Fef']).to(device)
-            self.Gdf = Decoder(ngpu=ngpu,nz=2*nzf,nch=nch_tot,ndf=ndf,nly=5,ker=4,std=2,pad=0,\
-                               opd=0,dpc=0.0,act=act['Gdf']).to(device)
+            self.Fef = Encoder(ngpu=ngpu,dev=device,nz=nzf,nzcl=0,
+                               nch=2*nch_tot,ndf=ndf,szs=md['ntm'],
+                               nly=nlayers['Fef'],ker=kernels['Fef'],
+                               std=strides['Fef'],pad=padding['Fef'],
+                               dil=1,grp=1,dpc=0.0,act=act['Fef']).to(device)
+            self.Gdf = Decoder(ngpu=ngpu,nz=2*nzf,nch=nch_tot,ndf=ndf,
+                               nly=nlayers['Gdf'],ker=kernels['Gdf'],
+                               std=strides['Gdf'],pad=padding['Gdf'],\
+                               opd=outpads['Gdf'],dpc=0.0,act=act['Gdf']).to(device)
             if self.strategy['tract']['filtered']:
                 if None in n:        
                     self.FGf = [self.Fef,self.Gdf]
@@ -192,10 +219,11 @@ class trainer(object):
             act = acts[self.style]
             n = self.strategy['hybrid']
             print("Loading hybrid generators")
-            self.Ghz = Encoder(ngpu=ngpu,dev=device,nz=nzd,nzcl=0,nch=2*nzf,
-                    ndf=nzf*4,szs=32,nly=3,ker=3,std=1,\
-                            pad=1,dil=1,grp=1,dpc=0.0,bn=True,
-                            act=act['Ghz']).to(device)
+            self.Ghz = Encoder(ngpu=ngpu,dev=device,nz=nzd,nzcl=0,
+                               nch=2*nzf,ndf=nzf*4,szs=32,nly=nlayers['Ghz'],
+                               ker=kernels['Ghz'],std=strides['Ghz'],
+                               pad=padding['Ghz'],dil=1,grp=1,dpc=0.0,
+                               bn=True,act=act['Ghz']).to(device)
             if None not in n:
                 print("Hybrid generators - no train: {0} - {1} - {2}".format(*n))
                 self.Ghz.load_state_dict(tload(n[2])['model_state_dict'])
