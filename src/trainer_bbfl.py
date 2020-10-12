@@ -19,7 +19,7 @@ from database_sae import random_split
 from leave_p_out import k_folds
 from common_setup import dataset2loader
 from database_sae import thsTensorData
-
+import json
 rndm_args = {'mean': 0, 'std': 1}
 
 u'''General informations'''
@@ -31,12 +31,46 @@ __version__ = "1.0.1"
 __maintainer__ = "Filippo Gatti"
 __email__ = "filippo.gatti@centralesupelec.fr"
 __status__ = "Beta"
+
+# coder en dure dans le programme 
 b1 = 0.5
 b2 = 0.9999
 nch_tot = 3
 penalty_wgangp = 10.
 nly = 5
 #self.style='ALICE'#'WGAN'
+"""
+    global variable for this python file. 
+    acts    [dictionnary]   :content ALICE and WGAN definitions.
+                            Those latter represent common activation functions used in 
+                            the whole prgramm for training The keyword :
+                            + Fed is the Encoder of Broadband signal, herein broadband 
+                            signal is named Xd
+                            + Gdd is the Decoder(generator) Broadband, herein encoded 
+                            signal form broad band is named zd 
+                            + Gdf is the Decoder(generator) of the filtred signal, herein 
+                            filtred signal is named Xf
+                            + Ghz is the Decoder(generator) of the hybrid signal
+                            + Dsx is associated to DCGAN_Dx, and Dsxf and Dsxd(function)
+                            + Dsz is associated to DCGAN_Dz(function)
+                            + Drx is associated to DCGAN_Dx and DsrXf (functions)
+                            + Drz is associated to DCGAN_Dx and Dsrzf(function)
+                            + Ddxz is associated to DCGAN_DXZ, and Ddxf, Dfxz and Dsrzd
+                            + [!] DhXd is for the Encoder and is associated to DsrXd for the 
+                            hybride signal
+
+    nlayers [dictionnary]   :contents the number of layers, parameter used for Encode and Decond on
+                            a Conv1D functions.
+
+    kernels [dictionnary]   :contents kernel_size parameter.
+
+    strides [dictionnary]   :this parameter define the number of time stake that each 
+                            convolutional window kernel will not see when this 
+                            latter moves on the nt times points. 
+
+    padding [dictionnary]   :contents the padding parameter relevant for the Conv1D  functions
+    outpads [dictionnary]   :not used actually.
+"""
 acts={}
 acts['ALICE'] = {'Fed' :[LeakyReLU(1.0,inplace=True) for t in range(nly)]+[LeakyReLU(1.0,inplace=True)],
                  'Gdd' :[ReLU(inplace=True) for t in range(nly-1)]+[Tanh()],
@@ -70,7 +104,7 @@ kernels = {'Fed':4,'Gdd':4,
            'Fef':4,'Gdf':4,
            'Ghz':3,
            }
-strides = {'Fed':2,'Gdd':2,
+strides = {'Fed':4,'Gdd':4,
            'Fef':2,'Gdf':2,
            'Ghz':1,
            }
@@ -87,19 +121,35 @@ class trainer(object):
     '''Initialize neural network'''
     @profile
     def __init__(self,cv):
+
+        """
+        Args
+        cv  [object] :  content all parsing paramaters from the flag when lauch the python instructions
+        """
         super(trainer, self).__init__()
     
         self.cv = cv
+        # define as global variable the cv object. 
+        # And therefore this latter is become accessible to the methods in this class
         globals().update(cv)
+        # define as global opt and passing it as a dictonnary here
         globals().update(opt.__dict__)
+        #import pdb
+        #pdb.set_trace()
+        #print(opt.config['decoder'])
+        # passing the content of file ./strategy_bb_*.txt
         self.strategy=strategy
         
+        # the follwings variable are the instance for the object Module from 
+        # the package pytorch: torch.nn.modulese. 
+        # the names of variable are maped to the description aforementioned
         self.Fed = Module()
         self.Gdd = Module()
         self.DsXd = Module()
         self.Dszd = Module()
         self.DsXf = Module()
         self.Dszf = Module()
+
         self.Ddnets = []
         self.Dfnets = []
         self.Dhnets = []
@@ -111,13 +161,32 @@ class trainer(object):
         self.oGhxz=None
         flagT=False
         flagF=False
-        t = [y.lower() for y in list(self.strategy.keys())]
+        t = [y.lower() for y in list(self.strategy.keys())] 
+
+        """
+            This part is for training with the broadband signal
+        """
         if 'broadband' in t:
             self.style='ALICE'
             act = acts[self.style]
             flagT = True
+            # if opt.config exist then change default value defined above 
+            if opt.config: 
+                nlayers['Fed'] = opt.config['decoder']['nlayers']
+                kernels['Fed'] = opt.config['decoder']['kernel']
+                strides['Fed'] = opt.config['decoder']['strides']
+                padding['Fed'] = opt.config['decoder']['padding']
+                nlayers['Gdd'] = opt.config['encoder']['nlayers']
+                kernels['Gdd'] = opt.config['encoder']['kernel']
+                strides['Gdd'] = opt.config['encoder']['strides']
+                padding['Gdd'] = opt.config['encoder']['padding']
+                outpads['Gdd'] = opt.config['encoder']['outpads']
+            else:
+                print('!!! warnings no configuration file found for the broadband\n\tassume default parameters of the programm')
+            # read specific strategy for the broadband signal
             n = self.strategy['broadband']
             print("Loading broadband generators")
+
             # Encoder broadband Fed
             self.Fed = Encoder(ngpu=ngpu,dev=device,nz=nzd,nzcl=0,
                                nch=2*nch_tot,ndf=ndf,szs=md['ntm'],
@@ -130,6 +199,10 @@ class trainer(object):
                                nly=nlayers['Gdd'],ker=kernels['Gdd'],
                                std=strides['Gdd'],pad=padding['Gdd'],\
                                opd=outpads['Gdd'],dpc=0.0,act=act['Gdd']).to(device)
+
+            #if we training with the broadband signal
+                # we read weigth and bias if is needed and then we set-up the Convolutional Neural 
+                # Network needed for the Discriminator
             if self.strategy['tract']['broadband']:
                 if None in n:
                     self.FGd = [self.Fed,self.Gdd]
@@ -142,17 +215,45 @@ class trainer(object):
                     self.oGdxz = Adam(ittc(self.Fed.parameters(),self.Gdd.parameters()),
                                       lr=glr,betas=(b1,b2))#,weight_decay=None)
                 self.optzd.append(self.oGdxz)
-                self.Dszd = DCGAN_Dz(ngpu=ngpu,nz=nzd,ncl=512,n_extra_layers=1,dpc=0.25,
+                # create a conv1D of 2 layers for the discriminator to tranfrom from (,,32) to (,,512)
+
+                if opt.config['DCGAN_Dz'] :
+                    self.Dszd = DCGAN_Dz(ngpu=ngpu,nz=nzd,ncl=512,n_extra_layers=opt.config['DCGAN_Dz']['nlayers'],dpc=0.25,
                                      bn=False,activation=act['Dsz']).to(device)
-                self.DsXd = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
-                                     n_extra_layers=0,dpc=0.25,activation=act['Dsx']).to(device)
-                self.Ddxz = DCGAN_DXZ(ngpu=ngpu,nc=1024,n_extra_layers=2,dpc=0.25,
-                                      activation=act['Ddxz']).to(device)    
+                else :
+                    self.Dszd = DCGAN_Dz(ngpu=ngpu,nz=nzd,ncl=512,n_extra_layers=1,dpc=0.25,
+                                     bn=False,activation=act['Dsz']).to(device)
+                    print('!!! warnings no discriminator configaration for DCGAN_Dz\n\tassume n_extra_layers = 1')
+                
+                if opt.config['DCGAN_Dx'] :
+                    self.DsXd = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
+                                     n_extra_layers=opt.config['DCGAN_Dx']['nlayers'],dpc=0.25,activation=act['Dsx']).to(device)
+                else:    
+                    # create a conv1D of 4 layers for the discriminator to transform from (,,3) to (,,512) 
+                    self.DsXd = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
+                                     n_extra_layers=1,dpc=0.25,activation=act['Dsx']).to(device)
+                    print('!!!! warnings no discriminator configaration found for DCGAN_Dx\n\tassume n_extra_layers` = 1')
+                
+                if opt.config['DCGAN_DXZ']:
+                    self.Ddxz = DCGAN_DXZ(ngpu=ngpu,nc=1024,n_extra_layers=opt.config['DCGAN_DXZ']['nlayers'],dpc=0.25,
+                                      activation=act['Ddxz']).to(device)
+                else:                 
+                    # create a conv1D of  layers for the discriminator to transform from (*,*,1024) to (*,*,1)
+                    self.Ddxz = DCGAN_DXZ(ngpu=ngpu,nc=1024,n_extra_layers=2,dpc=0.25,
+                                          activation=act['Ddxz']).to(device)
+                    print('!!! warnings no discriminator configaration for DCGAN_DXZ\n\tassume n_extra_layers = 2')
+
                 self.Ddnets.append(self.DsXd)  
                 self.Ddnets.append(self.Dszd)
                 self.Ddnets.append(self.Ddxz)
+
+                # Adam optimization for Ddnets
                 self.oDdxz = reset_net(self.Ddnets,func=set_weights,lr=rlr,b1=b1,b2=b2)
+                #Add the same Adam optimization parameter for optzd
                 self.optzd.append(self.oDdxz)   
+            #if we don't the training with the broadband ...
+                # we simply load the Python dictionary object that maps each layer to its parameter tensor. 
+                # here it is in te 'model_stat_dict' of the strategy_* file passed to the programm
             else:
                 if None not in n:
                     print("Broadband generators - NO TRAIN: {0} - {1}".format(*n))
@@ -160,22 +261,40 @@ class trainer(object):
                     self.Gdd.load_state_dict(tload(n[1])['model_state_dict'])
                 else:
                     flagT=False
+        """
+            This part is for the trainig with the filtred signal
+        """
 
         if 'filtered' in t:
+            if opt.config:
+                nlayers['Fef'] = opt.config['decoder']['nlayers']
+                kernels['Fef'] = opt.config['decoder']['kernel']
+                strides['Fef'] = opt.config['decoder']['strides']
+                padding['Fef'] = opt.config['decoder']['padding']
+                nlayers['Gdf'] = opt.config['encoder']['nlayers']
+                kernels['Gdf'] = opt.config['encoder']['kernel']
+                strides['Gdf'] = opt.config['encoder']['strides']
+                padding['Gdf'] = opt.config['encoder']['padding']
+                outpads['Gdf'] = opt.config['encoder']['outpads']
+            else:
+                print('!!! warnings no configuration file found\n\t assume default values')
+
             self.style='ALICE'
             act = acts[self.style]
             flagF = True
             n = self.strategy['filtered']
-            print("Loading filtered generators")
+            print("Loading filtered generators ...")
             self.Fef = Encoder(ngpu=ngpu,dev=device,nz=nzf,nzcl=0,
                                nch=2*nch_tot,ndf=ndf,szs=md['ntm'],
                                nly=nlayers['Fef'],ker=kernels['Fef'],
                                std=strides['Fef'],pad=padding['Fef'],
                                dil=1,grp=1,dpc=0.0,act=act['Fef']).to(device)
+            print("Encoder step passed ...")
             self.Gdf = Decoder(ngpu=ngpu,nz=2*nzf,nch=nch_tot,ndf=ndf,
                                nly=nlayers['Gdf'],ker=kernels['Gdf'],
                                std=strides['Gdf'],pad=padding['Gdf'],\
                                opd=outpads['Gdf'],dpc=0.0,act=act['Gdf']).to(device)
+            print("Decoder step passed ...")
             if self.strategy['tract']['filtered']:
                 if None in n:        
                     self.FGf = [self.Fef,self.Gdf]
@@ -188,21 +307,52 @@ class trainer(object):
                     self.oGfxz = Adam(ittc(self.Fef.parameters(),self.Gdf.parameters()),
                                       lr=glr,betas=(b1,b2),weight_decay=0.00001)
                 self.optzf.append(self.oGfxz)
-                self.Dszf = DCGAN_Dz(ngpu=ngpu,nz=nzf,ncl=2*nzf,n_extra_layers=2,dpc=0.25,bn=False,
+                # creat an Conv1D of 2 layers for the Discriminator Dszf
+                if opt.config['DCGAN_Dz']:
+                    self.Dszf = DCGAN_Dz(ngpu=ngpu,nz=nzf,ncl=2*nzf,n_extra_layers=opt.config['DCGAN_Dz']['nlayers'],dpc=0.25,bn=False,
                                      activation=act['Dsz'],wf=True).to(device)
-                self.DsXf = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
+                else:
+                    self.Dszf = DCGAN_Dz(ngpu=ngpu,nz=nzf,ncl=2*nzf,n_extra_layers=2,dpc=0.25,bn=False,
+                                     activation=act['Dsz'],wf=True).to(device)
+                    print('!!! warnings no discriminator configuration found for DCGAN_Dz\n\tassume n_extra_layers = 2')
+
+                if opt.config['DCGAN_Dx']:
+                    self.DsXf = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
+                                     n_extra_layers=opt.config['DCGAN_Dx']['nlayers'],dpc=0.25,activation=act['Dsx'],
+                                     wf=True).to(device)
+                else:
+                    self.DsXf = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
                                      n_extra_layers=0,dpc=0.25,activation=act['Dsx'],
                                      wf=True).to(device)
-                self.Dfxz = DCGAN_DXZ(ngpu=ngpu,nc=512+2*nzf,n_extra_layers=2,dpc=0.25,
+                    print('!!! warnings no discriminator configuration found for DCGAN_Dx\n\tassume n_extra_layers = 0')
+
+                if opt.config['DCGAN_DXZ']:
+                    self.Dfxz = DCGAN_DXZ(ngpu=ngpu,nc=512+2*nzf,n_extra_layers=opt.config['DCGAN_DXZ']['nlayers'],dpc=0.25,
                                       activation=act['Ddxz'],wf=True).to(device)
+                else:
+                    self.Dfxz = DCGAN_DXZ(ngpu=ngpu,nc=512+2*nzf,n_extra_layers=2,dpc=0.25,
+                                      activation=act['Ddxz'],wf=True).to(device)
+                    print('!!! warnings no discriminator configuration found for DCGAN_DXZ\n\t assume n_extra_layers = 2')
+
                 self.Dfnets.append(self.DsXf)
                 self.Dfnets.append(self.Dszf)
                 self.Dfnets.append(self.Dfxz)
-                # recontruction
-                self.Dsrzf = DCGAN_Dz(ngpu=ngpu,nz=2*nzf,ncl=2*nzf,n_extra_layers=1,dpc=0.25,
+                # recontructionc
+                if opt.config['DCGAN_Dz']:
+                    self.Dsrzf = DCGAN_Dz(ngpu=ngpu,nz=2*nzf,ncl=2*nzf,n_extra_layers=opt.config['DCGAN_Dz']['nlayers'],dpc=0.25,
                                       bn=False,activation=act['Drz']).to(device)
-                self.DsrXf = DCGAN_Dx(ngpu=ngpu,isize=256,nc=2*nch_tot,ncl=512,ndf=64,fpd=1,
+                else:
+                    self.Dsrzf = DCGAN_Dz(ngpu=ngpu,nz=2*nzf,ncl=2*nzf,n_extra_layers=1,dpc=0.25,
+                                      bn=False,activation=act['Drz']).to(device)
+                    print('!!! warnings no discriminator configuration found for DCGAN_Dz')
+
+                if opt.config['DCGAN_Dx']
+                    self.DsrXf = DCGAN_Dx(ngpu=ngpu,isize=256,nc=2*nch_tot,ncl=512,ndf=64,fpd=1,
+                                      n_extra_layers=opt.config['DCGAN_Dx']['nlayers'],dpc=0.25,activation=act['Drx']).to(device)
+                else:
+                    self.DsrXf = DCGAN_Dx(ngpu=ngpu,isize=256,nc=2*nch_tot,ncl=512,ndf=64,fpd=1,
                                       n_extra_layers=0,dpc=0.25,activation=act['Drx']).to(device)
+
                 self.Dfnets.append(self.DsrXf)
                 self.Dfnets.append(self.Dsrzf)
                 self.oDfxz = reset_net(self.Dfnets,func=set_weights,lr=rlr,optim='rmsprop')
@@ -214,11 +364,25 @@ class trainer(object):
                     self.Gdf.load_state_dict(tload(n[1])['model_state_dict'])    
                 else:
                     flagF=False
+
+        """
+            This part is for the training with the hybrid signal
+        """
         if 'hybrid' in t and flagF and flagT:
             self.style='WGAN'
             act = acts[self.style]
             n = self.strategy['hybrid']
             print("Loading hybrid generators")
+
+            if opt.config['Ghz'] :
+                nlayers['Gdf'] = opt.config['encoder']['nlayers']
+                kernels['Gdf'] = opt.config['encoder']['kernel']
+                strides['Gdf'] = opt.config['encoder']['strides']
+                padding['Gdf'] = opt.config['encoder']['padding']
+                outpads['Gdf'] = opt.config['encoder']['outpads']
+            else:
+                print('!!! warnings no config found\n\tassuming default parameters for the hybrid generator')
+
             self.Ghz = Encoder(ngpu=ngpu,dev=device,nz=nzd,nzcl=0,
                                nch=2*nzf,ndf=nzf*4,szs=32,nly=nlayers['Ghz'],
                                ker=kernels['Ghz'],std=strides['Ghz'],
@@ -233,19 +397,44 @@ class trainer(object):
                 else:
                     self.oGhxz = reset_net([self.Ghz],func=set_weights,lr=glr,b1=b1,b2=b2)
                 self.optzh.append(self.oGhxz)
-                self.Dsrzd = DCGAN_DXZ(ngpu=ngpu,nc=2*nzd,n_extra_layers=2,dpc=0.25,
-                                       activation=act['Ddxz'],wf=False).to(device)
+
+                if opt.config['DCGAN_DXZ']:
+                    self.Dsrzd = DCGAN_DXZ(ngpu=ngpu,nc=2*nzd,n_extra_layers=opt.config['DCGAN_DXZ']['layers'],dpc=0.25,
+                                           activation=act['Ddxz'],wf=False).to(device)
+                else:
+                    self.Dsrzd = DCGAN_DXZ(ngpu=ngpu,nc=2*nzd,n_extra_layers=2,dpc=0.25,
+                                           activation=act['Ddxz'],wf=False).to(device)
                 
                 if self.style=='WGAN':
-                    self.DsrXd = Encoder(ngpu=ngpu,dev=device,nz=1,nzcl=0,nch=2*nch_tot,
-                                     ndf=ndf,szs=md['ntm'],nly=3,ker=3,std=2,\
-                                     pad=1,dil=1,grp=1,dpc=0.25,bn=False,\
+                    if opt.config['WGAN_DsrXd']:
+                        self.DsrXd = Encoder(ngpu=ngpu,dev=device,nz=1,nzcl=0,nch=2*nch_tot,
+                                     ndf=ndf,szs=md['ntm'],nly=3,ker=opt.config['WGAN_DsrXd']['kernels'],\
+                                     std=opt.config['WGAN_DsrXd']['strides'],\
+                                     pad=opt.config['WGAN_DsrXd']['padding'],\
+                                     dil=opt.config['WGAN_DsrXd']['dilation'],\
+                                     grp=1,dpc=0.25,bn=False,\
                                      act=act['DhXd']).to(device)
+                    else:
+                        self.DsrXd = Encoder(ngpu=ngpu,dev=device,nz=1,nzcl=0,nch=2*nch_tot,
+                                         ndf=ndf,szs=md['ntm'],nly=3,ker=3,std=2,\
+                                         pad=1,dil=1,grp=1,dpc=0.25,bn=False,\
+                                         act=act['DhXd']).to(device)
+                        print('!!! warnings no configuration found for DsrXd')
                     self.Dhnets.append(self.Dsrzd)
                     self.Dhnets.append(self.DsrXd)
                     self.oDhzdzf = reset_net(self.Dhnets,func=set_weights,lr=rlr,optim='rmsprop')
                 else:
-                    self.DsrXd = Encoder(ngpu=ngpu,dev=device,nz=1,nzcl=0,nch=2*nch_tot,
+                    if opt.config['DsrXd']:
+                        self.DsrXd = Encoder(ngpu=ngpu,dev=device,nz=1,nzcl=0,nch=2*nch_tot,
+                                     ndf=ndf,szs=md['ntm'],nly=3,\
+                                     ker=opt.config['DsrXd']['kernel'],\
+                                     std=opt.config['DsrXd']['strides'],\
+                                     pad=opt.config['DsrXd']['padding'],\
+                                     dil=opt.config['DsrXd']['dilation'],\
+                                     grp=1,dpc=0.25,bn=True,\
+                                     act=act['DhXd']).to(device)    
+                    else:
+                        self.DsrXd = Encoder(ngpu=ngpu,dev=device,nz=1,nzcl=0,nch=2*nch_tot,
                                      ndf=ndf,szs=md['ntm'],nly=3,ker=3,std=2,\
                                      pad=1,dil=1,grp=1,dpc=0.25,bn=True,\
                                      act=act['DhXd']).to(device)
@@ -263,11 +452,19 @@ class trainer(object):
                        'Gloss_cycle_z':[0],'Dloss_ali':[0],
                        'Dloss_ali_X':[0],'Dloss_ali_z':[0]}
         
+        #end of constructior
+
+    ''' Methode that discriminate real and fake signal for broadband type '''
     @profile
     def discriminate_broadband_xz(self,Xd,Xdr,zd,zdr):
         
         # Discriminate real
-        zrc = zcat(self.DsXd(Xd),self.Dszd(zdr))
+        print("[!]In discriminate_broadband_xz funcnction")
+        print("for Xd and zdr",Xd.shape, zdr.shape)
+        a = self.DsXd(Xd)
+        b = self.Dszd(zdr)
+        print("for DsXd(Xd) and Dszd(zdr)", a.shape, b.shape)
+        zrc = zcat(a,b)
         DXz = self.Ddxz(zrc)
         
         # Discriminate fake
@@ -275,13 +472,17 @@ class trainer(object):
         DzX = self.Ddxz(zrc)
         
         return DXz,DzX
+        #end of discriminate_broadband_xz function
 
+    ''' Methode that discriminate real and fake signal for filtred type '''
     @profile
     def discriminate_filtered_xz(self,Xf,Xfr,zf,zfr):
-        
+        print("[!]In discriminate_filtered_xz function ...") 
         # Discriminate real
+        print("for Xf and zfr",Xf.shape,zfr.shape)
         ftz = self.Dszf(zfr)
         ftX = self.DsXf(Xf)
+        print("for ftX[0] and ftz[0]", ftX[0].shape, ftz[0].shape)
         zrc = zcat(ftX[0],ftz[0])
         ftr = ftz[1]+ftX[1]
         ftXz = self.Dfxz(zrc)
@@ -299,6 +500,7 @@ class trainer(object):
         
         return DXz,DzX,ftr,ftf
     
+    ''' Methode that discriminate real and fake hybrid signal type'''
     def discriminate_hybrid_xz(self,Xd,Xdr,zd,zdr):
         
         # Discriminate real
@@ -350,7 +552,8 @@ class trainer(object):
     ####################
     @profile
     def alice_train_broadband_discriminator_explicit_xz(self,Xd,zd):
-        
+        print("[!]In the alice_train_broadband_generator_explicit_xz funcnction  ...") 
+        print("for Xd and zd ...",Xd.shape,zd.shape)
         # Set-up training
         zerograd(self.optzd)
         self.Fed.eval(),self.Gdd.eval()
@@ -362,16 +565,18 @@ class trainer(object):
         # 1. Concatenate inputs
         X_inp = zcat(Xd,wnx)
         z_inp = zcat(zd,wnz)
-        
+        print("for X_inp and z_inp",X_inp.shape,z_inp.shape)
         # 2. Generate conditional samples
         X_gen = self.Gdd(z_inp)
         z_gen = self.Fed(X_inp)
+        print("for X_gen and z_gen",X_gen.shape,z_gen.shape)
         # z_gen = latent_resampling(self.Fed(X_inp),nzd,wn1)
-        
-        # 3. Cross-Discriminate XZ
+
+        # 3. Cross-Discriminate XZ 
         Dxz,Dzx = self.discriminate_broadband_xz(Xd,X_gen,zd,z_gen)
-        
+        print("... after discriminate_broadband_xz") 
         # 4. Compute ALI discriminator loss
+        print("for Dzx and Dxz", Dzx.shape,Dxz.shape)
         Dloss_ali = -torch.mean(ln0c(Dzx)+ln0c(1.0-Dxz))
         
         # Total loss
@@ -435,6 +640,7 @@ class trainer(object):
     ####################
     def alice_train_filtered_discriminator_adv_xz(self,Xf,zf):
         # Set-up training
+        print("for Xf and zf", Xf.shape,zf.shape)
         zerograd(self.optzf)
         self.Fef.eval(),self.Gdf.eval()
         self.DsXf.train(),self.Dszf.train(),self.Dfxz.train()
@@ -446,13 +652,14 @@ class trainer(object):
         # 1. Concatenate inputs
         X_inp = zcat(Xf,wnx)
         z_inp = zcat(zf,wnz)
-         
+        print("X_inp and z_inp", X_inp.shape, z_inp.shape)
         # 2. Generate conditional samples
         X_gen = self.Gdf(z_inp)
         z_gen = self.Fef(X_inp) 
         # z_gen = latent_resampling(self.Fef(X_inp),nzf,wn1)
-         
+        print("X_gen and z_gen", X_gen.shape, z_gen.shape)
         # 3. Cross-Discriminate XZ
+        
         DXz,DzX,_,_ = self.discriminate_filtered_xz(Xf,X_gen,zf,z_gen)
          
         # 4. Compute ALI discriminator loss
@@ -470,7 +677,7 @@ class trainer(object):
         z_rec = self.Fef(X_gen) 
         # z_rec = latent_resampling(self.Fef(X_gen),nzf,wn1)
         # 3. Cross-Discriminate XX
-        Dreal_X,Dfake_X = self.discriminate_filtered_xx(Xf,X_rec)
+        real_X,Dfake_X = self.discriminate_filtered_xx(Xf,X_rec)
         Dloss_ali_X = self.bce_loss(Dreal_X,o1l(Dreal_X))+\
             self.bce_loss(Dfake_X,o0l(Dfake_X))
             
@@ -654,7 +861,7 @@ class trainer(object):
         
     @profile
     def train_broadband(self):
-        print('Training on broadband signals') 
+        print('Training on broadband signals ...') 
         globals().update(self.cv)
         globals().update(opt.__dict__)   
         for epoch in range(niter):
@@ -686,7 +893,7 @@ class trainer(object):
                        'optimizer_state_dict':self.oDdxz.state_dict()},'DsXd_bb_{}.pth'.format(epoch))    
                 tsave({'model_state_dict':self.Ddxz.state_dict(),
                        'optimizer_state_dict':self.oDdxz.state_dict()},'Ddxz_bb_{}.pth'.format(epoch))
-        plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_classic',outf=outf)
+        #plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_classic',outf=outf)
         tsave({'epoch':niter,'model_state_dict':self.Fed.state_dict(),
             'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'Fed.pth')
         tsave({'epoch':niter,'model_state_dict':self.Gdd.state_dict(),
@@ -697,7 +904,7 @@ class trainer(object):
          
     @profile
     def train_filtered_explicit(self):
-        print('Training on filtered signals') 
+        print('Training on filtered signals ...') 
         globals().update(self.cv)
         globals().update(opt.__dict__)
         for epoch in range(niter):
@@ -729,22 +936,24 @@ class trainer(object):
                        'optimizer_state_dict':self.oDfxz.state_dict()},'DsXd_fl_{}.pth'.format(epoch))    
                 tsave({'model_state_dict':self.Dfxz.state_dict(),
                        'optimizer_state_dict':self.oDfxz.state_dict()},'Ddxz_fl_{}.pth'.format(epoch))
-        plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_filtered',outf=outf)
+        #plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_filtered',outf=outf)
         tsave({'epoch':niter,'model_state_dict':self.Fef.state_dict(),
             'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},'Fef.pth')
         tsave({'epoch':niter,'model_state_dict':self.Gdf.state_dict(),
             'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},'Gdf.pth')    
     @profile
     def train_filtered(self):
-        print('Training on filtered signals') 
+        print("[!] In function train_filtred ... ")
         globals().update(self.cv)
         globals().update(opt.__dict__)
+	
         for epoch in range(niter):
             for b,batch in enumerate(trn_loader):
                 # Load batch
                 _,xf_data,_,zf_data,_,_,_ = batch
                 Xf = Variable(xf_data).to(device) # LF-signal
                 zf = Variable(zf_data).to(device)
+                print("Xf and zf", Xf.shape, zf.shape)
 #               # Train G/D
                 for _ in range(5):
                     self.alice_train_filtered_discriminator_adv_xz(Xf,zf)
@@ -768,7 +977,7 @@ class trainer(object):
                        'optimizer_state_dict':self.oDfxz.state_dict()},'DsXd_fl_{}.pth'.format(epoch))    
                 tsave({'model_state_dict':self.Dfxz.state_dict(),
                        'optimizer_state_dict':self.oDfxz.state_dict()},'Ddxz_fl_{}.pth'.format(epoch))
-        plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_filtered',outf=outf)
+        #plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_filtered',outf=outf)
         tsave({'epoch':niter,'model_state_dict':self.Fef.state_dict(),
             'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses},'Fef.pth')
         tsave({'epoch':niter,'model_state_dict':self.Gdf.state_dict(),
@@ -778,7 +987,7 @@ class trainer(object):
     
     @profile
     def train_hybrid(self):
-        print('Training on filtered signals') 
+        print('Training on filtered signals ...') 
         globals().update(self.cv)
         globals().update(opt.__dict__)
         for epoch in range(niter):
@@ -799,7 +1008,7 @@ class trainer(object):
             str = 'epoch: {:>d} --- '.format(epoch)
             str = str + ' | '.join(str1)
             print(str)
-        plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_hybrid',outf=outf)
+        #plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_hybrid',outf=outf)
         
         tsave({'epoch':niter,'model_state_dict':self.Ghz.state_dict(),
             'optimizer_state_dict':self.oGhxz.state_dict(),'loss':self.losses},'Ghz.pth')    
@@ -828,12 +1037,12 @@ class trainer(object):
             #                          trn_loader,pfx="trn_set_bb",outf=outf)
             #plt.plot_generate_classic('broadband',Fed,Gdd,device,vtm,\
             #                          tst_loader,pfx="tst_set_bb",outf=outf)
-         #   plt.plot_generate_classic('broadband',self.Fed,self.Gdd,device,vtm,\
-         #                             vld_loader,pfx="vld_set_bb",outf=outf)
-         #   plt.plot_gofs(tag=['broadband'],Fef=self.Fef,Gdf=self.Gdf,Fed=self.Fed,\
-         #           Gdd=self.Gdd,Fhz=self.Fhz,Ghz=self.Ghz,dev=device,vtm=vtm,trn_set=trn_loader,\
-         #           pfx={'broadband':'set_bb','filtered':'set_fl','hybrid':'set_hb'},\
-         #           outf=outf)
+            plt.plot_generate_classic('broadband',self.Fed,self.Gdd,device,vtm,\
+                                      vld_loader,pfx="vld_set_bb",outf=outf)
+            #plt.plot_gofs(tag=['broadband'],Fef=self.Fef,Gdf=self.Gdf,Fed=self.Fed,\
+            #        	  Gdd=self.Gdd,Fhz=self.Fhz,Ghz=self.Ghz,dev=device,vtm=vtm,trn_set=trn_loader,\
+            #              pfx={'broadband':'set_bb','filtered':'set_fl','hybrid':'set_hb'},\
+            #             outf=outf)
             plt.plot_features('broadband',self.Fed,self.Gdd,nzd,device,vtm,vld_loader,pfx='set_bb',outf=outf)
         if 'filtered' in t and self.strategy['trplt']['filtered']:
             n = self.strategy['filtered']
@@ -847,12 +1056,12 @@ class trainer(object):
             #                          trn_loader,pfx="trn_set_fl",outf=outf)
             #plt.plot_generate_classic('filtered',Fef,Gdf,device,vtm,\
             #                          tst_loader,pfx="tst_set_fl",outf=outf)
-         ##   plt.plot_generate_classic('filtered',Fef,Gdf,device,vtm,\
-         ##                             vld_loader,pfx="vld_set_fl",outf=outf)
-         ##   plt.plot_gofs(tag=['filtered'],Fef=self.Fef,Gdf=self.Gdf,Fed=self.Fed,\
-         ##           Gdd=self.Gdd,Fhz=self.Fhz,Ghz=self.Ghz,dev=device,vtm=vtm,trn_set=trn_loader,\
-         ##           pfx={'broadband':'set_bb','filtered':'set_fl','hybrid':'set_hb'},\
-         ##           outf=outf)
+            plt.plot_generate_classic('filtered',Fef,Gdf,device,vtm,\
+                                      vld_loader,pfx="vld_set_fl",outf=outf)
+            plt.plot_gofs(tag=['filtered'],Fef=self.Fef,Gdf=self.Gdf,Fed=self.Fed,\
+                          Gdd=self.Gdd,Fhz=self.Fhz,Ghz=self.Ghz,dev=device,vtm=vtm,trn_set=trn_loader,\
+                          pfx={'broadband':'set_bb','filtered':'set_fl','hybrid':'set_hb'},\
+                          outf=outf)
             plt.plot_features('filtered',self.Fef,self.Gdf,nzf,device,vtm,vld_loader,pfx='set_fl',outf=outf)
 
         if 'hybrid' in t and self.strategy['trplt']['hybrid']:

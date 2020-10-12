@@ -36,6 +36,7 @@ from database_sae import load_dataset,synth_dataset
 from database_sae import stead_dataset,ann2bb_dataset
 from database_sae import deepbns_dataset
 import pandas as pd
+import json
 
 def setup():
     parser = argparse.ArgumentParser()
@@ -71,6 +72,7 @@ def setup():
     parser.add_argument('--scl',type=int,default=1,help='scale [1]')
     parser.add_argument('--nsy',type=int,default=83,help='number of synthetics [1]')
     parser.add_argument('--save_checkpoint',type=int,default=1,help='Number of epochs for each checkpoint')
+    parser.add_argument('--config',default='./config.txt', help='configuration file')
     parser.set_defaults(stack=False,ftune=False,feat=False,plot=True)
     opt = parser.parse_args()
 
@@ -80,20 +82,26 @@ def setup():
     FloatTensor = tcuda.FloatTensor if opt.cuda else tFT
     LongTensor = tcuda.LongTensor if opt.cuda else tLT
     ngpu = int(opt.ngpu)
-    
+    print("parser finish is job ...")
     try:
         os.makedirs(opt.outf)
     except OSError:
         pass
-    
+
+    try:
+       with open('config.txt') as json_file:
+         opt.config = json.load(json_file)
+    except OSError:
+        pass
+
     if opt.manualSeed is None:
         opt.manualSeed = random.randint(1, 10000)
     print("Random Seed: ", opt.manualSeed)
     random.seed(opt.manualSeed)
     mseed(opt.manualSeed)
-    
     cudnn.benchmark = True
-    
+    print("opt.dataset",opt.dataset)
+
     if tcuda.is_available() and not opt.cuda:
         print("WARNING: You have a CUDA device, so you should probably run with --cuda")
     
@@ -238,9 +246,11 @@ def setup():
         md = {'dtm':0.01,'cutoff':opt.cutoff,'ntm':opt.imageSize}
         md['vTn'] = np.arange(0.0,3.05,0.05,dtype=np.float64)
         md['nTn'] = md['vTn'].size
+        print("__init__ stead_dataset ...")
         ths_trn,ths_tst,ths_vld,\
         vtm,fsc = stead_dataset(src,opt.batchPercent,opt.imageSize,opt.latentSize,\
                                 opt.nzd,opt.nzf,md=md,nsy=opt.nsy,device=device)
+        print("__end__ stead_dataset")
         md['fsc']=fsc
         opt.ncls = md['fsc']['ncat']
         # Create natural period vector 

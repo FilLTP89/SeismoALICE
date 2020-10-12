@@ -195,26 +195,41 @@ def random_split(ths,lngs,idx=None):
         for off,lng in zip(_accumulate(lngs),lngs)]
 
 def stead_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
-    
+    print('Enter in the stead_dataset function ...') 
     vtm = md['dtm']*np.arange(0,md['ntm'])
     tar     = np.zeros((nsy,2))
     trn_set  = -999.9*np.ones(shape=(nsy,3,md['ntm']))
     pgat_set = -999.9*np.ones(shape=(nsy,3))
     psat_set = -999.9*np.ones(shape=(nsy,3,md['nTn']))
-    
+    print("training data ",trn_set.shape,pgat_set.shape, psat_set.shape)
+    print("src ", src)
     # parse hdf5 database
     eqd = h5py.File(src,'r')['earthquake']['local']
+    print("hdf5 file is read bay h5py object...")
+    
     eqm = pd.read_csv(osj(src.split('/waveforms')[0],'metadata_'+\
                           src.split('waveforms_')[-1].split('.hdf5')[0]+'.csv'))
     eqm = eqm.loc[eqm['trace_category'] == 'earthquake_local']
     eqm = eqm.loc[eqm['source_magnitude'] >= 3.5]
     eqm = eqm.sample(frac=nsy/len(eqm)).reset_index(drop=True)
     w = windows.tukey(md['ntm'],5/100)
+    print("size w", w.size)
+    print("size de w", w.shape)
+    print("eqm.index", eqm.index)
     for i in eqm.index:
         tn = eqm.loc[i,'trace_name']
         bi = int(eqd[tn].attrs['p_arrival_sample'])
         for j in range(3):
-            trn_set[i,j,:] = detrend(eqd[tn][bi:bi+Xwindow,j])*w
+            print("in the loop i,j",i,j)
+            print("dimensions of eqd passed in the program",tn,bi,j,Xwindow)
+            a = eqd[tn][bi:bi+Xwindow,j]
+            #a = np.reshape(a.shape[0],1)
+            #replace nan value to zeros if datatset is corrupted
+            print("shape of array", a.shape)
+            print("number of nan in the array to detrend", np.isnan(a).sum())
+            b = detrend(a)
+            trn_set[i,j,:] = b*w
+            print("__after__ detrend function")
             pgat_set[i,j] = np.abs(trn_set[i,j,:]).max()
             trn_set[i,j,:] = trn_set[i,j,:]/pgat_set[i,j]
             pgat_set[i,j] = np.abs(trn_set[i,j,:]).max()
