@@ -172,15 +172,15 @@ class trainer(object):
             flagT = True
             # if opt.config exist then change default value defined above 
             if opt.config: 
-                nlayers['Fed'] = opt.config['decoder']['nlayers']
-                kernels['Fed'] = opt.config['decoder']['kernel']
-                strides['Fed'] = opt.config['decoder']['strides']
-                padding['Fed'] = opt.config['decoder']['padding']
-                nlayers['Gdd'] = opt.config['encoder']['nlayers']
-                kernels['Gdd'] = opt.config['encoder']['kernel']
-                strides['Gdd'] = opt.config['encoder']['strides']
-                padding['Gdd'] = opt.config['encoder']['padding']
-                outpads['Gdd'] = opt.config['encoder']['outpads']
+                nlayers['Fed'] = opt.config['encoder']['nlayers']
+                kernels['Fed'] = opt.config['encoder']['kernel']
+                strides['Fed'] = opt.config['encoder']['strides']
+                padding['Fed'] = opt.config['encoder']['padding']
+                nlayers['Gdd'] = opt.config['decoder']['nlayers']
+                kernels['Gdd'] = opt.config['decoder']['kernel']
+                strides['Gdd'] = opt.config['decoder']['strides']
+                padding['Gdd'] = opt.config['decoder']['padding']
+                outpads['Gdd'] = opt.config['decoder']['outpads']
             else:
                 print('!!! warnings no configuration file found for the broadband\n\tassume default parameters of the programm')
             # read specific strategy for the broadband signal
@@ -193,6 +193,7 @@ class trainer(object):
                                nly=nlayers['Fed'],ker=kernels['Fed'],
                                std=strides['Fed'],pad=padding['Fed'],
                                dil=1,grp=1,dpc=0.0,act=act['Fed']).to(device)
+            
             # Decoder broadband Gdd
             self.Gdd = Decoder(ngpu=ngpu,nz=2*nzd,nch=nch_tot,
                                ndf=ndf//(2**(5-nlayers['Gdd'])),
@@ -267,15 +268,15 @@ class trainer(object):
 
         if 'filtered' in t:
             if opt.config:
-                nlayers['Fef'] = opt.config['decoder']['nlayers']
-                kernels['Fef'] = opt.config['decoder']['kernel']
-                strides['Fef'] = opt.config['decoder']['strides']
-                padding['Fef'] = opt.config['decoder']['padding']
-                nlayers['Gdf'] = opt.config['encoder']['nlayers']
-                kernels['Gdf'] = opt.config['encoder']['kernel']
-                strides['Gdf'] = opt.config['encoder']['strides']
-                padding['Gdf'] = opt.config['encoder']['padding']
-                outpads['Gdf'] = opt.config['encoder']['outpads']
+                nlayers['Fef'] = opt.config['encoder']['nlayers']
+                kernels['Fef'] = opt.config['encoder']['kernel']
+                strides['Fef'] = opt.config['encoder']['strides']
+                padding['Fef'] = opt.config['encoder']['padding']
+                nlayers['Gdf'] = opt.config['decoder']['nlayers']
+                kernels['Gdf'] = opt.config['decoder']['kernel']
+                strides['Gdf'] = opt.config['decoder']['strides']
+                padding['Gdf'] = opt.config['decoder']['padding']
+                outpads['Gdf'] = opt.config['decoder']['outpads']
             else:
                 print('!!! warnings no configuration file found\n\t assume default values')
 
@@ -375,11 +376,11 @@ class trainer(object):
             print("Loading hybrid generators")
 
             if opt.config['Ghz'] :
-                nlayers['Gdf'] = opt.config['encoder']['nlayers']
-                kernels['Gdf'] = opt.config['encoder']['kernel']
-                strides['Gdf'] = opt.config['encoder']['strides']
-                padding['Gdf'] = opt.config['encoder']['padding']
-                outpads['Gdf'] = opt.config['encoder']['outpads']
+                nlayers['Gdf'] = opt.config['decoder']['nlayers']
+                kernels['Gdf'] = opt.config['decoder']['kernel']
+                strides['Gdf'] = opt.config['decoder']['strides']
+                padding['Gdf'] = opt.config['decoder']['padding']
+                outpads['Gdf'] = opt.config['decoder']['outpads']
             else:
                 print('!!! warnings no config found\n\tassuming default parameters for the hybrid generator')
 
@@ -460,15 +461,20 @@ class trainer(object):
         
         # Discriminate real
         print("[!]In discriminate_broadband_xz funcnction")
-        print("for Xd and zdr",Xd.shape, zdr.shape)
+        print("--for Xd and zdr",Xd.shape, zdr.shape)
+        print("--for Xdr and zd", Xdr.shape, zd.shape)
         a = self.DsXd(Xd)
         b = self.Dszd(zdr)
-        print("for DsXd(Xd) and Dszd(zdr)", a.shape, b.shape)
+        print("--for DsXd(Xd) and Dszd(zdr)", a.shape, b.shape)
         zrc = zcat(a,b)
+        print("--for zrc", zrc.shape)
         DXz = self.Ddxz(zrc)
-        
+        print("--for DXz", DXz.shape)
         # Discriminate fake
-        zrc = zcat(self.DsXd(Xdr),self.Dszd(zd))
+        c = self.DsXd(Xdr)
+        d = self.Dszd(zd)
+        print("--for DsXd(Xdr) and Dszd(zd)",c.shape, d.shape)
+        zrc = zcat(c,d)
         DzX = self.Ddxz(zrc)
         
         return DXz,DzX
