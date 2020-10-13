@@ -89,7 +89,7 @@ def setup():
         pass
 
     try:
-       with open('config.txt') as json_file:
+       with open(opt.config) as json_file:
          opt.config = json.load(json_file)
     except OSError:
         pass
