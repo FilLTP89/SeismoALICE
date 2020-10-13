@@ -217,26 +217,26 @@ class trainer(object):
                 self.optzd.append(self.oGdxz)
                 # create a conv1D of 2 layers for the discriminator to tranfrom from (,,32) to (,,512)
 
-                if opt.config['DCGAN_Dz'] :
-                    self.Dszd = DCGAN_Dz(ngpu=ngpu,nz=nzd,ncl=512,n_extra_layers=opt.config['DCGAN_Dz']['nlayers'],dpc=0.25,
-                                     bn=False,activation=act['Dsz']).to(device)
+                if opt.config['Dszd'] :
+                    self.Dszd = DCGAN_Dz(ngpu=ngpu,nz=nzd,ncl=512,n_extra_layers=opt.config['Dszd']['nlayers'],dpc=0.25,
+                                     bn=False,activation=act['Dsz'], opt=opt.config['Dszd']).to(device)
                 else :
                     self.Dszd = DCGAN_Dz(ngpu=ngpu,nz=nzd,ncl=512,n_extra_layers=1,dpc=0.25,
                                      bn=False,activation=act['Dsz']).to(device)
                     print('!!! warnings no discriminator configaration for DCGAN_Dz\n\tassume n_extra_layers = 1')
                 
-                if opt.config['DCGAN_Dx'] :
+                if opt.config['DsXd'] :
                     self.DsXd = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
-                                     n_extra_layers=opt.config['DCGAN_Dx']['nlayers'],dpc=0.25,activation=act['Dsx']).to(device)
+                                     n_extra_layers=opt.config['DsXd']['nlayers'],dpc=0.25,activation=act['Dsx'], opt=opt.config['DsXd']).to(device)
                 else:    
                     # create a conv1D of 4 layers for the discriminator to transform from (,,3) to (,,512) 
                     self.DsXd = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
                                      n_extra_layers=1,dpc=0.25,activation=act['Dsx']).to(device)
                     print('!!!! warnings no discriminator configaration found for DCGAN_Dx\n\tassume n_extra_layers` = 1')
                 
-                if opt.config['DCGAN_DXZ']:
-                    self.Ddxz = DCGAN_DXZ(ngpu=ngpu,nc=1024,n_extra_layers=opt.config['DCGAN_DXZ']['nlayers'],dpc=0.25,
-                                      activation=act['Ddxz']).to(device)
+                if opt.config['Ddxz']:
+                    self.Ddxz = DCGAN_DXZ(ngpu=ngpu,nc=1024,n_extra_layers=opt.config['Ddxz']['nlayers'],dpc=0.25,
+                                      activation=act['Ddxz'], opt=opt.config['Ddxz']).to(device)
                 else:                 
                     # create a conv1D of  layers for the discriminator to transform from (*,*,1024) to (*,*,1)
                     self.Ddxz = DCGAN_DXZ(ngpu=ngpu,nc=1024,n_extra_layers=2,dpc=0.25,
@@ -308,17 +308,17 @@ class trainer(object):
                                       lr=glr,betas=(b1,b2),weight_decay=0.00001)
                 self.optzf.append(self.oGfxz)
                 # creat an Conv1D of 2 layers for the Discriminator Dszf
-                if opt.config['DCGAN_Dz']:
-                    self.Dszf = DCGAN_Dz(ngpu=ngpu,nz=nzf,ncl=2*nzf,n_extra_layers=opt.config['DCGAN_Dz']['nlayers'],dpc=0.25,bn=False,
+                if opt.config['Dszf']:
+                    self.Dszf = DCGAN_Dz(ngpu=ngpu,nz=nzf,ncl=2*nzf,n_extra_layers=opt.config['Dszf']['nlayers'],dpc=0.25,bn=False,
                                      activation=act['Dsz'],wf=True).to(device)
                 else:
                     self.Dszf = DCGAN_Dz(ngpu=ngpu,nz=nzf,ncl=2*nzf,n_extra_layers=2,dpc=0.25,bn=False,
                                      activation=act['Dsz'],wf=True).to(device)
                     print('!!! warnings no discriminator configuration found for DCGAN_Dz\n\tassume n_extra_layers = 2')
 
-                if opt.config['DCGAN_Dx']:
+                if opt.config['DsXf']:
                     self.DsXf = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
-                                     n_extra_layers=opt.config['DCGAN_Dx']['nlayers'],dpc=0.25,activation=act['Dsx'],
+                                     n_extra_layers=opt.config['DsXf']['nlayers'],dpc=0.25,activation=act['Dsx'],
                                      wf=True).to(device)
                 else:
                     self.DsXf = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
@@ -326,8 +326,8 @@ class trainer(object):
                                      wf=True).to(device)
                     print('!!! warnings no discriminator configuration found for DCGAN_Dx\n\tassume n_extra_layers = 0')
 
-                if opt.config['DCGAN_DXZ']:
-                    self.Dfxz = DCGAN_DXZ(ngpu=ngpu,nc=512+2*nzf,n_extra_layers=opt.config['DCGAN_DXZ']['nlayers'],dpc=0.25,
+                if opt.config['Dfxz']:
+                    self.Dfxz = DCGAN_DXZ(ngpu=ngpu,nc=512+2*nzf,n_extra_layers=opt.config['Dfxz']['nlayers'],dpc=0.25,
                                       activation=act['Ddxz'],wf=True).to(device)
                 else:
                     self.Dfxz = DCGAN_DXZ(ngpu=ngpu,nc=512+2*nzf,n_extra_layers=2,dpc=0.25,
@@ -338,15 +338,15 @@ class trainer(object):
                 self.Dfnets.append(self.Dszf)
                 self.Dfnets.append(self.Dfxz)
                 # recontructionc
-                if opt.config['DCGAN_Dz']:
-                    self.Dsrzf = DCGAN_Dz(ngpu=ngpu,nz=2*nzf,ncl=2*nzf,n_extra_layers=opt.config['DCGAN_Dz']['nlayers'],dpc=0.25,
+                if opt.config['Dsrzf']:
+                    self.Dsrzf = DCGAN_Dz(ngpu=ngpu,nz=2*nzf,ncl=2*nzf,n_extra_layers=opt.config['Dsrzf']['nlayers'],dpc=0.25,
                                       bn=False,activation=act['Drz']).to(device)
                 else:
                     self.Dsrzf = DCGAN_Dz(ngpu=ngpu,nz=2*nzf,ncl=2*nzf,n_extra_layers=1,dpc=0.25,
                                       bn=False,activation=act['Drz']).to(device)
                     print('!!! warnings no discriminator configuration found for DCGAN_Dz')
 
-                if opt.config['DCGAN_Dx']
+                if opt.config['DsrXf']:
                     self.DsrXf = DCGAN_Dx(ngpu=ngpu,isize=256,nc=2*nch_tot,ncl=512,ndf=64,fpd=1,
                                       n_extra_layers=opt.config['DCGAN_Dx']['nlayers'],dpc=0.25,activation=act['Drx']).to(device)
                 else:
@@ -398,20 +398,20 @@ class trainer(object):
                     self.oGhxz = reset_net([self.Ghz],func=set_weights,lr=glr,b1=b1,b2=b2)
                 self.optzh.append(self.oGhxz)
 
-                if opt.config['DCGAN_DXZ']:
-                    self.Dsrzd = DCGAN_DXZ(ngpu=ngpu,nc=2*nzd,n_extra_layers=opt.config['DCGAN_DXZ']['layers'],dpc=0.25,
+                if opt.config['Dsrzd']:
+                    self.Dsrzd = DCGAN_DXZ(ngpu=ngpu,nc=2*nzd,n_extra_layers=opt.config['Dsrzd']['layers'],dpc=0.25,
                                            activation=act['Ddxz'],wf=False).to(device)
                 else:
                     self.Dsrzd = DCGAN_DXZ(ngpu=ngpu,nc=2*nzd,n_extra_layers=2,dpc=0.25,
                                            activation=act['Ddxz'],wf=False).to(device)
                 
                 if self.style=='WGAN':
-                    if opt.config['WGAN_DsrXd']:
+                    if opt.config['DsrXd']:
                         self.DsrXd = Encoder(ngpu=ngpu,dev=device,nz=1,nzcl=0,nch=2*nch_tot,
-                                     ndf=ndf,szs=md['ntm'],nly=3,ker=opt.config['WGAN_DsrXd']['kernels'],\
-                                     std=opt.config['WGAN_DsrXd']['strides'],\
-                                     pad=opt.config['WGAN_DsrXd']['padding'],\
-                                     dil=opt.config['WGAN_DsrXd']['dilation'],\
+                                     ndf=ndf,szs=md['ntm'],nly=3,ker=opt.config['DsrXd']['kernels'],\
+                                     std=opt.config['DsrXd']['strides'],\
+                                     pad=opt.config['DsrXd']['padding'],\
+                                     dil=opt.config['DsrXd']['dilation'],\
                                      grp=1,dpc=0.25,bn=False,\
                                      act=act['DhXd']).to(device)
                     else:
@@ -426,7 +426,7 @@ class trainer(object):
                 else:
                     if opt.config['DsrXd']:
                         self.DsrXd = Encoder(ngpu=ngpu,dev=device,nz=1,nzcl=0,nch=2*nch_tot,
-                                     ndf=ndf,szs=md['ntm'],nly=3,\
+                                     ndf=ndf,szs=md['ntm'],nly=op.config['DsrXd']['nlayers'],\
                                      ker=opt.config['DsrXd']['kernel'],\
                                      std=opt.config['DsrXd']['strides'],\
                                      pad=opt.config['DsrXd']['padding'],\
@@ -565,6 +565,7 @@ class trainer(object):
         # 1. Concatenate inputs
         X_inp = zcat(Xd,wnx)
         z_inp = zcat(zd,wnz)
+
         print("for X_inp and z_inp",X_inp.shape,z_inp.shape)
         # 2. Generate conditional samples
         X_gen = self.Gdd(z_inp)
@@ -572,7 +573,9 @@ class trainer(object):
         print("for X_gen and z_gen",X_gen.shape,z_gen.shape)
         # z_gen = latent_resampling(self.Fed(X_inp),nzd,wn1)
 
-        # 3. Cross-Discriminate XZ 
+        # 3. Cross-Discriminate XZ
+        
+
         Dxz,Dzx = self.discriminate_broadband_xz(Xd,X_gen,zd,z_gen)
         print("... after discriminate_broadband_xz") 
         # 4. Compute ALI discriminator loss

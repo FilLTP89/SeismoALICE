@@ -235,18 +235,24 @@ class DCGAN_D(Module):
             final = [Conv1d(cndf, ncl, 4, padding=0, bias=False)]
             print('!!! warnings no configuration found for the DCGAN_D')
         else:
-            initial = [ConvBlock(nc, ndf, opt['initial']['kernel'], opt['initial']['strides'], bn=False, act=activation[0])]
+            initial = [ConvBlock(nc, ndf, opt['initial']['kernel'],\
+             opt['initial']['strides'],\
+             pad=opt['initial']['padding'], bn=False, act=activation[0])]
             
             csize,cndf = isize/2,ndf
             
-            extra = [ConvBlock(cndf, cndf, opt['extra']['kernel'], opt['extra']['strides'], act=activation[0]) 
+            extra = [ConvBlock(cndf, cndf, opt['extra']['kernel'],\
+             opt['extra']['strides'],pad=opt['extra']['padding'],\
+              act=activation[0]) 
                      for t in range(opt['nlayers'])]
 
             pyramid = []
             while csize > 4:
-                pyramid.append(ConvBlock(cndf, cndf*2, opt['pyramid']['kernel'], opt['pyramid']['strides'],act=activation[0]))
+                pyramid.append(ConvBlock(cndf, cndf*2, opt['pyramid']['kernel'],\
+                 opt['pyramid']['strides'],\
+                 pad=opt['pyramid']['padding'],act=activation[0]))
                 cndf *= 2; csize /= 2
-            final = [Conv1d(cndf, ncl, opt['final']['kernel'], padding=0, bias=False)]
+            final = [Conv1d(cndf, ncl, opt['final']['kernel'], padding=opt['final']['padding'], bias=False)]
 
         ann = initial+extra+pyramid+final+[activation[1]]+[Squeeze()]+[Squeeze()]
         self.ann = sqn(*ann)
@@ -283,11 +289,14 @@ class DCGAN_Dx(Module):
             if bn: final = final + [BatchNorm1d(ncl)] 
             final = final + [Dpout(dpc=dpc)] + [activation[1]]
         else:
-            initial = [ConvBlock(nc, ndf, opt['initial']['kernel'], opt['initial']['stride'], bn=False, act=activation[0],dpc=dpc)]
+            initial = [ConvBlock(nc, ndf, opt['initial']['kernel'],\
+             opt['initial']['stride'],\
+             opt['initial']['padding'], bn=False, act=activation[0],dpc=dpc)]
             csize,cndf = isize/2,ndf
-            extra = [ConvBlock(cndf, cndf, opt['extra']['kernel'], opt['extra']['strides'], bn=bn, act=activation[0],dpc=dpc) 
-                     for t in range(opt['extra']['nlayers'])]
-
+            extra = [ConvBlock(cndf, cndf, opt['extra']['kernel'],\
+             opt['extra']['strides'],\
+             pad=opt['extra']['padding'], bn=bn, act=activation[0],dpc=dpc) 
+                     for t in range(n_extra_layers)]
             pyramid = []
             while csize > 16:
                 pyramid.append(ConvBlock(cndf, cndf*2,\
@@ -355,14 +364,17 @@ class DCGAN_Dz(Module):
             ann = initial+layers+[Dpout(dpc=dpc)]+[activation[1]] 
             print('warnings no configuration found for the DCGAN_Dz object')
         else:
-            initial =[ConvBlock(nz, ncl, opt['initial']['kernel'], opt['initial']['strides'], bn=False, act=activation[0],dpc=dpc)]
-            layers = [ConvBlock(ncl,ncl, opt['extra']['kernel'], opt['extra']['strides'], bn=bn, act=activation[0],dpc=dpc) 
+            initial =[ConvBlock(nz, ncl, opt['initial']['kernel'],\
+             opt['initial']['strides'],\
+              bn=False, act=activation[0],dpc=dpc)]
+            layers = [ConvBlock(ncl,ncl, opt['extra']['kernel'],\
+             opt['extra']['strides'], bn=bn, act=activation[0],dpc=dpc) 
                       for t in range(opt['extra']['nlayers'])]
             
             if bn: layers = layers + [BatchNorm1d(ncl)] 
            
             ann = initial+layers+[Dpout(dpc=dpc)]+[activation[1]] 
-        
+       
         self.ann = sqn(*ann)
         self.prc = sqn(*initial)
         self.exf = layers[:-1]
@@ -394,27 +406,56 @@ class DCGAN_Dz(Module):
     
 class DCGAN_G(Module):
     def __init__(self, ngpu, isize, nz, nc, ngf, n_extra_layers=0,
-                 activation = [ReLU(inplace=True),Tanh()],dpc=0.0):
+                 activation = [ReLU(inplace=True),Tanh()],dpc=0.0, opt=None):
         super(DCGAN_G,self).__init__()
         assert isize % 16 == 0, "isize has to be a multiple of 16"
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
         cngf, tisize = ngf//2, 4
-        while tisize!=isize: cngf*=2; tisize*=2
-        layers = [DeconvBlock(nz, cngf, 4, 1, 2, act=activation[0],dpc=dpc)]
-        
-        csize, cndf = 4, cngf
-        layers.append(DeconvBlock(cngf, cngf//2, 4, 2, 0, 0, act=activation[0],dpc=dpc))
-        
-        cngf //= 2; csize *= 2
-        while csize < isize//2:
-            layers.append(DeconvBlock(cngf, cngf//2, 4, 2, 1,dpc=dpc))
+        if opt is None:
+            while tisize!=isize: cngf*=2; tisize*=2
+            layers = [DeconvBlock(nz, cngf, 4, 1, 2, act=activation[0],dpc=dpc)]
+            
+            csize, cndf = 4, cngf
+            layers.append(DeconvBlock(cngf, cngf//2, 4, 2, 0, 0, act=activation[0],dpc=dpc))
+            
             cngf //= 2; csize *= 2
-        
-        layers += [DeconvBlock(cngf, cngf, 3, 1, 1, act=activation[0],dpc=dpc) for t in range(n_extra_layers)]
-        layers.append(ConvTranspose1d(cngf, nc, 4, 2, 1, bias=False))
-        layers.append(activation[1])
-        layers.append(Dpout(dpc=dpc))
+            while csize < isize//2:
+                layers.append(DeconvBlock(cngf, cngf//2, 4, 2, 1,dpc=dpc))
+                cngf //= 2; csize *= 2
+            
+            layers += [DeconvBlock(cngf, cngf, 3, 1, 1, act=activation[0],dpc=dpc) for t in range(n_extra_layers)]
+            layers.append(ConvTranspose1d(cngf, nc, 4, 2, 1, bias=False))
+            layers.append(activation[1])
+            layers.append(Dpout(dpc=dpc))
+        else:
+            while tisize!=isize: cngf*=2; tisize*=2
+            layers = [DeconvBlock(nz, cngf, opt['initial']['kernel'],\
+                opt['initial']['strides'],\
+                opt['initial']['padding'], act=activation[0],dpc=dpc)]
+            
+            csize, cndf = 4, cngf
+            layers.append(DeconvBlock(cngf, cngf//2, opt['extra']['kernel'],\
+                opt['extra']['strides'],\
+                opt['extra']['padding'], 0, act=activation[0],dpc=dpc))
+            
+            cngf //= 2; csize *= 2
+            while csize < isize//2:
+                layers.append(DeconvBlock(cngf, cngf//2,opt['pyramid']['kernel'],\
+                opt['pyramid']['strides'],\
+                opt['pyramid']['padding'],dpc=dpc))
+                cngf //= 2; csize *= 2
+            
+            layers += [DeconvBlock(cngf, cngf,opt['before_end']['kernel'],\
+                opt['before_end']['strides'],\
+                opt['before_end']['padding'], act=activation[0],dpc=dpc) for t in range(opt['nlayers'])]
+
+            layers.append(ConvTranspose1d(cngf, nc, opt['final']['kernel'],\
+                opt['final']['strides'],\
+                opt['final']['padding'], bias=False))
+            layers.append(activation[1])
+            layers.append(Dpout(dpc=dpc))
+
         self.ann = sqn(*layers)
             
     def forward(self,z):
@@ -429,15 +470,26 @@ class DCGAN_G(Module):
 class DCGAN_DXZ(Module):
     def __init__(self, ngpu, nc, n_extra_layers=0, 
                  activation=[LeakyReLU(1.0,inplace=True),LeakyReLU(1.0,inplace=True)],
-                 dpc=0.0,wf=False):
+                 dpc=0.0,wf=False, opt=None):
         super(DCGAN_DXZ,self).__init__()
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
         self.wf = wf
-        layers = [ConvBlock(nc, nc, 1, 1, bias=True, bn=False, act=activation[0], dpc=dpc) for t in range(n_extra_layers)]
-        final  = [ConvBlock(nc,  1, 1, 1, bias=True, bn=False, act=activation[1], dpc=dpc)]
-        ann = layers+final
-        self.exf = layers
+        if opt is None:
+            layers = [ConvBlock(nc, nc, 1, 1, bias=True, bn=False, act=activation[0], dpc=dpc) for t in range(n_extra_layers)]
+            final  = [ConvBlock(nc,  1, 1, 1, bias=True, bn=False, act=activation[1], dpc=dpc)]
+            ann = layers+final
+            self.exf = layers
+        else:
+            layers = [ConvBlock(nc, nc, opt['initial']['kernel'],\
+            opt['initial']['strides'],\
+            bias=True, bn=False, act=activation[0], dpc=dpc) for t in range(opt['nlayers'])]
+
+            final  = [ConvBlock(nc,  1, opt['final']['kernel'],\
+            opt['final']['strides'],\
+            bias=True, bn=False, act=activation[1], dpc=dpc)]
+            ann = layers+final
+            self.exf = layers
         self.ann = sqn(*ann)
         
     def extraction(self,X):
@@ -465,14 +517,22 @@ class DCGAN_DXZ(Module):
 
 class DCGAN_DXX(Module):
     def __init__(self, ngpu, nc, n_extra_layers=0,
-                 activation=LeakyReLU(1.0,inplace=True),dpc=0.0):
+                 activation=LeakyReLU(1.0,inplace=True),dpc=0.0, opt=None):
         super(DCGAN_DXX,self).__init__()
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
-        
-        layers  = [ConvBlock(nc, nc, 1, 1, bias=False, bn=True, act=activation, dpc=dpc) for t in range(n_extra_layers)]
-        final   = [ConvBlock(nc,  1, 1, 1, bias=False, bn=True, act=activation, dpc=dpc)]
-        ann = layers+final+[Squeeze()]
+        if opt is None:
+            layers  = [ConvBlock(nc, nc, 1, 1, bias=False, bn=True, act=activation, dpc=dpc) for t in range(n_extra_layers)]
+            final   = [ConvBlock(nc,  1, 1, 1, bias=False, bn=True, act=activation, dpc=dpc)]
+            ann = layers+final+[Squeeze()]
+        else:
+            layers  = [ConvBlock(nc, nc, opt['initial']['kernel'],\
+            opt['initial']['strides'],\
+            bias=False, bn=True, act=activation, dpc=dpc) for t in range(opt['nlayers'])]
+            final   = [ConvBlock(nc,  1, opt['final']['kernel'],\
+            opt['final']['strides'], bias=False, bn=True, act=activation, dpc=dpc)]
+            ann = layers+final+[Squeeze()]
+
         self.ann = sqn(*ann)
      
     def forward(self,X):
@@ -486,14 +546,22 @@ class DCGAN_DXX(Module):
 
 class DCGAN_DZZ(Module):
     def __init__(self, ngpu, nc, n_extra_layers=0,
-                 activation=LeakyReLU(1.0,inplace=True),dpc=0.0):
+                 activation=LeakyReLU(1.0,inplace=True),dpc=0.0, opt=None):
         super(DCGAN_DZZ,self).__init__()
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
-        
-        layers = [ConvBlock(nc, nc, 1, 1, bias=False, bn=False, act=activation, dpc=dpc) for t in range(n_extra_layers)]
-        final  = [ConvBlock(nc,  1, 1, 1, bias=False, bn=False, act=activation, dpc=dpc)]
-        ann = layers+final+[Squeeze()]#+[Sigmoid()]
+        if opt is None:
+            layers = [ConvBlock(nc, nc, 1, 1, bias=False, bn=False, act=activation, dpc=dpc) for t in range(n_extra_layers)]
+            final  = [ConvBlock(nc,  1, 1, 1, bias=False, bn=False, act=activation, dpc=dpc)]
+            ann = layers+final+[Squeeze()]#+[Sigmoid()]
+        else:
+            layers = [ConvBlock(nc, nc, opt['initial']['kernel'],\
+             opt['initial']['strides'],\
+              bias=False, bn=False, act=activation, dpc=dpc) for t in range(opt['nlayers'])]
+            final  = [ConvBlock(nc,  1, opt['final']['kernel'],\
+            opt['final']['strides'], bias=False, bn=False, act=activation, dpc=dpc)]
+            ann = layers+final+[Squeeze()]#+[Sigmoid()]
+
         self.ann = sqn(*ann)
      
     def forward(self,X):
@@ -714,25 +782,47 @@ class Decoder(Module):
 
 class DCGAN_D(Module):
     def __init__(self, ngpu, isize, nc, ncl, ndf, n_extra_layers=0,
-                 activation=[LeakyReLU(1.0,True),Sigmoid()]):
+                 activation=[LeakyReLU(1.0,True),Sigmoid()], opt=None):
         super(DCGAN_D,self).__init__()
         assert isize % 16 == 0, "isize has to be a multiple of 16"
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
-        initial = [ConvBlock(nc, ndf, 4, 2, bn=False, act=activation[0])]
-        
-        csize,cndf = isize/2,ndf
-        
-        extra = [ConvBlock(cndf, cndf, 3, 1, act=activation[0]) 
-                 for t in range(n_extra_layers)]
+        if opt is None:
+            initial = [ConvBlock(nc, ndf, 4, 2, bn=False, act=activation[0])]
+            
+            csize,cndf = isize/2,ndf
+            
+            extra = [ConvBlock(cndf, cndf, 3, 1, act=activation[0]) 
+                     for t in range(n_extra_layers)]
 
-        pyramid = []
-        while csize > 4:
-            pyramid.append(ConvBlock(cndf, cndf*2, 4, 2,act=activation[0]))
-            cndf *= 2; csize /= 2
-        
-        final = [Conv1d(cndf, ncl, 4, padding=0, bias=False)]
-        ann = initial+extra+pyramid+final+[activation[1]]+[Squeeze()]+[Squeeze()]
+            pyramid = []
+            while csize > 4:
+                pyramid.append(ConvBlock(cndf, cndf*2, 4, 2,act=activation[0]))
+                cndf *= 2; csize /= 2
+            
+            final = [Conv1d(cndf, ncl, 4, padding=0, bias=False)]
+            ann = initial+extra+pyramid+final+[activation[1]]+[Squeeze()]+[Squeeze()]
+        else:
+            initial = [ConvBlock(nc, ndf, opt['initial']['kernel'],\
+             opt['initial']['strides'], bn=False, act=activation[0])]
+            
+            csize,cndf = isize/2,ndf
+            
+            extra = [ConvBlock(cndf, cndf, opt['extra']['kernel'],\
+             opt['extra']['strides'], act=activation[0]) 
+                     for t in range(n_extra_layers)]
+
+            pyramid = []
+            while csize > 4:
+                pyramid.append(ConvBlock(cndf, cndf*2, opt['pyramid']['kernel'],\
+                 opt['pyramid']['strides'],act=activation[0]))
+                cndf *= 2; csize /= 2
+            
+            final = [Conv1d(cndf, ncl, opt['final']['kernel'],\
+                opt['final']['strides'],\
+                padding=opt['final']['padding'], bias=False)]
+            ann = initial+extra+pyramid+final+[activation[1]]+[Squeeze()]+[Squeeze()]
+
         self.ann = sqn(*ann)
     
     def forward(self,X):
@@ -746,32 +836,63 @@ class DCGAN_D(Module):
 
 class DCGAN_Dx(Module):
     def __init__(self, ngpu, isize, nc, ncl, ndf, fpd=0, n_extra_layers=0, dpc=0.0,
-                 activation=[LeakyReLU(1.0,True),Sigmoid()],bn=True,wf=False):
+                 activation=[LeakyReLU(1.0,True),Sigmoid()],bn=True,wf=False, opt=None):
         super(DCGAN_Dx,self).__init__()
         assert isize % 16 == 0, "isize has to be a multiple of 16"
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
         self.wf = wf
-        initial = [ConvBlock(nc, ndf, 4, 2, bn=False, act=activation[0],dpc=dpc)]
-        csize,cndf = isize/2,ndf
-        extra = [ConvBlock(cndf, cndf, 4, 4, bn=bn, act=activation[0],dpc=dpc) 
-                 for t in range(n_extra_layers)]
 
-        pyramid = []
-        while csize > 16:
-            pyramid.append(ConvBlock(cndf, cndf*2, 4, 4, bn=bn, act=activation[0],dpc=dpc))
-            cndf *= 2; csize /= 2
-        pyramid = pyramid+[ConvBlock(cndf, cndf  , 4, 2, bn=bn, act=activation[0],dpc=dpc)]
-        final = [Conv1d(cndf, ncl, 3, padding=fpd, bias=False)]
-        if bn: final = final + [BatchNorm1d(ncl)] 
-        final = final + [Dpout(dpc=dpc)] + [activation[1]]
-        
-        self.prc = sqn(*initial)
-        self.exf = extra+pyramid
-        #self.exf = sqn()
-        #for i,l in zip(range(extra+pyramid),extra+pyramid):
-        #    self.exf.add_module('exf_{}'.format(i),Feature_extractor(l))
-                
+        if opt is None:
+            initial = [ConvBlock(nc, ndf, 4, 2, bn=False, act=activation[0],dpc=dpc)]
+            csize,cndf = isize/2,ndf
+            extra = [ConvBlock(cndf, cndf, 4, 4, bn=bn, act=activation[0],dpc=dpc) 
+                     for t in range(n_extra_layers)]
+
+            pyramid = []
+            while csize > 16:
+                pyramid.append(ConvBlock(cndf, cndf*2, 4, 4, bn=bn, act=activation[0],dpc=dpc))
+                cndf *= 2; csize /= 2
+            pyramid = pyramid+[ConvBlock(cndf, cndf  , 4, 2, bn=bn, act=activation[0],dpc=dpc)]
+            final = [Conv1d(cndf, ncl, 3, padding=fpd, bias=False)]
+            if bn: final = final + [BatchNorm1d(ncl)] 
+            final = final + [Dpout(dpc=dpc)] + [activation[1]]
+            
+            self.prc = sqn(*initial)
+            self.exf = extra+pyramid
+            #self.exf = sqn()
+            #for i,l in zip(range(extra+pyramid),extra+pyramid):
+            #    self.exf.add_module('exf_{}'.format(i),Feature_extractor(l))
+        else:
+            initial = [ConvBlock(nc, ndf, opt['initial']['kernel'],\
+                opt['initial']['strides'],\
+                pad=opt['initial']['padding'], bn=False, act=activation[0],dpc=dpc)]
+            csize,cndf = isize/2,ndf
+            extra = [ConvBlock(cndf, cndf, opt['extra']['kernel'],\
+                opt['extra']['strides'],\
+                pad=opt['extra']['padding'],\
+                bn=bn, act=activation[0],dpc=dpc) 
+                     for t in range(opt['extra']['nlayers'])]
+
+            pyramid = []
+            while csize > 16:
+                pyramid.append(ConvBlock(cndf, cndf*2, opt['pyramid']['kernel'],\
+                    opt['pyramid']['strides'], pad=opt['pyramid']['padding'], bn=bn, act=activation[0],dpc=dpc))
+                cndf *= 2; csize /= 2
+            pyramid = pyramid+[ConvBlock(cndf, cndf  , opt['extra']['kernel'],\
+                opt['extra']['strides'],\
+                pad=opt['extra']['padding'],  bn=bn, act=activation[0],dpc=dpc)]
+            final = [Conv1d(cndf, ncl, opt['final']['kernel'],\
+                opt['final']['strides'],\
+                 padding=opt['final']['kernel'], bias=False)]
+            if bn: final = final + [BatchNorm1d(ncl)] 
+            final = final + [Dpout(dpc=dpc)] + [activation[1]]
+            
+            self.prc = sqn(*initial)
+            self.exf = extra+pyramid
+            #self.exf = sqn()
+            #for i,l in zip(range(extra+pyramid),extra+pyramid):
+            #    self.exf.add_module('exf_{}'.format(i),Feature_extractor(l))              
         ann = initial+extra+pyramid+final#+[Squeeze()]+[Squeeze()]
         self.ann = sqn(*ann)
     
@@ -801,18 +922,32 @@ class DCGAN_Dx(Module):
     
 class DCGAN_Dz(Module):
     def __init__(self, ngpu, nz, ncl, fpd=0, n_extra_layers=1, dpc=0.0,
-                 activation=[LeakyReLU(1.0,True),Sigmoid()],bn=True,wf=False):
+                 activation=[LeakyReLU(1.0,True),Sigmoid()],bn=True,wf=False, opt=None):
         super(DCGAN_Dz,self).__init__()
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
         self.wf = wf
-        initial =[ConvBlock(nz, ncl, 1, 1, bn=False, act=activation[0],dpc=dpc)]
-        layers = [ConvBlock(ncl,ncl, 1, 1, bn=bn, act=activation[0],dpc=dpc) 
-                  for t in range(n_extra_layers)]
-        
-        if bn: layers = layers + [BatchNorm1d(ncl)] 
-       
-        ann = initial+layers+[Dpout(dpc=dpc)]+[activation[1]] 
+        if opt is None:
+            initial =[ConvBlock(nz, ncl, 1, 1, bn=False, act=activation[0],dpc=dpc)]
+            layers = [ConvBlock(ncl,ncl, 1, 1, bn=bn, act=activation[0],dpc=dpc) 
+                      for t in range(n_extra_layers)]
+            
+            if bn: layers = layers + [BatchNorm1d(ncl)] 
+           
+            ann = initial+layers+[Dpout(dpc=dpc)]+[activation[1]]
+        else:
+            initial =[ConvBlock(nz, ncl, opt['initial']['kernel'],\
+             opt['initial']['strides'],\
+            pad=opt['initial']['padding'], bn=False, act=activation[0],dpc=dpc)]
+            layers = [ConvBlock(ncl,ncl, opt['extra']['kernel'],\
+            opt['extra']['strides'],\
+            pad=opt['extra']['padding'],\
+            bn=bn, act=activation[0],dpc=dpc) 
+                      for t in range(opt['extra']['nlayers'])]
+            
+            if bn: layers = layers + [BatchNorm1d(ncl)] 
+           
+            ann = initial+layers+[Dpout(dpc=dpc)]+[activation[1]]
         
         self.ann = sqn(*ann)
         self.prc = sqn(*initial)
@@ -845,27 +980,55 @@ class DCGAN_Dz(Module):
     
 class DCGAN_G(Module):
     def __init__(self, ngpu, isize, nz, nc, ngf, n_extra_layers=0,
-                 activation = [ReLU(inplace=True),Tanh()],dpc=0.0):
+                 activation = [ReLU(inplace=True),Tanh()],dpc=0.0, opt=None):
         super(DCGAN_G,self).__init__()
         assert isize % 16 == 0, "isize has to be a multiple of 16"
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
         cngf, tisize = ngf//2, 4
-        while tisize!=isize: cngf*=2; tisize*=2
-        layers = [DeconvBlock(nz, cngf, 4, 1, 2, act=activation[0],dpc=dpc)]
-        
-        csize, cndf = 4, cngf
-        layers.append(DeconvBlock(cngf, cngf//2, 4, 2, 0, 0, act=activation[0],dpc=dpc))
-        
-        cngf //= 2; csize *= 2
-        while csize < isize//2:
-            layers.append(DeconvBlock(cngf, cngf//2, 4, 2, 1,dpc=dpc))
+
+        if opt is None:
+            while tisize!=isize: cngf*=2; tisize*=2
+            layers = [DeconvBlock(nz, cngf, 4, 1, 2, act=activation[0],dpc=dpc)]
+            
+            csize, cndf = 4, cngf
+            layers.append(DeconvBlock(cngf, cngf//2, 4, 2, 0, 0, act=activation[0],dpc=dpc))
+            
             cngf //= 2; csize *= 2
-        
-        layers += [DeconvBlock(cngf, cngf, 3, 1, 1, act=activation[0],dpc=dpc) for t in range(n_extra_layers)]
-        layers.append(ConvTranspose1d(cngf, nc, 4, 2, 1, bias=False))
-        layers.append(activation[1])
-        layers.append(Dpout(dpc=dpc))
+            while csize < isize//2:
+                layers.append(DeconvBlock(cngf, cngf//2, 4, 2, 1,dpc=dpc))
+                cngf //= 2; csize *= 2
+            
+            layers += [DeconvBlock(cngf, cngf, 3, 1, 1, act=activation[0],dpc=dpc) for t in range(n_extra_layers)]
+            layers.append(ConvTranspose1d(cngf, nc, 4, 2, 1, bias=False))
+            layers.append(activation[1])
+            layers.append(Dpout(dpc=dpc))
+        else:
+            while tisize!=isize: cngf*=2; tisize*=2
+            layers = [DeconvBlock(nz, cngf, opt['initial']['kernel'],\
+                opt['initial']['strides'],\
+                opt['initial']['padding'], act=activation[0],dpc=dpc)]
+            
+            csize, cndf = 4, cngf
+            layers.append(DeconvBlock(cngf, cngf//2, opt['extra']['kernel'],\
+             opt['extra']['strides'],\
+              opt['extra']['padding'], 0, act=activation[0],dpc=dpc))
+            
+            cngf //= 2; csize *= 2
+            while csize < isize//2:
+                layers.append(DeconvBlock(cngf, cngf//2, opt['pyramid']['kernel'],\
+                opt['pyramid']['strides'], opt['pyramid']['padding'],dpc=dpc))
+                cngf //= 2; csize *= 2
+            
+            layers += [DeconvBlock(cngf, cngf, opt['before_end']['kernel'],\
+                opt['before_end']['strides'], opt['before_end']['padding'],\
+                 act=activation[0],dpc=dpc) for t in range(opt['nlayers'])]
+
+            layers.append(ConvTranspose1d(cngf, nc, opt['final']['kernel'],\
+                opt['final']['strides'], opt['final']['padding'], bias=False))
+            layers.append(activation[1])
+            layers.append(Dpout(dpc=dpc))
+
         self.ann = sqn(*layers)
             
     def forward(self,z):
@@ -880,15 +1043,27 @@ class DCGAN_G(Module):
 class DCGAN_DXZ(Module):
     def __init__(self, ngpu, nc, n_extra_layers=0, 
                  activation=[LeakyReLU(1.0,inplace=True),LeakyReLU(1.0,inplace=True)],
-                 dpc=0.0,wf=False):
+                 dpc=0.0,wf=False, opt=None):
         super(DCGAN_DXZ,self).__init__()
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
         self.wf = wf
-        layers = [ConvBlock(nc, nc, 1, 1, bias=True, bn=False, act=activation[0], dpc=dpc) for t in range(n_extra_layers)]
-        final  = [ConvBlock(nc,  1, 1, 1, bias=True, bn=False, act=activation[1], dpc=dpc)]
-        ann = layers+final
-        self.exf = layers
+
+        if opt is None:
+            layers = [ConvBlock(nc, nc, 1, 1, bias=True, bn=False, act=activation[0], dpc=dpc) for t in range(n_extra_layers)]
+            final  = [ConvBlock(nc,  1, 1, 1, bias=True, bn=False, act=activation[1], dpc=dpc)]
+            ann = layers+final
+            self.exf = layers
+        else:
+            layers = [ConvBlock(nc, nc, opt['initial']['kernel'],\
+             opt['initial']['strides'],\
+              pad=opt['initial']['padding'],\
+               bias=True, bn=False, act=activation[0], dpc=dpc) for t in range(opt['initial']['nlayers'])]
+            final  = [ConvBlock(nc,  1, opt['final']['kernel'],\
+             opt['final']['strides'],\
+             pad=opt['final']['padding'], bias=True, bn=False, act=activation[1], dpc=dpc)]
+            ann = layers+final
+            self.exf = layers
         self.ann = sqn(*ann)
         
     def extraction(self,X):
@@ -916,14 +1091,24 @@ class DCGAN_DXZ(Module):
 
 class DCGAN_DXX(Module):
     def __init__(self, ngpu, nc, n_extra_layers=0,
-                 activation=LeakyReLU(1.0,inplace=True),dpc=0.0):
+                 activation=LeakyReLU(1.0,inplace=True),dpc=0.0, opt=None):
         super(DCGAN_DXX,self).__init__()
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
         
-        layers  = [ConvBlock(nc, nc, 1, 1, bias=False, bn=True, act=activation, dpc=dpc) for t in range(n_extra_layers)]
-        final   = [ConvBlock(nc,  1, 1, 1, bias=False, bn=True, act=activation, dpc=dpc)]
-        ann = layers+final+[Squeeze()]
+        if opt is None:
+            layers  = [ConvBlock(nc, nc, 1, 1, bias=False, bn=True, act=activation, dpc=dpc) for t in range(n_extra_layers)]
+            final   = [ConvBlock(nc,  1, 1, 1, bias=False, bn=True, act=activation, dpc=dpc)]
+            ann = layers+final+[Squeeze()]
+        else:
+            layers  = [ConvBlock(nc, nc, opt['initial']['kernel'],\
+            opt['initial']['strides'],\
+            pad=opt['initial']['padding'],\
+            bias=False, bn=True, act=activation, dpc=dpc) for t in range(opt['nlayers'])]
+            final   = [ConvBlock(nc,  1, opt['final']['kernel'],\
+            opt['final']['strides'],pad=opt['final']['padding'],
+            bias=False, bn=True, act=activation, dpc=dpc)]
+            ann = layers+final+[Squeeze()]
         self.ann = sqn(*ann)
      
     def forward(self,X):
@@ -937,14 +1122,24 @@ class DCGAN_DXX(Module):
 
 class DCGAN_DZZ(Module):
     def __init__(self, ngpu, nc, n_extra_layers=0,
-                 activation=LeakyReLU(1.0,inplace=True),dpc=0.0):
+                 activation=LeakyReLU(1.0,inplace=True),dpc=0.0, opt=None):
         super(DCGAN_DZZ,self).__init__()
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
         
-        layers = [ConvBlock(nc, nc, 1, 1, bias=False, bn=False, act=activation, dpc=dpc) for t in range(n_extra_layers)]
-        final  = [ConvBlock(nc,  1, 1, 1, bias=False, bn=False, act=activation, dpc=dpc)]
-        ann = layers+final+[Squeeze()]#+[Sigmoid()]
+        if opt is None:
+            layers = [ConvBlock(nc, nc, 1, 1, bias=False, bn=False, act=activation, dpc=dpc) for t in range(n_extra_layers)]
+            final  = [ConvBlock(nc,  1, 1, 1, bias=False, bn=False, act=activation, dpc=dpc)]
+            ann = layers+final+[Squeeze()]#+[Sigmoid()]
+        else:
+            layers = [ConvBlock(nc, nc, opt['initial']['kernel'],\
+             opt['initial']['strides'],\
+              pad=opt['initial']['padding'],\
+               bias=False, bn=False, act=activation, dpc=dpc) for t in range(opt['layers'])]
+            final  = [ConvBlock(nc,  1, opt['final']['kernel'],\
+             opt['final']['strides'],\
+             pad=opt['final']['padding'], bias=False, bn=False, act=activation, dpc=dpc)]
+            ann = layers+final+[Squeeze()]#+[Sigmoid()]
         self.ann = sqn(*ann)
      
     def forward(self,X):
