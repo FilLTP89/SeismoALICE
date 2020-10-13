@@ -860,19 +860,19 @@ class DCGAN_Dx(Module):
             
             self.prc = sqn(*initial)
             self.exf = extra+pyramid
+
             #self.exf = sqn()
             #for i,l in zip(range(extra+pyramid),extra+pyramid):
             #    self.exf.add_module('exf_{}'.format(i),Feature_extractor(l))
+            ann = initial+extra+pyramid+final#+[Squeeze()]+[Squeeze()]
+            self.ann = sqn(*ann)
         else:
             initial = [ConvBlock(nc, ndf, opt['initial']['kernel'],\
                 opt['initial']['strides'],\
                 pad=opt['initial']['padding'], bn=False, act=activation[0],dpc=dpc)]
             csize,cndf = isize/2,ndf
-            extra = [ConvBlock(cndf, cndf, opt['extra']['kernel'],\
-                opt['extra']['strides'],\
-                pad=opt['extra']['padding'],\
-                bn=bn, act=activation[0],dpc=dpc) 
-                     for t in range(opt['extra']['nlayers'])]
+            extra = [ConvBlock(cndf, cndf, opt['extra']['kernel'], opt['extra']['strides'], bn=bn, act=activation[0],dpc=dpc) 
+                     for t in range(n_extra_layers)]
 
             pyramid = []
             while csize > 16:
@@ -893,8 +893,8 @@ class DCGAN_Dx(Module):
             #self.exf = sqn()
             #for i,l in zip(range(extra+pyramid),extra+pyramid):
             #    self.exf.add_module('exf_{}'.format(i),Feature_extractor(l))              
-        ann = initial+extra+pyramid+final#+[Squeeze()]+[Squeeze()]
-        self.ann = sqn(*ann)
+            ann = initial+extra+pyramid+final#+[Squeeze()]+[Squeeze()]
+            self.ann = sqn(*ann)
     
     def extraction(self,X):
         X = self.prc(X)
