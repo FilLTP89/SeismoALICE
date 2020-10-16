@@ -91,7 +91,10 @@ def setup():
     try:
        with open(opt.config) as json_file:
          opt.config = json.load(json_file)
+         print("file {}.json is read".format(json_file))
+         print(json_file)
     except OSError:
+        print("file {}.json not found".format(opt.config))
         pass
 
     if opt.manualSeed is None:

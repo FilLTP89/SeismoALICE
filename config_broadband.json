@@ -67,7 +67,7 @@
             "strides": 4
         },
         "final":{
-            "padding": 1,
+            "padding": 2,
             "kernel": 2,
             "strides": 2,
             "nlayers": 1,

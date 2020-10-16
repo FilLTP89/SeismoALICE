@@ -1,2 +1,2 @@
 encoder,decoder,extra
-broadband,models/Fed_is4096_ls128_nzd32_ns100.pth,models/Gdd_is4096_ls128_nzd32_ns100.pth,-
+broadband,Ddxz_bb_2500.pth,-
