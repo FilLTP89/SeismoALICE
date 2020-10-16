@@ -108,11 +108,12 @@ class Encoder(Module):
                  szs,nly,ker=7,std=4,pad=0,dil=1,grp=1,bn=True,
                  dpc=0.10,act=[LeakyReLU(1.0,True),LeakyReLU(1.0,True),LeakyReLU(1.0,True),LeakyReLU(1.0,True),Tanh()],\
                  with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2):
-        print("constructor of Encoder...")
+        print("|constructor of Encoder...")
         super(Encoder,self).__init__()
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
         self.dev = dev
+
         if nly==3:
             # 3 layers
             if with_noise:
@@ -136,6 +137,7 @@ class Encoder(Module):
                     cnn1d(ndf*2,ndf*4,act[2],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
                     cnn1d(ndf*4,ndf*8,act[3],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
                     cnn1d(ndf*8,nz   ,act[4],ker=ker,std=std,pad=pad  ,bn=False,dpc=0.0,wn=False)
+
             else:
                 self.cnn = \
                     cnn1d(nch*1,ndf*1,act[0],ker=ker,std=std,pad=pad,bn=bn,dpc=0.0)+\
@@ -143,6 +145,7 @@ class Encoder(Module):
                     cnn1d(ndf*2,ndf*4,act[2],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
                     cnn1d(ndf*4,ndf*8,act[3],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
                     cnn1d(ndf*8,nz   ,act[4],ker=ker,std=std,pad=pad  ,bn=False,dpc=0.0)
+
         elif nly==6:
             # 6 layers
             if with_noise:
@@ -884,7 +887,7 @@ class DCGAN_Dx(Module):
                 pad=opt['extra']['padding'],  bn=bn, act=activation[0],dpc=dpc)]
             final = [Conv1d(cndf, ncl, opt['final']['kernel'],\
                 opt['final']['strides'],\
-                 padding=opt['final']['kernel'], bias=False)]
+                 padding=opt['final']['padding'], bias=False)]
             if bn: final = final + [BatchNorm1d(ncl)] 
             final = final + [Dpout(dpc=dpc)] + [activation[1]]
             
@@ -936,13 +939,17 @@ class DCGAN_Dz(Module):
            
             ann = initial+layers+[Dpout(dpc=dpc)]+[activation[1]]
         else:
-            initial =[ConvBlock(nz, ncl, opt['initial']['kernel'],\
-             opt['initial']['strides'],\
-            pad=opt['initial']['padding'], bn=False, act=activation[0],dpc=dpc)]
-            layers = [ConvBlock(ncl,ncl, opt['extra']['kernel'],\
-            opt['extra']['strides'],\
-            pad=opt['extra']['padding'],\
-            bn=bn, act=activation[0],dpc=dpc) 
+            initial =[ConvBlock(nz, ncl, 
+                opt['initial']['kernel'],
+                opt['initial']['strides'],
+                pad=opt['initial']['padding'],
+                bn=False, act=activation[0],dpc=dpc)]
+
+            layers = [ConvBlock(ncl,ncl,
+                opt['extra']['kernel'],
+                opt['extra']['strides'],
+                pad=opt['extra']['padding'],
+                bn=bn, act=activation[0],dpc=dpc) 
                       for t in range(opt['extra']['nlayers'])]
             
             if bn: layers = layers + [BatchNorm1d(ncl)] 
@@ -955,6 +962,8 @@ class DCGAN_Dz(Module):
     
     def extraction(self,X):
         X = self.prc(X)
+        # import pdb
+        # pdb.set_trace()
         f = [self.exf[0](X)]
         for l in range(1,len(self.exf)):
             f.append(self.exf[l](f[l-1]))

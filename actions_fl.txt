@@ -1,2 +1,2 @@
 tract,trplt,trcmp,trdis
-filtered,False,True,False,False
+filtered,True,True,False,False
