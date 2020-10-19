@@ -754,6 +754,7 @@ class Decoder(Module):
         super(Decoder, self).__init__()
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
+
         if nly==3:
             self.cnn = \
                 cnn1dt(nz   ,ndf*8,act[0],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
@@ -770,6 +771,15 @@ class Decoder(Module):
                 cnn1dt(nz   ,ndf*8,act[0],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
                 cnn1dt(ndf*8,ndf*4,act[1],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
                 cnn1dt(ndf*4,ndf*2,act[2],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
+                cnn1dt(ndf*2,ndf*1,act[3],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
+                cnn1dt(ndf*1,nch*1,act[4],ker=ker,std=std,pad=pad,opd=opd,bn=False, dpc=0.0)
+        elif nly==8:
+            self.cnn = \
+                cnn1dt(nz   ,ndf*8,act[0],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
+                cnn1dt(ndf*8,ndf*4,act[1],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
+                cnn1dt(ndf*4,ndf*2,act[2],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
+                cnn1dt(ndf*2,ndf*1,act[3],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
+                cnn1dt(ndf*2,ndf*1,act[3],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
                 cnn1dt(ndf*2,ndf*1,act[3],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
                 cnn1dt(ndf*1,nch*1,act[4],ker=ker,std=std,pad=pad,opd=opd,bn=False, dpc=0.0)
         self.cnn = sqn(*self.cnn)

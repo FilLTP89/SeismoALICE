@@ -198,7 +198,7 @@ class trainer(object):
             
             # Decoder broadband Gdd
             self.Gdd = Decoder(ngpu=ngpu,nz=2*nzd,nch=nch_tot,
-                               ndf=ndf//(2**(5-nlayers['Gdd'])),
+                               ndf=int(ndf//(2**(5-nlayers['Gdd']))),
                                nly=nlayers['Gdd'],ker=kernels['Gdd'],
                                std=strides['Gdd'],pad=padding['Gdd'],\
                                opd=outpads['Gdd'],dpc=0.0,act=act['Gdd']).to(device)
