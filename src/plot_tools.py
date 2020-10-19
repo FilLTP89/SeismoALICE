@@ -1264,7 +1264,7 @@ def plot_features(tag,Qec,Pdc,nz,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
             hfg1,(hax3,hax4) = plt.subplots(2,1,figsize=(8,8))
             _,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,rndm_args)
             for w in range(1): #range(zd.shape[2]):
-                w = w +105
+                w = w +3
                 dwt = 2**5*(vtm[1]-vtm[0]) 
                 wtm = np.arange(0.0,dwt*zw.shape[2],dwt)
                 xw = Pdc(zcat(zw,wnz))
@@ -1328,7 +1328,6 @@ def plot_features(tag,Qec,Pdc,nz,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
                 plt.savefig(os.path.join(outf,"fts_zw_%s_%u_%u.eps"%(pfx,b,c)),\
                         format='eps',bbox_inches='tight',dpi = 500)
                 plt.close(fig=hfg)
-
                 zt = torch.zeros_like(zw).detach().to(dev)
                 zt[:,c,w]=zw[:,c,w]
                 xths = Pdc(zcat(zt,wnz.fill_(0.0)))
