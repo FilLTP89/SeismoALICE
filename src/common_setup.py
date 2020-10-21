@@ -82,7 +82,7 @@ def setup():
     FloatTensor = tcuda.FloatTensor if opt.cuda else tFT
     LongTensor = tcuda.LongTensor if opt.cuda else tLT
     ngpu = int(opt.ngpu)
-    print("parser finish is job ...")
+    print("|parser has finished his job ...")
     try:
         os.makedirs(opt.outf)
     except OSError:

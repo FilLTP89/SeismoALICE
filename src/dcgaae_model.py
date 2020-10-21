@@ -5,6 +5,7 @@ from torch.nn.modules import activation
 u'''AE design'''
 u'''Required modules'''
 import warnings
+import GPUtil
 warnings.filterwarnings("ignore")
 from common_nn import *
 import torch
@@ -108,7 +109,7 @@ class Encoder(Module):
                  szs,nly,ker=7,std=4,pad=0,dil=1,grp=1,bn=True,
                  dpc=0.10,act=[LeakyReLU(1.0,True),LeakyReLU(1.0,True),LeakyReLU(1.0,True),LeakyReLU(1.0,True),Tanh()],\
                  with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2):
-        print("|constructor of Encoder...")
+        print("Constructor of Encoder...")
         super(Encoder,self).__init__()
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
@@ -168,9 +169,9 @@ class Encoder(Module):
 
         self.cnn = sqn(*self.cnn)
         
-        
     def forward(self,Xn):
         if Xn.is_cuda and self.ngpu > 1:
+            # splits data in different GPUs if exist
             zlf   = pll(self.cnn,Xn,self.gang)
         else:
             zlf   = self.cnn(Xn)
@@ -733,6 +734,17 @@ class Encoder(Module):
                     cnn1d(ndf*4 ,ndf*8 ,act[3],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
                     cnn1d(ndf*8 ,ndf*16,act[4],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
                     cnn1d(ndf*16,nz    ,act[5],ker=ker,std=std,pad=2  ,bn=False,dpc=0.0)
+        elif nly==8:
+            self.cnn = \
+                cnn1d(nch    ,ndf*1  ,act[0],ker=ker,std=std,pad=pad,bn=bn , dpc=0.0)+\
+                cnn1d(ndf*1  ,ndf*2  ,act[1],ker=ker,std=std,pad=pad,bn=bn , dpc=dpc)+\
+                cnn1d(ndf*2  ,ndf*4  ,act[2],ker=ker,std=std,pad=pad,bn=bn , dpc=dpc)+\
+                cnn1d(ndf*4  ,ndf*8  ,act[3],ker=ker,std=std,pad=pad,bn=bn , dpc=dpc)+\
+                cnn1d(ndf*8  ,ndf*16 ,act[3],ker=ker,std=std,pad=pad,bn=bn , dpc=dpc)+\
+                cnn1d(ndf*16 ,ndf*32 ,act[3],ker=ker,std=std,pad=pad,bn=bn , dpc=dpc)+\
+                cnn1d(ndf*32 ,ndf*64 ,act[3],ker=ker,std=std,pad=pad,bn=bn , dpc=dpc)+\
+                cnn1d(ndf*64 ,nz,act[4],ker=ker,std=std,pad=pad,bn=False, dpc=0.0)
+
 
         self.cnn = sqn(*self.cnn)
         
@@ -775,13 +787,14 @@ class Decoder(Module):
                 cnn1dt(ndf*1,nch*1,act[4],ker=ker,std=std,pad=pad,opd=opd,bn=False, dpc=0.0)
         elif nly==8:
             self.cnn = \
-                cnn1dt(nz   ,ndf*8,act[0],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
-                cnn1dt(ndf*8,ndf*4,act[1],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
-                cnn1dt(ndf*4,ndf*2,act[2],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
-                cnn1dt(ndf*2,ndf*1,act[3],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
-                cnn1dt(ndf*2,ndf*1,act[3],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
-                cnn1dt(ndf*2,ndf*1,act[3],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
-                cnn1dt(ndf*1,nch*1,act[4],ker=ker,std=std,pad=pad,opd=opd,bn=False, dpc=0.0)
+                cnn1dt(nz    ,ndf*128,act[0],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
+                cnn1dt(ndf*128,ndf*64,act[1],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
+                cnn1dt(ndf*64,ndf*32,act[2],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
+                cnn1dt(ndf*32,ndf*16 ,act[3],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
+                cnn1dt(ndf*16 ,ndf*8 ,act[3],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
+                cnn1dt(ndf*8 ,ndf*4 ,act[3],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
+                cnn1dt(ndf*4 ,ndf*2 ,act[3],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
+                cnn1dt(ndf*2 ,nch*1 ,act[4],ker=ker,std=std,pad=pad,opd=opd,bn=False, dpc=0.0)
         self.cnn = sqn(*self.cnn)
             
     def forward(self,zxn):

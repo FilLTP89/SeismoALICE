@@ -21,6 +21,7 @@ from common_setup import dataset2loader
 from database_sae import thsTensorData
 import json
 import pdb
+import GPUtil
 rndm_args = {'mean': 0, 'std': 1}
 
 u'''General informations'''
@@ -118,6 +119,29 @@ outpads = {'Gdd':0,
            'Ghz':1,
            }
 
+import subprocess
+
+def get_gpu_memory_map():
+    """Get the current gpu usage.
+
+    Returns
+    -------
+    usage: dict
+        Keys are device ids as integers.
+        Values are memory usage as integers in MB.
+    """
+    result = subprocess.check_output(
+        [
+            'nvidia-smi', '--query-gpu=memory.used',
+            '--format=csv,nounits,noheader'
+        ], encoding='utf-8')
+    # Convert lines into a dictionary
+    gpu_memory = [int(x) for x in result.strip().split('\n')]
+    gpu_memory_map = dict(zip(range(len(gpu_memory)), gpu_memory))
+    return gpu_memory_map
+
+
+
 class trainer(object):
     '''Initialize neural network'''
     @profile
@@ -167,7 +191,7 @@ class trainer(object):
         """
             This part is for training with the broadband signal
         """
-
+        
         if 'broadband' in t:
             self.style='ALICE'
             act = acts[self.style]
@@ -202,6 +226,7 @@ class trainer(object):
                                nly=nlayers['Gdd'],ker=kernels['Gdd'],
                                std=strides['Gdd'],pad=padding['Gdd'],\
                                opd=outpads['Gdd'],dpc=0.0,act=act['Gdd']).to(device)
+            #print("|total_memory [GB]:",int(torch.cuda.get_device_properties(device).total_memory//(10**9)))
 
             #if we training with the broadband signal
                 # we read weigth and bias if is needed and then we set-up the Convolutional Neural 
@@ -572,21 +597,20 @@ class trainer(object):
         
         # 0. Generate noise
         wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,device,rndm_args)
-         
         # 1. Concatenate inputs
         X_inp = zcat(Xd,wnx)
         z_inp = zcat(zd,wnz)
-
+        #GPUtil.showUtilization()
         print("\t||X_inp : ",X_inp.shape,"\tz_inp : ",z_inp.shape)
+
         # 2. Generate conditional samples
         X_gen = self.Gdd(z_inp)
         z_gen = self.Fed(X_inp)
+        GPUtil.showUtilization(all=True)
         print("\t||X_gen : ",X_gen.shape,"\tz_gen : ",z_gen.shape)
         # z_gen = latent_resampling(self.Fed(X_inp),nzd,wn1)
 
         # 3. Cross-Discriminate XZ
-        
-
         Dxz,Dzx = self.discriminate_broadband_xz(Xd,X_gen,zd,z_gen)
         print("\t||After discriminate_broadband_xz") 
         # 4. Compute ALI discriminator loss
@@ -596,7 +620,8 @@ class trainer(object):
         # Total loss
         Dloss = Dloss_ali
         Dloss.backward(),self.oDdxz.step(),zerograd(self.optzd)
-        self.losses['Dloss_t'].append(Dloss.tolist())  
+        self.losses['Dloss_t'].append(Dloss.tolist())
+        del Dloss, Dloss_ali
     
     @profile
     def alice_train_broadband_generator_explicit_xz(self,Xd,zd):
