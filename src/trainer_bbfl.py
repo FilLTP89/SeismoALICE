@@ -22,6 +22,8 @@ from database_sae import thsTensorData
 import json
 import pdb
 import GPUtil
+from torch.nn.parallel import DistributedDataParallel as DDP
+
 rndm_args = {'mean': 0, 'std': 1}
 
 u'''General informations'''
@@ -191,7 +193,9 @@ class trainer(object):
         """
             This part is for training with the broadband signal
         """
-        
+        # dev0 = rank * 2
+        # dev1 = rank * 2 + 1
+
         if 'broadband' in t:
             self.style='ALICE'
             act = acts[self.style]
@@ -218,16 +222,18 @@ class trainer(object):
                                nch=2*nch_tot,ndf=ndf,szs=md['ntm'],
                                nly=nlayers['Fed'],ker=kernels['Fed'],
                                std=strides['Fed'],pad=padding['Fed'],
-                               dil=1,grp=1,dpc=0.0,act=act['Fed']).to(device)
+                               dil=1,grp=1,dpc=0.0,act=act['Fed'])
+
             
             # Decoder broadband Gdd
             self.Gdd = Decoder(ngpu=ngpu,nz=2*nzd,nch=nch_tot,
                                ndf=int(ndf//(2**(5-nlayers['Gdd']))),
                                nly=nlayers['Gdd'],ker=kernels['Gdd'],
                                std=strides['Gdd'],pad=padding['Gdd'],\
-                               opd=outpads['Gdd'],dpc=0.0,act=act['Gdd']).to(device)
+                               opd=outpads['Gdd'],dpc=0.0,act=act['Gdd'])
             #print("|total_memory [GB]:",int(torch.cuda.get_device_properties(device).total_memory//(10**9)))
-
+            GPUtil.showUtilization(all=True)
+            
             #if we training with the broadband signal
                 # we read weigth and bias if is needed and then we set-up the Convolutional Neural 
                 # Network needed for the Discriminator
@@ -247,38 +253,50 @@ class trainer(object):
 
                 if opt.config['Dszd'] :
                     self.Dszd = DCGAN_Dz(ngpu=ngpu,nz=nzd,ncl=512,n_extra_layers=opt.config['Dszd']['nlayers'],dpc=0.25,
-                                     bn=False,activation=act['Dsz'], opt=opt.config['Dszd']).to(device)
+                                     bn=False,activation=act['Dsz'], opt=opt.config['Dszd'])
                 else :
                     self.Dszd = DCGAN_Dz(ngpu=ngpu,nz=nzd,ncl=512,n_extra_layers=1,dpc=0.25,
-                                     bn=False,activation=act['Dsz']).to(device)
+                                     bn=False,activation=act['Dsz'])
                     print('!!! warnings no discriminator configaration for DCGAN_Dz\n\tassume n_extra_layers = 1')
                 
                 if opt.config['DsXd'] :
                     self.DsXd = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
-                                     n_extra_layers=opt.config['DsXd']['nlayers'],dpc=0.25,activation=act['Dsx'], opt=opt.config['DsXd']).to(device)
+                                     n_extra_layers=opt.config['DsXd']['nlayers'],dpc=0.25,activation=act['Dsx'], opt=opt.config['DsXd'])
                 else:    
                     # create a conv1D of 4 layers for the discriminator to transform from (,,3) to (,,512) 
                     self.DsXd = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
-                                     n_extra_layers=1,dpc=0.25,activation=act['Dsx']).to(device)
+                                     n_extra_layers=1,dpc=0.25,activation=act['Dsx'])
                     print('!!!! warnings no discriminator configaration found for DCGAN_Dx\n\tassume n_extra_layers` = 1')
                 
                 if opt.config['Ddxz']:
                     self.Ddxz = DCGAN_DXZ(ngpu=ngpu,nc=1024,n_extra_layers=opt.config['Ddxz']['nlayers'],dpc=0.25,
-                                      activation=act['Ddxz'], opt=opt.config['Ddxz']).to(device)
+                                      activation=act['Ddxz'], opt=opt.config['Ddxz'])
                 else:                 
                     # create a conv1D of  layers for the discriminator to transform from (*,*,1024) to (*,*,1)
                     self.Ddxz = DCGAN_DXZ(ngpu=ngpu,nc=1024,n_extra_layers=2,dpc=0.25,
-                                          activation=act['Ddxz']).to(device)
+                                          activation=act['Ddxz'])
                     print('!!! warnings no discriminator configaration for DCGAN_DXZ\n\tassume n_extra_layers = 2')
 
+
+                # DDP(self.Fed)
+                # DDP(self.Gdd)
+                # DDP(self.DsXd)
+                # DDP(self.Dszd)
+                # DDP(self.Ddxz)
+
+                self.Ddnets.append(self.Fed)
+                self.Ddnets.append(self.Gdd)
                 self.Ddnets.append(self.DsXd)  
                 self.Ddnets.append(self.Dszd)
                 self.Ddnets.append(self.Ddxz)
 
+
+
                 # Adam optimization for Ddnets
-                self.oDdxz = reset_net(self.Ddnets,func=set_weights,lr=rlr,b1=b1,b2=b2)
+                self.oDdxz = reset_net(self.Ddnets)
                 #Add the same Adam optimization parameter for optzd
                 self.optzd.append(self.oDdxz)   
+                
             #if we don't the training with the broadband ...
                 # we simply load the Python dictionary object that maps each layer to its parameter tensor. 
                 # here it is in te 'model_stat_dict' of the strategy_* file passed to the programm
@@ -489,12 +507,19 @@ class trainer(object):
     def discriminate_broadband_xz(self,Xd,Xdr,zd,zdr):
         
         # Discriminate real
-        print("|In discriminate_broadband_xz funcnction")
+        print("|In discriminate_broadband_xz function")
         print("\t||Xd : ",Xd.shape,"\tzdr : " ,zdr.shape)
         print("\t||Xdr : ",Xdr.shape,"\tzd : ", zd.shape)
+        # import pdb
+        # pdb.set_trace()
+
+        # put the out put on the same GPU
         a = self.DsXd(Xd)
         b = self.Dszd(zdr)
+        GPUtil.showUtilization(all=True)
         print("\t||DsXd(Xd) : ", a.shape,"\tDszd(zdr) : ",b.shape)
+        
+
         zrc = zcat(a,b)
         print("\t\t|||zrc : ", zrc.shape)
         DXz = self.Ddxz(zrc)
@@ -588,7 +613,7 @@ class trainer(object):
     ####################
     @profile
     def alice_train_broadband_discriminator_explicit_xz(self,Xd,zd):
-        print("|In the alice_train_broadband_generator_explicit_xz funcnction  ...") 
+        print("|In the alice_train_broadband_generator_explicit_xz function  ...") 
         print("\t||Xd:",Xd.shape,"\tzd ",zd.shape)
         # Set-up training
         zerograd(self.optzd)
@@ -694,8 +719,8 @@ class trainer(object):
         z_inp = zcat(zf,wnz)
         print("\t||X_inp :", X_inp.shape,"\tz_inp : " ,z_inp.shape)
         # 2. Generate conditional samples
-        X_gen = self.Gdf(z_inp)
-        z_gen = self.Fef(X_inp) 
+        X_gen = self.Gdf(z_inp).cuda(1)
+        z_gen = self.Fef(X_inp).cuda(1)
         # z_gen = latent_resampling(self.Fef(X_inp),nzf,wn1)
         print("\t||X_gen : ", X_gen.shape,"\tz_gen : ",z_gen.shape)
         # 3. Cross-Discriminate XZ
