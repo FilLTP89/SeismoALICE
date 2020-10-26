@@ -36,6 +36,9 @@ from database_sae import load_dataset,synth_dataset
 from database_sae import stead_dataset,ann2bb_dataset
 from database_sae import deepbns_dataset
 import pandas as pd
+import torch.multiprocessing as mp
+from torch.nn.parallel import DistributedDataParallel as DDP
+import torch.distributed as dist
 import json
 
 def setup():
@@ -78,24 +81,33 @@ def setup():
 
     u'''Set-up GPU and CUDA'''
     opt.cuda = True if (tcuda.is_available() and opt.cuda) else False
-    device = tdev("cuda:0" if opt.cuda else "cpu")
+    device = tdev("cuda" if opt.cuda else "cpu")
     FloatTensor = tcuda.FloatTensor if opt.cuda else tFT
     LongTensor = tcuda.LongTensor if opt.cuda else tLT
     ngpu = int(opt.ngpu)
     print("|parser has finished his job ...")
+
+    # Try to make an output directory if the latter does not exist
     try:
         os.makedirs(opt.outf)
     except OSError:
         pass
 
+    # Try to open the .json configuration of the case study
     try:
        with open(opt.config) as json_file:
          opt.config = json.load(json_file)
-         print("file {}.json is read".format(json_file))
-         print(json_file)
     except OSError:
-        print("file {}.json not found".format(opt.config))
+        print("|file {}.json not found".format(opt.config))
+        print("|The programm style proceed ...")
         pass
+
+    # try:
+    #     os.environ['MASTER_ADDR'] = os.environ['SLURM_SRUN_COMM_HOST']
+    #     os.environ['MASTER_PORT'] = '8080'
+    #     dist.init_process_group("gloo", rank=1, world_size=ngpu)
+    # except Exception as e:
+    #     raise e
 
     if opt.manualSeed is None:
         opt.manualSeed = random.randint(1, 10000)
@@ -326,6 +338,9 @@ def setup():
           'LongTensor':LongTensor,\
           'md':md}
     return cv
+
+def cleanup():
+    dist.destroy_process_group()
 
 from torch.utils.data import Sampler
 import torch

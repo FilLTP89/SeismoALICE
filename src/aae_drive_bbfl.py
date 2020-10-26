@@ -21,11 +21,14 @@ __status__ = "Beta"
 
 #file: aae_drive.py
 @profile
+
+@profile
 def main():
     #print("aae_drive_bbfl ...")
     u'''[SETUP] common variables/datasets'''
     cv = cs.setup()
     locals().update(cv)
+
     u'''[PREPARE] trainer'''
     DCA = aat.trainer(cv)
     u'''[TRAIN] neural networks'''
@@ -37,3 +40,4 @@ def main():
     u'''[STAT] spanning prob distribution'''
     DCA.compare()
 main()
+

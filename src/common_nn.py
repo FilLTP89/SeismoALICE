@@ -175,20 +175,32 @@ def DenseBlock(in_channels,out_channels,\
     return block
 
 class ConvBlock(Module):
-    def __init__(self, ni, no, ks, stride, bias=False,
+    def __init__(self,ngpu, ni, no, ks, stride, bias=False,
                  act = None, bn=True, pad=None, dpc=None):
         super(ConvBlock,self).__init__()
+        self.ngpu = ngpu
         if pad is None: pad = ks//2//stride
         self.ann = [Conv1d(ni, no, ks, stride, padding=pad, bias=bias)]
         if bn: self.ann+= [BatchNorm1d(no)]
         if dpc is not None: self.ann += [Dpout(dpc=dpc)]
         if act is not None: self.ann += [act] 
         
-        
+        self.ann+= [Conv1d(ni, no, ks, stride, padding=pad, bias=bias)]
+        if dpc is not None: self.ann += [Dpout(dpc=dpc)]
+        if act is not None: self.ann += [act] 
         self.ann = sqn(*self.ann)
-        
-    def forward(self, x):
-        return self.ann(x)
+    
+    def forward(self, X):
+        if X.is_cuda and self.ngpu > 1:
+            #z = pll(self.ann,X,self.gang)
+            # X = X.to(self.dev0)
+            # X = self.ann1(X)
+            # X = X.to(self.dev1)
+            X = self.ann(X)
+            z = X
+            return z
+        else:
+            return self.ann(x)
 
 class DeconvBlock(Module):
     def __init__(self,ni,no,ks,stride,pad,opd=0,bn=True,act=ReLU(inplace=True),
@@ -330,6 +342,7 @@ def reset_net(nets,func=set_weights,lr=0.0002,b1=b1,b2=b2,weight_decay=None,
     elif 'rmsprop' in optim.lower():
         return RMSprop(ittc(*p),lr=lr)
 
+
 def clipweights(netlist,lb=-0.01,ub=0.01):
     for D in netlist:
         for p in D.parameters():
@@ -359,3 +372,10 @@ def get_categorical(labels, n_classes=10):
     cat = np.eye(n_classes)[cat].astype('float32')
     cat = tfnp(cat)
     return Variable(cat)
+
+def runout(funct, world_size):
+    mp.spawn(funct,
+             args=(world_size,),
+             nprocs=world_size,
+             join=True)
+
