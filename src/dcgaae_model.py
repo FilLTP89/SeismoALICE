@@ -9,6 +9,7 @@ import GPUtil
 warnings.filterwarnings("ignore")
 from common_nn import *
 import torch
+import pdb
 from torch import device as tdev
 
 class DenseEncoder(Module):
@@ -752,6 +753,8 @@ class Encoder(Module):
         else:
             self.dev0 = 0
             self.dev1 = 1
+            self.dev2 = 2
+            self.dev3 = 3
             if nly==5:
                 # 5 layers
                 if with_noise:
@@ -792,30 +795,41 @@ class Encoder(Module):
                         cnn1d(ndf*8 ,ndf*16,act[4],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
                         cnn1d(ndf*16,nz    ,act[5],ker=ker,std=std,pad=2  ,bn=False,dpc=0.0)
             elif nly==8:
-                self.cnn1 = \
+                self.cnn1=\
                     cnn1d(nch    ,ndf*1  ,act[0],ker=ker,std=std,pad=pad,bn=bn , dpc=0.0)+\
-                    cnn1d(ndf*1  ,ndf*2  ,act[1],ker=ker,std=std,pad=pad,bn=bn , dpc=dpc)+\
+                    cnn1d(ndf*1  ,ndf*2  ,act[1],ker=ker,std=std,pad=pad,bn=bn , dpc=dpc)
+                self.cnn2=\
                     cnn1d(ndf*2  ,ndf*4  ,act[2],ker=ker,std=std,pad=pad,bn=bn , dpc=dpc)+\
                     cnn1d(ndf*4  ,ndf*8  ,act[3],ker=ker,std=std,pad=pad,bn=bn , dpc=dpc)
-                self.cnn2 = \
+                self.cnn3=\
                     cnn1d(ndf*8  ,ndf*16 ,act[3],ker=ker,std=std,pad=pad,bn=bn , dpc=dpc)+\
-                    cnn1d(ndf*16 ,ndf*32 ,act[3],ker=ker,std=std,pad=pad,bn=bn , dpc=dpc)+\
+                    cnn1d(ndf*16 ,ndf*32 ,act[3],ker=ker,std=std,pad=pad,bn=bn , dpc=dpc)
+                self.cnn4=\
                     cnn1d(ndf*32 ,ndf*64 ,act[3],ker=ker,std=std,pad=pad,bn=bn , dpc=dpc)+\
                     cnn1d(ndf*64 ,nz,act[4],ker=ker,std=std,pad=pad,bn=False, dpc=0.0)
 
             self.cnn1 = sqn(*self.cnn1)
             self.cnn2 = sqn(*self.cnn2)
-            self.cnn1.to(self.dev0)
-            self.cnn2.to(self.dev1)
+            self.cnn3 = sqn(*self.cnn3)
+            self.cnn4 = sqn(*self.cnn4)
+            self.cnn1.to(self.dev0,non_blocking=True)
+            self.cnn2.to(self.dev1,non_blocking=True)
+            self.cnn3.to(self.dev2,non_blocking=True)
+            self.cnn4.to(self.dev3,non_blocking=True)
         
     def forward(self,x):
         if x.is_cuda and self.ngpu > 1:
             #zlf   = pll(self.cnn,Xn,self.gang)
-            x = x.to(self.dev0)
+            x = x.to(self.dev0,non_blocking=True)
             x = self.cnn1(x)
-            x = x.cuda(1)
+            x = x.to(self.dev1,non_blocking=True)
             x = self.cnn2(x)
+            x = x.to(self.dev2,non_blocking=True)
+            x = self.cnn3(x)
+            x = x.to(self.dev3,non_blocking=True)
+            x = self.cnn4(x)
             zlf = x
+            torch.cuda.empty_cache()
         else:
             zlf   = self.cnn(Xn)
         if not self.training:
@@ -863,6 +877,9 @@ class Decoder(Module):
         else:
             self.dev0 = 0
             self.dev1 = 1
+            self.dev2 = 2
+            self.dev3 = 3
+
             if nly==5:
                 self.cnn1 = \
                     cnn1dt(nz   ,ndf*8,act[0],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
@@ -872,30 +889,42 @@ class Decoder(Module):
                     cnn1dt(ndf*2,ndf*1,act[3],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
                     cnn1dt(ndf*1,nch*1,act[4],ker=ker,std=std,pad=pad,opd=opd,bn=False, dpc=0.0)
             elif nly==8:
-                self.cnn1 = \
+                self.cnn1 =\
                     cnn1dt(nz    ,ndf*128,act[0],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
-                    cnn1dt(ndf*128,ndf*64,act[1],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
+                    cnn1dt(ndf*128,ndf*64,act[1],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)
+                self.cnn2=\
                     cnn1dt(ndf*64,ndf*32,act[2],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
                     cnn1dt(ndf*32,ndf*16 ,act[3],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)
-                self.cnn2 = \
+                self.cnn3=\
                     cnn1dt(ndf*16 ,ndf*8 ,act[3],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
-                    cnn1dt(ndf*8 ,ndf*4 ,act[3],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
+                    cnn1dt(ndf*8 ,ndf*4 ,act[3],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)
+                self.cnn4=\
                     cnn1dt(ndf*4 ,ndf*2 ,act[3],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
                     cnn1dt(ndf*2 ,nch*1 ,act[4],ker=ker,std=std,pad=pad,opd=opd,bn=False, dpc=0.0)
             self.cnn1 = sqn(*self.cnn1)
             self.cnn2 = sqn(*self.cnn2)
-            self.cnn1.to(self.dev0)
-            self.cnn2.to(self.dev1)
+            self.cnn3 = sqn(*self.cnn3)
+            self.cnn4 = sqn(*self.cnn4)
+            self.cnn1.to(self.dev0,non_blocking=True)
+            self.cnn2.to(self.dev1,non_blocking=True)
+            self.cnn3.to(self.dev2,non_blocking=True)
+            self.cnn4.to(self.dev3,non_blocking=True)
 
 
     def forward(self,x):
         if x.is_cuda and self.ngpu > 1:
             # Xr = pll(self.cnn,zxn,self.gang)
+            #pdb.set_trace()
             x = x.to(self.dev0)
             x = self.cnn1(x)
-            x = x.cuda(1)
+            x = x.to(self.dev1)
             x = self.cnn2(x)
+            x = x.to(self.dev2)
+            x = self.cnn3(x)
+            x = x.to(self.dev3)
+            x = self.cnn4(x)
             Xr = x
+            torch.cuda.empty_cache()
         else:
             Xr = self.cnn(zxn)
         if not self.training:
@@ -955,15 +984,15 @@ class DCGAN_D(Module):
             self.ann2 = sqn(*self.ann2)
 
 
-            self.ann1.to(self.dev0)
-            self.ann2.to(self.dev1)
+            self.ann1.to(self.dev0,non_blocking=True)
+            self.ann2.to(self.dev1,non_blocking=True)
 
     def forward(self,x):
         if x.is_cuda and self.ngpu > 1:
             #z = pll(self.ann,X,self.gang)
-            x = x.to(self.dev0)
+            x = x.to(self.dev0,non_blocking=True)
             x = self.ann1(x)
-            x = x.to(self.dev1)
+            x = x.to(self.dev1,non_blocking=True)
             x = self.ann2(x)
             z = x
         else:
@@ -980,8 +1009,8 @@ class DCGAN_Dx(Module):
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
         self.wf = wf
-        self.dev0 = 0
-        self.dev1 = 1
+        self.dev0 = ngpu//2
+        self.dev1 = ngpu//2+1
 
         if opt is None:
             initial = [ConvBlock(self.ngpu,nc, ndf, 4, 2, bn=False, act=activation[0],dpc=dpc)]
@@ -1041,8 +1070,8 @@ class DCGAN_Dx(Module):
             self.ann2 =  pyramid+final
             self.ann1 = sqn(*self.ann1)
             self.ann2 = sqn(*self.ann2)
-            self.ann1.to(self.dev0)
-            self.ann2.to(self.dev1)
+            self.ann1.to(self.dev0,non_blocking=True)
+            self.ann2.to(self.dev1,non_blocking=True)
             
     def extraction(self,X):
         X = self.prc(X)
@@ -1057,13 +1086,14 @@ class DCGAN_Dx(Module):
             # X = self.ann1(X)
             # X = X.cuda(1)
             # X = self.ann2(X)
-            import pdb
-            pdb.set_trace()
-            X = X.to(self.dev0)
+        
+
+            X = X.to(self.dev0,non_blocking=True)
             X = self.ann1(X)
-            X = X.to(self.dev1)
+            X = X.to(self.dev1,non_blocking=True)
             X = self.ann2(X)
             z = X
+            
             if self.wf:
                 #f = pll(self.extraction,X,self.gang)
                 f = self.extraction(X)
@@ -1085,8 +1115,8 @@ class DCGAN_Dz(Module):
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
         self.wf = wf
-        self.dev0 = 0
-        self.dev1 = 1
+        self.dev0 = ngpu//2
+        self.dev1 = ngpu//2+1
         if opt is None:
             initial =[ConvBlock(self.ngpu,nz, ncl, 1, 1, bn=False, act=activation[0],dpc=dpc)]
             layers = [ConvBlock(self.ngpu,ncl,ncl, 1, 1, bn=bn, act=activation[0],dpc=dpc) 
@@ -1119,8 +1149,11 @@ class DCGAN_Dz(Module):
             self.ann2 = [Dpout(dpc=dpc)]+[activation[1]]
             self.ann1 = sqn(*self.ann1)
             self.ann2 = sqn(*self.ann2)
-            self.ann1.to(self.dev0)
-            self.ann2.to(self.dev1)
+            self.ann1.to(self.dev0,non_blocking=True)
+            self.ann2.to(self.dev1,non_blocking=True)
+
+            
+                
 
         self.prc = sqn(*initial)
         self.exf = layers[:-1]
@@ -1137,11 +1170,12 @@ class DCGAN_Dz(Module):
     def forward(self,X):
         if X.is_cuda and self.ngpu > 1:
             # z = pll(self.ann,X,self.gang)
-            X = X.to(self.dev0)
+            X = X.to(self.dev0,non_blocking=True)
             X = self.ann1(X)
-            X = X.to(self.dev1)
+            X = X.to(self.dev1,non_blocking=True)
             X = self.ann2(X)
             z = X
+            torch.cuda.empty_cache()
             if self.wf:
                 #f = pll(self.extraction,X,self.gang)
                 f = self.extraction(X)

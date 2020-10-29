@@ -1479,11 +1479,13 @@ def discriminate_broadband_xz(DsXd,Dszd,Ddxz,Xd,Xdr,zd,zdr):
 
     # Discriminate real
     zrc = zcat(DsXd(Xd),Dszd(zdr))
-    DXz = Ddxz(zrc)
+    #DXz = Ddxz(zrc)
+    DXz = torch.utils.checkpoint.checkpoint_sequential(functions=Ddxz, segments=8 , input=zrc)
 
     # Discriminate fake
     zrc = zcat(DsXd(Xdr),Dszd(zd))
-    DzX = Ddxz(zrc)
+    #DzX = Ddxz(zrc)
+    DzX = torch.utils.checkpoint.checkpoint_sequential(functions=DsXd, segments=8 , input=zrc)
 
     return DXz,DzX
 

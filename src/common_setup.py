@@ -15,6 +15,7 @@ import warnings
 warnings.filterwarnings("ignore")
 import argparse
 import os
+import sys
 from os.path import join as osj
 import numpy as np
 import random
@@ -81,12 +82,13 @@ def setup():
 
     u'''Set-up GPU and CUDA'''
     opt.cuda = True if (tcuda.is_available() and opt.cuda) else False
-    device = tdev("cuda" if opt.cuda else "cpu")
+    device = tdev("cuda:3" if opt.cuda else "cpu")
     FloatTensor = tcuda.FloatTensor if opt.cuda else tFT
     LongTensor = tcuda.LongTensor if opt.cuda else tLT
     ngpu = int(opt.ngpu)
     print("|parser has finished his job ...")
-
+    rank=0
+    world_size = ngpu
     # Try to make an output directory if the latter does not exist
     try:
         os.makedirs(opt.outf)
@@ -103,9 +105,26 @@ def setup():
         pass
 
     # try:
-    #     os.environ['MASTER_ADDR'] = os.environ['SLURM_SRUN_COMM_HOST']
-    #     os.environ['MASTER_PORT'] = '8080'
-    #     dist.init_process_group("gloo", rank=1, world_size=ngpu)
+    #     if sys.platform == 'linux':
+    #         # Distributed package only covers collective communications with Gloo
+    #         # backend and FileStore on Windows platform. Set init_method parameter
+    #         # in init_process_group to a local file.
+    #         # Example init_method="file:///f:/libtmp/some_file"
+    #         init_method="file:///gpfs/workdir/jacquetg/SeismoALICE/temp.txt"
+
+    #         # initialize the process group
+    #         dist.init_process_group(
+    #             "gloo",
+    #             init_method=init_method,
+    #             rank=rank,
+    #             world_size=world_size
+    #         )
+    #     else:
+    #         os.environ['MASTER_ADDR'] = 'localhost'
+    #         os.environ['MASTER_PORT'] = '12355'
+
+    #         # initialize the process group
+    #         dist.init_process_group("gloo", rank=rank, world_size=world_size)
     # except Exception as e:
     #     raise e
 

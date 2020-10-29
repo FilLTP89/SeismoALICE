@@ -184,10 +184,7 @@ class ConvBlock(Module):
         if bn: self.ann+= [BatchNorm1d(no)]
         if dpc is not None: self.ann += [Dpout(dpc=dpc)]
         if act is not None: self.ann += [act] 
-        
-        self.ann+= [Conv1d(ni, no, ks, stride, padding=pad, bias=bias)]
-        if dpc is not None: self.ann += [Dpout(dpc=dpc)]
-        if act is not None: self.ann += [act] 
+         
         self.ann = sqn(*self.ann)
     
     def forward(self, X):
@@ -341,6 +338,8 @@ def reset_net(nets,func=set_weights,lr=0.0002,b1=b1,b2=b2,weight_decay=None,
             return Adam(ittc(*p),lr=lr,betas=(b1,b2),weight_decay=weight_decay) 
     elif 'rmsprop' in optim.lower():
         return RMSprop(ittc(*p),lr=lr)
+    elif 'sgd' in optim.lower():
+        return SGD(ittc(*p),lr=lr)
 
 
 def clipweights(netlist,lb=-0.01,ub=0.01):
