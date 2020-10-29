@@ -20,6 +20,7 @@ from leave_p_out import k_folds
 from common_setup import dataset2loader
 from database_sae import thsTensorData
 import json
+import pprint as pp
 import pdb
 import GPUtil
 from torch.nn.parallel import DistributedDataParallel as DDP
@@ -166,6 +167,7 @@ class trainer(object):
         #print(opt.config['decoder'])
         # passing the content of file ./strategy_bb_*.txt
         self.strategy=strategy
+        self.ngpu = ngpu
         
         # the follwings variable are the instance for the object Module from 
         # the package pytorch: torch.nn.modulese. 
@@ -186,6 +188,7 @@ class trainer(object):
         self.oGdxz=None
         self.oGfxz=None
         self.oGhxz=None
+        glr = 0.01
         flagT=False
         flagF=False
         t = [y.lower() for y in list(self.strategy.keys())] 
@@ -224,7 +227,6 @@ class trainer(object):
                                std=strides['Fed'],pad=padding['Fed'],
                                dil=1,grp=1,dpc=0.0,act=act['Fed'])
 
-            
             # Decoder broadband Gdd
             self.Gdd = Decoder(ngpu=ngpu,nz=2*nzd,nch=nch_tot,
                                ndf=int(ndf//(2**(5-nlayers['Gdd']))),
@@ -232,7 +234,7 @@ class trainer(object):
                                std=strides['Gdd'],pad=padding['Gdd'],\
                                opd=outpads['Gdd'],dpc=0.0,act=act['Gdd'])
             #print("|total_memory [GB]:",int(torch.cuda.get_device_properties(device).total_memory//(10**9)))
-            GPUtil.showUtilization(all=True)
+            
             
             #if we training with the broadband signal
                 # we read weigth and bias if is needed and then we set-up the Convolutional Neural 
@@ -278,11 +280,7 @@ class trainer(object):
                     print('!!! warnings no discriminator configaration for DCGAN_DXZ\n\tassume n_extra_layers = 2')
 
 
-                # DDP(self.Fed)
-                # DDP(self.Gdd)
-                # DDP(self.DsXd)
-                # DDP(self.Dszd)
-                # DDP(self.Ddxz)
+                
 
                 self.Ddnets.append(self.Fed)
                 self.Ddnets.append(self.Gdd)
@@ -293,7 +291,7 @@ class trainer(object):
 
 
                 # Adam optimization for Ddnets
-                self.oDdxz = reset_net(self.Ddnets)
+                self.oDdxz = reset_net(self.Ddnets,lr=0.01,optim='SGD')
                 #Add the same Adam optimization parameter for optzd
                 self.optzd.append(self.oDdxz)   
                 
@@ -335,12 +333,12 @@ class trainer(object):
                                nch=2*nch_tot,ndf=ndf,szs=md['ntm'],
                                nly=nlayers['Fef'],ker=kernels['Fef'],
                                std=strides['Fef'],pad=padding['Fef'],
-                               dil=1,grp=1,dpc=0.0,act=act['Fef']).to(device)
+                               dil=1,grp=1,dpc=0.0,act=act['Fef'])
             print("|Encoder step passed ...")
             self.Gdf = Decoder(ngpu=ngpu,nz=2*nzf,nch=nch_tot,ndf=ndf,
                                nly=nlayers['Gdf'],ker=kernels['Gdf'],
                                std=strides['Gdf'],pad=padding['Gdf'],\
-                               opd=outpads['Gdf'],dpc=0.0,act=act['Gdf']).to(device)
+                               opd=outpads['Gdf'],dpc=0.0,act=act['Gdf'])
             print("|Decoder step passed ...")
             #pdb.set_trace()
             if self.strategy['tract']['filtered']:
@@ -511,12 +509,12 @@ class trainer(object):
         print("\t||Xd : ",Xd.shape,"\tzdr : " ,zdr.shape)
         print("\t||Xdr : ",Xdr.shape,"\tzd : ", zd.shape)
         # import pdb
-        # pdb.set_trace()
+        #pdb.set_trace()
 
         # put the out put on the same GPU
         a = self.DsXd(Xd)
         b = self.Dszd(zdr)
-        GPUtil.showUtilization(all=True)
+        
         print("\t||DsXd(Xd) : ", a.shape,"\tDszd(zdr) : ",b.shape)
         
 
@@ -613,7 +611,7 @@ class trainer(object):
     ####################
     @profile
     def alice_train_broadband_discriminator_explicit_xz(self,Xd,zd):
-        print("|In the alice_train_broadband_generator_explicit_xz function  ...") 
+        print("|[1]In the alice_train_broadband_generator_explicit_xz function  ...") 
         print("\t||Xd:",Xd.shape,"\tzd ",zd.shape)
         # Set-up training
         zerograd(self.optzd)
@@ -623,15 +621,16 @@ class trainer(object):
         # 0. Generate noise
         wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,device,rndm_args)
         # 1. Concatenate inputs
-        X_inp = zcat(Xd,wnx)
-        z_inp = zcat(zd,wnz)
+        X_inp = zcat(Xd,wnx.to(Xd.device))
+        z_inp = zcat(zd,wnz.to(zd.device))
         #GPUtil.showUtilization()
         print("\t||X_inp : ",X_inp.shape,"\tz_inp : ",z_inp.shape)
 
         # 2. Generate conditional samples
         X_gen = self.Gdd(z_inp)
         z_gen = self.Fed(X_inp)
-        GPUtil.showUtilization(all=True)
+        torch.cuda.empty_cache()
+        
         print("\t||X_gen : ",X_gen.shape,"\tz_gen : ",z_gen.shape)
         # z_gen = latent_resampling(self.Fed(X_inp),nzd,wn1)
 
@@ -643,14 +642,17 @@ class trainer(object):
         Dloss_ali = -torch.mean(ln0c(Dzx)+ln0c(1.0-Dxz))
         
         # Total loss
-        Dloss = Dloss_ali
-        Dloss.backward(),self.oDdxz.step(),zerograd(self.optzd)
+        Dloss = Dloss_ali.to(3,non_blocking=True)
+        Dloss.backward()
+        torch.cuda.empty_cache()
+        self.oDdxz.step()
+        zerograd(self.optzd)
         self.losses['Dloss_t'].append(Dloss.tolist())
-        del Dloss, Dloss_ali
+        GPUtil.showUtilization(all=True)
     
     @profile
     def alice_train_broadband_generator_explicit_xz(self,Xd,zd):
-        
+        print("|[2]In alice_train_broadband_generator_explicit_xz ...")
         # Set-up training
         zerograd(self.optzd)
         self.Fed.train(),self.Gdd.train()
@@ -660,10 +662,11 @@ class trainer(object):
         wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,device,rndm_args)
         
         # 1. Concatenate inputs
-        X_inp = zcat(Xd,wnx)
-        z_inp = zcat(zd,wnz)
+        X_inp = zcat(Xd,wnx.to(Xd.device,non_blocking=True))
+        z_inp = zcat(zd,wnz.to(zd.device,non_blocking=True))
         
         # 2. Generate conditional samples
+        
         X_gen = self.Gdd(z_inp)
         z_gen = self.Fed(X_inp)
         # z_gen = latent_resampling(self.Fed(X_inp),nzd,wn1)
@@ -672,33 +675,45 @@ class trainer(object):
         Dxz,Dzx = self.discriminate_broadband_xz(Xd,X_gen,zd,z_gen)
         
         # 4. Compute ALI Generator loss
-        Gloss_ali = torch.mean(-Dxz +Dzx)
+        Gloss_ali = torch.mean(-Dxz +Dzx).to(1,non_blocking=True)
         
         # 0. Generate noise
         wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,device,rndm_args)
+        # # passign values to the CPU 0
         
+        wnx = wnx
+        wnz = wnz
+        wn1 = wn1
         # 1. Concatenate inputs
-        X_gen = zcat(X_gen,wnx)
-        z_gen = zcat(z_gen,wnz)
+        X_gen = zcat(X_gen,wnx.to(X_gen.device,non_blocking=True))
+        z_gen = zcat(z_gen,wnz.to(z_gen.device,non_blocking=True))
         
         # 2. Generate reconstructions
-        X_rec = self.Gdd(z_gen)
-        z_rec = self.Fed(X_gen)
+        X_rec = self.Gdd(z_gen).to(1,non_blocking=True)
+        z_rec = self.Fed(X_gen).to(1,non_blocking=True)
         # z_rec = latent_resampling(self.Fed(X_gen),nzd,wn1)
 
         # 3. Cross-Discriminate XX
-        Gloss_cycle_X = torch.mean(torch.abs(Xd-X_rec))   
+        # pdb.set_trace()
+        Gloss_cycle_X = torch.mean(torch.abs(Xd.to(1)-X_rec)).to(1,non_blocking=True)  
         
         # 4. Cross-Discriminate ZZ
-        Gloss_cycle_z = torch.mean(torch.abs(zd-z_rec))  
+        Gloss_cycle_z = torch.mean(torch.abs(zd.to(1)-z_rec)).to(1,non_blocking=True)
 
         # Total Loss
         Gloss = Gloss_ali + 10. * Gloss_cycle_X + 100. * Gloss_cycle_z
-        Gloss.backward(),self.oGdxz.step(),zerograd(self.optzd)
+
+        torch.cuda.empty_cache()
+        Gloss.backward()
+        torch.cuda.empty_cache()
+        # pp.pprint(dict(torch.cuda.memory_snapshot()), indent=4)
+        self.oGdxz.step()
+        zerograd(self.optzd)
         
         self.losses['Gloss_t'].append(Gloss.tolist()) 
         self.losses['Gloss_x'].append(Gloss_cycle_X.tolist())
         self.losses['Gloss_z'].append(Gloss_cycle_z.tolist())
+        GPUtil.showUtilization(all=True)
     ####################
     ##### FILTERED #####
     ####################
@@ -933,14 +948,16 @@ class trainer(object):
             for b,batch in enumerate(trn_loader):
                 # Load batch
                 xd_data,_,zd_data,_,_,_,_ = batch
-                Xd = Variable(xd_data).to(device) # BB-signal
-                zd = Variable(zd_data).to(device)
+                Xd = Variable(xd_data).to(self.ngpu-1,non_blocking=True) # BB-signal
+                zd = Variable(zd_data).to(self.ngpu-1,non_blocking=True)
                 # Train G/D
                 for _ in range(5):
                     self.alice_train_broadband_discriminator_explicit_xz(Xd,zd)
+                    
                 for _ in range(1):
                     self.alice_train_broadband_generator_explicit_xz(Xd,zd)
-    
+                   
+                
             str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
             str = 'epoch: {:>d} --- '.format(epoch)
             str = str + ' | '.join(str1)
@@ -976,8 +993,8 @@ class trainer(object):
             for b,batch in enumerate(trn_loader):
                 # Load batch
                 _,xf_data,_,zf_data,_,_,_ = batch
-                Xf = Variable(xf_data).to(device) # LF-signal
-                zf = Variable(zf_data).to(device)
+                Xf = Variable(xf_data).to(device,non_blocking=True) # LF-signal
+                zf = Variable(zf_data).to(device,non_blocking=True)
 #               # Train G/D
                 for _ in range(5):
                     self.alice_train_filtered_discriminator_explicit_xz(Xf,zf)
@@ -1016,8 +1033,8 @@ class trainer(object):
             for b,batch in enumerate(trn_loader):
                 # Load batch
                 _,xf_data,_,zf_data,_,_,_ = batch
-                Xf = Variable(xf_data).to(device) # LF-signal
-                zf = Variable(zf_data).to(device)
+                Xf = Variable(xf_data).to(device,non_blocking=True) # LF-signal
+                zf = Variable(zf_data).to(device,non_blocking=True)
                 print("Xf and zf", Xf.shape, zf.shape)
 #               # Train G/D
                 for _ in range(5):
