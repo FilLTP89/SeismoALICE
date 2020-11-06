@@ -533,7 +533,7 @@ def plot_generate_hybrid(Qec,Pdc,Ghz,dev,vtm,trn_set,pfx='hybrid',outf='./imgs')
             cnt += 1
             
 def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
-    Qec.to(dev),Pdc.to(dev)
+    #Qec.to(dev),Pdc.to(dev)
     Qec.eval(),Pdc.eval()
     cnt=0
     sns.set(style="whitegrid")
@@ -977,8 +977,10 @@ def pad3d(st1t,st2,vtm,style='arias'):
 def plot_features(tag,Qec,Pdc,nz,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
     print("Plotting features ...")
     sns.set(style="whitegrid")
-    Qec.to(dev),Qec.eval()
-    Pdc.to(dev),Pdc.eval()
+    #Qec.to(dev)
+    Qec.eval()
+    #Pdc.to(dev)
+    Pdc.eval()
     bsz = trn_set.batch_size
     idx = trn_set.dataset.indices.numpy()
     cht = trn_set.dataset.dataset.inpZ.shape[1]

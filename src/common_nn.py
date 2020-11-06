@@ -149,7 +149,7 @@ def cnn1d(in_channels,out_channels,\
 
 def cnn1dt(in_channels,out_channels,\
            act=LeakyReLU(1.0,inplace=True),\
-           bn=True,ker=7,std=4,pad=0,opd=0,\
+           bn=True,ker=2,std=2,pad=0,opd=0,\
            dil=1,grp=1,dpc=0.1):
 
     block = [ConvTranspose1d(in_channels=in_channels,\
