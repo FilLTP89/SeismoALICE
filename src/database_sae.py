@@ -258,6 +258,7 @@ def stead_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
             pgaf_set[i,j] = np.abs(thf_set[i,j,:].data.numpy()).max(axis=-1)
             _,psa,_,_,_ = rsp(md['dtm'],thf_set.data[i,j,:].numpy(),md['vTn'],5.)
             psaf_set[i,j,:] = psa.reshape((md['nTn']))
+            print("psa proceed ...",i,j)
     pgat_set = np2t(np.float32(pgat_set))    
     pgaf_set = np2t(np.float32(pgaf_set))
     psat_set = np2t(np.float32(psat_set))
@@ -282,7 +283,7 @@ def stead_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
            'one_hot':one_hot,'ncat':tar.shape[1]}
     tar = (psat_set,psaf_set,tar)
     ths = thsTensorData(trn_set,thf_set,wnz_set,wnf_set,tar,partition['all'])
-
+    print("values ....")
     # RANDOM SPLIT
     idx,\
     ths_trn = random_split(ths,[trn,vld,tst])

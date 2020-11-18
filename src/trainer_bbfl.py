@@ -124,24 +124,24 @@ outpads = {'Gdd':0,
 
 import subprocess
 
-def get_gpu_memory_map():
-    """Get the current gpu usage.
+# def get_gpu_memory_map():
+#     """Get the current gpu usage.
 
-    Returns
-    -------
-    usage: dict
-        Keys are device ids as integers.
-        Values are memory usage as integers in MB.
-    """
-    result = subprocess.check_output(
-        [
-            'nvidia-smi', '--query-gpu=memory.used',
-            '--format=csv,nounits,noheader'
-        ], encoding='utf-8')
-    # Convert lines into a dictionary
-    gpu_memory = [int(x) for x in result.strip().split('\n')]
-    gpu_memory_map = dict(zip(range(len(gpu_memory)), gpu_memory))
-    return gpu_memory_map
+#     Returns
+#     -------
+#     usage: dict
+#         Keys are device ids as integers.
+#         Values are memory usage as integers in MB.
+#     """
+#     result = subprocess.check_output(
+#         [
+#             'nvidia-smi', '--query-gpu=memory.used',
+#             '--format=csv,nounits,noheader'
+#         ], encoding='utf-8')
+#     # Convert lines into a dictionary
+#     gpu_memory = [int(x) for x in result.strip().split('\n')]
+#     gpu_memory_map = dict(zip(range(len(gpu_memory)), gpu_memory))
+#     return gpu_memory_map
 
 
 
@@ -219,20 +219,20 @@ class trainer(object):
             # read specific strategy for the broadband signal
             n = self.strategy['broadband']
             print("Loading broadband generators")
-
+            
             # Encoder broadband Fed
             self.Fed = Encoder(ngpu=ngpu,dev=device,nz=nzd,nzcl=0,
                                nch=2*nch_tot,ndf=ndf,szs=md['ntm'],
                                nly=nlayers['Fed'],ker=kernels['Fed'],
                                std=strides['Fed'],pad=padding['Fed'],
-                               dil=1,grp=1,dpc=0.0,act=act['Fed']).to(torch.float16)
+                               dil=1,grp=1,dpc=0.0,act=act['Fed']).to(torch.float32)
 
             # Decoder broadband Gdd
             self.Gdd = Decoder(ngpu=ngpu,nz=2*nzd,nch=nch_tot,
                                ndf=int(ndf//(2**(5-nlayers['Gdd']))),
                                nly=nlayers['Gdd'],ker=kernels['Gdd'],
                                std=strides['Gdd'],pad=padding['Gdd'],\
-                               opd=outpads['Gdd'],dpc=0.0,act=act['Gdd']).to(torch.float16)
+                               opd=outpads['Gdd'],dpc=0.0,act=act['Gdd']).to(torch.float32)
             #print("|total_memory [GB]:",int(torch.cuda.get_device_properties(device).total_memory//(10**9)))
             
             # pdb.set_trace()
@@ -246,8 +246,10 @@ class trainer(object):
                             weight_decay=None)
                 else:
                     print("Broadband generators: {0} - {1}".format(*n))
-                    self.Fed.load_state_dict(tload(n[0])['model_state_dict']).to(torch.float16)
-                    self.Gdd.load_state_dict(tload(n[1])['model_state_dict']).to(torch.float16)
+                    self.Fed.load_state_dict(tload(n[0])['model_state_dict'])
+                    self.Gdd.load_state_dict(tload(n[1])['model_state_dict'])
+                    self.Fed.to(torch.float32)
+                    self.Gdd.to(torch.float32)
                     self.oGdxz = Adam(ittc(self.Fed.parameters(),self.Gdd.parameters()),
                                       lr=glr,betas=(b1,b2))#,weight_decay=None)
                 self.optzd.append(self.oGdxz)
@@ -255,28 +257,28 @@ class trainer(object):
 
                 if opt.config['Dszd'] :
                     self.Dszd = DCGAN_Dz(ngpu=ngpu,nz=nzd,ncl=512,n_extra_layers=opt.config['Dszd']['nlayers'],dpc=0.25,
-                                     bn=False,activation=act['Dsz'], opt=opt.config['Dszd']).to(torch.float16)
+                                     bn=False,activation=act['Dsz'], opt=opt.config['Dszd']).to(torch.float32)
                 else :
                     self.Dszd = DCGAN_Dz(ngpu=ngpu,nz=nzd,ncl=512,n_extra_layers=1,dpc=0.25,
-                                     bn=False,activation=act['Dsz']).to(torch.float16)
+                                     bn=False,activation=act['Dsz']).to(torch.float32)
                     print('!!! warnings no discriminator configaration for DCGAN_Dz\n\tassume n_extra_layers = 1')
                 
                 if opt.config['DsXd'] :
                     self.DsXd = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
-                                     n_extra_layers=opt.config['DsXd']['nlayers'],dpc=0.25,activation=act['Dsx'], opt=opt.config['DsXd']).to(torch.float16)
+                                     n_extra_layers=opt.config['DsXd']['nlayers'],dpc=0.25,activation=act['Dsx'], opt=opt.config['DsXd']).to(torch.float32)
                 else:    
                     # create a conv1D of 4 layers for the discriminator to transform from (,,3) to (,,512) 
                     self.DsXd = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
-                                     n_extra_layers=1,dpc=0.25,activation=act['Dsx']).to(torch.float16)
+                                     n_extra_layers=1,dpc=0.25,activation=act['Dsx']).to(torch.float32)
                     print('!!!! warnings no discriminator configaration found for DCGAN_Dx\n\tassume n_extra_layers` = 1')
                 
                 if opt.config['Ddxz']:
                     self.Ddxz = DCGAN_DXZ(ngpu=ngpu,nc=1024,n_extra_layers=opt.config['Ddxz']['nlayers'],dpc=0.25,
-                                      activation=act['Ddxz'], opt=opt.config['Ddxz']).to(torch.float16)
+                                      activation=act['Ddxz'], opt=opt.config['Ddxz']).to(torch.float32)
                 else:                 
                     # create a conv1D of  layers for the discriminator to transform from (*,*,1024) to (*,*,1)
                     self.Ddxz = DCGAN_DXZ(ngpu=ngpu,nc=1024,n_extra_layers=2,dpc=0.25,
-                                          activation=act['Ddxz']).to(torch.float16)
+                                          activation=act['Ddxz']).to(torch.float32)
                     print('!!! warnings no discriminator configaration for DCGAN_DXZ\n\tassume n_extra_layers = 2')
 
 
@@ -364,19 +366,19 @@ class trainer(object):
 
                 if opt.config['DsXf']:
                     self.DsXf = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
-                                     n_extra_layers=opt.config['DsXf']['nlayers'],dpc=0.25,activation=act['Dsx'],
+                                     n_extra_layers=opt.config['DsXf']['nlayers'],dpc=0.25,bn=False,activation=act['Dsx'],
                                      wf=True,opt=opt.config['DsXf']).to(device)
                 else:
                     self.DsXf = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
-                                     n_extra_layers=0,dpc=0.25,activation=act['Dsx'],
+                                     n_extra_layers=0,dpc=0.25,bn=False,activation=act['Dsx'],
                                      wf=True).to(device)
                     print('!!! warnings no discriminator configuration found for DCGAN_Dx\n\tassume n_extra_layers = 0')
 
                 if opt.config['Dfxz']:
                     self.Dfxz = DCGAN_DXZ(ngpu=ngpu,nc=512+2*nzf,n_extra_layers=opt.config['Dfxz']['nlayers'],dpc=0.25,
-                                      activation=act['Ddxz'],wf=True,opt=opt.config['Dfxz']).to(device)
+                                      activation=act['Ddxz'],bn=False,wf=True,opt=opt.config['Dfxz']).to(device)
                 else:
-                    self.Dfxz = DCGAN_DXZ(ngpu=ngpu,nc=512+2*nzf,n_extra_layers=2,dpc=0.25,
+                    self.Dfxz = DCGAN_DXZ(ngpu=ngpu,nc=512+2*nzf,n_extra_layers=2,dpc=0.25,bn=False,
                                       activation=act['Ddxz'],wf=True).to(device)
                     print('!!! warnings no discriminator configuration found for DCGAN_DXZ\n\t assume n_extra_layers = 2')
 
@@ -394,10 +396,10 @@ class trainer(object):
 
                 if opt.config['DsrXf']:
                     self.DsrXf = DCGAN_Dx(ngpu=ngpu,isize=256,nc=2*nch_tot,ncl=512,ndf=64,fpd=1,
-                                      n_extra_layers=opt.config['DsrXf']['nlayers'],dpc=0.25,activation=act['Drx'],opt=opt.config['DsrXf']).to(device)
+                                      n_extra_layers=opt.config['DsrXf']['nlayers'],dpc=0.25,activation=act['Drx'],bn=False,opt=opt.config['DsrXf']).to(device)
                 else:
                     self.DsrXf = DCGAN_Dx(ngpu=ngpu,isize=256,nc=2*nch_tot,ncl=512,ndf=64,fpd=1,
-                                      n_extra_layers=0,dpc=0.25,activation=act['Drx']).to(device)
+                                      n_extra_layers=0,dpc=0.25,bn=False,activation=act['Drx']).to(device)
 
                 self.Dfnets.append(self.DsrXf)
                 self.Dfnets.append(self.Dsrzf)
@@ -519,13 +521,13 @@ class trainer(object):
         
 
         zrc = zcat(a,b)
-        # print("\t\t|||zrc : ", zrc.shape)
+        print("\t\t|||zrc : ", zrc.shape)
         DXz = self.Ddxz(zrc)
-        # print("\t\t|||DXz : ", DXz.shape)
+        print("\t\t|||DXz : ", DXz.shape)
         # Discriminate fake
         c = self.DsXd(Xdr)
         d = self.Dszd(zd)
-        # print("\t||DsXd(Xdr) : ",c.shape,"\tDszd(zd) : ", d.shape)
+        print("\t||DsXd(Xdr) : ",c.shape,"\tDszd(zd) : ", d.shape)
         zrc = zcat(c,d)
         DzX = self.Ddxz(zrc)
         
@@ -636,7 +638,7 @@ class trainer(object):
 
         # 3. Cross-Discriminate XZ
         Dxz,Dzx = self.discriminate_broadband_xz(Xd,X_gen,zd,z_gen)
-        print("\t||After discriminate_broadband_xz") 
+        # print("\t||After discriminate_broadband_xz") 
         # 4. Compute ALI discriminator loss
         print("\t||Dzx : ", Dzx.shape,"Dxz : ",Dxz.shape)
         Dloss_ali = -torch.mean(ln0c(Dzx)+ln0c(1.0-Dxz))
@@ -649,7 +651,7 @@ class trainer(object):
         self.oDdxz.step()
         zerograd(self.optzd)
         self.losses['Dloss_t'].append(Dloss.tolist())
-        GPUtil.showUtilization(all=True)
+        # GPUtil.showUtilization(all=True)
     
     @profile
     def alice_train_broadband_generator_explicit_xz(self,Xd,zd):
@@ -658,7 +660,7 @@ class trainer(object):
         zerograd(self.optzd)
         self.Fed.train(),self.Gdd.train()
         self.DsXd.train(),self.Dszd.train(),self.Ddxz.train()
-        
+        #pdb.set_trace()
         # 0. Generate noise
         wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,device,rndm_args)
         
@@ -696,7 +698,7 @@ class trainer(object):
         # z_rec = latent_resampling(self.Fed(X_gen),nzd,wn1)
         print("\t||X_rec", X_rec.shape,"\t||z_rec",z_rec.shape)
         # 3. Cross-Discriminate XX
-        #pdb.set_trace()
+        # pdb.set_trace()
         Gloss_cycle_X = torch.mean(torch.abs(Xd.to(1)-X_rec)).to(1,non_blocking=True)  
         
         # 4. Cross-Discriminate ZZ
@@ -705,9 +707,9 @@ class trainer(object):
         # Total Loss
         Gloss = Gloss_ali + 10. * Gloss_cycle_X + 100. * Gloss_cycle_z
 
-        torch.cuda.empty_cache()
+        #torch.cuda.empty_cache()
         Gloss.backward()
-        GPUtil.showUtilization(all=True)
+        # GPUtil.showUtilization(all=True)
         
         # pp.pprint(dict(torch.cuda.memory_snapshot()), indent=4)
         self.oGdxz.step()
@@ -716,14 +718,14 @@ class trainer(object):
         self.losses['Gloss_t'].append(Gloss.tolist()) 
         self.losses['Gloss_x'].append(Gloss_cycle_X.tolist())
         self.losses['Gloss_z'].append(Gloss_cycle_z.tolist())
-        # GPUtil.showUtilization(all=True)
+        GPUtil.showUtilization(all=True)
         torch.cuda.empty_cache()
     ####################
     ##### FILTERED #####
     ####################
     def alice_train_filtered_discriminator_adv_xz(self,Xf,zf):
         # Set-up training
-        print("|In function alice_train_filtered_discriminator_adv_xzl")
+        # print("|In function alice_train_filtered_discriminator_adv_xzl")
         # print("\t||Xf : ", Xf.shape,"\tzf : ",zf.shape)
         zerograd(self.optzf)
         self.Fef.eval(),self.Gdf.eval()
@@ -979,7 +981,7 @@ class trainer(object):
                        'optimizer_state_dict':self.oDdxz.state_dict()},'DsXd_bb_{}.pth'.format(epoch))    
                 tsave({'model_state_dict':self.Ddxz.state_dict(),
                        'optimizer_state_dict':self.oDdxz.state_dict()},'Ddxz_bb_{}.pth'.format(epoch))
-        #plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_classic',outf=outf)
+        # plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_classic',outf=outf)
         tsave({'epoch':niter,'model_state_dict':self.Fed.state_dict(),
             'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'Fed.pth')
         tsave({'epoch':niter,'model_state_dict':self.Gdd.state_dict(),
@@ -1213,15 +1215,4 @@ class trainer(object):
                     Xf = Variable(xf_data).to(device) # LF-signal
                     zd = Variable(zd_data).to(device)
                     zf = Variable(zf_data).to(device)
-                    wnxd,wnzd,_ = noise_generator(Xd.shape,zd.shape,device,rndm_args)
-                    wnxf,wnzf,_ = noise_generator(Xf.shape,zf.shape,device,rndm_args)
-                    X_inp = zcat(Xf,wnxf)
-                    zfr = self.Fef(X_inp)
-                    zdr = self.Ghz(zcat(zfr,wnzf))
-                    z_inp = zcat(zdr,wnzd)
-                    Xr = self.Gdd(z_inp)
-                    #import pdb
-                    #pdb.set_trace()
-                    Dxz,Dzx = self.discriminate_broadband_xz(Xd,Xr,zd,zdr)
-    
-
+   

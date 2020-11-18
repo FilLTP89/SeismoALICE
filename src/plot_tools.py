@@ -546,11 +546,11 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs')
             Xf = Variable(xf_data).to(dev)
             zt = Variable(zt_data).to(dev)
             wnx,wnz,wn1 = noise_generator(Xt.shape,zt.shape,dev,rndm_args)
-            X_inp = zcat(Xt,wnx)
-            ztr = Qec(X_inp)
+            X_inp = zcat(Xt,wnx.to(dev))
+            ztr = Qec(X_inp).to(dev)
             # ztr = latent_resampling(Qec(X_inp),zt.shape[1],wn1)
-            z_inp = zcat(ztr,wnz)
-            z_pre = zcat(zt,wnz)
+            z_inp = zcat(ztr,wnz.to(dev))
+            z_pre = zcat(zt,wnz.to(dev))
             Xr = Pdc(z_inp)
             #Xp = Pdc(z_pre)
             Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
@@ -1041,6 +1041,7 @@ def plot_features(tag,Qec,Pdc,nz,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
                         format='eps',bbox_inches='tight',dpi = 500)
                 plt.close()
             zw = zg
+            zw =  zw.to(dev)
             zg = zg.detach().cpu().data.numpy().copy()
             zd = zd.detach().cpu().data.numpy().copy()
             zd = np.nan_to_num(zd)
@@ -1052,6 +1053,8 @@ def plot_features(tag,Qec,Pdc,nz,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
             c=c+15 #range(zd.shape[1]):
             hfg1,(hax3,hax4) = plt.subplots(2,1,figsize=(8,8))
             _,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,rndm_args)
+            wnz.to(dev)
+            wn1.to(dev)
             for w in range(1): #range(zd.shape[2]):
                 w = w +1
                 dwt = 2**5*(vtm[1]-vtm[0]) 
