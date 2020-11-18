@@ -282,6 +282,18 @@ def setup():
         with open('opt.p', 'wb') as handle:
                 pickle.dump(opt,handle)
         handle.close()
+
+    elif opt.dataset == 'mdof':
+        src = opt.dataroot
+        print('dataroots:')
+        print(src)
+        md = {'dtm':0.01,'cutoff':opt.cutoff,'ntm':opt.imageSize}
+        md['vTn'] = np.arange(0.0,3.05,0.05,dtype=np.float64)
+        md['nTn'] = md['vTn'].size
+        #[TODO]
+        ths_trn,ths_tst,ths_vld,\
+        vtm,fsc,md = mdof_dataset(src,opt.batchPercent,opt.imageSize,opt.latentSize,\
+                                  opt.nzd,opt.nzf,md=md,nsy=opt.nsy,device=device)
         
     params = {'batch_size': opt.batchSize,\
               'shuffle': True,'num_workers':int(opt.workers)}
