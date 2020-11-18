@@ -179,6 +179,7 @@ class ConvBlock(Module):
                  act = None, bn=True, pad=None, dpc=None):
         super(ConvBlock,self).__init__()
         self.ngpu = ngpu
+        self.dev  =self.ngpu-1
         if pad is None: pad = ks//2//stride
         self.ann = [Conv1d(ni, no, ks, stride, padding=pad, bias=bias)]
         if bn: self.ann+= [BatchNorm1d(no)]
@@ -186,6 +187,7 @@ class ConvBlock(Module):
         if act is not None: self.ann += [act] 
          
         self.ann = sqn(*self.ann)
+        self.ann.to(self.dev,dtype=torch.float32)
     
     def forward(self, X):
         if X.is_cuda and self.ngpu > 1:

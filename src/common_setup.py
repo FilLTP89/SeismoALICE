@@ -82,7 +82,7 @@ def setup():
 
     u'''Set-up GPU and CUDA'''
     opt.cuda = True if (tcuda.is_available() and opt.cuda) else False
-    device = tdev("cuda:3" if opt.cuda else "cpu")
+    device = tdev("cuda:0" if opt.cuda else "cpu")
     FloatTensor = tcuda.FloatTensor if opt.cuda else tFT
     LongTensor = tcuda.LongTensor if opt.cuda else tLT
     ngpu = int(opt.ngpu)
@@ -299,6 +299,7 @@ def setup():
         handle.close()
         with open('opt.p', 'wb') as handle:
                 pickle.dump(opt,handle)
+        print("Done!")
         handle.close()
         
     elif opt.dataset == 'ann2bb':
