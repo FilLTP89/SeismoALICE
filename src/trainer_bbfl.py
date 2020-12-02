@@ -10,7 +10,7 @@ from common_nn import *
 from common_torch import * 
 from dcgaae_model import Encoder, Decoder
 from dcgaae_model import DCGAN_Dx, DCGAN_Dz
-from dcgaae_model import DCGAN_DXX, DCGAN_DZZ, DCGAN_DXZ
+from dcgaae_model import *
 from dcgaae_model import DenseEncoder
 import plot_tools as plt
 from generate_noise import latent_resampling, noise_generator
@@ -23,6 +23,7 @@ import json
 import pprint as pp
 import pdb
 import GPUtil
+import resnet
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 rndm_args = {'mean': 0, 'std': 1}
@@ -514,6 +515,7 @@ class trainer(object):
         #pdb.set_trace()
 
         # put the out put on the same GPU
+        # pdb.set_trace()
         a = self.DsXd(Xd)
         b = self.Dszd(zdr)
         
@@ -981,7 +983,7 @@ class trainer(object):
                        'optimizer_state_dict':self.oDdxz.state_dict()},'DsXd_bb_{}.pth'.format(epoch))    
                 tsave({'model_state_dict':self.Ddxz.state_dict(),
                        'optimizer_state_dict':self.oDdxz.state_dict()},'Ddxz_bb_{}.pth'.format(epoch))
-        # plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_classic',outf=outf)
+        plt.plot_loss_dict(nb=niter,losses=self.losses,title='loss_classic',outf=outf)
         tsave({'epoch':niter,'model_state_dict':self.Fed.state_dict(),
             'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'Fed.pth')
         tsave({'epoch':niter,'model_state_dict':self.Gdd.state_dict(),
@@ -1215,4 +1217,6 @@ class trainer(object):
                     Xf = Variable(xf_data).to(device) # LF-signal
                     zd = Variable(zd_data).to(device)
                     zf = Variable(zf_data).to(device)
-   
+    @profile
+    def ResNet(model,block):
+        return ResNet(model,block)
