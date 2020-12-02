@@ -179,7 +179,7 @@ class ConvBlock(Module):
                  act = None, bn=True, pad=None, dpc=None):
         super(ConvBlock,self).__init__()
         self.ngpu = ngpu
-        self.dev  =self.ngpu-1
+        #self.dev  =self.ngpu-1
         if pad is None: pad = ks//2//stride
         self.ann = [Conv1d(ni, no, ks, stride, padding=pad, bias=bias)]
         if bn: self.ann+= [BatchNorm1d(no)]
@@ -187,19 +187,16 @@ class ConvBlock(Module):
         if act is not None: self.ann += [act] 
          
         self.ann = sqn(*self.ann)
-        self.ann.to(self.dev,dtype=torch.float32)
+        #self.ann.to(self.dev,dtype=torch.float32)
     
     def forward(self, X):
-        if X.is_cuda and self.ngpu > 1:
+        #if X.is_cuda and self.ngpu >= 1:
             #z = pll(self.ann,X,self.gang)
-            # X = X.to(self.dev0)
+            #X = X.to(self.dev)
             # X = self.ann1(X)
             # X = X.to(self.dev1)
-            X = self.ann(X)
-            z = X
-            return z
-        else:
-            return self.ann(x)
+        z = self.ann(X)
+        return z
 
 class DeconvBlock(Module):
     def __init__(self,ni,no,ks,stride,pad,opd=0,bn=True,act=ReLU(inplace=True),
@@ -380,3 +377,18 @@ def runout(funct, world_size):
              nprocs=world_size,
              join=True)
 
+"""
+def hessian_penalty(G, z, k, epsilon):
+    # Input G: Function to compute the Hessian Penalty of
+    # Input z: Input to G that the Hessian Penalty is taken w.r.t.
+    # Input k: Number of Hessian directions to sample
+    # Input epsilon: Finite differences hyperparameter
+    # Output: Hessian Penalty loss
+    G_z = G(z)
+    #https://www.geeksforgeeks.org/sympy-stats-rademacher-function-in-python/
+    vs = epsilon * random_rademacher(shape=[k, *z.size()])
+    finite_diffs = [G(z + v) - 2 * G_z + G(z - v) for v in vs]
+    finite_diffs = stack(finite_diffs) / (epsilon ** 2)
+    penalty = var(finite_diffs, dim=0).max()
+    return penalty
+"""

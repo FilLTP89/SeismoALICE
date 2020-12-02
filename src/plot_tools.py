@@ -97,17 +97,31 @@ def multivariateGrid(col_x, col_y, col_k, df, k_is_color=False, scatter_alpha=.7
 def plot_loss_dict(losses,nb,title='loss',outf='./imgs'):
     sns.set(style="whitegrid")
     hfg,hax0 = plt.subplots(1,1,figsize=(6,6))
-    min_iter=1000000
+    miniter = 10000000 
+    min_iter = {'key':0}
     for k,v in losses.items():
-        min_iter=min(min_iter,int((len(v)-1)//nb))
+        temp=min(miniter,(len(v)-1)//nb)
+        min_iter[k] = temp
+
+    min_iter.pop('key')
+    loss_name = []
     for k,v in losses.items():
-        v=np.array(v[1:]).reshape(min_iter,nb,-1).mean(axis=-1).mean(axis=1)
-        losses[k]=v
+        if(min_iter[k]!=0):
+            v=np.array(v[1:]).reshape(min_iter[k],nb,-1).mean(axis=-1).mean(axis=1)
+            losses[k]=v
+            loss_name.append(k)
+
+    
     Dloss = {}
-    Dloss[r"$l^D(\mathbf{z^,},\mathbf{z},\mathbf{y},\mathbf{x})$"] = losses[r'$l^D$']
-    Dloss[r"$l^G(\mathbf{z^,},\mathbf{z},\mathbf{y},\mathbf{x})$"] = losses[r'$l^G$']
-    Dloss[r"$l_{R1}(\mathbf{y})$"] = losses[r'$l_{R1-y}$']
-    Dloss[r"$l_{R1}(\mathbf{x})$"] = losses[r'$l_{R1-x}$']
+    # Dloss[r"$l^D(\mathbf{z^,},\mathbf{z},\mathbf{y},\mathbf{x})$"] = losses[r'$l^D$']
+    # Dloss[r"$l^G(\mathbf{z^,},\mathbf{z},\mathbf{y},\mathbf{x})$"] = losses[r'$l^G$']
+    # Dloss[r"$l_{R1}(\mathbf{y})$"] = losses[r'$l_{R1-y}$']
+    # Dloss[r"$l_{R1}(\mathbf{x})$"] = losses[r'$l_{R1-x}$']
+
+    Dloss[r"$l^D(\mathbf{z^,},\mathbf{z},\mathbf{y},\mathbf{x})$"] = losses[loss_name[0]]
+    Dloss[r"$l^G(\mathbf{z^,},\mathbf{z},\mathbf{y},\mathbf{x})$"] = losses[loss_name[1]]
+    Dloss[r"$l_{R1}(\mathbf{y})$"] = losses[loss_name[2]]
+    Dloss[r"$l_{R1}(\mathbf{x})$"] = losses[loss_name[3]]
 
     clr = sns.color_palette("coolwarm",len(Dloss.keys()))
     i=0
@@ -132,6 +146,7 @@ def plot_loss_dict(losses,nb,title='loss',outf='./imgs'):
                 bbox_inches='tight',dpi=500)
 
     plt.close()
+    print('loss functions done ...',outf)
     return
 
 def plot_compare_ann2bb(Qec,Pfc,Qdc,Pdc,Fhz,Ghz,dev,vtm,trn_set,pfx='hybrid',outf='./imgs'):
