@@ -35,14 +35,15 @@ from common_model import get_truncated_normal
 from database_sae import load_dataset,synth_dataset
 from database_sae import stead_dataset,ann2bb_dataset
 from database_sae import deepbns_dataset
+from database_sae import mdof_dataset
 import pandas as pd
 
 def setup():
     parser = argparse.ArgumentParser()
     parser.add_argument('--actions', default='../actions_bb.txt',help='define actions txt')
     parser.add_argument('--strategy', default='../strategy_bb.txt',help='define strategy txt')
-    parser.add_argument('--dataset', default='nt4096_ls128_nzf8_nzd32.pth',help='folder | synth | pth | stead | ann2bb | deepbns')
-    parser.add_argument('--dataroot', default='../database/stead',help='Path to dataset') # '/home/filippo/Data/Filippo/aeolus/ann2bb_as4_') # '/home/filippo/Data/Filippo/aeolus/STEAD/waveforms_11_13_19.hdf5',help='path to dataset')
+    parser.add_argument('--dataset', default='mdof',help='folder | synth | pth | stead | ann2bb | deepbns | mdof')  #nt4096_ls128_nzf8_nzd32.pth
+    parser.add_argument('--dataroot', default='D:\\Luca\\Dati\\Filippo_data\\damaged_1_1T',help='Path to dataset') # '/home/filippo/Data/Filippo/aeolus/ann2bb_as4_') # '/home/filippo/Data/Filippo/aeolus/STEAD/waveforms_11_13_19.hdf5',help='path to dataset') # './database/stead'
     parser.add_argument('--inventory',default='RM07.xml,LXRA.xml,SRN.xml',help='inventories')
     parser.add_argument('--workers', type=int, help='number of data loading workers', default=2)
     parser.add_argument('--batchSize', type=int, default=5, help='input batch size')
@@ -69,8 +70,12 @@ def setup():
     parser.add_argument('--scc',type=int,default=0,help='site-class')
     parser.add_argument('--sst',type=int,default=1,help='site')
     parser.add_argument('--scl',type=int,default=1,help='scale [1]')
-    parser.add_argument('--nsy',type=int,default=83,help='number of synthetics [1]')
+    parser.add_argument('--nsy',type=int,default=10,help='number of synthetics [1]')
     parser.add_argument('--save_checkpoint',type=int,default=1,help='Number of epochs for each checkpoint')
+    parser.add_argument('--mdof',type=int,default=3,help='Number of channels of the monitoring ssystem (mdof database only)')
+    parser.add_argument('--wdof',type=int,nargs='+',default=[1,2,3],help='Channels used by the monitoring system (mdof database only)')
+    parser.add_argument('--tdof',default='A',help='Signal content (e.g. U, V, A) (mdof database only)') # eventually 'nargs='+' if different types of signals (e.g. displacements, velocities, accelerations etc.) are considered
+    parser.add_argument('--wtdof',nargs='+',default=[3],help='Specify the connection between wdof and tdof (mdof database only)')
     parser.set_defaults(stack=False,ftune=False,feat=False,plot=True)
     opt = parser.parse_args()
 
@@ -293,7 +298,8 @@ def setup():
         #[TODO]
         ths_trn,ths_tst,ths_vld,\
         vtm,fsc,md = mdof_dataset(src,opt.batchPercent,opt.imageSize,opt.latentSize,\
-                                  opt.nzd,opt.nzf,md=md,nsy=opt.nsy,device=device)
+                                  opt.nzd,opt.nzf,opt.imageSize,opt.mdof,opt.wdof,opt.tdof,\
+                                  opt.wtdof,md=md,nsy=opt.nsy,device=device)
         
     params = {'batch_size': opt.batchSize,\
               'shuffle': True,'num_workers':int(opt.workers)}

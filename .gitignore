@@ -1,2 +1,4 @@
 /.vscode/
 /env
+call_common_setup
+call_common_setup_debug

@@ -847,8 +847,7 @@ def civa_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
     return ths_trn,ths_tst,ths_vld,vtm,fsc
 
 
-#[TODO]
-def mdof_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
+def mdof_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,ntm,mdof,wdof,tdof,wtdof,md,nsy,device):
     '''
     Input:
         src: source file
@@ -857,6 +856,11 @@ def mdof_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
         zwindow: length of the latent space last dimension
         nzd: number of channels of broad-band latent space (Xd<->zd)
         nzf: number of channels of filtered latent space (Xf<->zf)
+        ntm: number of time series
+        mdof: number of channels
+        wdof: channel numbers (int)
+        tdof: type of channels (e.g. A)
+        wtdof: specify the subdivision of the channels in tdofs
         md: meta-data dictionary
         nsy: number of signals to extract from the src database
         device: CPU or GPU
@@ -881,48 +885,37 @@ def mdof_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
                 zf = Variable(zf_data).to(device) # filtered latent space converted to pytorch Variable)
                 ...
     '''
-    mdof = 3
+
+    # Initialize wtdof_v tensor
+    for i1 in range(len(wtdof)):
+        if i1==0:
+            wtdof_v=[wtdof[i1]]
+            wtdof_v=np.array(wtdof_v)
+            np.expand_dims(wtdof_v, axis=0)
+        else:
+            i2=wtdof_v[i1-1]+wtdof[i1]
+            np.concatenate((wtdof_v,i2), axis=1)
+
     # time vector
     vtm = md['dtm']*np.arange(0,md['ntm'])
     # initialize numpy tensors 
-    tar = np.zeros((nsy,2))
+    tar = np.zeros((nsy,1))
     trn_set  = -999.9*np.ones(shape=(nsy,mdof,md['ntm']))
+    thf_set  = -999.9*np.ones(shape=(nsy,mdof,md['ntm']))
+    # initialize numpy tensor for normalizing original (undamaged) data
     pgat_set = -999.9*np.ones(shape=(nsy,mdof))
     psat_set = -999.9*np.ones(shape=(nsy,mdof,md['nTn']))
+    # initialize numpy tensor for normalizing filtered (damaged) data
+    pgaf_set = -999.9*np.ones(shape=(nsy,3))
+    psaf_set = -999.9*np.ones(shape=(nsy,3,md['nTn']))
     
-    #[TODO]
-    # parse MDOF database
-    eqd = [...]  # h5py.File(src,'r')['earthquake']['local']
-    # parse MDOF metadata
-    eqm = [...]
-            #pd.read_csv(osj(src.split('/waveforms')[0],'metadata_'+\
-            #                src.split('waveforms_')[-1].split('.hdf5')[0]+'.csv'))
+    case_ud='undamaged'
+    [mdof_ths_u,eqm_u]=mdof_case_loader(mdof,wtdof_v,src,case_ud,tdof,wdof,nsy,ntm)
+    [pgat_set,trn_set]=mdof_tuk_pyt(md,nsy,mdof,mdof_ths_u,Xwindow,trn_set,pgat_set)
 
-    # Tukey window
-    w = windows.tukey(md['ntm'],5/100)
-    for i in nsy:
-        # [TODO]
-        # read ndof-component time-histories into a numpy tensor mdof_ths
-        mdof_ths = np.empty((ntm,mdof)) # must be populated with dataset from civa
-        [...]
-        # loop over components
-        bi = 0 # initial index of the time history (can be changed)
-        for j in range(mdof):
-            # detrend portion of time
-            trn_set[i,j,:] = detrend(civa_ths[bi:bi+Xwindow,j])*w
-            # compute peak values per component
-            pgat_set[i,j] = np.abs(trn_set[i,j,:]).max()
-            # normalize
-            trn_set[i,j,:] = trn_set[i,j,:]/pgat_set[i,j]
-            # recompute peak value per component
-            pgat_set[i,j] = np.abs(trn_set[i,j,:]).max()
-            # response spectrum ---> not necessary
-            #_,psa,_,_,_ = rsp(md['dtm'],trn_set[i,j,:],md['vTn'],5.)
-            #psat_set[i,j,:] = psa.reshape((md['nTn']))
-    
-    # convert numpy tensors to pytorch tensors
-    pgat_set = np2t(np.float32(pgat_set))
-    trn_set = np2t(trn_set).float()
+    case_ud='damaged'
+    [mdof_ths_d,eqm_d]=mdof_case_loader(mdof,wtdof_v,src,case_ud,tdof,wdof,nsy,ntm)
+    [pgaf_set,thf_set]=mdof_tuk_pyt(md,nsy,mdof,mdof_ths_d,Xwindow,thf_set,pgaf_set)
     
     # Define database partitioning
     ths_fsc = []
@@ -937,26 +930,8 @@ def mdof_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
     wnf_set   = tFT(nsy,nzf,zwindow)
     wnf_set.resize_(nsy,nzf,zwindow).normal_(**rndm_args)
 
-    # filter original CIVA time-histories (md['cutoff'] is the cutoff frequency)
-    thf_set = lowpass_biquad(trn_set,1./md['dtm'],md['cutoff'])
-
-    # Normalize filtered data
-    pgaf_set = -999.9*np.ones(shape=(nsy,3))
-    psaf_set = -999.9*np.ones(shape=(nsy,3,md['nTn']))
-    for i in range(thf_set.shape[0]):
-        for j in range(3):
-            pgaf_set[i,j] = np.abs(thf_set[i,j,:].data.numpy()).max(axis=-1)
-            #_,psa,_,_,_ = rsp(md['dtm'],thf_set.data[i,j,:].numpy(),md['vTn'],5.)
-            #psaf_set[i,j,:] = psa.reshape((md['nTn']))
-    # Convert numpy tensor to pytorch tensors
-    pgat_set = np2t(np.float32(pgat_set))    
-    pgaf_set = np2t(np.float32(pgaf_set))
-    psat_set = np2t(np.float32(psat_set))
-    psaf_set = np2t(np.float32(psaf_set))
-       
-    # Define target (fake labels issued from metadata)
-    tar[:,0] = np.empty(dtype=np.float32) # source magnitude
-    tar[:,1] = np.empty(dtype=np.float32) # source depth
+    # Define target (fake labels issued from metadata)  **damaged only**
+    tar[:,0]=eqm_d
     
     nhe = tar.shape[1] 
     # Scaler for metadata homogeneization
@@ -970,7 +945,7 @@ def mdof_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
     one_hot = MultiLabelBinarizer(classes=range(64))
     tar = np2t(np.float32(one_hot.fit_transform(tar)))
     from plot_tools import plot_ohe
-    plot_ohe(tar)
+    #plot_ohe(tar)
     fsc = {'lab_enc':lab_enc,'tar':tar_fsc,'ths_fsc':ths_fsc,\
            'one_hot':one_hot,'ncat':tar.shape[1]}
     tar = (psat_set,psaf_set,tar)
@@ -983,3 +958,57 @@ def mdof_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
     ths_tst,\
     ths_vld = ths_trn
     return ths_trn,ths_tst,ths_vld,vtm,fsc
+
+# for mdof only ########################################################################
+def mdof_case_loader(mdof,wtdof_v,src,case_ud,tdof,wdof,nsy,ntm):
+    # parse MDOF database
+    i4=0
+    for i1 in range(mdof):
+        if i1 > wtdof_v[i4]:
+            i4=i4+1
+        #load the measurements recorded by each single channel
+        if len(wtdof_v)>1:
+            src_dof=src+'\\'+case_ud+'_'+tdof[i4]+'_DC_concat_dof_'+str(wdof[i1])+'.csv'
+        else:
+            src_dof=src+'\\'+case_ud+'_'+tdof+'_DC_concat_dof_'+str(wdof[i1])+'.csv'
+        sdof=np.genfromtxt(src_dof)
+        sdof.astype(np.float32)
+        #initialise mdof_ths
+        if i1==0:
+            mdof_ths=np.zeros((nsy,mdof,ntm))
+        i2=0
+        for i3 in range(nsy):
+            mdof_ths[i3,i1,0:ntm]=sdof[i2:(i2+ntm)]
+            i2=i2+ntm
+
+    # parse MDOF metadata
+    src_metadata=src+'\\'+case_ud+'_'+'DC_labels.csv'
+    eqm=np.genfromtxt(src_metadata)
+    return mdof_ths,eqm
+# for mdof only ########################################################################
+
+# for mdof only ########################################################################
+def mdof_tuk_pyt(md,nsy,mdof,mdof_ths,Xwindow,trn_set,pgat_set):
+    # Tukey window
+    w = windows.tukey(md['ntm'],5/100)
+    for i in range(nsy):
+        # loop over components
+        bi = 0 # initial index of the time history (can be changed)
+        for j in range(mdof):
+            # detrend portion of time
+            trn_set[i,j,:] = detrend(mdof_ths[i,j,bi:bi+Xwindow])*w 
+            # compute peak values per component
+            pgat_set[i,j] = np.abs(trn_set[i,j,:]).max()
+            # normalize
+            trn_set[i,j,:] = trn_set[i,j,:]/pgat_set[i,j]
+            # recompute peak value per component
+            pgat_set[i,j] = np.abs(trn_set[i,j,:]).max()
+            # response spectrum ---> not necessary
+            #_,psa,_,_,_ = rsp(md['dtm'],trn_set[i,j,:],md['vTn'],5.)
+            #psat_set[i,j,:] = psa.reshape((md['nTn']))
+    
+    # convert numpy tensors to pytorch tensors
+    pgat_set = np2t(np.float32(pgat_set))
+    trn_set = np2t(trn_set).float()
+    return trn_set,pgat_set #,psat_set
+# for mdof only ########################################################################

@@ -1,11 +1,13 @@
+u'''General informations'''
+__author__ = "Mousavi S.M."
+r"""Load STEAD data updated dataset"""
+u'''Required modules'''
 import os
-
 # data selection part
 import pandas as pd
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-
 # convert waveforms part
 from convert_waveforms import make_stream
 from convert_waveforms import make_plot
@@ -21,7 +23,7 @@ def data_selector(csv_file,file_name):
     df = pd.read_csv(csv_file)
     print(f'total events in csv file: {len(df)}')
     # filterering the dataframe
-    df = df[(df.trace_category == 'earthquake_local') & (df.source_distance_km <= 20) & (df.source_magnitude > 3)]
+    df = df[(df.trace_category == 'earthquake_local') & (df.source_distance_km <= 15) & (df.source_magnitude < 4.5) & (4 < df.source_magnitude)]
     print(f'total events selected: {len(df)}')
 
     # making a list of trace names for the selected data
@@ -41,9 +43,9 @@ def data_selector(csv_file,file_name):
                                         station=dataset.attrs['receiver_code'],
                                         starttime=UTCDateTime(dataset.attrs['trace_start_time']),
                                         endtime=UTCDateTime(dataset.attrs['trace_start_time']) + 60,
-                                        loc="*", 
+                                        loc="*",
                                         channel="*",
-                                        level="response")  
+                                        level="response")
 
         # # converting into displacement
         # st = make_stream(dataset)
@@ -63,9 +65,9 @@ def data_selector(csv_file,file_name):
             acc_for_loading  = acc_for_loading_1
         else:
             acc_for_loading  = np.concatenate((acc_for_loading, acc_for_loading_1), axis=1)
-
-        return acc_for_loading
         # end convert waveforms part ##############################################################################################################
+    return acc_for_loading
+        
 
 
 

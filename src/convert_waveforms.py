@@ -1,5 +1,8 @@
+u'''General informations'''
+__author__ = "Mousavi S.M."
+r"""Reshape waveforms data (STEAD updated dataset)"""
+u'''Required modules'''
 import os
-
 import obspy
 import h5py
 from obspy import UTCDateTime
