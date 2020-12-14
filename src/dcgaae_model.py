@@ -5,7 +5,7 @@ from torch.nn.modules import activation
 u'''AE design'''
 u'''Required modules'''
 import warnings
-import GPUtil
+# import GPUtil
 warnings.filterwarnings("ignore")
 from common_nn import *
 import torch
@@ -686,7 +686,6 @@ class Encoder(Module):
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
         self.dev = dev
-        # pdb.set_trace()
         if ngpu ==1:
             if nly==3:
                 # 3 layers
@@ -820,22 +819,47 @@ class Encoder(Module):
             self.cnn2 = sqn(*self.cnn2)
             self.cnn3 = sqn(*self.cnn3)
             self.cnn4 = sqn(*self.cnn4)
+            
+            #residual network
+            self.res1 = ResNetLayer(ndf,ndf,n=3)
+            self.res2 = ResNetLayer(ndf*2,ndf*2,n=3)
+            self.res3 = ResNetLayer(ndf*4,ndf*4,n=3)
+            self.res4 = ResNetLayer(nz,nz,n=3)
+
             self.cnn1.to(self.dev0,non_blocking=True,dtype=torch.float32)
+            self.res1.to(self.dev0,non_blocking=True,dtype=torch.float32)
+
             self.cnn2.to(self.dev1,non_blocking=True,dtype=torch.float32)
+            self.res2.to(self.dev1,non_blocking=True,dtype=torch.float32)
+
             self.cnn3.to(self.dev2,non_blocking=True,dtype=torch.float32)
+            self.res3.to(self.dev2,non_blocking=True,dtype=torch.float32)
+
             self.cnn4.to(self.dev3,non_blocking=True,dtype=torch.float32)
+            self.res4.to(self.dev3,non_blocking=True,dtype=torch.float32)
+
         
     def forward(self,x):
         if x.is_cuda and self.ngpu > 1:
             #zlf   = pll(self.cnn,Xn,self.gang)
+            # import pdb
+            # pdb.set_trace()
             x = x.to(self.dev0,non_blocking=True,dtype=torch.float32)
             x = self.cnn1(x)
+            x = self.res1(x)+x
+
             x = x.to(self.dev1,non_blocking=True,dtype=torch.float32)
             x = self.cnn2(x)
+            x = self.res2(x)+x
+
             x = x.to(self.dev2,non_blocking=True,dtype=torch.float32)
             x = self.cnn3(x)
+            x = self.res3(x)+x
+
             x = x.to(self.dev3,non_blocking=True,dtype=torch.float32)
             x = self.cnn4(x)
+            x = self.res4(x)+x
+
             zlf = x
             torch.cuda.empty_cache()
         else:
@@ -926,24 +950,43 @@ class Decoder(Module):
             self.cnn2 = sqn(*self.cnn2)
             self.cnn3 = sqn(*self.cnn3)
             self.cnn4 = sqn(*self.cnn4)
+            self.res1 = ResNetLayer(ndf*4,ndf*4, conv=cnn1dt, n=3)
+            self.res2 = ResNetLayer(ndf*2, ndf*2,conv=cnn1dt,n=3)
+            self.res3 = ResNetLayer(ndf*1, ndf*1,conv=cnn1dt, n=3)
+            self.res4 = ResNetLayer(nch, nch, conv=cnn1dt, n=3)
+
             self.cnn1.to(self.dev0,non_blocking=True,dtype=torch.float32)
+            self.res1.to(self.dev0,non_blocking=True,dtype=torch.float32)
+
             self.cnn2.to(self.dev1,non_blocking=True,dtype=torch.float32)
+            self.res2.to(self.dev1,non_blocking=True, dtype=torch.float32)
+
             self.cnn3.to(self.dev2,non_blocking=True,dtype=torch.float32)
+            self.res3.to(self.dev2,non_blocking=True,dtype=torch.float32)
+
             self.cnn4.to(self.dev3,non_blocking=True,dtype=torch.float32)
+            self.res4.to(self.dev3,non_blocking=True,dtype=torch.float32)
 
 
     def forward(self,x):
         if x.is_cuda and self.ngpu > 1:
             # Xr = pll(self.cnn,zxn,self.gang)
-            #pdb.set_trace()
+            # pdb.set_trace()
             x = x.to(self.dev0,dtype=torch.float32)
             x = self.cnn1(x)
+            x = self.res1(x)+x
+
             x = x.to(self.dev1,dtype=torch.float32)
             x = self.cnn2(x)
+            x = self.res2(x)+x
+
             x = x.to(self.dev2,dtype=torch.float32)
             x = self.cnn3(x)
+            x = self.res3(x)+x
+
             x = x.to(self.dev3,dtype=torch.float32)
             x = self.cnn4(x)
+            x = self.res4(x)+x
             Xr = x
             torch.cuda.empty_cache()
         else:
@@ -1091,8 +1134,12 @@ class DCGAN_Dx(Module):
             self.ann2 =  pyramid+final
             self.ann1 = sqn(*self.ann1)
             self.ann2 = sqn(*self.ann2)
+            self.res1 = ResNetLayer(64,64,n=3,conv=cnn1dt)
+            self.res2 = ResNetLayer(512,512,n=3,conv=cnn1dt)
             self.ann1.to(self.dev0,non_blocking=True,dtype=torch.float32)
+            self.res1.to(self.dev0, non_blocking=True,dtype=torch.float32)
             self.ann2.to(self.dev1,non_blocking=True,dtype=torch.float32)
+            self.res2.to(self.dev1, non_blocking=True, dtype = torch.float32)
             
     def extraction(self,X):
         X = self.prc(X)
@@ -1111,8 +1158,10 @@ class DCGAN_Dx(Module):
             # import pdb
             # pdb.set_trace()
             X = self.ann1(X)
+            X =  self.res1(X)+X
             X = X.to(self.dev1,dtype=torch.float32)
             X = self.ann2(X)
+            X = self.res2(X) + X
             z = X
             
             if self.wf:
@@ -1170,14 +1219,19 @@ class DCGAN_Dz(Module):
             self.ann2 = [Dpout(dpc=dpc)]+[activation[1]]
             self.ann1 = sqn(*self.ann1)
             self.ann2 = sqn(*self.ann2)
+            self.res = ResNetLayer(512,512,n=3)
             self.ann1.to(self.dev0,non_blocking=True,dtype=torch.float32)
+            self.res.to(self.dev0,non_blocking=True, dtype=torch.float32)
             self.ann2.to(self.dev1,non_blocking=True,dtype=torch.float32)
 
             
                 
 
         self.prc = sqn(*initial)
+        self.prc.to(self.dev0,non_blocking=True, dtype=torch.float32)
         self.exf = layers[:-1]
+        self.aft = sqn(*self.exf) 
+        self.aft.to(self.dev0,non_blocking=True, dtype = torch.float32)
     
     def extraction(self,X):
         X = self.prc(X)
@@ -1191,8 +1245,10 @@ class DCGAN_Dz(Module):
     def forward(self,X):
         if X.is_cuda and self.ngpu > 1:
             # z = pll(self.ann,X,self.gang)
+            # pdb.set_trace()
             X = X.to(self.dev0,non_blocking=True,dtype=torch.float32)
             X = self.ann1(X)
+            X = self.res(X) + X
             X = X.to(self.dev1,non_blocking=True,dtype=torch.float32)
             X = self.ann2(X)
             z = X
@@ -1311,12 +1367,18 @@ class DCGAN_DXZ(Module):
             self.ann1 = layers1
             self.ann2 = layers2
             self.ann3 = final
-            
+            self.res1 = ResNetLayer(1024,1024,n=3)
+            self.res2 = ResNetLayer(1024,1024,n=3)
             self.ann1 = sqn(*self.ann1)
             self.ann2 = sqn(*self.ann2)
             self.ann3 = sqn(*self.ann3)
+
             self.ann1.to(self.dev0,dtype=torch.float32)
+            self.res1.to(self.dev0,dtype=torch.float32)
+
             self.ann2.to(self.dev1,dtype=torch.float32)
+            self.res2.to(self.dev1,dtype=torch.float32)
+
             self.ann3.to(self.dev2,dtype=torch.float32)
             
     def extraction(self,X):
@@ -1328,10 +1390,15 @@ class DCGAN_DXZ(Module):
     def forward(self,X):
         if X.is_cuda and self.ngpu > 1:
             #z = pll(self.ann,X,self.gang)
+            # pdb.set_trace()
             X = X.to(self.dev0,dtype=torch.float32)
             X = self.ann1(X)
+            X = self.res1(X)+X
+
             X = X.to(self.dev1,dtype=torch.float32)
             X = self.ann2(X)
+            X = self.res2(X)+X
+
             X = X.to(self.dev2,dtype=torch.float32)
             X = self.ann3(X)
             z = X

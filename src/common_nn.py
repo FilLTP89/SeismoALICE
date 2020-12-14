@@ -129,7 +129,7 @@ class Squeeze(Module):
 
 def cnn1d(in_channels,out_channels,\
           act=LeakyReLU(1.0,inplace=True),\
-          bn=True,ker=7,std=4,pad=1,\
+          bn=True,ker=7,std=4,pad=0,\
           dil=1,grp=1,dpc=0.1,wn=False,dev=tdev("cpu")):
 
     block = [Conv1d(in_channels=in_channels,\
@@ -238,16 +238,85 @@ class ResConvBlock(Module):
     def forward(self, x):
         return self.ann(x) + x
 
-class ResNet(Module):
-    def __init__(self, ann):
-        super(ResNet,self).__init__()
-        
+class ResidualBlock(Module):
+    def __init__(self, in_channels, out_channels, activation='relu'):
+        super(ResidualBlock,self).__init__()
+        self.in_channels = in_channels,
+        self.out_channels = out_channels
+        self.activation = activation
         # 1st block
-        self.ann = sqn(*ann)
+        self.block = nn.Identity()
+        self.activate = self.activation_function(self.activation)
+        self.shortcut = nn.Identity() 
         
     def forward(self, x):
-        return self.ann(x) + self.ann._modules['0'](x)
+        # return self.ann(x) + self.ann._modules['0'](x)
+        residual  = x
+        if self.should_apply_shortcut: residual =  self.shortcut(x)
+        x = self.block(x)
+        x +=residual
+        x = self.activate(x)
+        return x
+
+
+    def activation_function(self, activation):
+        return  nn.ModuleDict([
+            ['relu', nn.ReLU(inplace=True)],
+            ['leaky_relu', nn.LeakyReLU(negative_slope=0.01, inplace=True)],
+            ['selu', nn.SELU(inplace=True)],
+            ['none', nn.Identity()]
+        ])[activation]
+    @property
+    def should_apply_shortcut(self):
+        return self.in_channels != self.out_channels
+
+class ResNetResidualBlock(ResidualBlock):
+    def __init__(self,in_channels, out_channels, expansion=1, conv=cnn1d, downsampling=1, *args, **kwargs):
+        super().__init__(in_channels,out_channels)
+        self.expansion = expansion
+        self.downsampling = downsampling
+        self._conv = conv
+        self.ann = self._conv(in_channels, self.expanded_channels, ker = 1, std = 1, pad= 0)
+        # self.shortcut = sqn(*self.ann, nn.BatchNorm1d(self.expanded_channels)) if self.should_apply_shortcut else None
+
+    @property
+    def expanded_channels(self):
+        return self.out_channels*self.expansion
+    @property
+    def should_apply_shortcut(self):
+        return self.in_channels != self.expanded_channels
     
+class ResNetBasicBlock(ResNetResidualBlock):
+    def __init__(self, in_channels, out_channels, conv, *args, **kwargs):
+        super().__init__(in_channels, out_channels, *args, **kwargs)
+        self.ann1 = self.conv_bn(in_channels,out_channels, conv=conv, ker=1, std=1)
+        self.ann2 = self.conv_bn(out_channels, self.expanded_channels,conv=conv,ker=1, std=1)
+        self.shortcut = self.short_bn(in_channels, out_channels,conv=cnn1d,*args, ** kwargs)
+        self.block = sqn(*self.ann1,self.activation_function(self.activation),*self.ann2)
+
+    def conv_bn(self, in_channels, out_channels, conv, *args, **kwargs):
+        return sqn(*conv(in_channels, out_channels,*args, **kwargs), nn.BatchNorm1d(out_channels))
+    def short_bn(self, in_channels, out_channels, conv, *args, **kwargs):
+        ann = conv(in_channels, out_channels, ker=1, std=1, pad=0)
+        return  sqn(*ann, nn.BatchNorm1d(self.expanded_channels)) if self.should_apply_shortcut else None
+
+class ResNetLayer(Module):
+    def __init__(self,in_channels, out_channels, block=ResNetBasicBlock, conv=cnn1d, n=1, *args, **kwargs):
+        super().__init__()
+        downsampling = 2 if in_channels !=out_channels else 1
+        _block = block(in_channels, out_channels, conv=conv,
+            *args, **kwargs, downsampling = downsampling)
+        expansion = _block.expansion
+        self.Resblock = sqn(
+            _block,
+            *[block(out_channels*expansion,
+                 out_channels, downsampling=1, conv=conv,*args, **kwargs) for _ in range(n - 1)]
+            )
+
+    def forward(self, x):
+        x = self.Resblock(x)
+        return x
+
 u'''[Zeroed gradient for selected optimizers]'''
 def zerograd(optz):
     for o in optz: 

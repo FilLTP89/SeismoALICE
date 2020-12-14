@@ -8,10 +8,10 @@ from copy import deepcopy
 from profile_support import profile
 from common_nn import *
 from common_torch import * 
-from dcgaae_model import Encoder, Decoder
-from dcgaae_model import DCGAN_Dx, DCGAN_Dz
+# from dcgaae_model import Encoder, Decoder
+# from dcgaae_model import DCGAN_Dx, DCGAN_Dz
 from dcgaae_model import *
-from dcgaae_model import DenseEncoder
+# from dcgaae_model import DenseEncoder
 import plot_tools as plt
 from generate_noise import latent_resampling, noise_generator
 from generate_noise import lowpass_biquad
@@ -22,8 +22,7 @@ from database_sae import thsTensorData
 import json
 import pprint as pp
 import pdb
-import GPUtil
-import resnet
+# import GPUtil
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 rndm_args = {'mean': 0, 'std': 1}
@@ -236,7 +235,7 @@ class trainer(object):
                                opd=outpads['Gdd'],dpc=0.0,act=act['Gdd']).to(torch.float32)
             #print("|total_memory [GB]:",int(torch.cuda.get_device_properties(device).total_memory//(10**9)))
             
-            # pdb.set_trace()
+            
             #if we training with the broadband signal
                 # we read weigth and bias if is needed and then we set-up the Convolutional Neural 
                 # Network needed for the Discriminator
@@ -508,9 +507,9 @@ class trainer(object):
     def discriminate_broadband_xz(self,Xd,Xdr,zd,zdr):
         
         # Discriminate real
-        print("|In discriminate_broadband_xz function")
-        print("\t||Xd : ",Xd.shape,"\tzdr : " ,zdr.shape)
-        print("\t||Xdr : ",Xdr.shape,"\tzd : ", zd.shape)
+        # print("|In discriminate_broadband_xz function")
+        # print("\t||Xd : ",Xd.shape,"\tzdr : " ,zdr.shape)
+        # print("\t||Xdr : ",Xdr.shape,"\tzd : ", zd.shape)
         # import pdb
         #pdb.set_trace()
 
@@ -519,17 +518,17 @@ class trainer(object):
         a = self.DsXd(Xd)
         b = self.Dszd(zdr)
         
-        print("\t||DsXd(Xd) : ", a.shape,"\tDszd(zdr) : ",b.shape)
+        # print("\t||DsXd(Xd) : ", a.shape,"\tDszd(zdr) : ",b.shape)
         
 
         zrc = zcat(a,b)
-        print("\t\t|||zrc : ", zrc.shape)
+        # print("\t\t|||zrc : ", zrc.shape)
         DXz = self.Ddxz(zrc)
-        print("\t\t|||DXz : ", DXz.shape)
+        # print("\t\t|||DXz : ", DXz.shape)
         # Discriminate fake
         c = self.DsXd(Xdr)
         d = self.Dszd(zd)
-        print("\t||DsXd(Xdr) : ",c.shape,"\tDszd(zd) : ", d.shape)
+        # print("\t||DsXd(Xdr) : ",c.shape,"\tDszd(zd) : ", d.shape)
         zrc = zcat(c,d)
         DzX = self.Ddxz(zrc)
         
@@ -539,13 +538,13 @@ class trainer(object):
     ''' Methode that discriminate real and fake signal for filtred type '''
     @profile
     def discriminate_filtered_xz(self,Xf,Xfr,zf,zfr):
-        print("|In discriminate_filtered_xz function ...") 
+        # print("|In discriminate_filtered_xz function ...") 
         # Discriminate real
-        print("\t||Xf : ",Xf.shape,"\tzfr : ",zfr.shape)
+        # print("\t||Xf : ",Xf.shape,"\tzfr : ",zfr.shape)
         #pdb.set_trace()
         ftz = self.Dszf(zfr)
         ftX = self.DsXf(Xf)
-        print("\t||ftX[0] : ", ftX[0].shape,"\tftz[0] : ",ftz[0].shape)
+        # print("\t||ftX[0] : ", ftX[0].shape,"\tftz[0] : ",ftz[0].shape)
         zrc = zcat(ftX[0],ftz[0])
         ftr = ftz[1]+ftX[1]
         ftXz = self.Dfxz(zrc)
@@ -615,8 +614,8 @@ class trainer(object):
     ####################
     @profile
     def alice_train_broadband_discriminator_explicit_xz(self,Xd,zd):
-        print("|[1]In the alice_train_broadband_generator_explicit_xz function  ...") 
-        print("\t||Xd:",Xd.shape,"\tzd ",zd.shape)
+        # print("|[1]In the alice_train_broadband_generator_explicit_xz function  ...") 
+        # print("\t||Xd:",Xd.shape,"\tzd ",zd.shape)
         # Set-up training
         zerograd(self.optzd)
         self.Fed.eval(),self.Gdd.eval()
@@ -628,21 +627,21 @@ class trainer(object):
         X_inp = zcat(Xd,wnx.to(Xd.device))
         z_inp = zcat(zd,wnz.to(zd.device))
         #GPUtil.showUtilization()
-        print("\t||X_inp : ",X_inp.shape,"\tz_inp : ",z_inp.shape)
+        # print("\t||X_inp : ",X_inp.shape,"\tz_inp : ",z_inp.shape)
 
         # 2. Generate conditional samples
         X_gen = self.Gdd(z_inp)
         z_gen = self.Fed(X_inp)
         torch.cuda.empty_cache()
         
-        print("\t||X_gen : ",X_gen.shape,"\tz_gen : ",z_gen.shape)
+        # print("\t||X_gen : ",X_gen.shape,"\tz_gen : ",z_gen.shape)
         # z_gen = latent_resampling(self.Fed(X_inp),nzd,wn1)
 
         # 3. Cross-Discriminate XZ
         Dxz,Dzx = self.discriminate_broadband_xz(Xd,X_gen,zd,z_gen)
         # print("\t||After discriminate_broadband_xz") 
         # 4. Compute ALI discriminator loss
-        print("\t||Dzx : ", Dzx.shape,"Dxz : ",Dxz.shape)
+        # print("\t||Dzx : ", Dzx.shape,"Dxz : ",Dxz.shape)
         Dloss_ali = -torch.mean(ln0c(Dzx)+ln0c(1.0-Dxz))
         
         # Total loss
@@ -657,7 +656,7 @@ class trainer(object):
     
     @profile
     def alice_train_broadband_generator_explicit_xz(self,Xd,zd):
-        print("|[2]In alice_train_broadband_generator_explicit_xz ...")
+        # print("|[2]In alice_train_broadband_generator_explicit_xz ...")
         # Set-up training
         zerograd(self.optzd)
         self.Fed.train(),self.Gdd.train()
@@ -669,18 +668,18 @@ class trainer(object):
         # 1. Concatenate inputs
         X_inp = zcat(Xd,wnx.to(Xd.device,non_blocking=True))
         z_inp = zcat(zd,wnz.to(zd.device,non_blocking=True))
-        print("\t||X_inp", X_inp.shape,"\t||z_inp",z_inp.shape)
+        # print("\t||X_inp", X_inp.shape,"\t||z_inp",z_inp.shape)
         # 2. Generate conditional samples
         
         X_gen = self.Gdd(z_inp)
         z_gen = self.Fed(X_inp)
-        print("\t||X_gen", X_gen.shape,"\t||z_gen",z_gen.shape)
+        # print("\t||X_gen", X_gen.shape,"\t||z_gen",z_gen.shape)
         # z_gen = latent_resampling(self.Fed(X_inp),nzd,wn1)
         
         # 3. Cross-Discriminate XZ
         Dxz,Dzx = self.discriminate_broadband_xz(Xd,X_gen,zd,z_gen)
-        print("\t||Dxz", Dxz.shape,"\t||Dzx",Dzx.shape)
-        # 4. Compute ALI Generator loss
+        # print("\t||Dxz", Dxz.shape,"\t||Dzx",Dzx.shape)
+        # 4. Compute ALI Generator loss WGAN
         Gloss_ali = torch.mean(-Dxz +Dzx).to(1,non_blocking=True)
         
         # 0. Generate noise
@@ -698,7 +697,7 @@ class trainer(object):
         X_rec = self.Gdd(z_gen).to(1,non_blocking=True)
         z_rec = self.Fed(X_gen).to(1,non_blocking=True)
         # z_rec = latent_resampling(self.Fed(X_gen),nzd,wn1)
-        print("\t||X_rec", X_rec.shape,"\t||z_rec",z_rec.shape)
+        # print("\t||X_rec", X_rec.shape,"\t||z_rec",z_rec.shape)
         # 3. Cross-Discriminate XX
         # pdb.set_trace()
         Gloss_cycle_X = torch.mean(torch.abs(Xd.to(1)-X_rec)).to(1,non_blocking=True)  
@@ -720,7 +719,7 @@ class trainer(object):
         self.losses['Gloss_t'].append(Gloss.tolist()) 
         self.losses['Gloss_x'].append(Gloss_cycle_X.tolist())
         self.losses['Gloss_z'].append(Gloss_cycle_z.tolist())
-        GPUtil.showUtilization(all=True)
+        # GPUtil.showUtilization(all=True)
         torch.cuda.empty_cache()
     ####################
     ##### FILTERED #####
@@ -955,6 +954,7 @@ class trainer(object):
         for epoch in range(niter):
             for b,batch in enumerate(trn_loader):
                 # Load batch
+                # pdb.set_trace()
                 xd_data,_,zd_data,_,_,_,_ = batch
                 Xd = Variable(xd_data).to(self.ngpu-1,non_blocking=True) # BB-signal
                 zd = Variable(zd_data).to(self.ngpu-1,non_blocking=True)
@@ -1217,6 +1217,4 @@ class trainer(object):
                     Xf = Variable(xf_data).to(device) # LF-signal
                     zd = Variable(zd_data).to(device)
                     zf = Variable(zf_data).to(device)
-    @profile
-    def ResNet(model,block):
-        return ResNet(model,block)
+   
