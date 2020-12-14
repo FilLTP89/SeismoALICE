@@ -235,7 +235,7 @@ class trainer(object):
                                opd=outpads['Gdd'],dpc=0.0,act=act['Gdd']).to(torch.float32)
             #print("|total_memory [GB]:",int(torch.cuda.get_device_properties(device).total_memory//(10**9)))
             
-            
+            pdb.set_trace()
             #if we training with the broadband signal
                 # we read weigth and bias if is needed and then we set-up the Convolutional Neural 
                 # Network needed for the Discriminator
