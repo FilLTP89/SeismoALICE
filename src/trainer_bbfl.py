@@ -22,6 +22,7 @@ from database_sae import thsTensorData
 import json
 import pprint as pp
 import pdb
+from conv_factory import *
 # import GPUtil
 from torch.nn.parallel import DistributedDataParallel as DDP
 
@@ -123,7 +124,7 @@ outpads = {'Gdd':0,
            }
 
 import subprocess
-
+import os
 # def get_gpu_memory_map():
 #     """Get the current gpu usage.
 
@@ -196,8 +197,21 @@ class trainer(object):
         """
             This part is for training with the broadband signal
         """
-        # dev0 = rank * 2
-        # dev1 = rank * 2 + 1
+        # we determine in which kind of environnement we are 
+        # if(opt.ntask ==1 and opt.ngpu >=1):
+        #     print('ModelParallele to Build')
+        #     factory = ModelParalleleFactory()
+        # elif(opt.ntask >1 and opt.ngpu >=1):
+        #     print('DataParallele to Build')
+        #     factory = DataParalleleFactory()
+        # else:
+        #     print('environ not found')
+        # net = Network(factory)
+        # encoder = net.Encoder(opt.config["encoder"], opt, acts['ALICE']['Fed'])
+        # decoder = net.Decoder(opt.config["decoder"], opt, acts["ALICE"]["Gdd"])
+
+        # import pdb
+        # pdb.set_trace()
 
         if 'broadband' in t:
             self.style='ALICE'
@@ -221,21 +235,21 @@ class trainer(object):
             print("Loading broadband generators")
             
             # Encoder broadband Fed
-            self.Fed = Encoder(ngpu=ngpu,dev=device,nz=nzd,nzcl=0,
-                               nch=2*nch_tot,ndf=ndf,szs=md['ntm'],
-                               nly=nlayers['Fed'],ker=kernels['Fed'],
-                               std=strides['Fed'],pad=padding['Fed'],
+            self.Fed = Encoder(ngpu=ngpu,dev=device,nz=nzd,\
+                               nch=2*nch_tot,ndf=ndf,\
+                               nly=nlayers['Fed'],ker=kernels['Fed'],\
+                               std=strides['Fed'],pad=padding['Fed'],\
                                dil=1,grp=1,dpc=0.0,act=act['Fed']).to(torch.float32)
 
             # Decoder broadband Gdd
-            self.Gdd = Decoder(ngpu=ngpu,nz=2*nzd,nch=nch_tot,
+            self.Gdd = Decoder(ngpu=ngpu,nz=2*nzd,nch=nch_tot,\
                                ndf=int(ndf//(2**(5-nlayers['Gdd']))),
                                nly=nlayers['Gdd'],ker=kernels['Gdd'],
                                std=strides['Gdd'],pad=padding['Gdd'],\
                                opd=outpads['Gdd'],dpc=0.0,act=act['Gdd']).to(torch.float32)
             #print("|total_memory [GB]:",int(torch.cuda.get_device_properties(device).total_memory//(10**9)))
             
-            pdb.set_trace()
+            
             #if we training with the broadband signal
                 # we read weigth and bias if is needed and then we set-up the Convolutional Neural 
                 # Network needed for the Discriminator
@@ -271,6 +285,7 @@ class trainer(object):
                     self.DsXd = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
                                      n_extra_layers=1,dpc=0.25,activation=act['Dsx']).to(torch.float32)
                     print('!!!! warnings no discriminator configaration found for DCGAN_Dx\n\tassume n_extra_layers` = 1')
+                pdb.set_trace()
                 
                 if opt.config['Ddxz']:
                     self.Ddxz = DCGAN_DXZ(ngpu=ngpu,nc=1024,n_extra_layers=opt.config['Ddxz']['nlayers'],dpc=0.25,
@@ -281,8 +296,6 @@ class trainer(object):
                                           activation=act['Ddxz']).to(torch.float32)
                     print('!!! warnings no discriminator configaration for DCGAN_DXZ\n\tassume n_extra_layers = 2')
 
-
-                
 
                 self.Ddnets.append(self.Fed)
                 self.Ddnets.append(self.Gdd)

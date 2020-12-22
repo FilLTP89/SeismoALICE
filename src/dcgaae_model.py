@@ -678,10 +678,10 @@ from torch import device as tdev
 #         return zlf
 
 class Encoder(Module):
-    def __init__(self,ngpu,dev,nz,nzcl,nch,ndf,\
-                 szs,nly,ker=7,std=4,pad=0,dil=1,grp=1,bn=True,
+    def __init__(self,ngpu,dev,nz,nch,ndf,\
+                 nly,ker=7,std=4,pad=0,dil=1,grp=1,bn=True,
                  dpc=0.10,act=[LeakyReLU(1.0,True),LeakyReLU(1.0,True),LeakyReLU(1.0,True),LeakyReLU(1.0,True),Tanh()],\
-                 with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2):
+                 with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2, *args, **kwargs):
         super(Encoder,self).__init__()
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
@@ -1141,6 +1141,9 @@ class DCGAN_Dx(Module):
             self.ann2.to(self.dev1,non_blocking=True,dtype=torch.float32)
             # self.res2.to(self.dev1, non_blocking=True, dtype = torch.float32)
             
+            import pdb
+            pdb.set_trace()
+
     def extraction(self,X):
         X = self.prc(X)
         f = [self.exf[0](X)]
@@ -1419,61 +1422,4 @@ class DCGAN_DXZ(Module):
 # class DCGAN_DXX(Module):
 #     def __init__(self, ngpu, nc, n_extra_layers=0,
 #                  activation=LeakyReLU(1.0,inplace=True),dpc=0.0, opt=None):
-#         super(DCGAN_DXX,self).__init__()
-#         self.ngpu = ngpu
-#         self.gang = range(self.ngpu)
-        
-#         if opt is None:
-#             layers  = [ConvBlock(self.ngpu,nc, nc, 1, 1, bias=False, bn=True, act=activation, dpc=dpc) for t in range(n_extra_layers)]
-#             final   = [ConvBlock(self.ngpu,nc,  1, 1, 1, bias=False, bn=True, act=activation, dpc=dpc)]
-#             ann = layers+final+[Squeeze()]
-#         else:
-#             layers  = [ConvBlock(nc, nc, opt['initial']['kernel'],\
-#             opt['initial']['strides'],\
-#             pad=opt['initial']['padding'],\
-#             bias=False, bn=True, act=activation, dpc=dpc) for t in range(opt['nlayers'])]
-#             final   = [ConvBlock(nc,  1, opt['final']['kernel'],\
-#             opt['final']['strides'],pad=opt['final']['padding'],
-#             bias=False, bn=True, act=activation, dpc=dpc)]
-#             ann = layers+final+[Squeeze()]
-#         self.ann = sqn(*ann)
-     
-#     def forward(self,X):
-#         if X.is_cuda and self.ngpu > 1:
-#             z = pll(self.ann,X,self.gang)
-#         else:
-#             z = self.ann(X)
-#         if not self.training:
-#             z = z.detach()
-#         return z
-
-# class DCGAN_DZZ(Module):
-#     def __init__(self, ngpu, nc, n_extra_layers=0,
-#                  activation=LeakyReLU(1.0,inplace=True),dpc=0.0, opt=None):
-#         super(DCGAN_DZZ,self).__init__()
-#         self.ngpu = ngpu
-#         self.gang = range(self.ngpu)
-        
-#         if opt is None:
-#             layers = [ConvBlock(self.ngpu,nc, nc, 1, 1, bias=False, bn=False, act=activation, dpc=dpc) for t in range(n_extra_layers)]
-#             final  = [ConvBlock(self.ngpu,nc,  1, 1, 1, bias=False, bn=False, act=activation, dpc=dpc)]
-#             ann = layers+final+[Squeeze()]#+[Sigmoid()]
-#         else:
-#             layers = [ConvBlock(self.ngpu,nc, nc, opt['initial']['kernel'],\
-#              opt['initial']['strides'],\
-#               pad=opt['initial']['padding'],\
-#                bias=False, bn=False, act=activation, dpc=dpc) for t in range(opt['layers'])]
-#             final  = [ConvBlock(self.ngpu,nc,  1, opt['final']['kernel'],\
-#              opt['final']['strides'],\
-#              pad=opt['final']['padding'], bias=False, bn=False, act=activation, dpc=dpc)]
-#             ann = layers+final+[Squeeze()]#+[Sigmoid()]
-#         self.ann = sqn(*ann)
-     
-#     def forward(self,X):
-#         if X.is_cuda and self.ngpu > 1:
-#             z = pll(self.ann,X,self.gang)
-#         else:
-#             z = self.ann(X)
-#         if not self.training:
-#             z = z.detach()
-#         return z
+#         s
