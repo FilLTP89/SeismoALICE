@@ -243,8 +243,7 @@ def setup():
         md = {'dtm':0.01,'cutoff':opt.cutoff,'ntm':opt.imageSize}
         md['vTn'] = np.arange(0.0,3.05,0.05,dtype=np.float64)
         md['nTn'] = md['vTn'].size
-        ths_trn,ths_tst,ths_vld,\
-        vtm,fsc = stead_dataset(src,opt.batchPercent,opt.imageSize,opt.latentSize,\
+        ths_trn,ths_tst,ths_vld,vtm,fsc = stead_dataset(src,opt.batchPercent,opt.imageSize,opt.latentSize,\
                                 opt.nzd,opt.nzf,md=md,nsy=opt.nsy,device=device)
         md['fsc']=fsc
         opt.ncls = md['fsc']['ncat']
@@ -269,8 +268,7 @@ def setup():
         md = {'dtm':0.005,'cutoff':opt.cutoff,'ntm':opt.imageSize}
         md['vTn'] = np.arange(0.0,3.05,0.05,dtype=np.float64)
         md['nTn'] = md['vTn'].size
-        ths_trn,ths_tst,ths_vld,\
-        vtm,fsc,md = ann2bb_dataset(src,opt.batchPercent,opt.imageSize,opt.latentSize,\
+        ths_trn,ths_tst,ths_vld,vtm,fsc,md = ann2bb_dataset(src,opt.batchPercent,opt.imageSize,opt.latentSize,\
                                     opt.nzd,opt.nzf,md=md,nsy=opt.nsy,device=device)
         md['fsc']=fsc
         opt.ncls = md['fsc']['ncat']
@@ -295,12 +293,26 @@ def setup():
         md = {'dtm':0.01,'cutoff':opt.cutoff,'ntm':opt.imageSize}
         md['vTn'] = np.arange(0.0,3.05,0.05,dtype=np.float64)
         md['nTn'] = md['vTn'].size
-        #[TODO]
-        ths_trn,ths_tst,ths_vld,\
-        vtm,fsc,md = mdof_dataset(src,opt.batchPercent,opt.imageSize,opt.latentSize,\
+        
+        ths_trn,ths_tst,ths_vld,vtm,fsc = mdof_dataset(src,opt.batchPercent,opt.imageSize,opt.latentSize,\
                                   opt.nzd,opt.nzf,opt.imageSize,opt.mdof,opt.wdof,opt.tdof,\
                                   opt.wtdof,md=md,nsy=opt.nsy,device=device)
-        
+        md['fsc']=fsc
+        opt.ncls = md['fsc']['ncat']
+        # Create natural period vector 
+        opt.vTn = np.arange(0.0,3.05,0.05,dtype=np.float64)
+        opt.nTn = md['vTn'].size
+        tsave(ths_trn,'./ths_trn.pth')
+        tsave(ths_tst,'./ths_tst.pth')
+        tsave(ths_vld,'./ths_vld.pth')
+        tsave(vtm,    './vtm.pth')
+        with open('md.p', 'wb') as handle:
+                pickle.dump(md,handle)
+        handle.close()
+        with open('opt.p', 'wb') as handle:
+                pickle.dump(opt,handle)
+        handle.close()
+
     params = {'batch_size': opt.batchSize,\
               'shuffle': True,'num_workers':int(opt.workers)}
     

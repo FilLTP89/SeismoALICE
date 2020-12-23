@@ -9,7 +9,7 @@ import torch
 import h5py
 import pandas as pd
 import random as rnd
-from os.path import join as osj
+from os.path import join as opj
 from torch import from_numpy as np2t
 from common_nn import to_categorical
 from common_torch import o1l
@@ -204,7 +204,7 @@ def stead_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
     
     # parse hdf5 database
     eqd = h5py.File(src,'r')['earthquake']['local']
-    eqm = pd.read_csv(osj(src.split('/waveforms')[0],'metadata_'+\
+    eqm = pd.read_csv(opj(src.split('/waveforms')[0],'metadata_'+\
                           src.split('waveforms_')[-1].split('.hdf5')[0]+'.csv'))
     eqm = eqm.loc[eqm['trace_category'] == 'earthquake_local']
     eqm = eqm.loc[eqm['source_magnitude'] >= 3.5]
@@ -757,7 +757,7 @@ def civa_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
     eqd = [...]  # h5py.File(src,'r')['earthquake']['local']
     # parse CIVA metadata
     eqm = [...]
-            #pd.read_csv(osj(src.split('/waveforms')[0],'metadata_'+\
+            #pd.read_csv(opj(src.split('/waveforms')[0],'metadata_'+\
             #                src.split('waveforms_')[-1].split('.hdf5')[0]+'.csv'))
 
     # Tukey window
@@ -911,12 +911,12 @@ def mdof_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,ntm,mdof,wdof,tdof,wt
     
     case_ud='undamaged'
     [mdof_ths_u,eqm_u]=mdof_case_loader(mdof,wtdof_v,src,case_ud,tdof,wdof,nsy,ntm)
-    [pgat_set,trn_set]=mdof_tuk_pyt(md,nsy,mdof,mdof_ths_u,Xwindow,trn_set,pgat_set)
+    [trn_set,pgat_set]=mdof_tuk_pyt(md,nsy,mdof,mdof_ths_u,Xwindow,trn_set,pgat_set)
 
     case_ud='damaged'
     [mdof_ths_d,eqm_d]=mdof_case_loader(mdof,wtdof_v,src,case_ud,tdof,wdof,nsy,ntm)
-    [pgaf_set,thf_set]=mdof_tuk_pyt(md,nsy,mdof,mdof_ths_d,Xwindow,thf_set,pgaf_set)
-    
+    [thf_set,pgaf_set]=mdof_tuk_pyt(md,nsy,mdof,mdof_ths_d,Xwindow,thf_set,pgaf_set)
+
     # Define database partitioning
     ths_fsc = []
     partition = {'all': range(0,nsy)}
@@ -944,8 +944,7 @@ def mdof_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,ntm,mdof,wdof,tdof,wt
     from sklearn.preprocessing import MultiLabelBinarizer
     one_hot = MultiLabelBinarizer(classes=range(64))
     tar = np2t(np.float32(one_hot.fit_transform(tar)))
-    from plot_tools import plot_ohe
-    #plot_ohe(tar)
+
     fsc = {'lab_enc':lab_enc,'tar':tar_fsc,'ths_fsc':ths_fsc,\
            'one_hot':one_hot,'ncat':tar.shape[1]}
     tar = (psat_set,psaf_set,tar)
@@ -968,11 +967,12 @@ def mdof_case_loader(mdof,wtdof_v,src,case_ud,tdof,wdof,nsy,ntm):
             i4=i4+1
         #load the measurements recorded by each single channel
         if len(wtdof_v)>1:
-            src_dof=src+'\\'+case_ud+'_'+tdof[i4]+'_DC_concat_dof_'+str(wdof[i1])+'.csv'
+            src_dof=opj(src,"{:>s}_{:>s}_DC_concat_dof_{:>d}.csv".format(case_ud,tdof[i4],wdof[i1]))
         else:
-            src_dof=src+'\\'+case_ud+'_'+tdof+'_DC_concat_dof_'+str(wdof[i1])+'.csv'
+            src_dof=opj(src,"{:>s}_{:>s}_DC_concat_dof_{:>d}.csv".format(case_ud,tdof,wdof[i1]))
         sdof=np.genfromtxt(src_dof)
         sdof.astype(np.float32)
+
         #initialise mdof_ths
         if i1==0:
             mdof_ths=np.zeros((nsy,mdof,ntm))
@@ -982,7 +982,8 @@ def mdof_case_loader(mdof,wtdof_v,src,case_ud,tdof,wdof,nsy,ntm):
             i2=i2+ntm
 
     # parse MDOF metadata
-    src_metadata=src+'\\'+case_ud+'_'+'DC_labels.csv'
+
+    src_metadata=opj(src,"{:>s}_DC_labels.csv".format(case_ud))
     eqm=np.genfromtxt(src_metadata)
     return mdof_ths,eqm
 # for mdof only ########################################################################
@@ -1010,5 +1011,4 @@ def mdof_tuk_pyt(md,nsy,mdof,mdof_ths,Xwindow,trn_set,pgat_set):
     # convert numpy tensors to pytorch tensors
     pgat_set = np2t(np.float32(pgat_set))
     trn_set = np2t(trn_set).float()
-    return trn_set,pgat_set #,psat_set
-# for mdof only ########################################################################
+    return trn_set,pgat_set
