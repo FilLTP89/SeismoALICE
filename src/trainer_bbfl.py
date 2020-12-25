@@ -197,21 +197,22 @@ class trainer(object):
         """
             This part is for training with the broadband signal
         """
-        # we determine in which kind of environnement we are 
-        # if(opt.ntask ==1 and opt.ngpu >=1):
-        #     print('ModelParallele to Build')
-        #     factory = ModelParalleleFactory()
-        # elif(opt.ntask >1 and opt.ngpu >=1):
-        #     print('DataParallele to Build')
-        #     factory = DataParalleleFactory()
-        # else:
-        #     print('environ not found')
-        # net = Network(factory)
-        # encoder = net.Encoder(opt.config["encoder"], opt, acts['ALICE']['Fed'])
-        # decoder = net.Decoder(opt.config["decoder"], opt, acts["ALICE"]["Gdd"])
-
-        # import pdb
-        # pdb.set_trace()
+        #we determine in which kind of environnement we are 
+        if(opt.ntask ==1 and opt.ngpu >=1):
+            print('ModelParallele to Build')
+            factory = ModelParalleleFactory()
+        elif(opt.ntask >1 and opt.ngpu >=1):
+            print('DataParallele to Build')
+            factory = DataParalleleFactory()
+        else:
+            print('environ not found')
+        net = Network(factory)
+        encoder = net.Encoder(opt.config["encoder"], opt, acts['ALICE']['Fed'])
+        decoder = net.Decoder(opt.config["decoder"], opt, acts["ALICE"]["Gdd"])
+        DCGAN_Dx, DCGAN_Dz, DCGAN_DXZ = net.Discriminator(opt.config['DsXd'], opt.config['Dszd'], opt.config['Ddxz'], opt)
+        
+        import pdb
+        pdb.set_trace()
 
         if 'broadband' in t:
             self.style='ALICE'
