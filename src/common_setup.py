@@ -83,7 +83,7 @@ def setup():
     u'''Set-up GPU and CUDA'''
     opt.cuda = True if (tcuda.is_available() and opt.cuda) else False
     opt.nch = 3
-    device = tdev("cuda:0" if opt.cuda else "cpu")
+    device = tdev("cuda" if opt.cuda else "cpu")
     opt.dev = device
     FloatTensor = tcuda.FloatTensor if opt.cuda else tFT
     LongTensor = tcuda.LongTensor if opt.cuda else tLT
@@ -95,8 +95,8 @@ def setup():
     opt.ntask =  int(ntask[-1])
     # extract the ordinal of GPU of the environment
     ordinal  = os.environ['GPU_DEVICE_ORDINAL'].split(',')
-    # transform to int the last ordinal + 1
-    opt.ngpu = int(ordinal[-1])+1
+    # number of GPU of the system environment
+    opt.ngpu = torch.cuda.device_count()
     #os.environ['SLURM_TASKS_PER_NODE']
         #os.environ['GPU_DEVICE_ORDINAL']
     # Try to make an output directory if the latter does not exist

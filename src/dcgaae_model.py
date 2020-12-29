@@ -1141,8 +1141,6 @@ class DCGAN_Dx(Module):
             self.ann2.to(self.dev1,non_blocking=True,dtype=torch.float32)
             # self.res2.to(self.dev1, non_blocking=True, dtype = torch.float32)
             
-            import pdb
-            pdb.set_trace()
 
     def extraction(self,X):
         X = self.prc(X)
