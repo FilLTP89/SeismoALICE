@@ -23,7 +23,7 @@ import json
 import pprint as pp
 import pdb
 from conv_factory import *
-# import GPUtil
+import GPUtil
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 rndm_args = {'mean': 0, 'std': 1}
@@ -214,8 +214,8 @@ class trainer(object):
         decoder = net.Decoder(opt.config["decoder"], opt)
         DCGAN_Dx, DCGAN_Dz, DCGAN_DXZ = net.Discriminator(opt.config['DsXd'], opt.config['Dszd'], opt.config['Ddxz'], opt)
         
-        import pdb
-        pdb.set_trace()
+        # import pdb
+        # pdb.set_trace()
 
         if 'broadband' in t:
             self.style='ALICE'
@@ -538,10 +538,12 @@ class trainer(object):
         a = self.DsXd(Xd)
         b = self.Dszd(zdr)
         
-        print("\t||DsXd(Xd) : ", a.shape,"\tDszd(zdr) : ",b.shape)
+        print("\t||DsXd(Xd) : ", a.shape,"\tDszd(zdr) : ", b.shape)
         
 
         zrc = zcat(a,b)
+        # GPUtil.showUtilization(all=True)
+        # torch.cuda.empty_cache()
         print("\t\t|||zrc : ", zrc.shape)
         DXz = self.Ddxz(zrc)
         print("\t\t|||DXz : ", DXz.shape)
@@ -551,6 +553,9 @@ class trainer(object):
         print("\t||DsXd(Xdr) : ",c.shape,"\tDszd(zd) : ", d.shape)
         zrc = zcat(c,d)
         DzX = self.Ddxz(zrc)
+
+        # torch.cuda.empty_cache()
+        GPUtil.showUtilization(all=True)
         
         return DXz,DzX
         #end of discriminate_broadband_xz function
@@ -650,16 +655,16 @@ class trainer(object):
         print("\t||X_inp : ",X_inp.shape,"\tz_inp : ",z_inp.shape)
 
         # 2. Generate conditional samples
-        
         X_gen = self.Gdd(z_inp)
         z_gen = self.Fed(X_inp)
-        torch.cuda.empty_cache()
+        # torch.cuda.empty_cache()
         # pdb.set_trace()
         print("\t||X_gen : ",X_gen.shape,"\tz_gen : ",z_gen.shape)
         # z_gen = latent_resampling(self.Fed(X_inp),nzd,wn1)
 
         # 3. Cross-Discriminate XZ
         Dxz,Dzx = self.discriminate_broadband_xz(Xd,X_gen,zd,z_gen)
+
         print("\t||After discriminate_broadband_xz") 
         # 4. Compute ALI discriminator loss
         print("\t||Dzx : ", Dzx.shape,"Dxz : ",Dxz.shape)
@@ -667,13 +672,14 @@ class trainer(object):
         
         # Total loss
         #pdb.set_trace()
-        Dloss = Dloss_ali.to(3,non_blocking=True)
+        Dloss = Dloss_ali.to(ngpu-1,non_blocking=True)
         Dloss.backward()
-        torch.cuda.empty_cache()
+        # torch.cuda.empty_cache()
         self.oDdxz.step()
         zerograd(self.optzd)
         self.losses['Dloss_t'].append(Dloss.tolist())
-        # GPUtil.showUtilization(all=True)
+        # torch.cuda.empty_cache()
+        GPUtil.showUtilization(all=True)
     
     @profile
     def alice_train_broadband_generator_explicit_xz(self,Xd,zd):
@@ -686,8 +692,8 @@ class trainer(object):
         # 0. Generate noise
         wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,device,rndm_args)
         #Put wnx and wnz and the same device of X_inp and z_inp
-        wnx = wnx.to(0)
-        wnz = wnz.to(0)
+        wnx = wnx.to(ngpu-1)
+        wnz = wnz.to(ngpu-1)
         # 1. Concatenate inputs
         X_inp = zcat(Xd,wnx)
         z_inp = zcat(zd,wnz)
@@ -979,14 +985,16 @@ class trainer(object):
                 # Load batch
                 # pdb.set_trace()
                 xd_data,_,zd_data,_,_,_,_ = batch
-                Xd = Variable(xd_data).to(0,non_blocking=True) # BB-signal
-                zd = Variable(zd_data).to(0,non_blocking=True)
+                Xd = Variable(xd_data).to(ngpu-1,non_blocking=True) # BB-signal
+                zd = Variable(zd_data).to(ngpu-1,non_blocking=True)
                 # Train G/D
                 for _ in range(5):
                     self.alice_train_broadband_discriminator_explicit_xz(Xd,zd)
+                    torch.cuda.empty_cache()
                     
                 for _ in range(1):
                     self.alice_train_broadband_generator_explicit_xz(Xd,zd)
+                    torch.cuda.empty_cache()
                    
                 
             str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
@@ -996,24 +1004,24 @@ class trainer(object):
             if epoch%save_checkpoint==0:
                 tsave({'epoch':epoch,'model_state_dict':self.Fed.state_dict(),
                        'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},
-                       'Fed_{}.pth'.format(epoch))
+                       './network/Fed_{}.pth'.format(epoch))
                 tsave({'epoch':epoch,'model_state_dict':self.Gdd.state_dict(),
                        'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},
-                       'Gdd_{}.pth'.format(epoch))    
+                       './network/Gdd_{}.pth'.format(epoch))    
                 tsave({'model_state_dict':self.Dszd.state_dict(),
-                       'optimizer_state_dict':self.oDdxz.state_dict()},'Dszd_bb_{}.pth'.format(epoch))
+                       'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Dszd_bb_{}.pth'.format(epoch))
                 tsave({'model_state_dict':self.DsXd.state_dict(),
-                       'optimizer_state_dict':self.oDdxz.state_dict()},'DsXd_bb_{}.pth'.format(epoch))    
+                       'optimizer_state_dict':self.oDdxz.state_dict()},'./network/DsXd_bb_{}.pth'.format(epoch))    
                 tsave({'model_state_dict':self.Ddxz.state_dict(),
-                       'optimizer_state_dict':self.oDdxz.state_dict()},'Ddxz_bb_{}.pth'.format(epoch))
+                       'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Ddxz_bb_{}.pth'.format(epoch))
         plt.plot_loss_dict(nb=niter,losses=self.losses,title='loss_classic',outf=outf)
         tsave({'epoch':niter,'model_state_dict':self.Fed.state_dict(),
-            'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'Fed.pth')
+            'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'./network/Fed.pth')
         tsave({'epoch':niter,'model_state_dict':self.Gdd.state_dict(),
-            'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'Gdd.pth')    
-        tsave({'model_state_dict':self.Dszd.state_dict()},'Dszd_bb.pth')
-        tsave({'model_state_dict':self.DsXd.state_dict()},'DsXd_bb.pth')    
-        tsave({'model_state_dict':self.Ddxz.state_dict()},'Ddxz_bb.pth')
+            'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'./network/Gdd.pth')    
+        tsave({'model_state_dict':self.Dszd.state_dict()},'./network/Dszd_bb.pth')
+        tsave({'model_state_dict':self.DsXd.state_dict()},'./network/DsXd_bb.pth')    
+        tsave({'model_state_dict':self.Ddxz.state_dict()},'./network/Ddxz_bb.pth')
          
     @profile
     def train_filtered_explicit(self):
@@ -1225,7 +1233,7 @@ class trainer(object):
                 self.Ddxz.load_state_dict(tload(n[3])['model_state_dict'])
                 self.DsXd.load_state_dict(tload(n[4])['model_state_dict'])
                 self.Dszd.load_state_dict(tload(n[5])['model_state_dict'])
-                import pdb
+                # import pdb
                 #pdb.set_trace()
                 DsXz = load_state_dict(tload(n[6])['model_state_dict'])
             # Set-up training
