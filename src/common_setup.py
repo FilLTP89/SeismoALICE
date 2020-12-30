@@ -87,18 +87,19 @@ def setup():
     opt.dev = device
     FloatTensor = tcuda.FloatTensor if opt.cuda else tFT
     LongTensor = tcuda.LongTensor if opt.cuda else tLT
-    ngpu = int(opt.ngpu)
+    
 
 
     print("|parser has finished his job ...")
-    ntask =  os.environ['SLURM_NTASKS'].split(',')
-    opt.ntask =  int(ntask[-1])
-    # extract the ordinal of GPU of the environment
-    ordinal  = os.environ['GPU_DEVICE_ORDINAL'].split(',')
-    # number of GPU of the system environment
+    
+    #get number of thread in the environment (CPUs)
+    opt.ntask =  torch.get_num_threads()
+    
+    #get number of GPUs in the system environment
     opt.ngpu = torch.cuda.device_count()
-    #os.environ['SLURM_TASKS_PER_NODE']
-        #os.environ['GPU_DEVICE_ORDINAL']
+    #to no detray propagation values of the gpus
+    ngpu = opt.ngpu
+    
     # Try to make an output directory if the latter does not exist
     try:
         os.makedirs(opt.outf)
