@@ -215,7 +215,6 @@ class trainer(object):
         DCGAN_Dx, DCGAN_Dz, DCGAN_DXZ = net.Discriminator(opt.config['DsXd'], opt.config['Dszd'], opt.config['Ddxz'], opt)
         
         # import pdb
-        pdb.set_trace()
 
         if 'broadband' in t:
             self.style='ALICE'
