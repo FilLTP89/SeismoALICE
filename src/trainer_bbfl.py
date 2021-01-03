@@ -215,7 +215,7 @@ class trainer(object):
         DCGAN_Dx, DCGAN_Dz, DCGAN_DXZ = net.Discriminator(opt.config['DsXd'], opt.config['Dszd'], opt.config['Ddxz'], opt)
         
         # import pdb
-        # pdb.set_trace()
+        pdb.set_trace()
 
         if 'broadband' in t:
             self.style='ALICE'
@@ -531,7 +531,7 @@ class trainer(object):
         # print("\t||Xd : ",Xd.shape,"\tzdr : " ,zdr.shape)
         # print("\t||Xdr : ",Xdr.shape,"\tzd : ", zd.shape)
         # import pdb
-        #pdb.set_trace()
+        # pdb.set_trace()
 
         # put the out put on the same GPU
         # pdb.set_trace()
@@ -639,8 +639,8 @@ class trainer(object):
     ####################
     @profile
     def alice_train_broadband_discriminator_explicit_xz(self,Xd,zd):
-        # print("|[1]In the alice_train_broadband_generator_explicit_xz function  ...") 
-        # print("\t||Xd:",Xd.shape,"\tzd ",zd.shape)
+        print("|[1]In the alice_train_broadband_generator_explicit_xz function  ...") 
+        print("\t||Xd:",Xd.shape,"\tzd ",zd.shape)
         # Set-up training
         zerograd(self.optzd)
         self.Fed.eval(),self.Gdd.eval()
@@ -648,32 +648,36 @@ class trainer(object):
         
         # 0. Generate noise
         wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,device,rndm_args)
+
         # 1. Concatenate inputs
-        X_inp = zcat(Xd,wnx.to(Xd.device))
-        z_inp = zcat(zd,wnz.to(zd.device))
+        wnx = wnx.to(Xd.device)
+        wnz = wnz.to(zd.device)
+
+        X_inp = zcat(Xd,wnx)
+        z_inp = zcat(zd,wnz)
         #GPUtil.showUtilization()
-        # print("\t||X_inp : ",X_inp.shape,"\tz_inp : ",z_inp.shape)
+        print("\t||X_inp : ",X_inp.shape,"\tz_inp : ",z_inp.shape)
 
         # 2. Generate conditional samples
         X_gen = self.Gdd(z_inp)
         z_gen = self.Fed(X_inp)
         # torch.cuda.empty_cache()
         # pdb.set_trace()
-        # print("\t||X_gen : ",X_gen.shape,"\tz_gen : ",z_gen.shape)
+        print("\t||X_gen : ",X_gen.shape,"\tz_gen : ",z_gen.shape)
         # z_gen = latent_resampling(self.Fed(X_inp),nzd,wn1)
 
         # 3. Cross-Discriminate XZ
         Dxz,Dzx = self.discriminate_broadband_xz(Xd,X_gen,zd,z_gen)
 
-        # print("\t||After discriminate_broadband_xz") 
+        print("\t||After discriminate_broadband_xz") 
         # 4. Compute ALI discriminator loss
-        # print("\t||Dzx : ", Dzx.shape,"Dxz : ",Dxz.shape)
+        print("\t||Dzx : ", Dzx.shape,"Dxz : ",Dxz.shape)
         # pdb.set_trace()
         Dloss_ali = -torch.mean(ln0c(torch.abs(Dzx))+ln0c(torch.abs(1.0-Dxz)))
 
         # Total loss
         Dloss = Dloss_ali.to(ngpu-1)
-        # print("\t||Dloss :", Dloss)
+        print("\t||Dloss :", Dloss)
         Dloss.backward()
         # torch.cuda.empty_cache()
         self.oDdxz.step()
@@ -698,19 +702,19 @@ class trainer(object):
         # 1. Concatenate inputs
         X_inp = zcat(Xd,wnx)
         z_inp = zcat(zd,wnz)
-        # print("\t||X_inp", X_inp.shape,"\t||z_inp",z_inp.shape)
+        print("\t||X_inp", X_inp.shape,"\t||z_inp",z_inp.shape)
         # 2. Generate conditional samples
         
         X_gen = self.Gdd(z_inp)
         z_gen = self.Fed(X_inp)
-        # print("\t||X_gen", X_gen.shape,"\t||z_gen",z_gen.shape)
+        print("\t||X_gen", X_gen.shape,"\t||z_gen",z_gen.shape)
         # z_gen = latent_resampling(self.Fed(X_inp),nzd,wn1)
         
         # 3. Cross-Discriminate XZ
         Dxz,Dzx = self.discriminate_broadband_xz(Xd,X_gen,zd,z_gen)
-        # print("\t||Dxz", Dxz.shape,"\t||Dzx",Dzx.shape)
+        print("\t||Dxz", Dxz.shape,"\t||Dzx",Dzx.shape)
         # 4. Compute ALI Generator loss WGAN
-        Gloss_ali = torch.mean(-Dxz +Dzx).to(1,non_blocking=True)
+        Gloss_ali = torch.mean(-Dxz +Dzx).to(ngpu-1,non_blocking=True)
         
         # 0. Generate noise
         wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,device,rndm_args)
@@ -724,16 +728,16 @@ class trainer(object):
         z_gen = zcat(z_gen,wnz.to(z_gen.device,non_blocking=True))
         
         # 2. Generate reconstructions
-        X_rec = self.Gdd(z_gen).to(1,non_blocking=True)
-        z_rec = self.Fed(X_gen).to(1,non_blocking=True)
+        X_rec = self.Gdd(z_gen).to(ngpu-1,non_blocking=True)
+        z_rec = self.Fed(X_gen).to(ngpu-1,non_blocking=True)
         # z_rec = latent_resampling(self.Fed(X_gen),nzd,wn1)
-        # print("\t||X_rec", X_rec.shape,"\t||z_rec",z_rec.shape)
+        print("\t||X_rec", X_rec.shape,"\t||z_rec",z_rec.shape)
         # 3. Cross-Discriminate XX
         # pdb.set_trace()
-        Gloss_cycle_X = torch.mean(torch.abs(Xd.to(1)-X_rec)).to(1,non_blocking=True)  
+        Gloss_cycle_X = torch.mean(torch.abs(Xd.to(ngpu-1)-X_rec)).to(ngpu-1,non_blocking=True)  
         
         # 4. Cross-Discriminate ZZ
-        Gloss_cycle_z = torch.mean(torch.abs(zd.to(1)-z_rec)).to(1,non_blocking=True)
+        Gloss_cycle_z = torch.mean(torch.abs(zd.to(ngpu-1)-z_rec)).to(ngpu-1,non_blocking=True)
 
         # Total Loss
         Gloss = Gloss_ali + 10. * Gloss_cycle_X + 100. * Gloss_cycle_z
