@@ -297,6 +297,7 @@ class ResNetBasicBlock(ResNetResidualBlock):
     def conv_bn(self, in_channels, out_channels, conv, *args, **kwargs):
         return sqn(*conv(in_channels, out_channels,*args, **kwargs), nn.BatchNorm1d(out_channels))
     def short_bn(self, in_channels, out_channels, conv, *args, **kwargs):
+        #work as an identity if ker = std =1
         ann = conv(in_channels, out_channels, ker=1, std=1, pad=0)
         return  sqn(*ann, nn.BatchNorm1d(self.expanded_channels)) if self.should_apply_shortcut else None
 
