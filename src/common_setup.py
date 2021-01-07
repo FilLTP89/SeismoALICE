@@ -94,6 +94,7 @@ def setup():
     
     #get number of thread in the environment (CPUs)
     opt.ntask =  torch.get_num_threads()
+    # opt.ntask =  2
     
     #get number of GPUs in the system environment
     opt.ngpu = torch.cuda.device_count()
