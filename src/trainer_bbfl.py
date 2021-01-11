@@ -657,14 +657,15 @@ class trainer(object):
 
         X_inp = zcat(Xd,wnx)
         z_inp = zcat(zd,wnz)
-        #GPUtil.showUtilization()
+        # GPUtil.showUtilization()
         # print("\t||X_inp : ",X_inp.shape,"\tz_inp : ",z_inp.shape)
 
         # 2. Generate conditional samples
+        # pdb.set_trace()
         X_gen = self.Gdd(z_inp)
         z_gen = self.Fed(X_inp)
         # torch.cuda.empty_cache()
-        # pdb.set_trace()
+        
         # print("\t||X_gen : ",X_gen.shape,"\tz_gen : ",z_gen.shape)
         # z_gen = latent_resampling(self.Fed(X_inp),nzd,wn1)
 
@@ -762,8 +763,8 @@ class trainer(object):
     ####################
     def alice_train_filtered_discriminator_adv_xz(self,Xf,zf):
         # Set-up training
-        # print("|In function alice_train_filtered_discriminator_adv_xzl")
-        # print("\t||Xf : ", Xf.shape,"\tzf : ",zf.shape)
+        print("|In function alice_train_filtered_discriminator_adv_xzl")
+        print("\t||Xf : ", Xf.shape,"\tzf : ",zf.shape)
         zerograd(self.optzf)
         self.Fef.eval(),self.Gdf.eval()
         self.DsXf.train(),self.Dszf.train(),self.Dfxz.train()
@@ -775,12 +776,12 @@ class trainer(object):
         # 1. Concatenate inputs
         X_inp = zcat(Xf,wnx)
         z_inp = zcat(zf,wnz)
-        # print("\t||X_inp :", X_inp.shape,"\tz_inp : " ,z_inp.shape)
+        print("\t||X_inp :", X_inp.shape,"\tz_inp : " ,z_inp.shape)
         # 2. Generate conditional samples
         X_gen = self.Gdf(z_inp).cuda(1)
         z_gen = self.Fef(X_inp).cuda(1)
         # z_gen = latent_resampling(self.Fef(X_inp),nzf,wn1)
-        # print("\t||X_gen : ", X_gen.shape,"\tz_gen : ",z_gen.shape)
+        print("\t||X_gen : ", X_gen.shape,"\tz_gen : ",z_gen.shape)
         # 3. Cross-Discriminate XZ
         
         DXz,DzX,_,_ = self.discriminate_filtered_xz(Xf,X_gen,zf,z_gen)
