@@ -661,7 +661,6 @@ class trainer(object):
         # print("\t||X_inp : ",X_inp.shape,"\tz_inp : ",z_inp.shape)
 
         # 2. Generate conditional samples
-        # pdb.set_trace()
         X_gen = self.Gdd(z_inp)
         z_gen = self.Fed(X_inp)
         # torch.cuda.empty_cache()
