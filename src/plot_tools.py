@@ -546,7 +546,28 @@ def plot_generate_hybrid(Qec,Pdc,Ghz,dev,vtm,trn_set,pfx='hybrid',outf='./imgs')
             plt.close()
             
             cnt += 1
-            
+
+def plot_error(error, outf):
+    import matplotlib.pyplot as plt
+    import matplotlib.ticker as mticker
+
+    nx = len(error[0])
+    # plt.ticklabel_format(style='plain', axis='x', useOffset=False)
+    fig, ax = plt.subplots()
+    for key in error :
+        ax.plot(error[key], label = "batch #{0}".format(key))
+
+        # ax.gca().xaxis.set_major_locator(mticker.MultipleLocator(1))
+    plt.xlabel("Epochs")
+    plt.ylabel("Mean Error[%]")
+    plt.legend(loc="best")
+    plt.title("Error with MSELoss - squared L2 norm")
+    ax.set_xticks([ i for i in range(0,nx, nx//5)])
+    fig.savefig(os.path.join(outf,"error.png"),format="png",\
+                            bbox_inches='tight',dpi = 500)
+    plt.close()
+
+     
 def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
     #Qec.to(dev),Pdc.to(dev)
     Qec.eval(),Pdc.eval()

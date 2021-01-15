@@ -25,6 +25,7 @@ import pdb
 from conv_factory import *
 import GPUtil
 from torch.nn.parallel import DistributedDataParallel as DDP
+import numpy as np
 
 rndm_args = {'mean': 0, 'std': 1}
 
@@ -986,7 +987,8 @@ class trainer(object):
     def train_broadband(self):
         print('Training on broadband signals ...') 
         globals().update(self.cv)
-        globals().update(opt.__dict__)   
+        globals().update(opt.__dict__)
+        error = {}
         for epoch in range(niter):
             for b,batch in enumerate(trn_loader):
                 # Load batch
@@ -1003,6 +1005,15 @@ class trainer(object):
                     self.alice_train_broadband_generator_explicit_xz(Xd,zd)
                     torch.cuda.empty_cache()
 
+                # pdb.set_trace()
+                err = self._error(Xd,zd,device)
+                a =  err.cpu().data.numpy().tolist()
+                #error in percentage (%)
+                if b in error:
+                    error[b] = np.append(error[b], a)
+                else:
+                    error[b] = a
+            
             GPUtil.showUtilization(all=True)
 
                 
@@ -1025,6 +1036,9 @@ class trainer(object):
                 tsave({'model_state_dict':self.Ddxz.state_dict(),
                        'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Ddxz_bb_{}.pth'.format(epoch))
         plt.plot_loss_dict(nb=niter,losses=self.losses,title='loss_classic',outf=outf)
+        # pdb.set_trace()
+        plt.plot_error(error,outf=outf)
+
         tsave({'epoch':niter,'model_state_dict':self.Fed.state_dict(),
             'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'./network/Fed.pth')
         tsave({'epoch':niter,'model_state_dict':self.Gdd.state_dict(),
@@ -1134,7 +1148,7 @@ class trainer(object):
                     self.alice_train_hybrid_discriminator_adv_xz(Xd,zd,Xf,zf)
                 for _ in range(1):
                     self.alice_train_hybrid_generator_adv_xz(Xd,zd,Xf,zf)
-    
+
             str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
             str = 'epoch: {:>d} --- '.format(epoch)
             str = str + ' | '.join(str1)
@@ -1258,4 +1272,21 @@ class trainer(object):
                     Xf = Variable(xf_data).to(device) # LF-signal
                     zd = Variable(zd_data).to(device)
                     zf = Variable(zf_data).to(device)
-   
+
+    @profile
+    def _error(self, Xt, zt, dev):
+        wnx,wnz,wn1 = noise_generator(Xt.shape,zt.shape,dev,rndm_args)
+        X_inp = zcat(Xt,wnx.to(dev))
+        ztr =self.Fed(X_inp).to(dev)
+        # ztr = latent_resampling(Qec(X_inp),zt.shape[1],wn1)
+        z_inp = zcat(ztr,wnz.to(dev))
+        z_pre = zcat(zt,wnz.to(dev))
+        Xr = self.Gdd(z_inp)
+
+        loss = torch.nn.MSELoss(reduction="mean")
+
+        return loss(Xt,Xr)
+
+
+
+
