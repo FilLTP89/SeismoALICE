@@ -678,7 +678,7 @@ from torch import device as tdev
 #         return zlf
 
 class Encoder(Module):
-    def __init__(self,ngpu,dev,nz,nch,ndf,\
+    def __init__(self,ngpu,dev,nz,nch,ndf,nzcl,\
                  nly,ker=7,std=4,pad=0,dil=1,grp=1,bn=True,
                  dpc=0.10,act=[LeakyReLU(1.0,True),LeakyReLU(1.0,True),LeakyReLU(1.0,True),LeakyReLU(1.0,True),Tanh()],\
                  with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2, *args, **kwargs):
@@ -1332,7 +1332,7 @@ class DCGAN_Dz(Module):
 #         return X
 
 class DCGAN_DXZ(Module):
-    def __init__(self, ngpu, nc, n_extra_layers=0, 
+    def __init__(self, ngpu, nc, bn, n_extra_layers=0, 
                  activation=[LeakyReLU(1.0,inplace=True),LeakyReLU(1.0,inplace=True)],
                  dpc=0.0,wf=False, opt=None):
         super(DCGAN_DXZ,self).__init__()
@@ -1360,8 +1360,8 @@ class DCGAN_DXZ(Module):
              opt['final']['strides'],\
              pad=opt['final']['padding'], bias=True, bn=False, act=activation[1], dpc=dpc)]
         if ngpu==1:
-            ann = layers1+layers2+final
-            self.exf = layers1+layers2
+            ann = layers1+layers2+final if opt is not None else layers + final
+            self.exf = layers1+layers2 if opt is not None else layers
             self.ann = sqn(*ann)
         else:
             self.exf = layers1+layers2

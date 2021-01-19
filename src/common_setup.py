@@ -113,6 +113,7 @@ def setup():
          opt.config = json.load(json_file)
     except OSError:
         print("|file {}.json not found".format(opt.config))
+        opt.config =  None
         print("|The programm style proceed ...")
         pass
 
