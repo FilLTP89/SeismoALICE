@@ -216,7 +216,7 @@ class trainer(object):
         DCGAN_Dx, DCGAN_Dz, DCGAN_DXZ = net.Discriminator(opt.config['DsXd'],opt.config['Dszd'], opt.config['Ddxz'], opt)
         
         # import pdb
-        # pdb.set_trace()
+        pdb.set_trace()
 
         if 'broadband' in t:
             self.style='ALICE'
@@ -364,7 +364,7 @@ class trainer(object):
                                opd=outpads['Gdf'],dpc=0.0,act=act['Gdf'])
             print("|Decoder step passed ...")
             #pdb.set_trace()
-            if self.strategy['tract']['filtered']:
+            if  self.strategy['tract']['filtered']:
                 if None in n:        
                     self.FGf = [self.Fef,self.Gdf]
                     self.oGfxz = reset_net(self.FGf,func=set_weights,lr=glr,b1=b1,b2=b2,
@@ -377,7 +377,7 @@ class trainer(object):
                                       lr=glr,betas=(b1,b2),weight_decay=0.00001)
                 self.optzf.append(self.oGfxz)
                 # creat an Conv1D of 2 layers for the Discriminator Dszf
-                if opt.config['Dszf']:
+                if hasattr(opt.config, 'Dszf'):
                     self.Dszf = DCGAN_Dz(ngpu=ngpu,nz=nzf,ncl=2*nzf,n_extra_layers=opt.config['Dszf']['nlayers'],dpc=0.25,bn=False,
                                      activation=act['Dsz'],wf=True, opt=opt.config['Dszf']).to(device)
                 else:
@@ -385,29 +385,29 @@ class trainer(object):
                                      activation=act['Dsz'],wf=True).to(device)
                     print('!!! warnings no discriminator configuration found for DCGAN_Dz\n\tassume n_extra_layers = 2')
 
-                if opt.config['DsXf']:
+                if hasattr(opt.config,'DsXf'):
                     self.DsXf = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
                                      n_extra_layers=opt.config['DsXf']['nlayers'],dpc=0.25,bn=False,activation=act['Dsx'],
                                      wf=True,opt=opt.config['DsXf']).to(device)
                 else:
                     self.DsXf = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
                                      n_extra_layers=0,dpc=0.25,bn=False,activation=act['Dsx'],
-                                     wf=True).to(device)
+                                     wf=True,opt=None).to(device)
                     print('!!! warnings no discriminator configuration found for DCGAN_Dx\n\tassume n_extra_layers = 0')
 
-                if opt.config['Dfxz']:
+                if hasattr(opt.config,'Dfxz'):
                     self.Dfxz = DCGAN_DXZ(ngpu=ngpu,nc=512+2*nzf,n_extra_layers=opt.config['Dfxz']['nlayers'],dpc=0.25,
                                       activation=act['Ddxz'],bn=False,wf=True,opt=opt.config['Dfxz']).to(device)
                 else:
                     self.Dfxz = DCGAN_DXZ(ngpu=ngpu,nc=512+2*nzf,n_extra_layers=2,dpc=0.25,bn=False,
-                                      activation=act['Ddxz'],wf=True).to(device)
+                                      activation=act['Ddxz'],wf=True,opt=None).to(device)
                     print('!!! warnings no discriminator configuration found for DCGAN_DXZ\n\t assume n_extra_layers = 2')
 
                 self.Dfnets.append(self.DsXf)
                 self.Dfnets.append(self.Dszf)
                 self.Dfnets.append(self.Dfxz)
                 # recontructionc
-                if opt.config['Dsrzf']:
+                if hasattr(opt.config, 'Dsrzf'):
                     self.Dsrzf = DCGAN_Dz(ngpu=ngpu,nz=2*nzf,ncl=2*nzf,n_extra_layers=opt.config['Dsrzf']['nlayers'],dpc=0.25,
                                       bn=False,activation=act['Drz'],opt=opt.config['Dsrzf']).to(device)
                 else:
@@ -415,7 +415,7 @@ class trainer(object):
                                       bn=False,activation=act['Drz']).to(device)
                     print('!!! warnings no discriminator configuration found for DCGAN_Dz')
 
-                if opt.config['DsrXf']:
+                if hasattr(opt.config,'DsrXf'):
                     self.DsrXf = DCGAN_Dx(ngpu=ngpu,isize=256,nc=2*nch_tot,ncl=512,ndf=64,fpd=1,
                                       n_extra_layers=opt.config['DsrXf']['nlayers'],dpc=0.25,activation=act['Drx'],bn=False,opt=opt.config['DsrXf']).to(device)
                 else:
@@ -433,6 +433,8 @@ class trainer(object):
                     self.Gdf.load_state_dict(tload(n[1])['model_state_dict'])    
                 else:
                     flagF=False
+
+            pdb.set_trace()
 
         """
             This part is for the training with the hybrid signal
@@ -992,7 +994,7 @@ class trainer(object):
         for epoch in range(niter):
             for b,batch in enumerate(trn_loader):
                 # Load batch
-                # pdb.set_trace()
+                pdb.set_trace()
                 xd_data,_,zd_data,_,_,_,_ = batch
                 Xd = Variable(xd_data).to(ngpu-1,non_blocking=True) # BB-signal
                 zd = Variable(zd_data).to(ngpu-1,non_blocking=True)
