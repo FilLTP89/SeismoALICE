@@ -22,7 +22,7 @@ from database_sae import thsTensorData
 import json
 import pprint as pp
 import pdb
-from conv_factory import *
+# from conv_factory import *
 import GPUtil
 from torch.nn.parallel import DistributedDataParallel as DDP
 import numpy as np
@@ -211,36 +211,37 @@ class trainer(object):
         else:
             print('environ not found')
         net = Network(factory)
-        encoder = net.Encoder(opt.config["encoder"], opt)
-        decoder = net.Decoder(opt.config["decoder"], opt)
-        DCGAN_Dx, DCGAN_Dz, DCGAN_DXZ = net.Discriminator(opt.config['DsXd'],opt.config['Dszd'], opt.config['Ddxz'], opt)
-        
-        # import pdb
-        pdb.set_trace()
+        # encoder    = net.Encoder(opt.config["encoder"],opt)
+        # decoder    = net.Decoder(opt.config["decoder"],opt)
+        # DCGAN_Dx   = net.DCGAN_Dx(opt.config['DsXd'],opt)
+        # DCGAN_Dz   = net.DCGAN_Dz(opt.config['Dszd'],opt)
+        # DCGAN_DXZ  = net.DCGAN_DXZ(opt.config['Ddxz'],opt)
+        # # import pdb
+        # pdb.set_trace()
 
         if 'broadband' in t:
             self.style='ALICE'
             act = acts[self.style]
             flagT = True
             # if opt.config exist then change default value defined above 
-            if opt.config: 
-                nlayers['Fed'] = opt.config['encoder']['nlayers']
-                kernels['Fed'] = opt.config['encoder']['kernel']
-                strides['Fed'] = opt.config['encoder']['strides']
-                padding['Fed'] = opt.config['encoder']['padding']
-                nlayers['Gdd'] = opt.config['decoder']['nlayers']
-                kernels['Gdd'] = opt.config['decoder']['kernel']
-                strides['Gdd'] = opt.config['decoder']['strides']
-                padding['Gdd'] = opt.config['decoder']['padding']
-                outpads['Gdd'] = opt.config['decoder']['outpads']
-            else:
-                print('!!! warnings no configuration file found for the broadband\n\tassume default parameters of the programm')
-            # read specific strategy for the broadband signal
+            # if opt.config: 
+            #     nlayers['Fed'] = opt.config['encoder']['nlayers']
+            #     kernels['Fed'] = opt.config['encoder']['kernel']
+            #     strides['Fed'] = opt.config['encoder']['strides']
+            #     padding['Fed'] = opt.config['encoder']['padding']
+            #     nlayers['Gdd'] = opt.config['decoder']['nlayers']
+            #     kernels['Gdd'] = opt.config['decoder']['kernel']
+            #     strides['Gdd'] = opt.config['decoder']['strides']
+            #     padding['Gdd'] = opt.config['decoder']['padding']
+            #     outpads['Gdd'] = opt.config['decoder']['outpads']
+            # else:
+            #     print('!!! warnings no configuration file found for the broadband\n\tassume default parameters of the programm')
+            # # read specific strategy for the broadband signal
             n = self.strategy['broadband']
             print("Loading broadband generators")
             
             # # Encoder broadband Fed
-            self.Fed = encoder
+            self.Fed = net.Encoder(opt.config["encoder"],opt)
             # self.Fed = Encoder(ngpu=opt.ngpu,dev=device,nz=nzd,\
             #                    nch=2*nch_tot,ndf=ndf,\
             #                    nly=nlayers['Fed'],ker=kernels['Fed'],\
@@ -248,7 +249,7 @@ class trainer(object):
             #                    dil=1,grp=1,dpc=0.0,act=act['Fed']).to(torch.float32)
 
             # # Decoder broadband Gdd
-            self.Gdd = decoder
+            self.Gdd = net.Decoder(opt.config["decoder"],opt)
             # self.Gdd = Decoder(ngpu=opt.ngpu,nz=2*nzd,nch=nch_tot,\
             #                    ndf=int(ndf//(2**(5-nlayers['Gdd']))),
             #                    nly=nlayers['Gdd'],ker=kernels['Gdd'],
@@ -276,9 +277,9 @@ class trainer(object):
                 self.optzd.append(self.oGdxz)
                 # create a conv1D of 2 layers for the discriminator to tranfrom from (,,32) to (,,512)
 
-                self.Dszd = DCGAN_Dz
-                self.DsXd = DCGAN_Dx
-                self.Ddxz = DCGAN_DXZ
+                self.Dszd = net.DCGAN_Dz(opt.config['Dszd'],opt)
+                self.DsXd = net.DCGAN_Dx(opt.config['DsXd'],opt)
+                self.Ddxz = net.DCGAN_DXZ(opt.config['Ddxz'],opt)
                 # if opt.config['Dszd'] :
                 #     self.Dszd = DCGAN_Dz(ngpu=opt.ngpu,nz=nzd,ncl=512,n_extra_layers=opt.config['Dszd']['nlayers'],dpc=0.25,
                 #                      bn=False,activation=act['Dsz'], opt=opt.config['Dszd']).to(torch.float32)
@@ -994,7 +995,7 @@ class trainer(object):
         for epoch in range(niter):
             for b,batch in enumerate(trn_loader):
                 # Load batch
-                pdb.set_trace()
+                # pdb.set_trace()
                 xd_data,_,zd_data,_,_,_,_ = batch
                 Xd = Variable(xd_data).to(ngpu-1,non_blocking=True) # BB-signal
                 zd = Variable(zd_data).to(ngpu-1,non_blocking=True)

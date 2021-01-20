@@ -29,15 +29,15 @@ def main():
     cv = cs.setup()
     locals().update(cv)
 
-    # u'''[PREPARE] trainer'''
-    # DCA = aat.trainer(cv)
-    # u'''[TRAIN] neural networks'''
-    # DCA.train()
-    # u'''[GENERATE] samples'''
-    # DCA.generate()
-    # u'''[TEST] discrimination'''
-    # DCA.discriminate()
-    # u'''[STAT] spanning prob distribution'''
-    # DCA.compare()
+    u'''[PREPARE] trainer'''
+    DCA = aat.trainer(cv)
+    u'''[TRAIN] neural networks'''
+    DCA.train()
+    u'''[GENERATE] samples'''
+    DCA.generate()
+    u'''[TEST] discrimination'''
+    DCA.discriminate()
+    u'''[STAT] spanning prob distribution'''
+    DCA.compare()
 main()
 
