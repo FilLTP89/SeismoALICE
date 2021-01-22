@@ -1040,7 +1040,7 @@ class trainer(object):
                     self.alice_train_broadband_generator_explicit_xz(Xd,zd)
                     torch.cuda.empty_cache()
 
-                # pdb.set_trace()
+                pdb.set_trace()
                 err = self._error(Xd,zd,device)
                 a =  err.cpu().data.numpy().tolist()
                 #error in percentage (%)

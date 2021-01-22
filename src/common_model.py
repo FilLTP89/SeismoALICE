@@ -105,7 +105,6 @@ def cluster(dataset, num_centers, device):
         codes = new_codes
     return centers, codes
 
-
 class AKA(type):
     """ 'Also Known As' metaclass to create aliases for a class. """
     def __new__(cls, classname, bases, attrs):
@@ -114,4 +113,4 @@ class AKA(type):
         globals().update({alias: class_ for alias in attrs.get('aliases', [])})
         return class_
 
-    
+
