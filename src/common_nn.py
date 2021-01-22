@@ -129,7 +129,7 @@ class Squeeze(Module):
 
 def cnn1d(in_channels,out_channels,\
           act=LeakyReLU(1.0,inplace=True),\
-          bn=True,ker=7,std=4,pad=1,\
+          bn=True,ker=7,std=4,pad=0,\
           dil=1,grp=1,dpc=0.1,wn=False,dev=tdev("cpu")):
 
     block = [Conv1d(in_channels=in_channels,\
@@ -149,7 +149,7 @@ def cnn1d(in_channels,out_channels,\
 
 def cnn1dt(in_channels,out_channels,\
            act=LeakyReLU(1.0,inplace=True),\
-           bn=True,ker=7,std=4,pad=0,opd=0,\
+           bn=True,ker=2,std=2,pad=0,opd=0,\
            dil=1,grp=1,dpc=0.1):
 
     block = [ConvTranspose1d(in_channels=in_channels,\
@@ -175,20 +175,28 @@ def DenseBlock(in_channels,out_channels,\
     return block
 
 class ConvBlock(Module):
-    def __init__(self, ni, no, ks, stride, bias=False,
+    def __init__(self,ngpu, ni, no, ks, stride, bias=False,
                  act = None, bn=True, pad=None, dpc=None):
         super(ConvBlock,self).__init__()
+        self.ngpu = ngpu
+        #self.dev  =self.ngpu-1
         if pad is None: pad = ks//2//stride
         self.ann = [Conv1d(ni, no, ks, stride, padding=pad, bias=bias)]
         if bn: self.ann+= [BatchNorm1d(no)]
         if dpc is not None: self.ann += [Dpout(dpc=dpc)]
         if act is not None: self.ann += [act] 
-        
-        
+         
         self.ann = sqn(*self.ann)
-        
-    def forward(self, x):
-        return self.ann(x)
+        #self.ann.to(self.dev,dtype=torch.float32)
+    
+    def forward(self, X):
+        #if X.is_cuda and self.ngpu >= 1:
+            #z = pll(self.ann,X,self.gang)
+            #X = X.to(self.dev)
+            # X = self.ann1(X)
+            # X = X.to(self.dev1)
+        z = self.ann(X)
+        return z
 
 class DeconvBlock(Module):
     def __init__(self,ni,no,ks,stride,pad,opd=0,bn=True,act=ReLU(inplace=True),
@@ -230,16 +238,86 @@ class ResConvBlock(Module):
     def forward(self, x):
         return self.ann(x) + x
 
-class ResNet(Module):
-    def __init__(self, ann):
-        super(ResNet,self).__init__()
-        
+class ResidualBlock(Module):
+    def __init__(self, in_channels, out_channels, activation='relu'):
+        super(ResidualBlock,self).__init__()
+        self.in_channels = in_channels,
+        self.out_channels = out_channels
+        self.activation = activation
         # 1st block
-        self.ann = sqn(*ann)
+        self.block = nn.Identity()
+        self.activate = self.activation_function(self.activation)
+        self.shortcut = nn.Identity() 
         
     def forward(self, x):
-        return self.ann(x) + self.ann._modules['0'](x)
+        # return self.ann(x) + self.ann._modules['0'](x)
+        residual  = x
+        if self.should_apply_shortcut: residual =  self.shortcut(x)
+        x = self.block(x)
+        x +=residual
+        x = self.activate(x)
+        return x
+
+
+    def activation_function(self, activation):
+        return  nn.ModuleDict([
+            ['relu', nn.ReLU(inplace=True)],
+            ['leaky_relu', nn.LeakyReLU(negative_slope=0.01, inplace=True)],
+            ['selu', nn.SELU(inplace=True)],
+            ['none', nn.Identity()]
+        ])[activation]
+    @property
+    def should_apply_shortcut(self):
+        return self.in_channels != self.out_channels
+
+class ResNetResidualBlock(ResidualBlock):
+    def __init__(self,in_channels, out_channels, expansion=1, conv=cnn1d, downsampling=1, *args, **kwargs):
+        super().__init__(in_channels,out_channels)
+        self.expansion = expansion
+        self.downsampling = downsampling
+        self._conv = conv
+        self.ann = self._conv(in_channels, self.expanded_channels, ker = 1, std = 1, pad= 0)
+        # self.shortcut = sqn(*self.ann, nn.BatchNorm1d(self.expanded_channels)) if self.should_apply_shortcut else None
+
+    @property
+    def expanded_channels(self):
+        return self.out_channels*self.expansion
+    @property
+    def should_apply_shortcut(self):
+        return self.in_channels != self.expanded_channels
     
+class ResNetBasicBlock(ResNetResidualBlock):
+    def __init__(self, in_channels, out_channels, conv, *args, **kwargs):
+        super().__init__(in_channels, out_channels, *args, **kwargs)
+        self.ann1 = self.conv_bn(in_channels,out_channels, conv=conv, ker=1, std=1)
+        self.ann2 = self.conv_bn(out_channels, self.expanded_channels,conv=conv,ker=1, std=1)
+        self.shortcut = self.short_bn(in_channels, out_channels,conv=cnn1d,*args, ** kwargs)
+        self.block = sqn(*self.ann1,self.activation_function(self.activation),*self.ann2)
+
+    def conv_bn(self, in_channels, out_channels, conv, *args, **kwargs):
+        return sqn(*conv(in_channels, out_channels,*args, **kwargs), nn.BatchNorm1d(out_channels))
+    def short_bn(self, in_channels, out_channels, conv, *args, **kwargs):
+        #work as an identity if ker = std =1
+        ann = conv(in_channels, out_channels, ker=1, std=1, pad=0)
+        return  sqn(*ann, nn.BatchNorm1d(self.expanded_channels)) if self.should_apply_shortcut else None
+
+class ResNetLayer(Module):
+    def __init__(self,in_channels, out_channels, block=ResNetBasicBlock, conv=cnn1d, n=1, *args, **kwargs):
+        super().__init__()
+        downsampling = 2 if in_channels !=out_channels else 1
+        _block = block(in_channels, out_channels, conv=conv,
+            *args, **kwargs, downsampling = downsampling)
+        expansion = _block.expansion
+        self.Resblock = sqn(
+            _block,
+            *[block(out_channels*expansion,
+                 out_channels, downsampling=1, conv=conv,*args, **kwargs) for _ in range(n - 1)]
+            )
+
+    def forward(self, x):
+        x = self.Resblock(x)
+        return x
+
 u'''[Zeroed gradient for selected optimizers]'''
 def zerograd(optz):
     for o in optz: 
@@ -329,6 +407,9 @@ def reset_net(nets,func=set_weights,lr=0.0002,b1=b1,b2=b2,weight_decay=None,
             return Adam(ittc(*p),lr=lr,betas=(b1,b2),weight_decay=weight_decay) 
     elif 'rmsprop' in optim.lower():
         return RMSprop(ittc(*p),lr=lr)
+    elif 'sgd' in optim.lower():
+        return SGD(ittc(*p),lr=lr)
+
 
 def clipweights(netlist,lb=-0.01,ub=0.01):
     for D in netlist:
@@ -359,3 +440,25 @@ def get_categorical(labels, n_classes=10):
     cat = np.eye(n_classes)[cat].astype('float32')
     cat = tfnp(cat)
     return Variable(cat)
+
+def runout(funct, world_size):
+    mp.spawn(funct,
+             args=(world_size,),
+             nprocs=world_size,
+             join=True)
+
+"""
+def hessian_penalty(G, z, k, epsilon):
+    # Input G: Function to compute the Hessian Penalty of
+    # Input z: Input to G that the Hessian Penalty is taken w.r.t.
+    # Input k: Number of Hessian directions to sample
+    # Input epsilon: Finite differences hyperparameter
+    # Output: Hessian Penalty loss
+    G_z = G(z)
+    #https://www.geeksforgeeks.org/sympy-stats-rademacher-function-in-python/
+    vs = epsilon * random_rademacher(shape=[k, *z.size()])
+    finite_diffs = [G(z + v) - 2 * G_z + G(z - v) for v in vs]
+    finite_diffs = stack(finite_diffs) / (epsilon ** 2)
+    penalty = var(finite_diffs, dim=0).max()
+    return penalty
+"""
