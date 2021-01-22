@@ -53,7 +53,7 @@ def setup():
     parser.add_argument('--latentSize', type=int, default=128, help='the height / width of the input image to network')
     parser.add_argument('--cutoff', type=float, default=1., help='cutoff frequency')
     parser.add_argument('--nzd', type=int, default=32, help='size of the latent space')
-    parser.add_argument('--nzf', type=int, default=8, help='size of the latent space')
+    parser.add_argument('--nzf', type=int, default=32, help='size of the latent space')
     parser.add_argument('--ngf', type=int, default=32,help='size of G input layer')
     parser.add_argument('--ndf', type=int, default=32,help='size of D input layer')
     parser.add_argument('--glr', type=float, default=0.0001, help='AE learning rate, default=0.0001')
@@ -71,7 +71,7 @@ def setup():
     parser.add_argument('--sst',type=int,default=1,help='site')
     parser.add_argument('--scl',type=int,default=1,help='scale [1]')
     parser.add_argument('--nsy',type=int,default=10,help='number of synthetics [1]')
-    parser.add_argument('--save_checkpoint',type=int,default=1,help='Number of epochs for each checkpoint')
+    parser.add_argument('--save_checkpoint',type=int,default=3500,help='Number of epochs for each checkpoint')
     parser.add_argument('--mdof',type=int,default=3,help='Number of channels of the monitoring ssystem (mdof database only)')
     parser.add_argument('--wdof',type=int,nargs='+',default=[1,2,3],help='Channels used by the monitoring system (mdof database only)')
     parser.add_argument('--tdof',default='A',help='Signal content (e.g. U, V, A) (mdof database only)') # eventually 'nargs='+' if different types of signals (e.g. displacements, velocities, accelerations etc.) are considered

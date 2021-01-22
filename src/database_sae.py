@@ -909,11 +909,11 @@ def mdof_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,ntm,mdof,wdof,tdof,wt
     pgaf_set = -999.9*np.ones(shape=(nsy,3))
     psaf_set = -999.9*np.ones(shape=(nsy,3,md['nTn']))
     
-    case_ud='undamaged'
+    case_ud='damaged'
     [mdof_ths_u,eqm_u]=mdof_case_loader(mdof,wtdof_v,src,case_ud,tdof,wdof,nsy,ntm)
     [trn_set,pgat_set]=mdof_tuk_pyt(md,nsy,mdof,mdof_ths_u,Xwindow,trn_set,pgat_set)
 
-    case_ud='damaged'
+    case_ud='undamaged'
     [mdof_ths_d,eqm_d]=mdof_case_loader(mdof,wtdof_v,src,case_ud,tdof,wdof,nsy,ntm)
     [thf_set,pgaf_set]=mdof_tuk_pyt(md,nsy,mdof,mdof_ths_d,Xwindow,thf_set,pgaf_set)
 

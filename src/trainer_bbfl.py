@@ -686,7 +686,7 @@ class trainer(object):
                        'optimizer_state_dict':self.oDdxz.state_dict()},'DsXd_bb_{}.pth'.format(epoch))    
                 tsave({'model_state_dict':self.Ddxz.state_dict(),
                        'optimizer_state_dict':self.oDdxz.state_dict()},'Ddxz_bb_{}.pth'.format(epoch))
-        plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_classic',outf=outf)
+        plt.plot_loss_dict(self.losses,100,title='loss_classic',outf=outf)
         tsave({'epoch':niter,'model_state_dict':self.Fed.state_dict(),
             'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'Fed.pth')
         tsave({'epoch':niter,'model_state_dict':self.Gdd.state_dict(),
@@ -828,13 +828,13 @@ class trainer(object):
             #                          trn_loader,pfx="trn_set_bb",outf=outf)
             #plt.plot_generate_classic('broadband',Fed,Gdd,device,vtm,\
             #                          tst_loader,pfx="tst_set_bb",outf=outf)
-         #   plt.plot_generate_classic('broadband',self.Fed,self.Gdd,device,vtm,\
-         #                             vld_loader,pfx="vld_set_bb",outf=outf)
+            plt.plot_generate_classic('broadband',self.Fed,self.Gdd,device,vtm,\
+                                   tst_loader,pfx="tst_set_bb",outf=outf)
          #   plt.plot_gofs(tag=['broadband'],Fef=self.Fef,Gdf=self.Gdf,Fed=self.Fed,\
          #           Gdd=self.Gdd,Fhz=self.Fhz,Ghz=self.Ghz,dev=device,vtm=vtm,trn_set=trn_loader,\
          #           pfx={'broadband':'set_bb','filtered':'set_fl','hybrid':'set_hb'},\
          #           outf=outf)
-            plt.plot_features('broadband',self.Fed,self.Gdd,nzd,device,vtm,vld_loader,pfx='set_bb',outf=outf)
+           # plt.plot_features('broadband',self.Fed,self.Gdd,nzd,device,vtm,vld_loader,pfx='set_bb',outf=outf)
         if 'filtered' in t and self.strategy['trplt']['filtered']:
             n = self.strategy['filtered']
             Fef = deepcopy(self.Fef)
