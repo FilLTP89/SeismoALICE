@@ -33,6 +33,9 @@ from ss_process import rsp
 from scipy.signal import detrend, windows
 from scipy.io import loadmat
 
+#from dask.distributed import Client
+#client = Client(n_workers=1, threads_per_worker=4, processes=False, memory_limit='2GB')
+
 rndm_args = {'mean': 0, 'std': 1}
 dirs = {'ew':0,'ns':1,'ud':2}
 u'''General informations'''
@@ -194,6 +197,15 @@ def random_split(ths,lngs,idx=None):
     return idx,[Subset(ths,idx[off-lng:off]) 
         for off,lng in zip(_accumulate(lngs),lngs)]
 
+def stead_dataset_dask(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
+    vtm = md['dtm']*np.arange(0,md['ntm'])
+    tar     = np.zeros((nsy,2))
+    trn_set  = -999.9*np.ones(shape=(nsy,3,md['ntm']))
+    pgat_set = -999.9*np.ones(shape=(nsy,3))
+    psat_set = -999.9*np.ones(shape=(nsy,3,md['nTn']))
+    print("training data ",trn_set.shape,pgat_set.shape, psat_set.shape)
+    print("src ", src)
+    dd.read_hdf('myfile.1.hdf5', '/*')
 def stead_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
     print('Enter in the stead_dataset function ...') 
     vtm = md['dtm']*np.arange(0,md['ntm'])
