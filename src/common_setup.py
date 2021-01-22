@@ -15,6 +15,7 @@ import warnings
 warnings.filterwarnings("ignore")
 import argparse
 import os
+import sys
 from os.path import join as osj
 import numpy as np
 import random
@@ -37,6 +38,10 @@ from database_sae import stead_dataset,ann2bb_dataset
 from database_sae import deepbns_dataset
 from database_sae import mdof_dataset
 import pandas as pd
+import torch.multiprocessing as mp
+from torch.nn.parallel import DistributedDataParallel as DDP
+import torch.distributed as dist
+import json
 
 def setup():
     parser = argparse.ArgumentParser()
@@ -76,29 +81,79 @@ def setup():
     parser.add_argument('--wdof',type=int,nargs='+',default=[1,2,3],help='Channels used by the monitoring system (mdof database only)')
     parser.add_argument('--tdof',default='A',help='Signal content (e.g. U, V, A) (mdof database only)') # eventually 'nargs='+' if different types of signals (e.g. displacements, velocities, accelerations etc.) are considered
     parser.add_argument('--wtdof',nargs='+',default=[3],help='Specify the connection between wdof and tdof (mdof database only)')
+    parser.add_argument('--config',default='./config.txt', help='configuration file')
     parser.set_defaults(stack=False,ftune=False,feat=False,plot=True)
     opt = parser.parse_args()
 
     u'''Set-up GPU and CUDA'''
     opt.cuda = True if (tcuda.is_available() and opt.cuda) else False
-    device = tdev("cuda:0" if opt.cuda else "cpu")
+    opt.nch = 3
+    device = tdev("cuda" if opt.cuda else "cpu")
+    opt.dev = device
     FloatTensor = tcuda.FloatTensor if opt.cuda else tFT
     LongTensor = tcuda.LongTensor if opt.cuda else tLT
-    ngpu = int(opt.ngpu)
     
+
+
+    print("|parser has finished his job ...")
+    
+    #get number of thread in the environment (CPUs)
+    opt.ntask =  torch.get_num_threads()
+    # opt.ntask =  2
+    
+    #get number of GPUs in the system environment
+    opt.ngpu = torch.cuda.device_count()
+    #to no detray propagation values of the gpus
+    ngpu = opt.ngpu
+    
+    # Try to make an output directory if the latter does not exist
     try:
         os.makedirs(opt.outf)
     except OSError:
         pass
-    
+
+    # Try to open the .json configuration of the case study
+    try:
+       with open(opt.config) as json_file:
+         opt.config = json.load(json_file)
+    except OSError:
+        print("|file {}.json not found".format(opt.config))
+        opt.config =  None
+        print("|The programm style proceed ...")
+        pass
+
+    # try:
+    #     if sys.platform == 'linux':
+    #         # Distributed package only covers collective communications with Gloo
+    #         # backend and FileStore on Windows platform. Set init_method parameter
+    #         # in init_process_group to a local file.
+    #         # Example init_method="file:///f:/libtmp/some_file"
+    #         init_method="file:///gpfs/workdir/jacquetg/SeismoALICE/temp.txt"
+
+    #         # initialize the process group
+    #         dist.init_process_group(
+    #             "gloo",
+    #             init_method=init_method,
+    #             rank=rank,
+    #             world_size=world_size
+    #         )
+    #     else:
+    #         os.environ['MASTER_ADDR'] = 'localhost'
+    #         os.environ['MASTER_PORT'] = '12355'
+
+    #         # initialize the process group
+    #         dist.init_process_group("gloo", rank=rank, world_size=world_size)
+    # except Exception as e:
+    #     raise e
+
     if opt.manualSeed is None:
         opt.manualSeed = random.randint(1, 10000)
     print("Random Seed: ", opt.manualSeed)
     random.seed(opt.manualSeed)
     mseed(opt.manualSeed)
-    
     cudnn.benchmark = True
-    
+    print("opt.dataset",opt.dataset)
+
     if tcuda.is_available() and not opt.cuda:
         print("WARNING: You have a CUDA device, so you should probably run with --cuda")
     
@@ -245,6 +300,7 @@ def setup():
         md['nTn'] = md['vTn'].size
         ths_trn,ths_tst,ths_vld,vtm,fsc = stead_dataset(src,opt.batchPercent,opt.imageSize,opt.latentSize,\
                                 opt.nzd,opt.nzf,md=md,nsy=opt.nsy,device=device)
+        print("__end__ stead_dataset")
         md['fsc']=fsc
         opt.ncls = md['fsc']['ncat']
         # Create natural period vector 
@@ -259,6 +315,7 @@ def setup():
         handle.close()
         with open('opt.p', 'wb') as handle:
                 pickle.dump(opt,handle)
+        print("Done!")
         handle.close()
         
     elif opt.dataset == 'ann2bb':
@@ -343,6 +400,9 @@ def setup():
           'LongTensor':LongTensor,\
           'md':md}
     return cv
+
+def cleanup():
+    dist.destroy_process_group()
 
 from torch.utils.data import Sampler
 import torch

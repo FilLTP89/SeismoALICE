@@ -195,13 +195,14 @@ def random_split(ths,lngs,idx=None):
         for off,lng in zip(_accumulate(lngs),lngs)]
 
 def stead_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
-    
+    print('Enter in the stead_dataset function ...') 
     vtm = md['dtm']*np.arange(0,md['ntm'])
     tar     = np.zeros((nsy,2))
     trn_set  = -999.9*np.ones(shape=(nsy,3,md['ntm']))
     pgat_set = -999.9*np.ones(shape=(nsy,3))
     psat_set = -999.9*np.ones(shape=(nsy,3,md['nTn']))
-    
+    print("training data ",trn_set.shape,pgat_set.shape, psat_set.shape)
+    print("src ", src)
     # parse hdf5 database
     eqd = h5py.File(src,'r')['earthquake']['local']
     eqm = pd.read_csv(opj(src.split('/waveforms')[0],'metadata_'+\
@@ -210,11 +211,21 @@ def stead_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
     eqm = eqm.loc[eqm['source_magnitude'] >= 3.5]
     eqm = eqm.sample(frac=nsy/len(eqm)).reset_index(drop=True)
     w = windows.tukey(md['ntm'],5/100)
+
     for i in eqm.index:
         tn = eqm.loc[i,'trace_name']
         bi = int(eqd[tn].attrs['p_arrival_sample'])
         for j in range(3):
-            trn_set[i,j,:] = detrend(eqd[tn][bi:bi+Xwindow,j])*w
+            print("in the loop i,j",i,j)
+            print("dimensions of eqd passed in the program",tn,bi,j,Xwindow)
+            a = eqd[tn][bi:bi+Xwindow,j]
+            #a = np.reshape(a.shape[0],1)
+            #replace nan value to zeros if datatset is corrupted
+            print("shape of array", a.shape)
+            print("number of nan in the array to detrend", np.isnan(a).sum())
+            b = detrend(a)
+            trn_set[i,j,:] = b*w
+            print("__after__ detrend function")
             pgat_set[i,j] = np.abs(trn_set[i,j,:]).max()
             trn_set[i,j,:] = trn_set[i,j,:]/pgat_set[i,j]
             pgat_set[i,j] = np.abs(trn_set[i,j,:]).max()
@@ -243,6 +254,7 @@ def stead_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
             pgaf_set[i,j] = np.abs(thf_set[i,j,:].data.numpy()).max(axis=-1)
             _,psa,_,_,_ = rsp(md['dtm'],thf_set.data[i,j,:].numpy(),md['vTn'],5.)
             psaf_set[i,j,:] = psa.reshape((md['nTn']))
+            print("psa proceed ...",i,j)
     pgat_set = np2t(np.float32(pgat_set))    
     pgaf_set = np2t(np.float32(pgaf_set))
     psat_set = np2t(np.float32(psat_set))
@@ -267,7 +279,7 @@ def stead_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
            'one_hot':one_hot,'ncat':tar.shape[1]}
     tar = (psat_set,psaf_set,tar)
     ths = thsTensorData(trn_set,thf_set,wnz_set,wnf_set,tar,partition['all'])
-
+    print("values ....")
     # RANDOM SPLIT
     idx,\
     ths_trn = random_split(ths,[trn,vld,tst])

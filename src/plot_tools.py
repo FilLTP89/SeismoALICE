@@ -97,17 +97,31 @@ def multivariateGrid(col_x, col_y, col_k, df, k_is_color=False, scatter_alpha=.7
 def plot_loss_dict(losses,nb,title='loss',outf='./imgs'):
     sns.set(style="whitegrid")
     hfg,hax0 = plt.subplots(1,1,figsize=(6,6))
-    min_iter=1000000
+    miniter = 10000000 
+    min_iter = {'key':0}
     for k,v in losses.items():
-        min_iter=min(min_iter,int((len(v)-1)//nb))
+        temp=min(miniter,(len(v)-1)//nb)
+        min_iter[k] = temp
+
+    min_iter.pop('key')
+    loss_name = []
     for k,v in losses.items():
-        v=np.array(v[1:]).reshape(min_iter,nb,-1).mean(axis=-1).mean(axis=1)
-        losses[k]=v
+        if(min_iter[k]!=0):
+            v=np.array(v[1:]).reshape(min_iter[k],nb,-1).mean(axis=-1).mean(axis=1)
+            losses[k]=v
+            loss_name.append(k)
+
+    
     Dloss = {}
-    Dloss[r"$l^D(\mathbf{z^,},\mathbf{z},\mathbf{y},\mathbf{x})$"] = losses[r'$l^D$']
-    Dloss[r"$l^G(\mathbf{z^,},\mathbf{z},\mathbf{y},\mathbf{x})$"] = losses[r'$l^G$']
-    Dloss[r"$l_{R1}(\mathbf{y})$"] = losses[r'$l_{R1-y}$']
-    Dloss[r"$l_{R1}(\mathbf{x})$"] = losses[r'$l_{R1-x}$']
+    # Dloss[r"$l^D(\mathbf{z^,},\mathbf{z},\mathbf{y},\mathbf{x})$"] = losses[r'$l^D$']
+    # Dloss[r"$l^G(\mathbf{z^,},\mathbf{z},\mathbf{y},\mathbf{x})$"] = losses[r'$l^G$']
+    # Dloss[r"$l_{R1}(\mathbf{y})$"] = losses[r'$l_{R1-y}$']
+    # Dloss[r"$l_{R1}(\mathbf{x})$"] = losses[r'$l_{R1-x}$']
+
+    Dloss[r"$l^D(\mathbf{z^,},\mathbf{z},\mathbf{y},\mathbf{x})$"] = losses[loss_name[0]]
+    Dloss[r"$l^G(\mathbf{z^,},\mathbf{z},\mathbf{y},\mathbf{x})$"] = losses[loss_name[1]]
+    Dloss[r"$l_{R1}(\mathbf{y})$"] = losses[loss_name[2]]
+    Dloss[r"$l_{R1}(\mathbf{x})$"] = losses[loss_name[3]]
 
     clr = sns.color_palette("coolwarm",len(Dloss.keys()))
     i=0
@@ -132,6 +146,7 @@ def plot_loss_dict(losses,nb,title='loss',outf='./imgs'):
                 bbox_inches='tight',dpi=500)
 
     plt.close()
+    print('loss functions done ...',outf)
     return
 
 def plot_compare_ann2bb(Qec,Pfc,Qdc,Pdc,Fhz,Ghz,dev,vtm,trn_set,pfx='hybrid',outf='./imgs'):
@@ -531,9 +546,30 @@ def plot_generate_hybrid(Qec,Pdc,Ghz,dev,vtm,trn_set,pfx='hybrid',outf='./imgs')
             plt.close()
             
             cnt += 1
-            
+
+def plot_error(error, outf):
+    import matplotlib.pyplot as plt
+    import matplotlib.ticker as mticker
+
+    nx = len(error[0])
+    # plt.ticklabel_format(style='plain', axis='x', useOffset=False)
+    fig, ax = plt.subplots()
+    for key in error :
+        ax.plot(error[key], label = "batch #{0}".format(key))
+
+        # ax.gca().xaxis.set_major_locator(mticker.MultipleLocator(1))
+    plt.xlabel("Epochs")
+    plt.ylabel("Mean Error[%]")
+    plt.legend(loc="best")
+    plt.title("Error with MSELoss - squared L2 norm")
+    ax.set_xticks([ i for i in range(0,nx, nx//5)])
+    fig.savefig(os.path.join(outf,"error.png"),format="png",\
+                            bbox_inches='tight',dpi = 500)
+    plt.close()
+
+     
 def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
-    Qec.to(dev),Pdc.to(dev)
+    #Qec.to(dev),Pdc.to(dev)
     Qec.eval(),Pdc.eval()
     cnt=0
     sns.set(style="whitegrid")
@@ -546,11 +582,11 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs')
             Xf = Variable(xf_data).to(dev)
             zt = Variable(zt_data).to(dev)
             wnx,wnz,wn1 = noise_generator(Xt.shape,zt.shape,dev,rndm_args)
-            X_inp = zcat(Xt,wnx)
-            ztr = Qec(X_inp)
+            X_inp = zcat(Xt,wnx.to(dev))
+            ztr = Qec(X_inp).to(dev)
             # ztr = latent_resampling(Qec(X_inp),zt.shape[1],wn1)
-            z_inp = zcat(ztr,wnz)
-            z_pre = zcat(zt,wnz)
+            z_inp = zcat(ztr,wnz.to(dev))
+            z_pre = zcat(zt,wnz.to(dev))
             Xr = Pdc(z_inp)
             #Xp = Pdc(z_pre)
             Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
@@ -756,9 +792,9 @@ def plot_gofs(tag,Fef,Gdf,Fed,Gdd,Fhz,Ghz,dev,vtm,trn_set,
             wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,rndm_args)
             X_inp = zcat(Xd,wnx)
             zdr = Fed(X_inp)
-            if tnan(zdr).any():
-                import pdb
-                pdb.set_trace()
+            #if tnan(zdr).any():
+             #   import pdb
+              #  pdb.set_trace()
             z_inp = zcat(zdr,wnz)
 
             Xr = Gdd(z_inp)
@@ -791,9 +827,9 @@ def plot_gofs(tag,Fef,Gdf,Fed,Gdd,Fhz,Ghz,dev,vtm,trn_set,
             wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,rndm_args)
             X_inp = zcat(Xd,wnx)
             zdr = Fef(X_inp)
-            if tnan(zdr).any():
-                import pdb
-                pdb.set_trace()
+            #if tnan(zdr).any():
+               # import pdb
+               #pdb.set_trace()
             z_inp = zcat(zdr,wnz)
 
             Xr = Gdf(z_inp)
@@ -829,9 +865,9 @@ def plot_gofs(tag,Fef,Gdf,Fed,Gdd,Fhz,Ghz,dev,vtm,trn_set,
             wnxd,wnzd,wn1 = noise_generator(Xd.shape,zd.shape,dev,rndm_args)
             X_inp = zcat(Xd,wnxd)
             zdr = Fed(X_inp)
-            if tnan(zdr).any():
-                import pdb
-                pdb.set_trace()
+            #if tnan(zdr).any():
+                #import pdb
+                #pdb.set_trace()
             z_inp = zcat(zdr,wnzd)
 
             Xr = Gdd(z_inp)
@@ -842,9 +878,9 @@ def plot_gofs(tag,Fef,Gdf,Fed,Gdd,Fhz,Ghz,dev,vtm,trn_set,
             wnxf,wnzf,_ = noise_generator(Xf.shape,zf.shape,dev,rndm_args)
             Xf_inp = zcat(Xf,wnxf)
             zff = Fef(Xf_inp)
-            if tnan(zff).any():
-                import pdb
-                pdb.set_trace()
+            #if tnan(zff).any():
+               # import pdb
+               # pdb.set_trace()
             zdr = Ghz(zcat(zff,wnzf))
             Xdr = Gdd(zcat(zdr,wnzd))
             Xdr = Xdr.cpu().data.numpy().copy()
@@ -905,9 +941,9 @@ def plot_gofs(tag,Fef,Gdf,Fed,Gdd,Fhz,Ghz,dev,vtm,trn_set,
             wnxf,wnzf,_ = noise_generator(Xf.shape,zf.shape,dev,rndm_args)
             Xf_inp = zcat(Xf,wnxf)
             zff = Fef(Xf_inp)
-            if tnan(zff).any():
-                import pdb
-                pdb.set_trace()
+            #if tnan(zff).any():
+                #import pdb
+                #pdb.set_trace()
             zdr = Ghz(zcat(zff,wnzf))
             Xdr = Gdd(zcat(zdr,wnzd))
 
@@ -976,9 +1012,12 @@ def pad3d(st1t,st2,vtm,style='arias'):
         st1[ix,:]=tt
     return st1
 def plot_features(tag,Qec,Pdc,nz,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
+    print("Plotting features ...")
     sns.set(style="whitegrid")
-    Qec.to(dev),Qec.eval()
-    Pdc.to(dev),Pdc.eval()
+    #Qec.to(dev)
+    Qec.eval()
+    #Pdc.to(dev)
+    Pdc.eval()
     bsz = trn_set.batch_size
     idx = trn_set.dataset.indices.numpy()
     cht = trn_set.dataset.dataset.inpZ.shape[1]
@@ -1039,6 +1078,7 @@ def plot_features(tag,Qec,Pdc,nz,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
                         format='eps',bbox_inches='tight',dpi = 500)
                 plt.close()
             zw = zg
+            zw =  zw.to(dev)
             zg = zg.detach().cpu().data.numpy().copy()
             zd = zd.detach().cpu().data.numpy().copy()
             zd = np.nan_to_num(zd)
@@ -1050,10 +1090,13 @@ def plot_features(tag,Qec,Pdc,nz,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
             c=c+15 #range(zd.shape[1]):
             hfg1,(hax3,hax4) = plt.subplots(2,1,figsize=(8,8))
             _,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,rndm_args)
+            wnz.to(dev)
+            wn1.to(dev)
             for w in range(1): #range(zd.shape[2]):
-                w = w +10
+                w = w +1
                 dwt = 2**5*(vtm[1]-vtm[0]) 
                 wtm = np.arange(0.0,dwt*zw.shape[2],dwt)
+                print("[!] wtm[-1]...", wtm[-1])
                 xw = Pdc(zcat(zw,wnz))
                 zwfsa = tfft(zw,dwt,nfr=vfr.size)
                 xwfsa = tfft(xw,vtm[1]-vtm[0],nfr=vfr.size)
@@ -1078,14 +1121,14 @@ def plot_features(tag,Qec,Pdc,nz,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
                 #hax2.loglog(vfr,xwfsa[0,1,:].cpu().data.numpy(),color=clt[0+2],label=r'$G_y(F_y(y))_1$',linewidth=1.5)
                 #hax2.loglog(vfr,xwfsa[0,2,:].cpu().data.numpy(),color=clt[0+3],label=r'$G_y(F_y(y))_2$',linewidth=1.5)
                 #hax2.loglog(vfr,zwfsa[0,c,:].cpu().data.numpy(),color=clt[0],label=r'$ch {{{:>d}}}$'.format(c),linewidth=2.0)
-                hax0.set_xlim(0.0,int(wtm[-1]))
-                hax1.set_xlim(0.0,int(wtm[-1]))
-                hax2.set_xlim(0.0,int(wtm[-1]))
-                hax5.set_xlim(0.0,int(wtm[-1]))
-                hax0.set_xticks(np.arange(0.0,int(wtm[-1])*11./10.,int(wtm[-1])/10.))
-                hax1.set_xticks(np.arange(0.0,int(wtm[-1])*11./10.,int(wtm[-1])/10.))
-                hax2.set_xticks(np.arange(0.0,int(wtm[-1])*11./10.,int(wtm[-1])/10.))
-                hax5.set_xticks(np.arange(0.0,int(wtm[-1])*11./10.,int(wtm[-1])/10.))
+                hax0.set_xlim(0.0,round(wtm[-1]))
+                hax1.set_xlim(0.0,round(wtm[-1]))
+                hax2.set_xlim(0.0,round(wtm[-1]))
+                hax5.set_xlim(0.0,round(wtm[-1]))
+                hax0.set_xticks(np.arange(0.0,round(wtm[-1])*11./10.,round(wtm[-1])/10.))
+                hax1.set_xticks(np.arange(0.0,round(wtm[-1])*11./10.,round(wtm[-1])/10.))
+                hax2.set_xticks(np.arange(0.0,round(wtm[-1])*11./10.,round(wtm[-1])/10.))
+                hax5.set_xticks(np.arange(0.0,round(wtm[-1])*11./10.,round(wtm[-1])/10.))
                 hax1.set_ylim(-1.0,1.0)
                 hax1.set_yticks(np.arange(-1.0,1.25,0.25))
                 hax2.set_ylim(-1.0,1.0)
@@ -1114,7 +1157,8 @@ def plot_features(tag,Qec,Pdc,nz,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
                 plt.savefig(os.path.join(outf,"fts_zw_%s_%u_%u.eps"%(pfx,b,c)),\
                         format='eps',bbox_inches='tight',dpi = 500)
                 plt.close(fig=hfg)
-
+                
+                print("[!] informations for zt and zw", zt.shape, zw.shape)
                 option = 2
                 if option==0:
                     zt = torch.zeros_like(zw).detach().to(dev)
@@ -1160,7 +1204,7 @@ def plot_features(tag,Qec,Pdc,nz,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
                                                 cov=Czz_zd.covariance_,prc=Czz_zd.precision_)
         z_correlation_matrix(zg_df,os.path.join(outf,"zg_{}".format(pfx)),\
                                                 cov=Czz_zg.covariance_,prc=Czz_zg.precision_)
-        #z_histogram(zd_df,zg_df,os.path.join(outf,"histogram_{}".format(pfx))) 
+        z_histogram(zd_df,zg_df,os.path.join(outf,"histogram_{}".format(pfx))) 
         #zd_ch0_flt = zd_all[:,0,:].reshape(-1,zd_all.shape[2])
         #zg_ch0_flt = zg_all[:,0,:].reshape(-1,zd_all.shape[2])
         #zd_ch0_df = zd_df.loc[:,'z0':'z127']
@@ -1262,7 +1306,7 @@ def plot_features(tag,Qec,Pdc,nz,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
             hfg1,(hax3,hax4) = plt.subplots(2,1,figsize=(8,8))
             _,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,rndm_args)
             for w in range(1): #range(zd.shape[2]):
-                w = w +105
+                w = w +3
                 dwt = 2**5*(vtm[1]-vtm[0]) 
                 wtm = np.arange(0.0,dwt*zw.shape[2],dwt)
                 xw = Pdc(zcat(zw,wnz))
@@ -1289,14 +1333,14 @@ def plot_features(tag,Qec,Pdc,nz,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
                 #hax2.loglog(vfr,xwfsa[0,1,:].cpu().data.numpy(),color=clt[0+2],label=r'$G_x(F_x(x))_1$',linewidth=1.5)
                 #hax2.loglog(vfr,xwfsa[0,2,:].cpu().data.numpy(),color=clt[0+3],label=r'$G_x(F_x(x))_2$',linewidth=1.5)
                 #hax2.loglog(vfr,zwfsa[0,c,:].cpu().data.numpy(),color=clt[0],label=r'$ch {{{:>d}}}$'.format(c),linewidth=2.0)
-                hax0.set_xlim(0.0,int(wtm[-1]))
-                hax1.set_xlim(0.0,int(wtm[-1]))
-                hax2.set_xlim(0.0,int(wtm[-1]))
-                hax5.set_xlim(0.0,int(wtm[-1]))
-                hax0.set_xticks(np.arange(0.0,int(wtm[-1])*11./10.,int(wtm[-1])/10.))
-                hax1.set_xticks(np.arange(0.0,int(wtm[-1])*11./10.,int(wtm[-1])/10.))
-                hax2.set_xticks(np.arange(0.0,int(wtm[-1])*11./10.,int(wtm[-1])/10.))
-                hax5.set_xticks(np.arange(0.0,int(wtm[-1])*11./10.,int(wtm[-1])/10.))
+                hax0.set_xlim(0.0,round(wtm[-1]))
+                hax1.set_xlim(0.0,round(wtm[-1]))
+                hax2.set_xlim(0.0,round(wtm[-1]))
+                hax5.set_xlim(0.0,round(wtm[-1]))
+                hax0.set_xticks(np.arange(0.0,round(wtm[-1])*11./10.,round(wtm[-1])/10.))
+                hax1.set_xticks(np.arange(0.0,round(wtm[-1])*11./10.,round(wtm[-1])/10.))
+                hax2.set_xticks(np.arange(0.0,round(wtm[-1])*11./10.,round(wtm[-1])/10.))
+                hax5.set_xticks(np.arange(0.0,round(wtm[-1])*11./10.,round(wtm[-1])/10.))
                 hax1.set_ylim(-0.2,0.2)
                 hax1.set_yticks(np.arange(-0.2,0.25,0.05))
                 hax2.set_ylim(-0.2,0.2)
@@ -1326,7 +1370,6 @@ def plot_features(tag,Qec,Pdc,nz,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
                 plt.savefig(os.path.join(outf,"fts_zw_%s_%u_%u.eps"%(pfx,b,c)),\
                         format='eps',bbox_inches='tight',dpi = 500)
                 plt.close(fig=hfg)
-
                 zt = torch.zeros_like(zw).detach().to(dev)
                 zt[:,c,w]=zw[:,c,w]
                 xths = Pdc(zcat(zt,wnz.fill_(0.0)))
@@ -1391,6 +1434,7 @@ def plot_features(tag,Qec,Pdc,nz,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
 
 def z_correlation_matrix(df,figname,cov=None,prc=None):
     #pandas
+    print("correlation_matrix ...")
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
     cmap = cm.get_cmap('RdBu_r',200)
@@ -1441,6 +1485,7 @@ def z_correlation_matrix(df,figname,cov=None,prc=None):
         plt.close()
 
 def z_histogram(zt,zm,figname):
+    print("plot histogram ...")
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
     zt = zt.stack().reset_index()
@@ -1454,11 +1499,12 @@ def z_histogram(zt,zm,figname):
     zm.hist(ax=ax1,bins=100,xlabelsize=12,ylabelsize=12,grid=False,label=r'$F(\mathbf{x})$',color=cb,density=True)
     zi = np.linspace(-10.0,10.0,2001) 
     ax1.plot(zi,np.exp(-zi**2/2.)/np.sqrt(2.*np.pi),lw=4,color='gold')
-    import pdb
-    pdb.set_trace()
-    ax1.axvline(x=zm.mean().values,lw=4,color='cornflowerblue')
-    ax1.axvline(x=zm.mean().values+zm.std().values,lw=2,color='cornflowerblue',ls='--')
-    ax1.axvline(x=zm.mean().values-zm.std().values,lw=2,color='cornflowerblue',ls='--')
+    #import pdb
+    #pdb.set_trace()
+    print("[!]Mean of Variable zm ", zm.mean().values)
+    ax1.axvline(x=zm.mean()[0],lw=4,color='cornflowerblue')
+    ax1.axvline(x=zm.mean()[0]+zm.std().values[0],lw=2,color='cornflowerblue',ls='--')
+    ax1.axvline(x=zm.mean()[0]-zm.std().values[0],lw=2,color='cornflowerblue',ls='--')
     ax1.text(-4.,1.2, r'$\mu={{ {{{:.1f}}} }};\sigma={{ {{{:.1f}}} }}$'.format(zm.mean().values.tolist()[0],zm.std().values.tolist()[0]),fontsize=20)
     plt.ylabel(r'$p(z_i)$',fontsize=20)
     plt.xlabel(r'$z_i$',fontsize=20)
@@ -1475,11 +1521,13 @@ def discriminate_broadband_xz(DsXd,Dszd,Ddxz,Xd,Xdr,zd,zdr):
 
     # Discriminate real
     zrc = zcat(DsXd(Xd),Dszd(zdr))
-    DXz = Ddxz(zrc)
+    #DXz = Ddxz(zrc)
+    DXz = torch.utils.checkpoint.checkpoint_sequential(functions=Ddxz, segments=8 , input=zrc)
 
     # Discriminate fake
     zrc = zcat(DsXd(Xdr),Dszd(zd))
-    DzX = Ddxz(zrc)
+    #DzX = Ddxz(zrc)
+    DzX = torch.utils.checkpoint.checkpoint_sequential(functions=DsXd, segments=8 , input=zrc)
 
     return DXz,DzX
 
