@@ -10,7 +10,7 @@ from common_nn import *
 from common_torch import * 
 from dcgaae_model import Encoder, Decoder
 from dcgaae_model import DCGAN_Dx, DCGAN_Dz
-from dcgaae_model import DCGAN_DXX, DCGAN_DZZ, DCGAN_DXZ
+# from dcgaae_model import DCGAN_DXX, DCGAN_DZZ, DCGAN_DXZ
 from dcgaae_model import DenseEncoder
 import plot_tools as plt
 from generate_noise import latent_resampling, noise_generator
@@ -27,9 +27,9 @@ __maintainer__ = "Filippo Gatti"
 __email__ = "filippo.gatti@centralesupelec.fr"
 __status__ = "Beta"
 
-    """ This file contents methods to train the CNN for broadband and filtred signal
-    the trainer[class], gets the setup from the flag, instantiate Encoder and Decoder methodes.
-    """
+# This file contents methods to train the CNN for broadband and filtred signal
+# the trainer[class], gets the setup from the flag, instantiate Encoder and Decoder methodes.
+#
 
 b1 = 0.5
 b2 = 0.9999
@@ -37,27 +37,27 @@ nch_tot = 3
 penalty_wgangp = 10.
 nly = 5
 #self.style='ALICE'#'WGAN'
-        """ It is important in this part we define the principale gobale varable that will be used ih the entire classe :
+        # It is important in this part we define the principale gobale varable that will be used ih the entire classe :
 
-            acts    [dictionnary]   :This variable contents 2 items, in which, a set of activation functions is defined.
-                                    Those activation functions are used in this program. 
+        #     acts    [dictionnary]   :This variable contents 2 items, in which, a set of activation functions is defined.
+        #                             Those activation functions are used in this program. 
 
-            nlayer  [dictionnary]   :This variable contents 5 items, parameters for encoder, decoder and generator
-                                    Those parameters represent the number of layers for encoder and decoder NN for broadband 
-                                    and filtred signal signal
-                                    /!\ WARNING Actually the 5 CNN layer is hardly encoded!
+        #     nlayer  [dictionnary]   :This variable contents 5 items, parameters for encoder, decoder and generator
+        #                             Those parameters represent the number of layers for encoder and decoder NN for broadband 
+        #                             and filtred signal signal
+        #                             /!\ WARNING Actually the 5 CNN layer is hardly encoded!
 
-            strides [dictionnary]   :This variable contents 5 items, parameters to define the stride. The stride represent 
-                                    the movement of the Kernel on the signal that the latter operate on.
+        #     strides [dictionnary]   :This variable contents 5 items, parameters to define the stride. The stride represent 
+        #                             the movement of the Kernel on the signal that the latter operate on.
 
-            kernels [dictionnary]   :This variable contents 5 items for the sepecific encoder and decoders. length or Kenerl
-                                     that will used is defined for each encoder and decoder. 
+        #     kernels [dictionnary]   :This variable contents 5 items for the sepecific encoder and decoders. length or Kenerl
+        #                              that will used is defined for each encoder and decoder. 
 
-            padding [dictionnary]   :This variable contents 5 items. This feature that adds zero value arround the kernel. 
+        #     padding [dictionnary]   :This variable contents 5 items. This feature that adds zero value arround the kernel. 
 
-            outpads [dictionnary]   :This variable contents, 5 items. 
+        #     outpads [dictionnary]   :This variable contents, 5 items. 
 
-        """
+        # #
 
 acts={}
 acts['ALICE'] = {'Fed' :[LeakyReLU(1.0,inplace=True) for t in range(nly)]+[LeakyReLU(1.0,inplace=True)],
@@ -85,8 +85,8 @@ acts['WGAN']  = {'Fed' :[LeakyReLU(1.0,inplace=True) for t in range(nly)]+[Leaky
                  'Drz' :[LeakyReLU(1.0,inplace=True) for t in range(2)],
                  'Ddxz':[LeakyReLU(1.0,inplace=True) for t in range(2)],
                  'DhXd':[LeakyReLU(1.0,inplace=True) for t in range(3)]}
-u ''' dictonnary
-'''
+# u ''' dictonnary
+# '''
 nlayers = {'Fed':5,'Gdd':5,
            'Fef':5,'Gdf':5,
            'Ghz':3,
@@ -112,28 +112,28 @@ class trainer(object):
     '''Initialize neural network'''
     @profile
     def __init__(self,cv):
-        """This is the constructor receive informations sent form the flag passed to the cv object. With this latter, 
-        The encoder and the decoder will be instanciate. 
-        A set of attributs is made in this programme. The most important are :
-        1. The Encoders
-        +Fed    ([object]): The encoder will be initialised for the broadband dataset. 
-        +Fef    ([object]): The encoder to initiate the filtred dataset.
+        #This is the constructor receive informations sent form the flag passed to the cv object. With this latter, 
+        # The encoder and the decoder will be instanciate. 
+        # A set of attributs is made in this programme. The most important are :
+        # 1. The Encoders
+        # +Fed    ([object]): The encoder will be initialised for the broadband dataset. 
+        # +Fef    ([object]): The encoder to initiate the filtred dataset.
 
-        2. The Decoders
-        +Gdd    ([object]): The decoder for the broadband signal
-        +Gdf    ([object]): The decoder for the filtred signal
+        # 2. The Decoders
+        # +Gdd    ([object]): The decoder for the broadband signal
+        # +Gdf    ([object]): The decoder for the filtred signal
 
-        3. The Discriminators
-        +DsXd   ([object]):
-        +Dszd   ([object]):
-        +DsXf   ([object]):
-        +Dszf   ([object]):
+        # 3. The Discriminators
+        # +DsXd   ([object]):
+        # +Dszd   ([object]):
+        # +DsXf   ([object]):
+        # +Dszf   ([object]):
 
-        Args:
-            cv ([object]): parsing information from the flag. The flag is excuted as by example  :
-            python ./src/aae_drive_bbfl.py --dataroot='./database/stead' --dataset='nt4096_ls128_nzf8_nzd32.pth', etc...
+        # Args:
+        #     cv ([object]): parsing information from the flag. The flag is excuted as by example  :
+        #     python ./src/aae_drive_bbfl.py --dataroot='./database/stead' --dataset='nt4096_ls128_nzf8_nzd32.pth', etc...
 
-        """
+        #
         super(trainer, self).__init__()
     
         self.cv = cv

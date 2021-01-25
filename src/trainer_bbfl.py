@@ -10,7 +10,7 @@ from common_nn import *
 from common_torch import * 
 # from dcgaae_model import Encoder, Decoder
 # from dcgaae_model import DCGAN_Dx, DCGAN_Dz
-from dcgaae_model import *
+# from dcgaae_model import *
 # from dcgaae_model import DenseEncoder
 import plot_tools as plt
 from generate_noise import latent_resampling, noise_generator
@@ -20,12 +20,12 @@ from leave_p_out import k_folds
 from common_setup import dataset2loader
 from database_sae import thsTensorData
 import json
-import pprint as pp
+# import pprint as pp
 import pdb
 from conv_factory import *
 import GPUtil
 from torch.nn.parallel import DistributedDataParallel as DDP
-from pytorchsummary.torchsummary import summary
+# from pytorchsummary.torchsummary import summary
 import numpy as np
 
 rndm_args = {'mean': 0, 'std': 1}
@@ -204,10 +204,10 @@ class trainer(object):
         """
         #we determine in which kind of environnement we are 
         if(opt.ntask ==1 and opt.ngpu >=1):
-            print('ModelParallele to Build')
+            print('ModelParallele to be builded ...')
             factory = ModelParalleleFactory()
         elif(opt.ntask >1 and opt.ngpu >=1):
-            print('DataParallele to Build')
+            print('DataParallele to be builded ...')
             factory = DataParalleleFactory()
         else:
             print('environ not found')
@@ -355,6 +355,7 @@ class trainer(object):
             flagF = True
             n = self.strategy['filtered']
             print("|Loading filtered generators ...")
+            # pdb.set_trace()
 
             # self.Fef = Encoder(ngpu=ngpu,dev=device,nz=nzf,nzcl=0,
             #                    nch=2*nch_tot,ndf=ndf,szs=md['ntm'],
@@ -461,7 +462,7 @@ class trainer(object):
             n = self.strategy['hybrid']
             print("Loading hybrid generators")
 
-            if opt.config['Ghz'] :
+            if hasattr(opt.config,'Ghz'):
                 nlayers['Gdf'] = opt.config['decoder']['nlayers']
                 kernels['Gdf'] = opt.config['decoder']['kernel']
                 strides['Gdf'] = opt.config['decoder']['strides']
@@ -485,7 +486,7 @@ class trainer(object):
                     self.oGhxz = reset_net([self.Ghz],func=set_weights,lr=glr,b1=b1,b2=b2)
                 self.optzh.append(self.oGhxz)
 
-                if opt.config['Dsrzd']:
+                if hasattr(opt.config,'Dsrzd'):
                     self.Dsrzd = DCGAN_DXZ(ngpu=ngpu,nc=2*nzd,n_extra_layers=opt.config['Dsrzd']['layers'],dpc=0.25,
                                            activation=act['Ddxz'],wf=False).to(device)
                 else:
@@ -493,7 +494,7 @@ class trainer(object):
                                            activation=act['Ddxz'],wf=False).to(device)
                 
                 if self.style=='WGAN':
-                    if opt.config['DsrXd']:
+                    if hasattr(opt.config,'DsrXd'):
                         self.DsrXd = Encoder(ngpu=ngpu,dev=device,nz=1,nzcl=0,nch=2*nch_tot,
                                      ndf=ndf,szs=md['ntm'],nly=3,ker=opt.config['DsrXd']['kernels'],\
                                      std=opt.config['DsrXd']['strides'],\
@@ -511,7 +512,7 @@ class trainer(object):
                     self.Dhnets.append(self.DsrXd)
                     self.oDhzdzf = reset_net(self.Dhnets,func=set_weights,lr=rlr,optim='rmsprop')
                 else:
-                    if opt.config['DsrXd']:
+                    if hasattr(opt.config,'DsrXd'):
                         self.DsrXd = Encoder(ngpu=ngpu,dev=device,nz=1,nzcl=0,nch=2*nch_tot,
                                      ndf=ndf,szs=md['ntm'],nly=op.config['DsrXd']['nlayers'],\
                                      ker=opt.config['DsrXd']['kernel'],\
@@ -530,6 +531,7 @@ class trainer(object):
                     self.oDhzdzf = reset_net(self.Dhnets,func=set_weights,lr=rlr,b1=b1,b2=b2)
                 self.optzh.append(self.oDhzdzf) 
         # Loss Criteria
+        # pdb.set_trace()
         self.bce_loss = BCE(reduction='mean').to(ngpu-1)
         self.losses = {'Dloss_t':[0],'Dloss_f':[0],'Dloss_t':[0],
                        'Gloss_x':[0],'Gloss_z':[0],'Gloss_t':[0],
@@ -702,6 +704,25 @@ class trainer(object):
         # pdb.set_trace()
         Dloss_ali = -torch.mean(ln0c(torch.abs(Dzx))+ln0c(torch.abs(1.0-Dxz)))
 
+
+        # # Gradient penalty
+        # epsX = torch.random((Xd.shape[0],1),
+        #     device=Xd.get_device()).repeat_interleave(repeats=Xd.shape[2],
+        #     dim=-1).view(-1,1).repeat_interleave(repeats=Xd.shape[3],dim=-1)
+
+        # epsz = torch.random((zd.shape[0],1),
+        #     device=zd.get_device()).repeat_interleave(repeats=zd.shape[2],
+        #     dim=-1).view(-1,1).repeat_interleave(repeats=zd.shape[3],dim=-1)
+
+        # X_til = eps*Xd+(1-eps)*X_gen
+        # z_til = eps*zd+(1-eps)*z_gen
+
+        # grad_params = torch.autograd.grad(loss, model.parameters(), create_graph=True)
+        # grad_norm = 0
+        # for grad in grad_params:
+        #     grad_norm += grad.pow(2).sum()
+        #     grad_norm = grad_norm.sqrt()
+
         # Total loss
         Dloss = Dloss_ali.to(ngpu-1)
         # print("\t||Dloss :", Dloss)
@@ -766,8 +787,17 @@ class trainer(object):
         # 4. Cross-Discriminate ZZ
         Gloss_cycle_z = torch.mean(torch.abs(zd.to(ngpu-1)-z_rec)).to(ngpu-1)
 
+
+        gradsX = torch.autograd.grad(Gloss_ali, 
+            ittc(self.DsXd.parameters(),
+                self.Dszd.parameters(),
+                self.Ddxz.parameters()), 
+            retain_graph=True, create_graph=True)
+        gr_norm_sq = 0.0
+        for gr in gradsX:
+            gr_norm_sq += (gr**2).sum()
         # Total Loss
-        Gloss = Gloss_ali + 10. * Gloss_cycle_X + 100. * Gloss_cycle_z
+        Gloss = Gloss_ali + 10. * Gloss_cycle_X + 100. * Gloss_cycle_z + penalty_wgangp*gr_norm_sq
 
         #torch.cuda.empty_cache()
         Gloss.backward()
@@ -787,6 +817,8 @@ class trainer(object):
     ####################
     def alice_train_filtered_discriminator_adv_xz(self,Xf,zf):
         # Set-up training
+        # pdb.set_trace()
+
         # print("|In function alice_train_filtered_discriminator_adv_xzl")
         # print("\t||Xf : ", Xf.shape,"\tzf : ",zf.shape)
         zerograd(self.optzf)
@@ -845,9 +877,11 @@ class trainer(object):
         Dreal_z,Dfake_z = self.discriminate_filtered_zz(zf,z_rec)
 
         Dloss_ali_z = self.bce_loss(Dreal_z,o1l(Dreal_z))+self.bce_loss(Dfake_z,o0l(Dfake_z))
+
+       
         
         # Total loss
-        Dloss = Dloss_ali + Dloss_ali_X + Dloss_ali_z
+        Dloss = Dloss_ali + 10*Dloss_ali_X + 100*Dloss_ali_z
         Dloss.backward(),self.oDfxz.step(),clipweights(self.Dfnets),zerograd(self.optzf)
         self.losses['Dloss'].append(Dloss.tolist())  
         self.losses['Dloss_ali'].append(Dloss_ali.tolist())  
@@ -1040,8 +1074,8 @@ class trainer(object):
                     self.alice_train_broadband_generator_explicit_xz(Xd,zd)
                     torch.cuda.empty_cache()
 
-                pdb.set_trace()
-                err = self._error(Xd,zd,device)
+                # pdb.set_trace()
+                err = self._error(self.Fed, self.Gdd,Xd,zd,device)
                 a =  err.cpu().data.numpy().tolist()
                 #error in percentage (%)
                 if b in error:
@@ -1056,20 +1090,22 @@ class trainer(object):
             str = 'epoch: {:>d} --- '.format(epoch)
             str = str + ' | '.join(str1)
             print(str)
-            if epoch%save_checkpoint==0:
-                print("\t|saving model at this checkpoint : ", epoch)
-                tsave({'epoch':epoch,'model_state_dict':self.Fed.state_dict(),
-                       'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},
-                       './network/Fed_{}.pth'.format(epoch))
-                tsave({'epoch':epoch,'model_state_dict':self.Gdd.state_dict(),
-                       'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},
-                       './network/Gdd_{}.pth'.format(epoch))    
-                tsave({'model_state_dict':self.Dszd.state_dict(),
-                       'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Dszd_bb_{}.pth'.format(epoch))
-                tsave({'model_state_dict':self.DsXd.state_dict(),
-                       'optimizer_state_dict':self.oDdxz.state_dict()},'./network/DsXd_bb_{}.pth'.format(epoch))    
-                tsave({'model_state_dict':self.Ddxz.state_dict(),
-                       'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Ddxz_bb_{}.pth'.format(epoch))
+            if save_checkpoint:
+                if epoch%save_checkpoint==0:
+                    print("\t|saving model at this checkpoint : ", epoch)
+                    tsave({'epoch':epoch,'model_state_dict':self.Fed.state_dict(),
+                           'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},
+                           './network/Fed_{}.pth'.format(epoch))
+                    tsave({'epoch':epoch,'model_state_dict':self.Gdd.state_dict(),
+                           'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},
+                           './network/Gdd_{}.pth'.format(epoch))    
+                    tsave({'model_state_dict':self.Dszd.state_dict(),
+                           'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Dszd_bb_{}.pth'.format(epoch))
+                    tsave({'model_state_dict':self.DsXd.state_dict(),
+                           'optimizer_state_dict':self.oDdxz.state_dict()},'./network/DsXd_bb_{}.pth'.format(epoch))    
+                    tsave({'model_state_dict':self.Ddxz.state_dict(),
+                           'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Ddxz_bb_{}.pth'.format(epoch))
+        
         plt.plot_loss_dict(nb=niter,losses=self.losses,title='loss_classic',outf=outf)
         # pdb.set_trace()
         plt.plot_error(error,outf=outf)
@@ -1087,6 +1123,7 @@ class trainer(object):
         print('Training on filtered signals ...') 
         globals().update(self.cv)
         globals().update(opt.__dict__)
+        error = {}
         for epoch in range(niter):
             for b,batch in enumerate(trn_loader):
                 # Load batch
@@ -1096,10 +1133,14 @@ class trainer(object):
 #               # Train G/D
                 for _ in range(5):
                     self.alice_train_filtered_discriminator_explicit_xz(Xf,zf)
+                    torch.cuda.empty_cache()
+
                 for _ in range(1):
                     self.alice_train_filtered_generator_explicit_xz(Xf,zf)
+                    torch.cuda.empty_cache()
+
             # pdb.set_trace()
-                err = self._error(Xd,zd,device)
+                err = self._error(self.Fef, self.Gdf,Xf,zf,device)
                 a =  err.cpu().data.numpy().tolist()
                 #error in percentage (%)
                 if b in error:
@@ -1107,35 +1148,39 @@ class trainer(object):
                 else:
                     error[b] = a
 
+            GPUtil.showUtilization(all=True)
+
             str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
             str = 'epoch: {:>d} --- '.format(epoch)
             str = str + ' | '.join(str1)
             print(str)
-            if epoch%save_checkpoint==0:
-                tsave({'epoch':epoch,'model_state_dict':self.Fef.state_dict(),
-                       'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
-                       'Fef_{}.pth'.format(epoch))
-                tsave({'epoch':epoch,'model_state_dict':self.Gdf.state_dict(),
-                       'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
-                       'Gdf_{}.pth'.format(epoch))    
-                tsave({'model_state_dict':self.Dszf.state_dict(),
-                       'optimizer_state_dict':self.oDfxz.state_dict()},'Dszd_fl_{}.pth'.format(epoch))
-                tsave({'model_state_dict':self.DsXf.state_dict(),
-                       'optimizer_state_dict':self.oDfxz.state_dict()},'DsXd_fl_{}.pth'.format(epoch))    
-                tsave({'model_state_dict':self.Dfxz.state_dict(),
-                       'optimizer_state_dict':self.oDfxz.state_dict()},'Ddxz_fl_{}.pth'.format(epoch))
+            if save_checkpoint:
+                if epoch%save_checkpoint==0:
+                    print("saving model at this checkpoint, talk few minutes ...")
+                    tsave({'epoch':epoch,'model_state_dict':self.Fef.state_dict(),
+                           'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
+                           './network/Fef_{}.pth'.format(epoch))
+                    tsave({'epoch':epoch,'model_state_dict':self.Gdf.state_dict(),
+                           'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
+                           './network/Gdf_{}.pth'.format(epoch))    
+                    tsave({'model_state_dict':self.Dszf.state_dict(),
+                           'optimizer_state_dict':self.oDfxz.state_dict()},'./network/Dszd_fl_{}.pth'.format(epoch))
+                    tsave({'model_state_dict':self.DsXf.state_dict(),
+                           'optimizer_state_dict':self.oDfxz.state_dict()},'./network/DsXd_fl_{}.pth'.format(epoch))    
+                    tsave({'model_state_dict':self.Dfxz.state_dict(),
+                           'optimizer_state_dict':self.oDfxz.state_dict()},'./network/Ddxz_fl_{}.pth'.format(epoch))
         #plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_filtered',outf=outf)
         plt.plot_error(error,outf=outf)
         tsave({'epoch':niter,'model_state_dict':self.Fef.state_dict(),
-            'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},'Fef.pth')
+            'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},'./network/Fef.pth')
         tsave({'epoch':niter,'model_state_dict':self.Gdf.state_dict(),
-            'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},'Gdf.pth')    
+            'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},'./network/Gdf.pth')    
     @profile
     def train_filtered(self):
         print("[!] In function train_filtred ... ")
         globals().update(self.cv)
         globals().update(opt.__dict__)
-	
+        error = {}
         for epoch in range(niter):
             for b,batch in enumerate(trn_loader):
                 # Load batch
@@ -1146,39 +1191,54 @@ class trainer(object):
 #               # Train G/D
                 for _ in range(5):
                     self.alice_train_filtered_discriminator_adv_xz(Xf,zf)
+                    torch.cuda.empty_cache()
                 for _ in range(1):
                     self.alice_train_filtered_generator_adv_xz(Xf,zf)
-    
+                    torch.cuda.empty_cache()
+
+                err = self._error(self.Fef, self.Gdf, Xf,zf,device)
+                a =  err.cpu().data.numpy().tolist()
+                #error in percentage (%)
+                if b in error:
+                    error[b] = np.append(error[b], a)
+                else:
+                    error[b] = a
+
+            GPUtil.showUtilization(all=True)
+
             str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
             str = 'epoch: {:>d} --- '.format(epoch)
             str = str + ' | '.join(str1)
             print(str)
-            if epoch%save_checkpoint==0:
-                tsave({'epoch':epoch,'model_state_dict':self.Fef.state_dict(),
-                       'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
-                       'Fef_{}.pth'.format(epoch))
-                tsave({'epoch':epoch,'model_state_dict':self.Gdf.state_dict(),
-                       'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
-                       'Gdf_{}.pth'.format(epoch))    
-                tsave({'model_state_dict':self.Dszf.state_dict(),
-                       'optimizer_state_dict':self.oDfxz.state_dict()},'Dszd_fl_{}.pth'.format(epoch))
-                tsave({'model_state_dict':self.DsXf.state_dict(),
-                       'optimizer_state_dict':self.oDfxz.state_dict()},'DsXd_fl_{}.pth'.format(epoch))    
-                tsave({'model_state_dict':self.Dfxz.state_dict(),
-                       'optimizer_state_dict':self.oDfxz.state_dict()},'Ddxz_fl_{}.pth'.format(epoch))
+            if save_checkpoint:
+                if epoch%save_checkpoint==0:
+                    print("saving model at this checkpoint, talk few minutes ...")
+                    tsave({'epoch':epoch,'model_state_dict':self.Fef.state_dict(),
+                           'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
+                           'Fef_{}.pth'.format(epoch))
+                    tsave({'epoch':epoch,'model_state_dict':self.Gdf.state_dict(),
+                           'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
+                           'Gdf_{}.pth'.format(epoch))    
+                    tsave({'model_state_dict':self.Dszf.state_dict(),
+                           'optimizer_state_dict':self.oDfxz.state_dict()},'./network/Dszd_fl_{}.pth'.format(epoch))
+                    tsave({'model_state_dict':self.DsXf.state_dict(),
+                           'optimizer_state_dict':self.oDfxz.state_dict()},'./network/DsXd_fl_{}.pth'.format(epoch))    
+                    tsave({'model_state_dict':self.Dfxz.state_dict(),
+                           'optimizer_state_dict':self.oDfxz.state_dict()},'./network/Ddxz_fl_{}.pth'.format(epoch))
         #plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_filtered',outf=outf)
         tsave({'epoch':niter,'model_state_dict':self.Fef.state_dict(),
-            'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses},'Fef.pth')
+            'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses},'./network/Fef.pth')
         tsave({'epoch':niter,'model_state_dict':self.Gdf.state_dict(),
-            'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses},'Gdf.pth')    
+            'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses},'./network/Gdf.pth')    
         tsave({'epoch':niter,'model_state_dict':[Dn.state_dict() for Dn in self.Dfnets],
-            'optimizer_state_dict':self.oDfxz.state_dict(),'loss':self.losses},'DsXz.pth')
+            'optimizer_state_dict':self.oDfxz.state_dict(),'loss':self.losses},'./network/DsXz.pth')
     
     @profile
     def train_hybrid(self):
         print('Training on filtered signals ...') 
         globals().update(self.cv)
         globals().update(opt.__dict__)
+        error = {}
         for epoch in range(niter):
             for b,batch in enumerate(trn_loader):
                 # Load batch
@@ -1318,19 +1378,18 @@ class trainer(object):
                     zf = Variable(zf_data).to(device)
 
     @profile
-    def _error(self, Xt, zt, dev):
-        wnx,wnz,wn1 = noise_generator(Xt.shape,zt.shape,dev,rndm_args)
+    def _error(self,encoder, decoder, Xt, zt, dev):
+        wnx,wnz,wn1 = noise_generator( Xt.shape,zt.shape,dev,rndm_args)
         X_inp = zcat(Xt,wnx.to(dev))
-        ztr =self.Fed(X_inp).to(dev)
+        ztr = encoder(X_inp).to(dev)
         # ztr = latent_resampling(Qec(X_inp),zt.shape[1],wn1)
         z_inp = zcat(ztr,wnz.to(dev))
         z_pre = zcat(zt,wnz.to(dev))
-        Xr = self.Gdd(z_inp)
+        Xr = decoder(z_inp)
 
         loss = torch.nn.MSELoss(reduction="mean")
 
         return loss(Xt,Xr)
-
 
 
 
