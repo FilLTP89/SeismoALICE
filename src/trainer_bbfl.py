@@ -1069,9 +1069,9 @@ class trainer(object):
                 tsave({'model_state_dict':self.DsXd.state_dict(),
                        'optimizer_state_dict':self.oDdxz.state_dict()},'./network/DsXd_bb_{}.pth'.format(epoch))    
                 tsave({'model_state_dict':self.Ddxz.state_dict(),
-                       'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Ddxz_bb_{}.pth'.format(epoch))
+                    'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Ddxz_bb_{}.pth'.format(epoch))
         plt.plot_loss_dict(nb=niter,losses=self.losses,title='loss_classic',outf=outf)
-        # pdb.set_trace()
+        
         plt.plot_error(error,outf=outf)
 
         tsave({'epoch':niter,'model_state_dict':self.Fed.state_dict(),
@@ -1233,6 +1233,7 @@ class trainer(object):
             #              pfx={'broadband':'set_bb','filtered':'set_fl','hybrid':'set_hb'},\
             #             outf=outf)
             plt.plot_features('broadband',self.Fed,self.Gdd,nzd,device,vtm,vld_loader,pfx='set_bb',outf=outf)
+
         if 'filtered' in t and self.strategy['trplt']['filtered']:
             n = self.strategy['filtered']
             Fef = deepcopy(self.Fef)
