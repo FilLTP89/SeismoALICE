@@ -1105,6 +1105,7 @@ class trainer(object):
             str = 'epoch: {:>d} --- '.format(epoch)
             str = str + ' | '.join(str1)
             print(str)
+<<<<<<< HEAD
             if save_checkpoint:
                 if epoch%save_checkpoint==0:
                     print("\t|saving model at this checkpoint : ", epoch)
@@ -1132,6 +1133,25 @@ class trainer(object):
         # plt.plot_error(error,outf=outf)
         # del self.losses
 
+=======
+            if epoch%save_checkpoint==0:
+                print("\t|saving model at this checkpoint : ", epoch)
+                tsave({'epoch':epoch,'model_state_dict':self.Fed.state_dict(),
+                       'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},
+                       './network/Fed_{}.pth'.format(epoch))
+                tsave({'epoch':epoch,'model_state_dict':self.Gdd.state_dict(),
+                       'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},
+                       './network/Gdd_{}.pth'.format(epoch))    
+                tsave({'model_state_dict':self.Dszd.state_dict(),
+                       'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Dszd_bb_{}.pth'.format(epoch))
+                tsave({'model_state_dict':self.DsXd.state_dict(),
+                       'optimizer_state_dict':self.oDdxz.state_dict()},'./network/DsXd_bb_{}.pth'.format(epoch))    
+                tsave({'model_state_dict':self.Ddxz.state_dict(),
+                    'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Ddxz_bb_{}.pth'.format(epoch))
+        plt.plot_loss_dict(nb=niter,losses=self.losses,title='loss_classic',outf=outf)
+        
+        plt.plot_error(error,outf=outf)
+>>>>>>> fa738440bd4a030f788f9b2e08ac661ac87c1fb8
 
         tsave({'epoch':niter,'model_state_dict':self.Fed.state_dict(),
             'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'./network/Fed.pth')
@@ -1316,6 +1336,7 @@ class trainer(object):
             #              pfx={'broadband':'set_bb','filtered':'set_fl','hybrid':'set_hb'},\
             #             outf=outf)
             plt.plot_features('broadband',self.Fed,self.Gdd,nzd,device,vtm,vld_loader,pfx='set_bb',outf=outf)
+
         if 'filtered' in t and self.strategy['trplt']['filtered']:
             n = self.strategy['filtered']
             Fef = deepcopy(self.Fef)

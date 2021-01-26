@@ -779,6 +779,7 @@ def plot_ohe(ohe):
     plt.title('One Hot Encoding')
     ax1.set_xticklabels(df.columns.tolist(),fontsize=12)
     ax1.set_yticklabels(df.index.tolist(),fontsize=12)
+    plt.show()
     # Add colorbar, make sure to specify tick locations to match desired ticklabels
     #fig.colorbar(cax, ticks=[.75,.8,.85,.90,.95,1])
     plt.savefig('onehotencoding.eps',dpi=300,bbox_inches='tight')
