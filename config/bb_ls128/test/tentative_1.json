@@ -1,0 +1,45 @@
+{
+    "encoder": {
+        "padding": 0, 
+        "kernel": 2,  
+        "strides": 2, 
+        "nlayers": 5, 
+        "dilation":1,
+        "act":"Fed"
+    }, 
+    "decoder": {
+        "padding": 0, 
+        "kernel": 2, 
+        "outpads": 0, 
+        "strides": 2,
+        "nlayers": 5,
+        "dilation":1,
+        "act":"Gdd"
+    },
+    "Dszd":{
+        "padding": 0,
+        "kernel": 1,
+        "strides": 1,
+        "nlayers": 3,
+        "outpads": 0,
+        "dilation":1,
+        "act":"Dsz"
+    }, 
+    "DsXd":{
+        "padding": 0,
+        "kernel": 2,
+        "strides": 2,
+        "nlayers": 5,
+        "dilation":1,
+        "act":"Dsx"
+    },
+    "Ddxz":{
+        "padding": 0,
+        "kernel": 1,
+        "strides": 1,
+        "nlayers": 3,
+        "outpads": 0,
+        "dilation":1,
+        "act":"Ddxz"
+    }
+}
