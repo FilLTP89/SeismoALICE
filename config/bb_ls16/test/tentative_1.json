@@ -1,0 +1,37 @@
+{
+    "encoder": {
+        "padding": 0, 
+        "kernel": 2,  
+        "strides": 2, 
+        "nlayers": 8
+    }, 
+    "decoder": {
+        "padding": 0, 
+        "kernel": 2, 
+        "outpads": 0, 
+        "strides": 2,
+        "dilation":1,
+        "nlayers": 8
+    },
+    "Dszd":{
+        "padding": 0,
+        "kernel": 1,
+        "strides": 1,
+        "nlayers": 8,
+        "outpads": 0
+    },
+    "DsXd":{
+        "padding": 0,
+        "kernel": 2,
+        "strides": 2,
+        "nlayers": 8,
+        "outpads": 0
+    },
+    "Ddxz":{
+        "padding": 0,
+        "kernel": 1,
+        "strides": 1,
+        "nlayers": 8,
+        "outpads": 0
+    }
+}

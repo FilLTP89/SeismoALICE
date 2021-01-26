@@ -1,0 +1,67 @@
+{
+    "encoder": {
+        "padding": 1, 
+        "kernel": 4,  
+        "strides": 4,
+        "dilation": 1, 
+        "nlayers": 5,
+        "act":"Fef"
+    }, 
+    "decoder": {
+        "padding": 0, 
+        "kernel": 4, 
+        "outpads": 0, 
+        "strides": 4,
+        "dilation": 1,
+        "nlayers": 5,
+        "act":"Gdf"
+    },
+    "Dszf":{
+        "padding": 0,
+        "kernel": 1,
+        "strides": 1,
+        "nlayers": 3,
+        "dilation": 1,
+        "outpads": 0,
+        "act":"Dsz"
+    },
+    "DsXf":{
+        "padding": 1,
+        "kernel": 4,
+        "strides": 4,
+        "nlayers": 5,
+        "dilation": 1,
+        "outpads": 0,
+        "act":"Dsx"
+    },
+    "Dfxz":{
+        "padding": 0,
+        "kernel": 1,
+        "strides": 1,
+        "nlayers": 3,
+        "dilation": 1,
+        "outpads": 0,
+        "act":"Ddxz", 
+        "nc":8
+    },
+    "Dsrzf":{
+        "padding": 0,
+        "kernel": 1,
+        "strides": 1,
+        "nlayers": 2,
+        "dilation": 1,
+        "outpads": 0,
+        "act":"Drz",
+        "nz":16
+    },
+    "DsrXf":{
+        "padding": 1,
+        "kernel": 4,
+        "strides": 2,
+        "nlayers": 5,
+        "dilation": 1,
+        "outpads": 0,
+        "nc":6,
+        "act":"Drx"
+    }
+}
