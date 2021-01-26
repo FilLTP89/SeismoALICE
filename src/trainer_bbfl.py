@@ -5,7 +5,7 @@ u'''Required modules'''
 import warnings
 warnings.filterwarnings("ignore")
 from copy import deepcopy
-from profile_support import profile
+# from profile_support import profile
 from common_nn import *
 from common_torch import * 
 # from dcgaae_model import Encoder, Decoder
@@ -26,7 +26,7 @@ from conv_factory import *
 import GPUtil
 from torch.nn.parallel import DistributedDataParallel as DDP
 # from pytorchsummary.torchsummary import summary
-import numpy as np
+# import numpy as np
 
 rndm_args = {'mean': 0, 'std': 1}
 
@@ -150,7 +150,7 @@ import os
 
 class trainer(object):
     '''Initialize neural network'''
-    @profile
+    # @profile
     def __init__(self,cv):
 
         """
@@ -160,6 +160,7 @@ class trainer(object):
         super(trainer, self).__init__()
     
         self.cv = cv
+        self.gr_norm = []
         # define as global variable the cv object. 
         # And therefore this latter is become accessible to the methods in this class
         globals().update(cv)
@@ -242,6 +243,7 @@ class trainer(object):
             print("Loading broadband generators")
             
             # # Encoder broadband Fed
+            # pdb.set_trace()
             self.Fed = net.Encoder(opt.config["encoder"],opt)
             # self.Fed = Encoder(ngpu=opt.ngpu,dev=device,nz=nzd,\
             #                    nch=2*nch_tot,ndf=ndf,\
@@ -539,12 +541,12 @@ class trainer(object):
                        'Gloss':[0],'Dloss':[0],'Gloss_ftm':[0],'Gloss_ali_X':[0],
                        'Gloss_ali_z':[0],'Gloss_cycle_X':[0],
                        'Gloss_cycle_z':[0],'Dloss_ali':[0],
-                       'Dloss_ali_X':[0],'Dloss_ali_z':[0]}
+                       'Dloss_ali_X':[0],'Dloss_ali_z':[0], 'norm_grad':[0]}
         
         #end of constructior
 
     ''' Methode that discriminate real and fake signal for broadband type '''
-    @profile
+    # @profile
     def discriminate_broadband_xz(self,Xd,Xdr,zd,zdr):
         
         # Discriminate real
@@ -582,7 +584,7 @@ class trainer(object):
         #end of discriminate_broadband_xz function
 
     ''' Methode that discriminate real and fake signal for filtred type '''
-    @profile
+    # @profile
     def discriminate_filtered_xz(self,Xf,Xfr,zf,zfr):
         # print("|In discriminate_filtered_xz function ...") 
         # Discriminate real
@@ -637,25 +639,25 @@ class trainer(object):
         
         return DXz,DzX,ftr,ftf
 
-    @profile
+    # @profile
     def discriminate_filtered_xx(self,Xf,Xfr):
         Dreal = self.DsrXf(zcat(Xf,Xf ))
         Dfake = self.DsrXf(zcat(Xf,Xfr))
         return Dreal,Dfake
 
-    @profile
+    # @profile
     def discriminate_filtered_zz(self,zf,zfr):
         Dreal = self.Dsrzf(zcat(zf,zf ))
         Dfake = self.Dsrzf(zcat(zf,zfr))
         return Dreal,Dfake
 
-    @profile
+    # @profile
     def discriminate_hybrid_xx(self,Xf,Xfr):
         Dreal = self.DsrXd(zcat(Xf,Xf ))
         Dfake = self.DsrXd(zcat(Xf,Xfr))
         return Dreal,Dfake
 
-    @profile
+    # @profile
     def discriminate_hybrid_zz(self,zf,zfr):
         Dreal = self.Dsrzd(zcat(zf,zf ))
         Dfake = self.Dsrzd(zcat(zf,zfr))
@@ -664,7 +666,7 @@ class trainer(object):
     ####################
     ##### CLASSIC  #####
     ####################
-    @profile
+    # @profile
     def alice_train_broadband_discriminator_explicit_xz(self,Xd,zd):
         # print("|[1]In the alice_train_broadband_generator_explicit_xz function  ...") 
         # print("\t||Xd:",Xd.shape,"\tzd ",zd.shape)
@@ -782,20 +784,32 @@ class trainer(object):
         # print("\t||X_rec", X_rec.shape,"\t||z_rec",z_rec.shape)
         # 3. Cross-Discriminate XX
         # pdb.set_trace()
-        Gloss_cycle_X = torch.mean(torch.abs(Xd.to(ngpu-1)-X_rec)).to(ngpu-1)  
+        Gloss_cycle_X = torch.mean(torch.abs(Xd.to(ngpu-1)-X_rec)).to(ngpu-1)
         
         # 4. Cross-Discriminate ZZ
         Gloss_cycle_z = torch.mean(torch.abs(zd.to(ngpu-1)-z_rec)).to(ngpu-1)
 
-
+ 
         gradsX = torch.autograd.grad(Gloss_ali, 
             ittc(self.DsXd.parameters(),
                 self.Dszd.parameters(),
                 self.Ddxz.parameters()), 
             retain_graph=True, create_graph=True)
+
+        # pdb.set_trace()
         gr_norm_sq = 0.0
+        # for gr in gradsX:
+        #     gr_norm_sq += (gr**2).sum()
+
         for gr in gradsX:
-            gr_norm_sq += (gr**2).sum()
+            gr = (gr**2).sum().cpu().data.numpy().tolist()
+            gr_norm_sq += gr
+
+
+        self.gr_norm.append(gr_norm_sq)
+        
+        # pdb.set_trace()
+
         # Total Loss
         Gloss = Gloss_ali + 10. * Gloss_cycle_X + 100. * Gloss_cycle_z + penalty_wgangp*gr_norm_sq
 
@@ -810,6 +824,7 @@ class trainer(object):
         self.losses['Gloss_t'].append(Gloss.tolist()) 
         self.losses['Gloss_x'].append(Gloss_cycle_X.tolist())
         self.losses['Gloss_z'].append(Gloss_cycle_z.tolist())
+        self.losses['norm_grad'].append(gr_norm_sq)
         # GPUtil.showUtilization(all=True)
         torch.cuda.empty_cache()
     ####################
@@ -1052,7 +1067,7 @@ class trainer(object):
          
         self.losses['Gloss'].append(Gloss.tolist())
         
-    @profile
+    # @profile
     def train_broadband(self):
         print('Training on broadband signals ...') 
         globals().update(self.cv)
@@ -1074,18 +1089,18 @@ class trainer(object):
                     self.alice_train_broadband_generator_explicit_xz(Xd,zd)
                     torch.cuda.empty_cache()
 
-                # pdb.set_trace()
-                err = self._error(self.Fed, self.Gdd,Xd,zd,device)
-                a =  err.cpu().data.numpy().tolist()
-                #error in percentage (%)
-                if b in error:
-                    error[b] = np.append(error[b], a)
-                else:
-                    error[b] = a
+                # # pdb.set_trace()
+                # err = self._error(self.Fed, self.Gdd,Xd,zd,device)
+                # a =  err.cpu().data.numpy().tolist()
+                # #error in percentage (%)
+                # if b in error:
+                #     error[b] = np.append(error[b], a)
+                # else:
+                #     error[b] = a
             
             GPUtil.showUtilization(all=True)
 
-                
+            
             str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
             str = 'epoch: {:>d} --- '.format(epoch)
             str = str + ' | '.join(str1)
@@ -1105,10 +1120,18 @@ class trainer(object):
                            'optimizer_state_dict':self.oDdxz.state_dict()},'./network/DsXd_bb_{}.pth'.format(epoch))    
                     tsave({'model_state_dict':self.Ddxz.state_dict(),
                            'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Ddxz_bb_{}.pth'.format(epoch))
-        
-        plt.plot_loss_dict(nb=niter,losses=self.losses,title='loss_classic',outf=outf)
         # pdb.set_trace()
-        plt.plot_error(error,outf=outf)
+        # plt.plot_loss_dict(nb=niter,losses=self.losses,title='loss_classic',outf=outf)
+        plt.plot_loss_explicit(losses=self.losses["Dloss_t"], key="Dloss_t", outf=outf,niter=niter)
+        plt.plot_loss_explicit(losses=self.losses["Gloss_x"], key="Gloss_x", outf=outf,niter=niter)
+        plt.plot_loss_explicit(losses=self.losses["Gloss_z"], key="Gloss_z", outf=outf,niter=niter)
+        plt.plot_loss_explicit(losses=self.losses["Gloss_z"], key="Gloss_z", outf=outf,niter=niter)
+        plt.plot_loss_explicit(losses=self.losses["Gloss_t"], key="Gloss_t", outf=outf,niter=niter)
+        plt.plot_loss_explicit(losses=self.losses["norm_grad"], key="norm_grad", outf=outf,niter=niter)
+        # pdb.set_trace()
+        # plt.plot_error(error,outf=outf)
+        # del self.losses
+
 
         tsave({'epoch':niter,'model_state_dict':self.Fed.state_dict(),
             'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'./network/Fed.pth')
@@ -1118,7 +1141,7 @@ class trainer(object):
         tsave({'model_state_dict':self.DsXd.state_dict()},'./network/DsXd_bb.pth')    
         tsave({'model_state_dict':self.Ddxz.state_dict()},'./network/Ddxz_bb.pth')
          
-    @profile
+    # @profile
     def train_filtered_explicit(self):
         print('Training on filtered signals ...') 
         globals().update(self.cv)
@@ -1175,7 +1198,7 @@ class trainer(object):
             'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},'./network/Fef.pth')
         tsave({'epoch':niter,'model_state_dict':self.Gdf.state_dict(),
             'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},'./network/Gdf.pth')    
-    @profile
+    # @profile
     def train_filtered(self):
         print("[!] In function train_filtred ... ")
         globals().update(self.cv)
@@ -1233,7 +1256,7 @@ class trainer(object):
         tsave({'epoch':niter,'model_state_dict':[Dn.state_dict() for Dn in self.Dfnets],
             'optimizer_state_dict':self.oDfxz.state_dict(),'loss':self.losses},'./network/DsXz.pth')
     
-    @profile
+    # @profile
     def train_hybrid(self):
         print('Training on filtered signals ...') 
         globals().update(self.cv)
@@ -1264,7 +1287,7 @@ class trainer(object):
         tsave({'epoch':niter,'model_state_dict':[Dn.state_dict() for Dn in self.Dhnets],
             'optimizer_state_dict':self.oDhzdzf.state_dict(),'loss':self.losses},'DsXz.pth')
 
-    @profile
+    # @profile
     def train(self):
         for t,a in self.strategy['tract'].items():
             if 'broadband' in t.lower() and a:
@@ -1274,7 +1297,7 @@ class trainer(object):
             if 'hybrid' in t.lower() and a:                    
                 self.train_hybrid()
 
-    @profile            
+    # @profile            
     def generate(self):
         globals().update(self.cv)
         globals().update(opt.__dict__)
@@ -1330,7 +1353,7 @@ class trainer(object):
             plt.plot_generate_hybrid(Fef,Gdd,Ghz,device,vtm,\
                                       vld_loader,pfx="vld_set_hb",outf=outf)
 
-    @profile            
+    # @profile            
     def compare(self):
         globals().update(self.cv)
         globals().update(opt.__dict__)
@@ -1345,7 +1368,7 @@ class trainer(object):
                 self.Ghz.load_state_dict(tload(n[2])['model_state_dict'])
             plt.plot_compare_ann2bb(self.Fef,self.Gdd,self.Ghz,device,vtm,\
                                     trn_loader,pfx="trn_set_ann2bb",outf=outf)
-    @profile            
+    # @profile            
     def discriminate(self):
         globals().update(self.cv)
         globals().update(opt.__dict__)
@@ -1377,7 +1400,7 @@ class trainer(object):
                     zd = Variable(zd_data).to(device)
                     zf = Variable(zf_data).to(device)
 
-    @profile
+    # @profile
     def _error(self,encoder, decoder, Xt, zt, dev):
         wnx,wnz,wn1 = noise_generator( Xt.shape,zt.shape,dev,rndm_args)
         X_inp = zcat(Xt,wnx.to(dev))

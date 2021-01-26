@@ -94,10 +94,35 @@ def multivariateGrid(col_x, col_y, col_k, df, k_is_color=False, scatter_alpha=.7
     plt.xlabel(r'$EG$')
     plt.ylabel(r'$PG$')
 
+
+def plot_loss_explicit(losses,key, niter,outf="./imgs"):
+    import matplotlib.pyplot as plt
+    import matplotlib.ticker as mticker
+    # plt.ticklabel_format(style='plain', axis='x', useOffset=False)
+    fig, ax = plt.subplots()
+    
+    nx = len(losses)
+    ax.plot(losses, label = "losses[{0}]".format(key))
+    # ax.gca().xaxis.set_major_locator(mticker.MultipleLocator(1))
+    plt.xlabel("iteration")
+    plt.ylabel("losses")
+    plt.legend(loc="best")
+    # plt.title("Evaluation of loss for {0}".format(key))
+    ax.set_xticks([ i for i in range(0, nx, nx//10)])
+    # ax2 = ax.twiny()
+    # ax2.set_xticks(ax.get_xticks())
+    # ax2.set_xbound(ax.get_xbound())
+    # ax2.set_xticklabels([x//41 for x in ax.get_xticks()])
+    fig.subplots_adjust(top=0.85)
+    fig.savefig(os.path.join(outf,"{0}.png".format(key)),format="png", bbox_inches='tight',dpi = 500)
+    print("saving the {0} plot ...".format(key))
+    plt.close()
+
+
 def plot_loss_dict(losses,nb,title='loss',outf='./imgs'):
     sns.set(style="whitegrid")
     hfg,hax0 = plt.subplots(1,1,figsize=(6,6))
-    miniter = 10000000 
+    miniter = 10000 
     min_iter = {'key':0}
     for k,v in losses.items():
         temp=min(miniter,(len(v)-1)//nb)
@@ -577,6 +602,7 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs')
     if tag=='broadband':
         for _,batch in enumerate(trn_set):
             #_,xt_data,zt_data,_,_,_,_ = batch
+            print("Plotting signals ...")
             xt_data,xf_data,zt_data,_,_,_,_,*other = batch
             Xt = Variable(xt_data).to(dev)
             Xf = Variable(xf_data).to(dev)
@@ -636,6 +662,7 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs')
                             bbox_inches='tight',dpi = 500)
                 plt.savefig(os.path.join(outf,"res_r_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
                             format='eps',bbox_inches='tight',dpi = 500)
+                print("saving res_r_aae_%s_%u_%u ... "%(pfx,cnt,io))
                 plt.close()
                 
                 cnt += 1
