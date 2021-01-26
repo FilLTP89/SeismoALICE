@@ -8,6 +8,9 @@ import numpy as np
 import torch
 import h5py
 import pandas as pd
+import dask
+import dask.dataframe as dd
+import dask.array as da
 import random as rnd
 from os.path import join as osj
 from torch import from_numpy as np2t
@@ -197,15 +200,17 @@ def random_split(ths,lngs,idx=None):
     return idx,[Subset(ths,idx[off-lng:off]) 
         for off,lng in zip(_accumulate(lngs),lngs)]
 
-def stead_dataset_dask(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
+def stead_dataset_dask(src,batch_percent,workers,
+    Xwindow,zwindow,nzd,nzf,md,nsy,device):
     vtm = md['dtm']*np.arange(0,md['ntm'])
     tar     = np.zeros((nsy,2))
     trn_set  = -999.9*np.ones(shape=(nsy,3,md['ntm']))
     pgat_set = -999.9*np.ones(shape=(nsy,3))
     psat_set = -999.9*np.ones(shape=(nsy,3,md['nTn']))
-    print("training data ",trn_set.shape,pgat_set.shape, psat_set.shape)
-    print("src ", src)
-    dd.read_hdf('myfile.1.hdf5', '/*')
+    edq = dd.read_hdf(pattern=src,key= '/earthquake/local',mode='r+')
+    edm = dd.read_csv(pattern=src.replace('.hdf5','.csv')).query('source_magnitude'>=3.5)
+    eqm = eqm.sample(frac=nsy/len(eqm)).reset_index(drop=True).repartition(workers)
+
 def stead_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
     print('Enter in the stead_dataset function ...') 
     vtm = md['dtm']*np.arange(0,md['ntm'])

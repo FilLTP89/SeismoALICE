@@ -293,11 +293,9 @@ def setup():
         md = {'dtm':0.01,'cutoff':opt.cutoff,'ntm':opt.imageSize}
         md['vTn'] = np.arange(0.0,3.05,0.05,dtype=np.float64)
         md['nTn'] = md['vTn'].size
-        print("__init__ stead_dataset ...")
-        ths_trn,ths_tst,ths_vld,\
-        vtm,fsc = stead_dataset(src,opt.batchPercent,opt.imageSize,opt.latentSize,\
-                                opt.nzd,opt.nzf,md=md,nsy=opt.nsy,device=device)
-        print("__end__ stead_dataset")
+        ths_trn,ths_tst,ths_vld,vtm,fsc = stead_dataset_dask(src,
+            opt.batchPercent,opt.workers,opt.imageSize,opt.latentSize,\
+            opt.nzd,opt.nzf,md=md,nsy=opt.nsy,device=device)
         md['fsc']=fsc
         opt.ncls = md['fsc']['ncat']
         # Create natural period vector 
