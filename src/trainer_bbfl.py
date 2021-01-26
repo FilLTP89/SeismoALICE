@@ -686,7 +686,7 @@ class trainer(object):
                        'optimizer_state_dict':self.oDdxz.state_dict()},'DsXd_bb_{}.pth'.format(epoch))    
                 tsave({'model_state_dict':self.Ddxz.state_dict(),
                        'optimizer_state_dict':self.oDdxz.state_dict()},'Ddxz_bb_{}.pth'.format(epoch))
-        plt.plot_loss_dict(self.losses,100,title='loss_classic',outf=outf)
+        #plt.plot_loss_dict(self.losses,100,title='loss_classic',outf=outf)
         tsave({'epoch':niter,'model_state_dict':self.Fed.state_dict(),
             'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'Fed.pth')
         tsave({'epoch':niter,'model_state_dict':self.Gdd.state_dict(),
@@ -768,7 +768,7 @@ class trainer(object):
                        'optimizer_state_dict':self.oDfxz.state_dict()},'DsXd_fl_{}.pth'.format(epoch))    
                 tsave({'model_state_dict':self.Dfxz.state_dict(),
                        'optimizer_state_dict':self.oDfxz.state_dict()},'Ddxz_fl_{}.pth'.format(epoch))
-        plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_filtered',outf=outf)
+        #plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_filtered',outf=outf)
         tsave({'epoch':niter,'model_state_dict':self.Fef.state_dict(),
             'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses},'Fef.pth')
         tsave({'epoch':niter,'model_state_dict':self.Gdf.state_dict(),
@@ -845,8 +845,8 @@ class trainer(object):
                 Gdf.load_state_dict(tload(n[1])['model_state_dict'])
             #plt.plot_generate_classic('filtered',Fef,Gdf,device,vtm,\
             #                          trn_loader,pfx="trn_set_fl",outf=outf)
-            #plt.plot_generate_classic('filtered',Fef,Gdf,device,vtm,\
-            #                          tst_loader,pfx="tst_set_fl",outf=outf)
+            plt.plot_generate_classic('filtered',Fef,Gdf,device,vtm,\
+                                      tst_loader,pfx="tst_set_fl",outf=outf)
          ##   plt.plot_generate_classic('filtered',Fef,Gdf,device,vtm,\
          ##                             vld_loader,pfx="vld_set_fl",outf=outf)
          ##   plt.plot_gofs(tag=['filtered'],Fef=self.Fef,Gdf=self.Gdf,Fed=self.Fed,\
