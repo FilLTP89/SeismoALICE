@@ -462,3 +462,41 @@ def hessian_penalty(G, z, k, epsilon):
     penalty = var(finite_diffs, dim=0).max()
     return penalty
 """
+
+class T(object):
+    """docstring for T"""
+    def __init__(self):
+        super(T, self).__init__()
+        pass
+
+    @staticmethod 
+    def activation(name, nly, typo = 'ALICE'):
+        acts = {}
+        acts['ALICE'] = {
+                 'Fed' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.LeakyReLU(1.0,inplace=True)],
+                 'Gdd' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.Tanh()],
+                 'Fef' :[nn.LeakyReLU(1.0,inplace=True) for t in range(4)]+[nn.LeakyReLU(1.0,inplace=True)],
+                 'Gdf' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.Tanh()],
+                 'Ghz' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.LeakyReLU(1.0,inplace=True)],
+                 'Dsx' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.LeakyReLU(1.0,inplace=True)],
+                 'Dsz' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.Sigmoid()],
+                 'Drx' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.Sigmoid()],
+                 'Drz' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.Sigmoid()],
+                 'Ddxz':[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)],
+                 'DhXd':[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.Sigmoid()]
+                 }
+
+        acts['WGAN']  = {
+                 'Fed' :[nn.LeakyReLU(1.0,inplace=True) for t in range(nly)]+[nn.LeakyReLU(1.0,inplace=True)],
+                 'Gdd' :[nn.ReLU(inplace=True) for t in range(nly-1)]+[nn.Tanh()],
+                 'Fef' :[nn.LeakyReLU(1.0,inplace=True) for t in range(4)]+[nn.LeakyReLU(1.0,inplace=True)],
+                 'Gdf' :[nn.ReLU(inplace=True) for t in range(4)]+[nn.Tanh()],
+                 'Ghz' :[nn.ReLU(inplace=True) for t in range(2)]+[nn.LeakyReLU(1.0,inplace=True)],
+                 'Dsx' :[nn.LeakyReLU(1.0,inplace=True),nn.LeakyReLU(1.0,inplace=True)],
+                 'Dsz' :[nn.LeakyReLU(1.0,inplace=True),nn.LeakyReLU(1.0,inplace=True)],
+                 'Drx' :[nn.LeakyReLU(1.0,inplace=True) for t in range(nly+1)],
+                 'Drz' :[nn.LeakyReLU(1.0,inplace=True) for t in range(nly+1)],
+                 'Ddxz':[nn.LeakyReLU(1.0,inplace=True) for t in range(nly+1)],
+                 'DhXd':[nn.LeakyReLU(1.0,inplace=True) for t in range(nly+1)]
+                 }
+        return acts[typo][name]
