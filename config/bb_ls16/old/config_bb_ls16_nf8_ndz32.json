@@ -1,0 +1,100 @@
+{
+    "encoder": {
+        "padding": 0, 
+        "kernel": 2,  
+        "strides": 2, 
+        "nlayers": 8
+    }, 
+    "decoder": {
+        "padding": 0, 
+        "kernel": 2, 
+        "outpads": 0, 
+        "strides": 2,
+        "nlayers": 8
+    },
+    "Dszd":{
+        "padding": 0,
+        "kernel": 1,
+        "strides": 1,
+        "nlayers": 1,
+        "outpads": 0,
+        "initial": {
+        },
+        "initial":{
+            "padding": 0,
+            "kernel": 1,
+            "strides": 1,
+            "nlayers": 1,
+            "outpads": 0
+        }, 
+        "extra":{
+            "padding": 0,
+            "kernel": 1,
+            "strides": 1,
+            "nlayers": 1,
+            "outpads": 0
+        },
+        "pyramid":{
+
+        },
+        "final":{
+
+        }
+    },
+    "DsXd":{
+        "padding": 0,
+        "kernel": 4,
+        "strides": 4,
+        "nlayers": 1,
+        "outpads": 0,
+        "initial": {
+            "padding": 0,
+            "kernel": 4,
+            "strides": 4,
+            "nlayers": 1,
+            "outpads": 0
+        },
+        "extra":{
+            "padding": 0,
+            "kernel": 4,
+            "strides": 2,
+            "nlayers": 1,
+            "outpads": 0
+        },
+        "pyramid":{
+            "padding": 0,
+            "kernel": 2,
+            "strides": 2
+        },
+        "final":{
+            "padding": 1,
+            "kernel": 2,
+            "strides": 2,
+            "nlayers": 1,
+            "outpads": 0
+        }
+    },
+    "Ddxz":{
+        "padding": 0,
+        "kernel": 1,
+        "strides": 1,
+        "nlayers": 4,
+        "outpads": 0,
+        "initial":{
+            "kernel":1,
+            "strides":1,
+            "padding":0,
+            "nlayers":16
+        },
+        "pyramid":{
+            "kernel":1,
+            "strides":1,
+            "padding":0
+        },
+        "final":{
+            "kernel":1,
+            "strides":1,
+            "padding":0
+        }
+    }
+}
