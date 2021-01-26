@@ -12,7 +12,7 @@ import dask
 import dask.dataframe as dd
 import dask.array as da
 import random as rnd
-from os.path import join as osj
+from os.path import join as opj
 from torch import from_numpy as np2t
 from common_nn import to_categorical
 from common_torch import o1l
@@ -222,17 +222,13 @@ def stead_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
     print("src ", src)
     # parse hdf5 database
     eqd = h5py.File(src,'r')['earthquake']['local']
-    print("hdf5 file is read bay h5py object...")
-    
-    eqm = pd.read_csv(osj(src.split('/waveforms')[0],'metadata_'+\
+    eqm = pd.read_csv(opj(src.split('/waveforms')[0],'metadata_'+\
                           src.split('waveforms_')[-1].split('.hdf5')[0]+'.csv'))
     eqm = eqm.loc[eqm['trace_category'] == 'earthquake_local']
     eqm = eqm.loc[eqm['source_magnitude'] >= 3.5]
     eqm = eqm.sample(frac=nsy/len(eqm)).reset_index(drop=True)
     w = windows.tukey(md['ntm'],5/100)
-    print("size w", w.size)
-    print("size de w", w.shape)
-    print("eqm.index", eqm.index)
+
     for i in eqm.index:
         tn = eqm.loc[i,'trace_name']
         bi = int(eqd[tn].attrs['p_arrival_sample'])
@@ -743,3 +739,305 @@ def deepbns_dataset(src,batch_percent,xwindow,zwindow,nzd,nzf,md,nsy,device):
     ths_vld = ths_trn
     vtm = md['dtm']*np.arange(0,md['ntm'],1)
     return ths_trn,ths_tst,ths_vld,vtm,fsc
+
+# [TODO]
+def civa_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
+    '''
+    Input:
+        src: source file
+        batch_percent: % for trn/tst/vld
+        Xwindow: number of time steps (including 0) in the time-window (default 4096)
+        zwindow: length of the latent space last dimension
+        nzd: number of channels of broad-band latent space (Xd<->zd)
+        nzf: number of channels of filtered latent space (Xf<->zf)
+        md: meta-data dictionary
+        nsy: number of signals to extract from the src database
+        device: CPU or GPU
+
+    Output: 
+        ths_trn: training set dataloader 
+        ths_tst: test set dataloader
+        ths_vld: validation set dataloader
+        vtm: time-vector (vtm = np.arange(0,Xwindow,md['dtm'],dtype=np.float32)
+
+    Observations: 
+        1. Latent space shape:
+            zd.shape = (nsy,nzd,zwindow) and zf.shape = (nsy,nzf,zwindow)
+        2. Each output dataloader (ths_trn,ths_tst,ths_vld) can be unwrapped as:
+
+            for b,batch in enumerate(ths_trn):
+                # Load batch (enumerating the dataloader ths_trn)
+                xd_data,xf_data,zd_data,zf_data,_,_,_ = batch
+                Xd = Variable(xd_data).to(device) # broad-band signal converted to pytorch Variable
+                zd = Variable(zd_data).to(device) # broad-band latent space converted to pytorch Variable)
+                Xf = Variable(xf_data).to(device) # filtered signal converted to pytorch Variable
+                zf = Variable(zf_data).to(device) # filtered latent space converted to pytorch Variable)
+                ...
+    '''
+    # time vector
+    vtm = md['dtm']*np.arange(0,md['ntm'])
+    # initialize numpy tensors 
+    tar = np.zeros((nsy,2))
+    trn_set  = -999.9*np.ones(shape=(nsy,3,md['ntm']))
+    pgat_set = -999.9*np.ones(shape=(nsy,3))
+    psat_set = -999.9*np.ones(shape=(nsy,3,md['nTn']))
+    
+    # parse CIVA database
+    eqd = [...]  # h5py.File(src,'r')['earthquake']['local']
+    # parse CIVA metadata
+    eqm = [...]
+            #pd.read_csv(opj(src.split('/waveforms')[0],'metadata_'+\
+            #                src.split('waveforms_')[-1].split('.hdf5')[0]+'.csv'))
+
+    # Tukey window
+    w = windows.tukey(md['ntm'],5/100)
+    for i in nsy:
+        # [TODO]
+        # read 3-component time-histories into a numpy tensor civa_ths
+        civa_ths = np.empty((nsy,3)) # must be populated with dataset from civa
+        [...]
+        # loop over components
+        bi = 0 # initial index of the time history (can be changed)
+        for j in range(3):
+            # detrend portion of time
+            trn_set[i,j,:] = detrend(civa_ths[bi:bi+Xwindow,j])*w
+            # compute peak values per component
+            pgat_set[i,j] = np.abs(trn_set[i,j,:]).max()
+            # normalize
+            trn_set[i,j,:] = trn_set[i,j,:]/pgat_set[i,j]
+            # recompute peak value per component
+            pgat_set[i,j] = np.abs(trn_set[i,j,:]).max()
+            # response spectrum ---> not necessary
+            #_,psa,_,_,_ = rsp(md['dtm'],trn_set[i,j,:],md['vTn'],5.)
+            #psat_set[i,j,:] = psa.reshape((md['nTn']))
+    
+    # convert numpy tensors to pytorch tensors
+    pgat_set = np2t(np.float32(pgat_set))
+    trn_set = np2t(trn_set).float()
+    
+    # Define database partitioning
+    ths_fsc = []
+    partition = {'all': range(0,nsy)}
+    trn = max(1,int(batch_percent[0]*nsy))
+    tst = max(1,int(batch_percent[1]*nsy))
+    vld = max(1,nsy-trn-tst)
+    
+    # define latent space (random values from normal centered distribution)
+    wnz_set   = tFT(nsy,nzd,zwindow)
+    wnz_set.resize_(nsy,nzd,zwindow).normal_(**rndm_args)
+    wnf_set   = tFT(nsy,nzf,zwindow)
+    wnf_set.resize_(nsy,nzf,zwindow).normal_(**rndm_args)
+
+    # filter original CIVA time-histories (md['cutoff'] is the cutoff frequency)
+    thf_set = lowpass_biquad(trn_set,1./md['dtm'],md['cutoff'])
+
+    # Normalize filtered data
+    pgaf_set = -999.9*np.ones(shape=(nsy,3))
+    psaf_set = -999.9*np.ones(shape=(nsy,3,md['nTn']))
+    for i in range(thf_set.shape[0]):
+        for j in range(3):
+            pgaf_set[i,j] = np.abs(thf_set[i,j,:].data.numpy()).max(axis=-1)
+            #_,psa,_,_,_ = rsp(md['dtm'],thf_set.data[i,j,:].numpy(),md['vTn'],5.)
+            #psaf_set[i,j,:] = psa.reshape((md['nTn']))
+    # Convert numpy tensor to pytorch tensors
+    pgat_set = np2t(np.float32(pgat_set))    
+    pgaf_set = np2t(np.float32(pgaf_set))
+    psat_set = np2t(np.float32(psat_set))
+    psaf_set = np2t(np.float32(psaf_set))
+       
+    # Define target (fake labels issued from metadata)
+    tar[:,0] = np.empty(dtype=np.float32) # source magnitude
+    tar[:,1] = np.empty(dtype=np.float32) # source depth
+    
+    nhe = tar.shape[1] 
+    # Scaler for metadata homogeneization
+    tar_fsc = select_scaler(method='fit_transform',\
+                            scaler='StandardScaler')
+    tar = operator_map['fit_transform'](tar_fsc,tar)
+    lab_enc = LabelEncoder()
+    for i in range(nhe):
+        tar[:,i] = lab_enc.fit_transform(tar[:,i])
+    from sklearn.preprocessing import MultiLabelBinarizer
+    one_hot = MultiLabelBinarizer(classes=range(64))
+    tar = np2t(np.float32(one_hot.fit_transform(tar)))
+    from plot_tools import plot_ohe
+    plot_ohe(tar)
+    fsc = {'lab_enc':lab_enc,'tar':tar_fsc,'ths_fsc':ths_fsc,\
+           'one_hot':one_hot,'ncat':tar.shape[1]}
+    tar = (psat_set,psaf_set,tar)
+    ths = thsTensorData(trn_set,thf_set,wnz_set,wnf_set,tar,partition['all'])
+
+    # RANDOM SPLIT
+    idx,\
+    ths_trn = random_split(ths,[trn,vld,tst])
+    ths_trn,\
+    ths_tst,\
+    ths_vld = ths_trn
+    return ths_trn,ths_tst,ths_vld,vtm,fsc
+
+
+def mdof_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,ntm,mdof,wdof,tdof,wtdof,md,nsy,device):
+    '''
+    Input:
+        src: source file
+        batch_percent: % for trn/tst/vld
+        Xwindow: number of time steps (including 0) in the time-window (default 4096)
+        zwindow: length of the latent space last dimension
+        nzd: number of channels of broad-band latent space (Xd<->zd)
+        nzf: number of channels of filtered latent space (Xf<->zf)
+        ntm: number of time series
+        mdof: number of channels
+        wdof: channel numbers (int)
+        tdof: type of channels (e.g. A)
+        wtdof: specify the subdivision of the channels in tdofs
+        md: meta-data dictionary
+        nsy: number of signals to extract from the src database
+        device: CPU or GPU
+
+    Output: 
+        ths_trn: training set dataloader 
+        ths_tst: test set dataloader
+        ths_vld: validation set dataloader
+        vtm: time-vector (vtm = np.arange(0,Xwindow,md['dtm'],dtype=np.float32)
+
+    Observations: 
+        1. Latent space shape:
+            zd.shape = (nsy,nzd,zwindow) and zf.shape = (nsy,nzf,zwindow)
+        2. Each output dataloader (ths_trn,ths_tst,ths_vld) can be unwrapped as:
+
+            for b,batch in enumerate(ths_trn):
+                # Load batch (enumerating the dataloader ths_trn)
+                xd_data,xf_data,zd_data,zf_data,_,_,_ = batch
+                Xd = Variable(xd_data).to(device) # broad-band signal converted to pytorch Variable
+                zd = Variable(zd_data).to(device) # broad-band latent space converted to pytorch Variable)
+                Xf = Variable(xf_data).to(device) # filtered signal converted to pytorch Variable
+                zf = Variable(zf_data).to(device) # filtered latent space converted to pytorch Variable)
+                ...
+    '''
+
+    # Initialize wtdof_v tensor
+    for i1 in range(len(wtdof)):
+        if i1==0:
+            wtdof_v=[wtdof[i1]]
+            wtdof_v=np.array(wtdof_v)
+            np.expand_dims(wtdof_v, axis=0)
+        else:
+            i2=wtdof_v[i1-1]+wtdof[i1]
+            np.concatenate((wtdof_v,i2), axis=1)
+
+    # time vector
+    vtm = md['dtm']*np.arange(0,md['ntm'])
+    # initialize numpy tensors 
+    tar = np.zeros((nsy,1))
+    trn_set  = -999.9*np.ones(shape=(nsy,mdof,md['ntm']))
+    thf_set  = -999.9*np.ones(shape=(nsy,mdof,md['ntm']))
+    # initialize numpy tensor for normalizing original (undamaged) data
+    pgat_set = -999.9*np.ones(shape=(nsy,mdof))
+    psat_set = -999.9*np.ones(shape=(nsy,mdof,md['nTn']))
+    # initialize numpy tensor for normalizing filtered (damaged) data
+    pgaf_set = -999.9*np.ones(shape=(nsy,3))
+    psaf_set = -999.9*np.ones(shape=(nsy,3,md['nTn']))
+    
+    case_ud='damaged'
+    [mdof_ths_u,eqm_u]=mdof_case_loader(mdof,wtdof_v,src,case_ud,tdof,wdof,nsy,ntm)
+    [trn_set,pgat_set]=mdof_tuk_pyt(md,nsy,mdof,mdof_ths_u,Xwindow,trn_set,pgat_set)
+
+    case_ud='undamaged'
+    [mdof_ths_d,eqm_d]=mdof_case_loader(mdof,wtdof_v,src,case_ud,tdof,wdof,nsy,ntm)
+    [thf_set,pgaf_set]=mdof_tuk_pyt(md,nsy,mdof,mdof_ths_d,Xwindow,thf_set,pgaf_set)
+
+    # Define database partitioning
+    ths_fsc = []
+    partition = {'all': range(0,nsy)}
+    trn = max(1,int(batch_percent[0]*nsy))
+    tst = max(1,int(batch_percent[1]*nsy))
+    vld = max(1,nsy-trn-tst)
+    
+    # define latent space (random values from normal centered distribution)
+    wnz_set   = tFT(nsy,nzd,zwindow)
+    wnz_set.resize_(nsy,nzd,zwindow).normal_(**rndm_args)
+    wnf_set   = tFT(nsy,nzf,zwindow)
+    wnf_set.resize_(nsy,nzf,zwindow).normal_(**rndm_args)
+
+    # Define target (fake labels issued from metadata)  **damaged only**
+    tar[:,0]=eqm_d
+    
+    nhe = tar.shape[1] 
+    # Scaler for metadata homogeneization
+    tar_fsc = select_scaler(method='fit_transform',\
+                            scaler='StandardScaler')
+    tar = operator_map['fit_transform'](tar_fsc,tar)
+    lab_enc = LabelEncoder()
+    for i in range(nhe):
+        tar[:,i] = lab_enc.fit_transform(tar[:,i])
+    from sklearn.preprocessing import MultiLabelBinarizer
+    one_hot = MultiLabelBinarizer(classes=range(64))
+    tar = np2t(np.float32(one_hot.fit_transform(tar)))
+
+    fsc = {'lab_enc':lab_enc,'tar':tar_fsc,'ths_fsc':ths_fsc,\
+           'one_hot':one_hot,'ncat':tar.shape[1]}
+    tar = (psat_set,psaf_set,tar)
+    ths = thsTensorData(trn_set,thf_set,wnz_set,wnf_set,tar,partition['all'])
+
+    # RANDOM SPLIT
+    idx,\
+    ths_trn = random_split(ths,[trn,vld,tst])
+    ths_trn,\
+    ths_tst,\
+    ths_vld = ths_trn
+    return ths_trn,ths_tst,ths_vld,vtm,fsc
+
+# for mdof only ########################################################################
+def mdof_case_loader(mdof,wtdof_v,src,case_ud,tdof,wdof,nsy,ntm):
+    # parse MDOF database
+    i4=0
+    for i1 in range(mdof):
+        if i1 > wtdof_v[i4]:
+            i4=i4+1
+        #load the measurements recorded by each single channel
+        if len(wtdof_v)>1:
+            src_dof=opj(src,"{:>s}_{:>s}_DC_concat_dof_{:>d}.csv".format(case_ud,tdof[i4],wdof[i1]))
+        else:
+            src_dof=opj(src,"{:>s}_{:>s}_DC_concat_dof_{:>d}.csv".format(case_ud,tdof,wdof[i1]))
+        sdof=np.genfromtxt(src_dof)
+        sdof.astype(np.float32)
+
+        #initialise mdof_ths
+        if i1==0:
+            mdof_ths=np.zeros((nsy,mdof,ntm))
+        i2=0
+        for i3 in range(nsy):
+            mdof_ths[i3,i1,0:ntm]=sdof[i2:(i2+ntm)]
+            i2=i2+ntm
+
+    # parse MDOF metadata
+
+    src_metadata=opj(src,"{:>s}_DC_labels.csv".format(case_ud))
+    eqm=np.genfromtxt(src_metadata)
+    return mdof_ths,eqm
+# for mdof only ########################################################################
+
+# for mdof only ########################################################################
+def mdof_tuk_pyt(md,nsy,mdof,mdof_ths,Xwindow,trn_set,pgat_set):
+    # Tukey window
+    w = windows.tukey(md['ntm'],5/100)
+    for i in range(nsy):
+        # loop over components
+        bi = 0 # initial index of the time history (can be changed)
+        for j in range(mdof):
+            # detrend portion of time
+            trn_set[i,j,:] = detrend(mdof_ths[i,j,bi:bi+Xwindow])*w 
+            # compute peak values per component
+            pgat_set[i,j] = np.abs(trn_set[i,j,:]).max()
+            # normalize
+            trn_set[i,j,:] = trn_set[i,j,:]/pgat_set[i,j]
+            # recompute peak value per component
+            pgat_set[i,j] = np.abs(trn_set[i,j,:]).max()
+            # response spectrum ---> not necessary
+            #_,psa,_,_,_ = rsp(md['dtm'],trn_set[i,j,:],md['vTn'],5.)
+            #psat_set[i,j,:] = psa.reshape((md['nTn']))
+    
+    # convert numpy tensors to pytorch tensors
+    pgat_set = np2t(np.float32(pgat_set))
+    trn_set = np2t(trn_set).float()
+    return trn_set,pgat_set
