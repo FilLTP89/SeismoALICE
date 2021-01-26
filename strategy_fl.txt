@@ -1,2 +1,5 @@
 encoder,decoder,extra
-filtered,models/Fef_is4096_ls128_nzf8_ns100.pth,models/Gdf_is4096_ls128_nzf8_ns100.pth,-
+filtered,None,None,-
+
+
+-,models/Fef_is4096_ls128_nzf8_ns100.pth,models/Gdf_is4096_ls128_nzf8_ns100.pth,-

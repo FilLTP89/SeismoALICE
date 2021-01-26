@@ -1,2 +1,2 @@
 tract,trplt,trcmp,trdis
-broadband,True,True,False,False
+broadband,True,False,False,False
