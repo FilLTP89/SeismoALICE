@@ -207,9 +207,15 @@ def stead_dataset_dask(src,batch_percent,workers,
     trn_set  = -999.9*np.ones(shape=(nsy,3,md['ntm']))
     pgat_set = -999.9*np.ones(shape=(nsy,3))
     psat_set = -999.9*np.ones(shape=(nsy,3,md['nTn']))
+    import pdb
+    pdb.set_trace()
     edq = dd.read_hdf(pattern=src,key= '/earthquake/local',mode='r+')
-    edm = dd.read_csv(pattern=src.replace('.hdf5','.csv')).query('source_magnitude'>=3.5)
+    edm = dd.read_csv(pattern=src.replace('.hdf5','.csv')).query('trace_category == earthquake_local').query('source_magnitude>=3.5')
     eqm = eqm.sample(frac=nsy/len(eqm)).reset_index(drop=True).repartition(workers)
+    eqd = eqd[eqm['trace_name']]
+
+    w = windows.tukey(md['ntm'],5/100)
+    
 
 def stead_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
     print('Enter in the stead_dataset function ...') 
