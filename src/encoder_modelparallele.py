@@ -18,6 +18,7 @@ class EncoderModelParallele(object):
     EncoderModelParallele manage creation of class for working in 
     the Model Parallele algorithme implemented by pytorch
     """
+
     def __init__(self, *arg, **kwargs):
         super(EncoderModelParallele, self).__init__()
         pass
@@ -68,8 +69,10 @@ class BasicEncoderModelParallele(Module):
         If, by example, nly 8. we strat from nz^(0) to nz^(6). we stop witnz
         
         """
+        limit = 1024
         n = increment - 1
-        return nz*2**n if n <= (nly - 2) else nz 
+        val = nz*2**n if n <= (nly - 2) else nz
+        return val if val<= limit else limit
 
 
 class Encoder_1GPU(BasicEncoderModelParallele):
@@ -84,11 +87,11 @@ class Encoder_1GPU(BasicEncoderModelParallele):
         for i in range(1, nly+1):
             if i ==1 and with_noise:
             #We take the first layers for adding noise to the system if the condition is set
-                self.cnn1 = cnn1d(nch*2,nz,acts[0],ker=ker,std=std,pad=pad,bn=bn,dil =dil, dpc=0.0,wn=True ,\
+                self.cnn1 = cnn1d(nch*2,nz, acts[0],ker=ker,std=std,pad=pad,bn=bn,dil =dil, dpc=0.0,wn=True ,\
                               dev='cuda:0')
             # esle if we not have a noise but we at the strating network
             elif i == 1:
-                self.cnn1 = cnn1d(nch*2,nz,acts[0],ker=ker,std=std,pad=pad,bn=bn,dil =dil,dpc=0.0,wn=False)
+                self.cnn1 = cnn1d(nch*2,nz, acts[0],ker=ker,std=std,pad=pad,bn=bn,dil =dil,dpc=0.0,wn=False)
             #else we proceed normaly
             else:
                 out_channels = self.lout(nz,nch,nly,i)

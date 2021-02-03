@@ -3,35 +3,45 @@
         "padding": 0, 
         "kernel": 2,  
         "strides": 2, 
-        "nlayers": 8
+        "nlayers": 8,
+        "dilation":1,
+        "act":"Fed"
     }, 
     "decoder": {
         "padding": 0, 
-        "kernel": 2, 
+        "kernel": 2,
+        "outpads":1, 
         "outpads": 0, 
         "strides": 2,
         "dilation":1,
-        "nlayers": 8
+        "nlayers": 8,
+        "act":"Gdd"
     },
     "Dszd":{
         "padding": 0,
         "kernel": 1,
         "strides": 1,
         "nlayers": 8,
-        "outpads": 0
+        "outpads": 0,
+        "dilation":1,
+        "act":"Dsz"
     },
     "DsXd":{
         "padding": 0,
         "kernel": 2,
         "strides": 2,
         "nlayers": 8,
-        "outpads": 0
+        "outpads": 0,
+        "dilation":1,
+        "act":"Dsx"
     },
     "Ddxz":{
         "padding": 0,
         "kernel": 1,
         "strides": 1,
+        "dilation":1,
         "nlayers": 8,
-        "outpads": 0
+        "outpads": 0,
+        "act":"Ddxz"
     }
 }

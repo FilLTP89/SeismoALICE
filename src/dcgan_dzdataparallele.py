@@ -50,7 +50,9 @@ class BasicDCGAN_DzDataParallele(Module):
 
     def lout(self, nz, nly,ncl, increment):
             #this is the logic of in_channels and out_channels
-            return ncl if increment!=nly-1 else nz   
+            limit = 512
+            val =  ncl if increment!=nly-1 else nz
+            return val if val <=limit else limit
 
 class DCGAN_Dz(BasicDCGAN_DzDataParallele):
     """docstring for DCGAN_DzDataParallele"""

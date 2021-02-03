@@ -99,8 +99,18 @@ def plot_loss_explicit(losses,key, niter,outf="./imgs"):
     import matplotlib.pyplot as plt
     import matplotlib.ticker as mticker
     # plt.ticklabel_format(style='plain', axis='x', useOffset=False)
-    fig, ax = plt.subplots()
+
+    # opening the csv file in 'w+' mode
     
+
+    path =  outf+"/"+key+".txt"
+    with open(path, 'w') as f:
+        for item in losses:
+            f.write("%s\n" % item)
+    import pdb
+    # pdb.set_trace()
+
+    fig, ax = plt.subplots()
     nx = len(losses)
     ax.plot(losses, label = "losses[{0}]".format(key))
     # ax.gca().xaxis.set_major_locator(mticker.MultipleLocator(1))
@@ -117,6 +127,8 @@ def plot_loss_explicit(losses,key, niter,outf="./imgs"):
     fig.savefig(os.path.join(outf,"{0}.png".format(key)),format="png", bbox_inches='tight',dpi = 500)
     print("saving the {0} plot ...".format(key))
     plt.close()
+
+
 
 
 def plot_loss_dict(losses,nb,title='loss',outf='./imgs'):

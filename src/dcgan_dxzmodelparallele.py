@@ -61,8 +61,15 @@ class BasicDCGAN_DXZ(Module):
         self.training = True
 
     def lout(self, nc, nly, increment):
-        return nc if increment < nly else 1
+        limit=512
+        val =  nc if increment < nly else 1
+        return val if val<=limit else limit
 
+    def critic(self,x):
+        pass
+
+    def extraction(self,x):
+        pass
 
 class DCGAN_DXZ_1GPU(BasicDCGAN_DXZ):
     """docstring for DCGAN_DXZ"""
@@ -101,6 +108,11 @@ class DCGAN_DXZ_1GPU(BasicDCGAN_DXZ):
         self.cnn1.to(self.dev0, dtype=torch.float32)
         self.exf.to(self.dev0, dtype=torch.float32)
 
+        self.features_to_prob = torch.nn.Sequential(
+            torch.nn.Linear(out_channels, 1),
+            torch.nn.LeakyReLU(negative_slope=1.0, inplace=True)
+        ).to(self.dev0, dtype=torch.float32)
+
     def extraction(self, x):
         f = [self.exf[0](x)]
         for l in range(1,len(self.exf)):
@@ -119,6 +131,12 @@ class DCGAN_DXZ_1GPU(BasicDCGAN_DXZ):
             return x,f
         else:
             return x
+
+    def critic(self,X):
+        X = self.forward(X)
+        z =  torch.reshape(X,(-1,1))
+        return self.features_to_prob(z)
+
 
 class DCGAN_DXZ_2GPU(BasicDCGAN_DXZ):
     """docstring for DCGAN_DXZ_2GPU"""
@@ -168,6 +186,11 @@ class DCGAN_DXZ_2GPU(BasicDCGAN_DXZ):
         self.exf =  sqn(*self.exf)
         self.exf.to(self.dev0, dtype=torch.float32)
 
+        self.features_to_prob = torch.nn.Sequential(
+            torch.nn.Linear(out_channels, 1),
+            torch.nn.LeakyReLU(negative_slope=1.0, inplace=True)
+        ).to(self.dev1, dtype=torch.float32)
+
     def forward(self,x):
         x = x.to(self.dev0,dtype=torch.float32)
         x = self.cnn1(x)
@@ -178,6 +201,12 @@ class DCGAN_DXZ_2GPU(BasicDCGAN_DXZ):
         if not self.training:
             x = x.detach()
         return x
+
+    def critic(self,X):
+        
+        X = self.forward(X)
+        z =  torch.reshape(X,(-1,1))
+        return self.features_to_prob(z)
 
 
 class DCGAN_DXZ_3GPU(BasicDCGAN_DXZ):
@@ -235,6 +264,11 @@ class DCGAN_DXZ_3GPU(BasicDCGAN_DXZ):
         self.exf =  sqn(*self.exf)
         self.exf.to(self.dev0, dtype=torch.float32)
 
+        self.features_to_prob = torch.nn.Sequential(
+            torch.nn.Linear(out_channels, 1),
+            torch.nn.LeakyReLU(negative_slope=1.0, inplace=True)
+        ).to(self.dev2, dtype=torch.float32)
+
     def extraction(self, x):
             x.to(self.dev0,  dtype=torch.float32)
             f = [self.exf[0](x)]
@@ -258,6 +292,11 @@ class DCGAN_DXZ_3GPU(BasicDCGAN_DXZ):
                 return x,f
             else:
                 return x
+
+    def critic(self,X):
+        X = self.forward(X)
+        z =  torch.reshape(X,(-1,1))
+        return self.features_to_prob(z)
 
 class DCGAN_DXZ_4GPU(BasicDCGAN_DXZ):
     """docstring for DCGAN_DXZ_4GPU"""
@@ -326,6 +365,11 @@ class DCGAN_DXZ_4GPU(BasicDCGAN_DXZ):
         self.exf =  sqn(*self.exf)
         self.exf.to(self.dev0, dtype=torch.float32)
 
+        self.features_to_prob = torch.nn.Sequential(
+            torch.nn.Linear(out_channels, 1),
+            torch.nn.LeakyReLU(negative_slope=1.0, inplace=True)
+        ).to(self.dev3, dtype=torch.float32)
+
     def extraction(self, x):
         x.to(self.dev0,  dtype=torch.float32)
         f = [self.exf[0](x)]
@@ -351,3 +395,8 @@ class DCGAN_DXZ_4GPU(BasicDCGAN_DXZ):
             return x,f
         else:
             return x
+
+    def critic(self,X):
+        X = self.forward(X)
+        z =  torch.reshape(X,(-1,1))
+        return self.features_to_prob(z)

@@ -19,12 +19,12 @@ class EncoderDataParallele(object):
         pass
         
     @staticmethod
-    def getEncoder(name, ngpu, dev, nz, nch, ndf, nly, ker, std, pad, dil, *args, **kwargs):
+    def getEncoder(name, ngpu, dev, nz, nch, ndf, nly, ker, std, pad, dil, act, *args, **kwargs):
         
         if name is not None:
             classname = 'Encoder_'+name
             try:
-                return type(classname, (BasicEncoderDataParallele, ), dict(ngpu = ngpu,dev =dev, nz = nz, nch = nch, 
+                return type(classname, (BasicEncoderDataParallele, ), dict(ngpu = ngpu,dev =dev, nz = nz, nch = nch, act=act,
                         nly = nly, ker = ker, std =std, pad = pad, dil = dil))
             except Exception as e:
                 raise e
@@ -46,12 +46,14 @@ class BasicEncoderDataParallele(Module):
         If, by example, nly 8. we strat from nz^(0) to nz^(6). we stop witnz
         
         """
+        limit = 1024
         n = increment - 1
-        return int(nz*2**n) if n <= (nly - 2) else nz
+        val = int(nz*2**n) if n <= (nly - 2) else nz
+        return val if val <= limit else limit
     
 class Encoder(BasicEncoderDataParallele):
     """docstring for Encoder"""
-    def __init__(self, ngpu,dev,nz,nch,ndf,\
+    def __init__(self, ngpu,dev,nz,nch,ndf,act,\
                  nly,ker=7,std=4,pad=0,dil=1,grp=1,bn=True,
                  dpc=0.0,\
                  with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2):

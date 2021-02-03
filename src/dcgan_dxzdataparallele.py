@@ -51,7 +51,15 @@ class BasicDCGAN_DXZDataParallele(Module):
         self.training = True
         
     def lout(self, nc, nly, increment):
-        return nc if increment < nly else 1 
+        limit = 512
+        val =  nc if increment < nly else 1
+        return val if val <= limit else limit
+
+    def critic(self,x):
+        pass
+
+    def extraction(self,x):
+        pass
 
 class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
     """docstring for DCGAN_DXZ"""
@@ -88,6 +96,10 @@ class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
 
         self.cnn = sqn(*self.cnn)
         self.exf = sqn(*self.exf)
+        self.features_to_prob = torch.nn.Sequential(
+            torch.nn.Linear(out_channels, 1),
+            torch.nn.LeakyReLU(negative_slope=1.0, inplace=True)
+        )
 
     def extraction(self, x):
         f = [self.exf[0](x)]
@@ -104,3 +116,8 @@ class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
         if not self.training:
             zlf=zlf.detach()
         return zlf
+
+    def critic(self,X):
+        X = self.forward(X)
+        z =  torch.reshape(X,(-1,1))
+        return pll(self.features_to_prob(z))

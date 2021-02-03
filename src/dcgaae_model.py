@@ -12,6 +12,20 @@ import torch
 import pdb
 from torch import device as tdev
 
+
+# class JointDiscriminator(Module):
+#     def __init__(self,DX,Dz,Dxz,nc):
+#         super(JointDiscriminator,self).__init__()
+#         self.Dx=Dx
+#         self.Dz=Dz
+#         self.Dxz=Dxz
+#         self.nc=nc
+        
+#     def forward(self,Xz):
+#         zX = self.Dx(Xz[:,:,:self.nc])
+#         zz = self.Dz(Xz[:,:,self.nc:])
+#         return self.Dxz(zcat(zX,zz))
+
 class DenseEncoder(Module):
     def __init__(self,ngpu,dev,ninp,nout,szs,nly,
                  act=[LeakyReLU(1.0,True),Tanh()],dpc=0.10):

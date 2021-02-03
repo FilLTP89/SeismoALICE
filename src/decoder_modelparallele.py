@@ -66,9 +66,12 @@ class BasicDecoderModelParallele(Module):
          (nz,nzd*2^(3)) --> (nzd*2^(3),nzd*2^(2)) --> (nzd*2^(2),nzd*2^(1))
          --> (nzd*2^(1),nzd*2^(0))--> (nzd*2^(0),nch)
         """
+        limit = 1024
+        
         nzd = nz
         n = nly-2-increment+1
-        return nzd*2**n if n >=0 else nch   
+        val = nzd*2**n if n >=0 else nch
+        return val if val <= limit else limit   
 
 class Decoder_1GPU(BasicDecoderModelParallele):
     def __init__(self,ngpu,nz,nch,ndf,nly,act,\

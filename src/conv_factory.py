@@ -89,7 +89,7 @@ class ModelParalleleFactory(ConvNetFactory):
     def createDCGAN_Dz(self, config_dcgan_dz, opt, *args, **kwargs):
         nz    = config_dcgan_dz["nz"]   if "nz" in config_dcgan_dz else opt.nzd
         dcgan_dz  = DCGAN_DzModelParallele.getDCGAN_DzByGPU(ngpu=opt.ngpu, nz=nz,\
-                                     ncl=512, fpd=0, n_extra_layers=0, dpc=0.25,
+                                     ncl=1024, fpd=0, n_extra_layers=0, dpc=0.25,
                                      nly = config_dcgan_dz['nlayers'],\
                                      ker = config_dcgan_dz['kernel'],\
                                      std = config_dcgan_dz['strides'],\

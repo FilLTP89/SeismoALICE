@@ -60,11 +60,17 @@ class BasicDCGAN_Dx(Module):
 
 
 
-    def lout(self,nz, nly, increment):
+    def lout(self, nz, nly, increment):
         #Here we specify the logic of the  in_channels/out_channels
         n = nz*2**(increment)
+        limit = 512
         #we force the last of the out_channels to not be greater than 512
-        return n if (n<512 or increment<nly) else 512
+        val = n if (n<limit or increment<nly) else limit
+        return val if val <= limit else limit
+
+        
+    def critic(self,X):
+        pass
 
 
 class DCGAN_Dx_1GPU(BasicDCGAN_Dx):
@@ -88,6 +94,11 @@ class DCGAN_Dx_1GPU(BasicDCGAN_Dx):
         self.cnn1 = sqn(*self.cnn1)
         self.cnn1.to(self.dev0, dtype=torch.float32)
 
+        self.features_to_prob = torch.nn.Sequential(
+            torch.nn.Linear(out_channels, 1),
+            torch.nn.Sigmoid()
+        ).to(self.dev0, dtype=torch.float32)
+
     def forward(self,x):
         x.to(self.dev0,dtype=torch.float32)
         x = self.cnn1(x)
@@ -95,6 +106,11 @@ class DCGAN_Dx_1GPU(BasicDCGAN_Dx):
         if not self.training:
             x=x.detach()
         return x
+
+    def critc(self,X):
+        X = forward(X)
+        return self.features_to_prob(X)
+
 
 
 class DCGAN_Dx_2GPU(BasicDCGAN_Dx):
@@ -146,6 +162,11 @@ class DCGAN_Dx_2GPU(BasicDCGAN_Dx):
         self.cnn2 = sqn(*self.cnn2)
         self.cnn2.to(self.dev1, dtype=torch.float32)
 
+        self.features_to_prob = torch.nn.Sequential(
+            torch.nn.Linear(out_channels, 1),
+            torch.nn.Sigmoid()
+        ).to(self.dev1, dtype=torch.float32)
+
     def forward(self, x):
         x = x.to(self.dev0,dtype=torch.float32)
         x = self.cnn1(x)
@@ -158,6 +179,11 @@ class DCGAN_Dx_2GPU(BasicDCGAN_Dx):
             return x
         else:
             return x
+
+    def critc(self,X):
+        X = forward(X)
+        return self.features_to_prob(X)
+
 
 class DCGAN_Dx_3GPU(BasicDCGAN_Dx):
     """docstring for DCGAN_Dx_3GPU"""

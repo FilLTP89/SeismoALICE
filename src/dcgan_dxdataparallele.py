@@ -49,8 +49,10 @@ class BasicDCGAN_DxDataParallele(Module):
     def lout(self,nz, nly, increment):
         #Here we specify the logic of the  in_channels/out_channels
         n = nz*2**(increment)
+        limit = 512
         #we force the last of the out_channels to not be greater than 512
-        return n if (n<512 or increment<nly) else 512
+        val = n if (n<limit or increment<nly) else limit
+        return val if val<=limit else limit
         
 
 class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
