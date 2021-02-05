@@ -11,6 +11,7 @@ import pandas as pd
 import dask
 import dask.dataframe as dd
 import dask.array as da
+from dask import delayed
 import random as rnd
 from os.path import join as opj
 from torch import from_numpy as np2t
@@ -200,22 +201,128 @@ def random_split(ths,lngs,idx=None):
     return idx,[Subset(ths,idx[off-lng:off]) 
         for off,lng in zip(_accumulate(lngs),lngs)]
 
+# def get_h5_groups(fname, group):
+#     h5f = open(fname, 'rb')
+#     return h5py.File(h5f, 'r').get(group)[:]  # note the [:] which gets all data as a numpy array
+
+# def get_h5_STEAD_waveforms(fnm,key):
+#     lazy = [dask.delayed(get_h5_groups)(fnm,k) for k in range(key)]
+#     arrays = [dd.from_delayed(x,shape=shape,dtype=np.float32) for x in lazy]
+#     return pd.DataFrame.from_dict({'a':[x + 1, x + 2]})
+
+# @delayed()
+# def make_daskdf(fnm,key):
+#     df_list = []
+#     for k in key:
+#         df_list.append(get_h5_groups(fnm,k))
+#     df = pd.concat(df_list, axis=0)
+#     return df
+# my_dask_script.py
+
+# Set up Dask workers from within an MPI job using the dask_mpi project
+# See https://dask-mpi.readthedocs.io/en/latest/
+def print_data_and_rank(chunks: list):
+    """ Fake function that mocks out how an MPI function should operate
+
+    -   It takes in a list of chunks of data that are present on this machine
+    -   It does whatever it wants to with this data and MPI
+        Here for simplicity we just print the data and print the rank
+    -   Maybe it returns something
+    """
+    rank = comm.Get_rank()
+
+    for chunk in chunks:
+        print("on rank:", rank)
+        print(chunk)
+
+    return sum(chunk.sum() for chunk in chunks)
+
+class H5ls:
+    def __init__(self,eqm):
+        # Store an empty list for dataset names
+        self.names = []
+        self.eqm = eqm
+
+    def __call__(self, name, h5obj):
+        # only h5py datasets have dtype attribute, so we can search on this
+        if hasattr(h5obj,'dtype') and not name in self.names:
+            print(name)
+
+
 def stead_dataset_dask(src,batch_percent,workers,
     Xwindow,zwindow,nzd,nzf,md,nsy,device):
+    
+    from mpi4py import MPI
+    rank = MPI.COMM_WORLD.rank
+    size = MPI.COMM_WORLD.Get_size()
+    # from dask_mpi import initialize
+    # initialize()
+
+    # from dask.distributed import Client, wait, futures_of
+    # client = Client()
+
+    # from toolz import first
+    # from collections import defaultdict
+
+    meta = {'network_code':'str','receiver_code':'str','receiver_type':'str',
+        'receiver_latitude':np.float64,'receiver_longitude':np.float64,'receiver_elevation_m':np.float64,
+        'p_arrival_sample':np.float64,'p_status':'str','p_weight':np.float64,'p_travel_sec':np.float64,
+        's_arrival_sample':np.float64,'s_status':'str','s_weight':np.float64,
+        'source_id':'str','source_origin_time':'str',
+        'source_origin_uncertainty_sec':np.float64,'source_latitude':np.float64,'source_longitude':np.float64,
+        'source_error_sec':np.float64,'source_gap_deg':np.float64,
+        'source_horizontal_uncertainty_km':np.float64,'source_depth_km':np.float64,
+        'source_depth_uncertainty_km':np.float64,'source_magnitude':np.float64,
+        'source_magnitude_type':'str','source_magnitude_author':'str',
+        'source_mechanism_strike_dip_rake':'str','source_distance_deg':np.float64,
+        'source_distance_km':np.float64,'back_azimuth_deg':np.float64,'snr_db':'str',
+        'coda_end_sample':np.float64,'trace_start_time':'str','trace_category':'str',
+        'trace_name':'str'}
     vtm = md['dtm']*np.arange(0,md['ntm'])
     tar     = np.zeros((nsy,2))
     trn_set  = -999.9*np.ones(shape=(nsy,3,md['ntm']))
     pgat_set = -999.9*np.ones(shape=(nsy,3))
     psat_set = -999.9*np.ones(shape=(nsy,3,md['nTn']))
-    import pdb
-    pdb.set_trace()
-    edq = dd.read_hdf(pattern=src,key= '/earthquake/local',mode='r+')
-    edm = dd.read_csv(pattern=src.replace('.hdf5','.csv')).query('trace_category == earthquake_local').query('source_magnitude>=3.5')
-    eqm = eqm.sample(frac=nsy/len(eqm)).reset_index(drop=True).repartition(workers)
-    eqd = eqd[eqm['trace_name']]
-
-    w = windows.tukey(md['ntm'],5/100)
     
+    eqm = dd.read_csv(urlpath=src.replace('.hdf5','.csv').replace('waveforms','metadata'),
+        na_values='None',dtype=meta).query('trace_category == "earthquake_local"').query('source_magnitude>=3.5')
+    eqm = eqm.sample(frac=nsy/len(eqm),replace=True).reset_index(drop=True).set_index("trace_name",sorted=True)
+    index_counts = eqm.map_partitions(lambda _df: _df.index.value_counts().sort_index()).compute()
+    index = np.repeat(index_counts.index, index_counts.values)
+    divisions, _ = dd.io.io.sorted_division_locations(index, npartitions=eqm.npartitions)
+    eqm = eqm.repartition(divisions=divisions).persist()
+    h5ls = H5ls(eqm=eqm)
+    
+    with h5py.File(src,'r',driver='mpio',comm=MPI.COMM_WORLD) as f:
+        # this will now visit all objects inside the hdf5 file and store datasets in h5ls.names
+        df.visititems(h5ls) 
+        eqd = f['earthquake']['local'].visititems(h5ls)
+        
+    #edq = dd.read_hdf(pattern=src,key='/earthquake/local',mode='r+')
+
+    # # Find out where data is on each worker
+    # key_to_part_dict = {str(part.key): part for part in futures_of(eqm)}
+    # who_has = client.who_has(eqm)
+    # worker_map = defaultdict(list)
+    # for key, workers in who_has.items():
+    #     worker_map[first(workers)].append(key_to_part_dict[key])
+    # # Call an MPI-enabled function on the list of data present on each worker
+    # futures = [client.submit(print_data_and_rank,
+    #     list_of_parts,workers=worker) 
+    #     for worker, list_of_parts in worker_map.items()]
+
+    # wait(futures)
+
+    # client.close()
+    
+    #dset = f.create_dataset('test', (4,), dtype='i')
+        
+    #
+    
+    #eqd = eqd[eqm['trace_name']]
+
+    #w = windows.tukey(md['ntm'],5/100)
+    return
 
 def stead_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
     print('Enter in the stead_dataset function ...') 
