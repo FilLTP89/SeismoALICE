@@ -1,20 +1,22 @@
 {
     "encoder": {
-        "padding": 0, 
-        "kernel": 2,  
+        "padding": 1, 
+        "kernel": 4,  
         "strides": 2, 
         "nlayers": 5, 
         "dilation":1,
-        "act":"Fed"
+        "act":"Fed",
+        "limit":128
     }, 
     "decoder": {
-        "padding": 0, 
-        "kernel": 2, 
+        "padding": 1, 
+        "kernel": 4, 
         "outpads": 0, 
         "strides": 2,
         "nlayers": 5,
         "dilation":1,
-        "act":"Gdd"
+        "act":"Gdd",
+        "limit":128
     },
     "Dszd":{
         "padding": 0,
@@ -23,15 +25,17 @@
         "nlayers": 3,
         "outpads": 0,
         "dilation":1,
-        "act":"Dsz"
+        "act":"Dsz",
+        "limit":256
     }, 
     "DsXd":{
-        "padding": 0,
-        "kernel": 2,
+        "padding": 1,
+        "kernel": 4,
         "strides": 2,
         "nlayers": 5,
         "dilation":1,
-        "act":"Dsx"
+        "act":"Dsx",
+        "limit":256
     },
     "Ddxz":{
         "padding": 0,
@@ -40,6 +44,8 @@
         "nlayers": 3,
         "outpads": 0,
         "dilation":1,
-        "act":"Ddxz"
+        "act":"Ddxz",
+        "nc":512,
+        "limit":512
     }
 }

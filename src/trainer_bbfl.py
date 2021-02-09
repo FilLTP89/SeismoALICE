@@ -37,11 +37,11 @@ __email__ = "filippo.gatti@centralesupelec.fr"
 __status__ = "Beta"
 
 # coder en dure dans le programme 
+# b1 = 0.5
+# b2 = 0.9999
+
 b1 = 0.5
 b2 = 0.9999
-
-# b1 = 0.
-# b2 = 0.9999
 
 nch_tot = 3
 penalty_wgangp = 10.
@@ -92,7 +92,7 @@ class trainer(object):
         self.oGdxz=None
         self.oGfxz=None
         self.oGhxz=None
-        glr = 0.0001
+        
         flagT=False
         flagF=False
         t = [y.lower() for y in list(self.strategy.keys())] 
@@ -119,7 +119,7 @@ class trainer(object):
             n = self.strategy['broadband']
             print("Loading broadband generators")
 
-            
+            # pdb.set_trace()
             # # Encoder broadband Fed
             self.Fed = net.Encoder(opt.config["encoder"],opt)
            
@@ -148,21 +148,20 @@ class trainer(object):
 
                 self.Dszd = net.DCGAN_Dz(opt.config['Dszd'],opt)
                 self.DsXd = net.DCGAN_Dx(opt.config['DsXd'],opt)
-                self.Ddxz = net.DCGAN_DXZ(opt.config['Ddxz'],opt)                
-                self.Ddnets.append(self.Fed)
-                self.Ddnets.append(self.Gdd)
+                self.Ddxz = net.DCGAN_DXZ(opt.config['Ddxz'],opt)
+
+                # self.Ddnets.append(self.Fed)
+                # self.Ddnets.append(self.Gdd)
                 self.Ddnets.append(self.DsXd)  
                 self.Ddnets.append(self.Dszd)
                 self.Ddnets.append(self.Ddxz)
-
-                # Adam optimization for Ddnets
-                self.oDdxz = reset_net(self.Ddnets,lr=0.0001,optim='Adam')
-                #Add the same Adam optimization parameter for optzd
+                self.oDdxz = reset_net(self.Ddnets,func=set_weights,lr=rlr,b1=b1,b2=b2)
                 self.optzd.append(self.oDdxz)
-                                
-            #if we don't the training with the broadband ...
-                # we simply load the Python dictionary object that maps each layer to its parameter tensor. 
-                # here it is in te 'model_stat_dict' of the strategy_* file passed to the programm
+
+                pdb.set_trace()
+                # self.DsXf = net.DCGAN_Dx(opt.config['DsXf'], opt)
+                # self.Dszf = net.DCGAN_Dz(opt.config['Dszf'], opt)
+                # self.Dfxz = net.DCGAN_DXZ(opt.config['Dfxz'], opt)
             else:
                 if None not in n:
                     print("Broadband generators - NO TRAIN: {0} - {1}".format(*n))
@@ -171,27 +170,21 @@ class trainer(object):
                 else:
                     flagT=False
 
-        """
-            This part is for the trainig with the filtred signal
-        """
         if 'filtered' in t:
-            
             self.style='ALICE'
             # act = acts[self.style]
             flagF = True
             n = self.strategy['filtered']
-            print("|Loading filtered generators ...")
-            
+            print("Loading filtered generators")
             self.Fef = net.Encoder(opt.config['encoder'], opt)
-            
             self.Gdf = net.Decoder(opt.config['decoder'], opt)
             
-            if  self.strategy['tract']['filtered']:
+            if self.strategy['tract']['filtered']:
                 if None in n:        
                     self.FGf = [self.Fef,self.Gdf]
                     self.oGfxz = reset_net(self.FGf,func=set_weights,lr=glr,b1=b1,b2=b2,
                             weight_decay=0.00001)
-                else:   
+                else:
                     print("Filtered generators: {0} - {1}".format(*n))
                     self.Fef.load_state_dict(tload(n[0])['model_state_dict'])
                     self.Gdf.load_state_dict(tload(n[1])['model_state_dict'])    
@@ -199,10 +192,9 @@ class trainer(object):
                                       lr=glr,betas=(b1,b2),weight_decay=0.00001)
                 self.optzf.append(self.oGfxz)
 
-                self.DsXf = net.DCGAN_Dx(opt.config['DsXf'], opt)
-                self.Dszf = net.DCGAN_Dz(opt.config['Dszf'], opt)
-                self.Dfxz = net.DCGAN_DXZ(opt.config['Dfxz'], opt)
-                
+                self.Dszf = net.DCGAN_Dz(opt.config['Dszf']  , opt)
+                self.DsXf = net.DCGAN_Dx(opt.config['DsXf']  , opt)
+                self.Dfxz = net.DCGAN_DXZ(opt.config['Dfxz'] , opt)
 
                 self.Dfnets.append(self.DsXf)
                 self.Dfnets.append(self.Dszf)
@@ -215,10 +207,9 @@ class trainer(object):
                 self.Dfnets.append(self.DsrXf)
                 self.Dfnets.append(self.Dsrzf)
 
-                self.oDfxz = reset_net(self.Dfnets,func=set_weights,lr=rlr,optim='Adam')
+                self.oDfxz = reset_net(self.Dfnets,func=set_weights,lr=rlr,optim='rmsprop')
                 self.optzf.append(self.oDfxz)
 
-                # pdb.set_trace()
             else:
                 if None not in n:
                     print("Filtered generators - no train: {0} - {1}".format(*n))
@@ -226,8 +217,6 @@ class trainer(object):
                     self.Gdf.load_state_dict(tload(n[1])['model_state_dict'])    
                 else:
                     flagF=False
-
-            
 
         """
             This part is for the training with the hybrid signal
@@ -419,7 +408,7 @@ class trainer(object):
     ####################
     # @profile
     def alice_train_broadband_discriminator_explicit_xz(self,Xd,zd):
-        
+        # pdb.set_trace()
         zerograd(self.optzd)
         self.Fed.eval(),self.Gdd.eval()
         self.DsXd.train(),self.Dszd.train(),self.Ddxz.train()
@@ -445,9 +434,9 @@ class trainer(object):
         Dxz,Dzx = self.discriminate_broadband_xz(Xd,X_gen,zd,z_gen)
 
         # Dloss_ali = -(torch.mean(Dxz)-torch.mean(Dzx))
-        Dloss_ali = -torch.mean(ln0c(torch.abs(Dzx))+ln0c(torch.abs(1.0-Dxz)))
+        Dloss_ali = -torch.mean(ln0c(Dzx)+ln0c(1.0-Dxz))
         
-        # gr_norm = self.get_Dgrad_norm(Xd, X_gen,zd, z_gen)
+        # gr_norm = self.get_Dgrad_norm(Xd, X_gen, zd, z_gen)
 
         # Dgrad_loss = ((gr_norm - 1.) ** 2).mean().to(ngpu-1)
         
@@ -467,7 +456,7 @@ class trainer(object):
     
     @profile
     def alice_train_broadband_generator_explicit_xz(self,Xd,zd):
-       
+        # pdb.set_trace()
         zerograd(self.optzd)
         self.Fed.train(),self.Gdd.train()
         self.DsXd.train(),self.Dszd.train(),self.Ddxz.train()
@@ -490,7 +479,6 @@ class trainer(object):
         Dxz,Dzx = self.discriminate_broadband_xz(Xd,X_gen,zd,z_gen)
         # 4. Compute ALI Generator loss WGAN
         Gloss_ali = torch.mean(-Dxz +Dzx).to(ngpu-1)
-        
         # 0. Generate noise
         wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,device,rndm_args)
         # # passign values to the CPU 0
@@ -499,7 +487,7 @@ class trainer(object):
         wnz = wnz
         wn1 = wn1
         # 1. Concatenate inputs
-        X_gen = zcat(X_gen,wnx.to(X_gen.device))
+        X_gen = zcat(X_gen,wnx.to(X_gen.device))    
         z_gen = zcat(z_gen,wnz.to(z_gen.device))
         
         # 2. Generate reconstructions
@@ -528,7 +516,7 @@ class trainer(object):
     ####################
     def alice_train_filtered_discriminator_adv_xz(self,Xf,zf):
         # Set-up training
-       
+        # pdb.set_trace()
         zerograd(self.optzf)
         self.Fef.eval(),self.Gdf.eval()
         self.DsXf.train(),self.Dszf.train(),self.Dfxz.train()
@@ -573,15 +561,15 @@ class trainer(object):
         # I recommanded using activation's function that values between 0 and 1, like sigmoid
         
         Dloss_ali_X = self.bce_loss(Dreal_X,o1l(Dreal_X))+self.bce_loss(Dfake_X,o1l(Dfake_X))
+        Dloss_ali_X = Dloss_ali_X
             
         # 4. Cross-Discriminate ZZ
         # pdb.set_trace()
         Dreal_z,Dfake_z = self.discriminate_filtered_zz(zf,z_rec)
 
         Dloss_ali_z = self.bce_loss(Dreal_z,o1l(Dreal_z))+self.bce_loss(Dfake_z,o0l(Dfake_z))
+        Dloss_ali_z
 
-       
-        
         # Total loss
         Dloss = Dloss_ali + 10*Dloss_ali_X + 100*Dloss_ali_z
         Dloss.backward(),self.oDfxz.step(),clipweights(self.Dfnets),zerograd(self.optzf)
@@ -772,7 +760,6 @@ class trainer(object):
                     torch.cuda.empty_cache()
             
             GPUtil.showUtilization(all=True)
-
             
             str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
             str = 'epoch: {:>d} --- '.format(epoch)
@@ -1093,7 +1080,7 @@ class trainer(object):
         Xhat.requires_grad_(True)
         zhat.requires_grad_(True)
 
-        prob_interpolated = self.Ddxz(zcat(self.DsXd(Xhat),self.Dszd(zhat)))
+        prob_interpolated = self.Ddxz.critic(zcat(self.DsXd(Xhat),self.Dszd(zhat)))
 
         if torch.cuda.is_available():
             grad_outputs = torch.ones(prob_interpolated.size(), requires_grad=True).cuda(ngpu-1)

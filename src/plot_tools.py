@@ -773,6 +773,7 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs')
                 plt.savefig(os.path.join(outf,"res_r_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
                             format='eps',bbox_inches='tight',dpi = 500)
                 plt.close()
+                print("saving res_r_aae_%s_%u_%u ... "%(pfx,cnt,io))
                 
                 cnt += 1
 

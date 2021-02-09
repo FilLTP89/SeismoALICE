@@ -130,13 +130,13 @@ class Squeeze(Module):
 def cnn1d(in_channels,out_channels,\
           act=LeakyReLU(1.0,inplace=True),\
           bn=True,ker=7,std=4,pad=0,\
-          dil=1,grp=1,dpc=0.1,wn=False,dev=tdev("cpu")):
+          dil=1,grp=1,dpc=0.1,wn=False,dev=tdev("cpu"),bias = False):
 
     block = [Conv1d(in_channels=in_channels,\
                     out_channels=out_channels,\
                     kernel_size=ker,stride=std,\
                     padding=pad,dilation=dil,groups=grp,\
-                    bias=False)]
+                    bias=bias)]
     #if wn:
     #    block.insert(0,AddNoise(dev=dev))
     if bn:
@@ -175,28 +175,17 @@ def DenseBlock(in_channels,out_channels,\
     return block
 
 class ConvBlock(Module):
-    def __init__(self,ngpu, ni, no, ks, stride, bias=False,
-                 act = None, bn=True, pad=None, dpc=None):
+    def __init__(self, ni, no, ks, stride, bias=False,
+                 act = None, bn=True, pad=None, dpc=None, dil = 1):
         super(ConvBlock,self).__init__()
-        self.ngpu = ngpu
-        #self.dev  =self.ngpu-1
         if pad is None: pad = ks//2//stride
-        self.ann = [Conv1d(ni, no, ks, stride, padding=pad, bias=bias)]
+        self.ann = [Conv1d(in_channels = ni, out_channels= no, kernel_size=ks, stride = stride, padding=pad, bias=bias, dilation = dil)]
         if bn: self.ann+= [BatchNorm1d(no)]
         if dpc is not None: self.ann += [Dpout(dpc=dpc)]
         if act is not None: self.ann += [act] 
-         
         self.ann = sqn(*self.ann)
-        #self.ann.to(self.dev,dtype=torch.float32)
-    
-    def forward(self, X):
-        #if X.is_cuda and self.ngpu >= 1:
-            #z = pll(self.ann,X,self.gang)
-            #X = X.to(self.dev)
-            # X = self.ann1(X)
-            # X = X.to(self.dev1)
-        z = self.ann(X)
-        return z
+    def forward(self, x):
+        return self.ann(x)
 
 class DeconvBlock(Module):
     def __init__(self,ni,no,ks,stride,pad,opd=0,bn=True,act=ReLU(inplace=True),
@@ -475,15 +464,15 @@ class T(object):
         acts['ALICE'] = {
                  'Fed' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.LeakyReLU(1.0,inplace=True)],
                  'Gdd' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.Tanh()],
-                 'Gdd2' :[nn.ReLU(inplace=True) for t in range(1, nly+1)],
+                 'Gdd2':[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.LeakyReLU(1.0,inplace=True)],
                  'Fef' :[nn.LeakyReLU(1.0,inplace=True) for t in range(4)]+[nn.LeakyReLU(1.0,inplace=True)],
                  'Gdf' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.Tanh()],
                  'Ghz' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.LeakyReLU(1.0,inplace=True)],
-                 'Dsx' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)] + [nn.LeakyReLU(1.0,inplace=True)],
+                 'Dsx' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)],
                  'Dsz' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)],
-                 'Drx' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)],
-                 'Drz' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)],
-                 'Ddxz':[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)],
+                 'Drx' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.Sigmoid()],
+                 'Drz' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.Sigmoid()],
+                 'Ddxz':[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.Sigmoid()],
                  'DhXd':[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.Sigmoid()]
                  }
 

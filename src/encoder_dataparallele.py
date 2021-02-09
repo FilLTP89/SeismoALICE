@@ -19,13 +19,13 @@ class EncoderDataParallele(object):
         pass
         
     @staticmethod
-    def getEncoder(name, ngpu, dev, nz, nch, ndf, nly, ker, std, pad, dil, act, *args, **kwargs):
+    def getEncoder(name, ngpu, dev, nz, nch, ndf, nly, ker, std, pad, dil, act,limit, *args, **kwargs):
         
         if name is not None:
             classname = 'Encoder_'+name
             try:
                 return type(classname, (BasicEncoderDataParallele, ), dict(ngpu = ngpu,dev =dev, nz = nz, nch = nch, act=act,
-                        nly = nly, ker = ker, std =std, pad = pad, dil = dil))
+                        nly = nly, ker = ker, std =std, pad = pad, dil = dil, limit = limit))
             except Exception as e:
                 raise e
                 print("The class ",classname, " does not exit")
@@ -39,14 +39,14 @@ class BasicEncoderDataParallele(Module):
         super(BasicEncoderDataParallele, self).__init__()
         self.training = True
 
-    def lout(self,nz,nch, nly, increment):
+    def lout(self,nz,nch, nly, increment,limit):
         """
         This code is for conv1d made according to the rule of Pytorch.
         One multiply nz by 2 ^(increment - 1). 
         If, by example, nly 8. we strat from nz^(0) to nz^(6). we stop witnz
         
         """
-        limit = 1024
+        limit = 256
         n = increment - 1
         val = int(nz*2**n) if n <= (nly - 2) else nz
         return val if val <= limit else limit
@@ -55,7 +55,7 @@ class Encoder(BasicEncoderDataParallele):
     """docstring for Encoder"""
     def __init__(self, ngpu,dev,nz,nch,ndf,act,\
                  nly,ker=7,std=4,pad=0,dil=1,grp=1,bn=True,
-                 dpc=0.0,\
+                 dpc=0.0,limit = 256,\
                  with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2):
         super(Encoder, self).__init__()
         self.ngpu= ngpu
@@ -65,16 +65,18 @@ class Encoder(BasicEncoderDataParallele):
         for i in range(1, nly+1):
             if i ==1 and with_noise:
             #We take the first layers for adding noise to the system if the condition is set
-                self.cnn = cnn1d(nch*2,ndf,act[0],ker=ker,std=std,pad=pad,dil=dil, bn=bn,dpc=0.0,wn=True ,\
+                self.cnn = cnn1d(nch*2,ndf,act[0],ker=ker,std=std,pad=pad,dil=dil, bn=bn,dpc=dpc,wn=True ,\
                               dtm=dtm,ffr=ffr,wpc=wpc,dev=self.dev)
             # esle if we not have a noise but we at the strating network
             elif i == 1:
-                self.cnn = cnn1d(nch*2,ndf,act[0],ker=ker,std=std,pad=pad,dil=dil,bn=bn,dpc=0.0,wn=True)
+                self.cnn = cnn1d(nch*2,ndf,act[0],ker=ker,std=std,pad=pad,dil=dil,bn=bn,dpc=dpc,wn=True)
             #else we proceed normaly
             else:
-                out_channels = self.lout(nz,nch,nly,i)
+                out_channels = self.lout(nz,nch,nly,i,limit)
+                _bn = False if i == nly else bn
+                _dpc = 0.0 if i == nly else dpc
                 self.cnn += cnn1d(in_channels,out_channels, act[i-1], ker=ker,std=std,pad=pad,dil=dil,\
-                        bn=False,dpc=0.0,wn=False) 
+                        bn=_bn,dpc=_dpc,wn=False) 
             in_channels = out_channels
         self.cnn = sqn(*self.cnn)
 

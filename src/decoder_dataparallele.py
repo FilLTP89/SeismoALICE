@@ -19,18 +19,18 @@ class DecoderDataParallele(object):
         pass
     
     @staticmethod
-    def getDecoder(name,ngpu, nz, nch, nly, ndf, ker, std, pad, opd):
+    def getDecoder(name,ngpu, nz, nch, nly, ndf, ker, std, pad, opd, dpc, limit):
         if name  is not None:
             classname = 'Decoder_'+ name
             try:
                 return type(classname, (BasiceDecoderDataParallele, ), dict(ngpu = ngpu, nz = nz, nch = nch, nly = nly,\
-                 ker = ker, std =std, pad = pad))
+                 ker = ker, std =std, pad = pad, limit=limit))
             except Exception as e:
                 raise e
                 print("The class ",classname," does not exit")
         else:
             return Decoder(ngpu,nz,nch,ndf,nly,\
-                 ker=ker,std=std,pad=pad,opd=opd,dil=1,grp=1,dpc=0.10)
+                 ker=ker,std=std,pad=pad,opd=opd,dil=1,grp=1,dpc=dpc,limit=limit)
 
 
 class BasiceDecoderDataParallele(Module):
@@ -39,7 +39,7 @@ class BasiceDecoderDataParallele(Module):
         super(BasiceDecoderDataParallele, self).__init__()
         self.training = True
     
-    def lout(self,nz, nch, nly, increment):
+    def lout(self,nz, nch, nly, increment, limit):
         """
         This code is for convTranspose1d made according to the rule of Pytorch. See official reference :
         One  multiply nz by  2 ^ (nly -incremement -1). 
@@ -49,7 +49,6 @@ class BasiceDecoderDataParallele(Module):
          (nz,nzd*2^(3)) --> (nzd*2^(3),nzd*2^(2)) --> (nzd*2^(2),nzd*2^(1))
          --> (nzd*2^(1),nzd*2^(0))--> (nzd*2^(0),nch)
         """
-        limit = 1024
         nzd = nz
         n = nly-2-increment+1
         val = int(nzd*2**n) if n >=0 else nch
@@ -58,7 +57,7 @@ class BasiceDecoderDataParallele(Module):
 class Decoder(BasiceDecoderDataParallele):
     """docstring for Decoder"""
     def __init__(self,ngpu,nz,nch,ndf,nly,\
-                 ker=7,std=4,pad=0,opd=0,dil=1,grp=1,dpc=0.10):
+                 ker=7,std=4,pad=0,opd=0,dil=1,grp=1,dpc=0.10,limit = 256):
         super(Decoder, self).__init__()
         self.ngpu= ngpu
         self.gang = range(self.ngpu)
@@ -66,7 +65,7 @@ class Decoder(BasiceDecoderDataParallele):
         in_channels   = nz
 
         for i in range(1, nly+1):
-            out_channels = self.lout(nz, nch,nly, i)
+            out_channels = self.lout(nz, nch,nly, i, limit)
             """
             This is made in the respectful of the pytorch documentation  :
             See the reference : 

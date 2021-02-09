@@ -22,7 +22,7 @@ class DCGAN_DzModelParallele(object):
 
     @staticmethod
     def getDCGAN_DzByGPU(ngpu, nz, nly, act, ncl=512, fpd=0, n_extra_layers=1, dpc=0.25,
-                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False):
+                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False,limit = 256, bias =  False):
         #we assign the code name
         classname = 'DCGAN_Dz_' + str(ngpu)+'GPU'
 
@@ -30,8 +30,10 @@ class DCGAN_DzModelParallele(object):
         module = importlib.import_module(module_name)
         class_ = getattr(module,classname)
 
-        return class_(ngpu = ngpu, nz = nz, nly = nly, act=act, ncl = ncl, n_extra_layers = n_extra_layers, dpc =dpc,\
-            ker=ker, std=std, pad = pad, dil=dil, grp=grp, bn =bn, wf = wf)
+        return class_(ngpu = ngpu, nz = nz, nly = nly, act=act, ncl = ncl,\
+                    n_extra_layers = n_extra_layers, dpc =dpc,\
+                    ker=ker, std=std, pad = pad, dil=dil, grp=grp,\
+                    bn =bn, wf = wf, limit = limit, bias = bias)
 
 
 class BasicDCGAN_Dz(Module):
@@ -53,17 +55,17 @@ class BasicDCGAN_Dz(Module):
             #training test
             self.training =  True
 
-        def lout(self, nz, nly,ncl, increment):
+        def lout(self, nz, nly,ncl, increment, limit):
             #this is the logic of in_channels and out_channels
-            limit = 512
-            val = ncl if increment!=nly-1 else nz
+            # val = ncl if increment!=nly-1 else nz
+            val = limit
             return val if val<=limit else limit 
 
 
 class  DCGAN_Dz_1GPU(BasicDCGAN_Dz):
     """docstring for  DCGAN_Dz_1GPU"""
     def __init__(self, ngpu, nz, nly,act,  ncl=512, fpd=1, n_extra_layers=1, dpc=0.25,
-                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False):
+                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False,limit = 256, bias = False):
         super(DCGAN_Dz_1GPU, self).__init__()
 
         #activation functions
@@ -73,12 +75,15 @@ class  DCGAN_Dz_1GPU(BasicDCGAN_Dz):
         in_channels  = nz
 
         for i in range(1,nly+1):
-            out_channels = self.lout(nz, nly, ncl, i)
+            out_channels = self.lout(nz, nly, ncl, i, limit)
             act = activation[i-1]
-            self.cnn1 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,\
-                    bn=True,dpc=0.0,wn=False)
+            self.cnn1.append(ConvBlock(ni = in_channels, no = out_channels,
+                ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
+            # self.cnn1 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,\
+            #         bn=_bn,dpc=dpc,wn=False)
             in_channels = out_channels
-
+        self.cnn1.append(Dpout(dpc = dpc))
+        self.cnn1.append(activation[-1])
         self.cnn1 = sqn(*self.cnn1)
         self.cnn1.to(self.dev0, dtype = torch.float32)
 
@@ -94,7 +99,7 @@ class  DCGAN_Dz_1GPU(BasicDCGAN_Dz):
 class DCGAN_Dz_2GPU(BasicDCGAN_Dz):
     """docstring for DCGAN_Dz_2GPU"""
     def __init__(self, ngpu, nz, nly, act, ncl=512, fpd=1, n_extra_layers=1, dpc=0.25,
-                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False):
+                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False,limit = 256, bias = False):
         super(DCGAN_Dz_2GPU, self).__init__()
         
         #activation functions
@@ -104,18 +109,23 @@ class DCGAN_Dz_2GPU(BasicDCGAN_Dz):
 
         #Part I is in GPU0
         for i in range(1,nly//2+1):
-            out_channels = self.lout(nz, nly, ncl, i)
+            out_channels = self.lout(nz, nly, ncl, i, limit)
             act = activation[i-1]
-            self.cnn1 += cnn1d(in_channels, out_channels, act,\
-                ker=ker, std=std, pad=pad,bn=True, dpc=dpc)
+            # _bn =  False if i == 1 else bn
+            # self.cnn1 += cnn1d(in_channels, out_channels, act,\
+            #     ker=ker, std=std, pad=pad,bn=_bn, dpc=dpc)
+            self.cnn1.append(ConvBlock(ni = in_channels, no = out_channels,
+                ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
 
         #Part II is in GPU1
         for i in range(nly//2+1,nly+1):
-            out_channels = self.lout(nz, nly, ncl, i)
+            out_channels = self.lout(nz, nly, ncl, i, limit)
             act = activation[i-1]
-            self.cnn2 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,\
-                    bn=True,dpc=0.0,wn=False)
+            # self.cnn2 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,\
+            #         bn=bn,dpc=dpc,wn=False)
+            self.cnn2.append(ConvBlock(ni = in_channels, no = out_channels,
+                ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
 
         self.cnn1 = sqn(*self.cnn1)
@@ -139,7 +149,7 @@ class DCGAN_Dz_2GPU(BasicDCGAN_Dz):
 class DCGAN_Dz_3GPU(BasicDCGAN_Dz):
     """docstring for DCGAN_Dz_3GPU"""
     def __init__(self, ngpu, nz, nly, act, ncl=512, fpd=1, n_extra_layers=1, dpc=0.25,
-                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False):
+                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, limit = 256, bias = False):
         super(DCGAN_Dz_3GPU, self).__init__()
 
         #activation 
@@ -148,24 +158,31 @@ class DCGAN_Dz_3GPU(BasicDCGAN_Dz):
         in_channels = nz
 
         for i in range(1, nly//3+1):
-            out_channels = self.lout(nz, nly, ncl, i)
+            out_channels = self.lout(nz, nly, ncl, i, limit)
             act = activation[i-1]
-            self.cnn1 += cnn1d(in_channels, out_channels, act,\
-                ker=ker, std=std,n=True, dpc=dpc)
+            # _bn =  False if i == 1 else bn
+            # self.cnn1 += cnn1d(in_channels, out_channels, act,\
+            #     ker=ker, std=std,bn=_bn, dpc=dpc)
+            self.cnn1.append(ConvBlock(ni = in_channels, no = out_channels,
+                ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
 
         for i in range(nly//3+1, 2*nly//3+1):
-            out_channels = self.lout(nz, nly, ncl, i)
+            out_channels = self.lout(nz, nly, ncl, i, limit)
             act = activation[i-1]
-            self.cnn2 += cnn1d(in_channels, out_channels, act,\
-                ker=ker, std=std, pad=pad,bn=True, dpc=dpc)
+            # self.cnn2 += cnn1d(in_channels, out_channels, act,\
+            #     ker=ker, std=std, pad=pad,bn=bn, dpc=dpc)
+            self.cnn2.append(ConvBlock(ni = in_channels, no = out_channels,
+                ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
 
         for i in range(2*nly//3+1, nly+1):
-            out_channels = self.lout(nz, nly, ncl, i)
+            out_channels = self.lout(nz, nly, ncl, i, limit)
             act = activation[i-1]
-            self.cnn3 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,\
-                    bn=True,dpc=0.0,wn=False)
+            # self.cnn3 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,\
+            #         bn=bn,dpc=dpc,wn=False)
+            self.cnn3.append(ConvBlock(ni = in_channels, no = out_channels,
+                ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
 
         self.cnn1 = sqn(*self.cnn1)
@@ -191,7 +208,7 @@ class DCGAN_Dz_3GPU(BasicDCGAN_Dz):
 class DCGAN_Dz_4GPU(BasicDCGAN_Dz):
     """docstring for DCGAN_Dz_4GPU"""
     def __init__(self, ngpu, nz, nly, act, ncl=512, fpd=1, n_extra_layers=1, dpc=0.25,
-                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False):
+                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False,limit = 256, bias = False):
         super(DCGAN_Dz_4GPU, self).__init__()
         
         #activation 
@@ -200,31 +217,40 @@ class DCGAN_Dz_4GPU(BasicDCGAN_Dz):
         in_channels = nz
 
         for i in range(1, nly//4+1):
-            out_channels = self.lout(nz, nly, ncl, i)
+            out_channels = self.lout(nz, nly, ncl, i, limit)
             act = activation[i-1]
-            self.cnn1 += cnn1d(in_channels, out_channels, act,\
-                ker=ker, std=std, pad=pad, bn=True, dpc=dpc)
+            # _bn =  False if i == 1 else bn
+            # self.cnn1 += cnn1d(in_channels, out_channels, act,\
+            #     ker=ker, std=std, pad=pad, bn=_bn, dpc=dpc)
+            self.cnn1.append(ConvBlock(ni = in_channels, no = out_channels,
+                ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
 
         for i in range(nly//4+1, 2*nly//4+1):
-            out_channels = self.lout(nz, nly, ncl, i)
+            out_channels = self.lout(nz, nly, ncl, i, limit)
             act = activation[i-1]
-            self.cnn2 += cnn1d(in_channels, out_channels, act,\
-                ker=ker, std=std, pad=pad, bn=True, dpc=dpc)
+            # self.cnn2 += cnn1d(in_channels, out_channels, act,\
+            #     ker=ker, std=std, pad=pad, bn=bn, dpc=dpc)
+            self.cnn2.append(ConvBlock(ni = in_channels, no = out_channels,
+                ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
 
         for i in range(2*nly//4+1, 3*nly//4+1):
-            out_channels = self.lout(nz, nly, ncl, i)
+            out_channels = self.lout(nz, nly, ncl, i, limit)
             act = activation[i-1]
-            self.cnn3 += cnn1d(in_channels, out_channels, act,\
-                ker=ker, std=std, pad=pad, bn=True, dpc=dpc)
+            # self.cnn3 += cnn1d(in_channels, out_channels, act,\
+            #     ker=ker, std=std, pad=pad, bn=bn, dpc=dpc)
+            self.cnn3.append(ConvBlock(ni = in_channels, no = out_channels,
+                ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
 
         for i in range(3*nly//4+1, nly+1):
-            out_channels = self.lout(nz, nly, ncl, i)
+            out_channels = self.lout(nz, nly, ncl, i, limit)
             act = activation[i-1]
-            self.cnn4 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,\
-                    bn=False,dpc=0.0,wn=False)
+            # self.cnn4 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,\
+            #         bn=bn,dpc=dpc,wn=False)
+            self.cnn4.append(ConvBlock(ni = in_channels, no = out_channels,
+                ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
 
         self.cnn1 = sqn(*self.cnn1)

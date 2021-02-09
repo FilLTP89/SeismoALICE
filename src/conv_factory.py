@@ -58,6 +58,8 @@ class ModelParalleleFactory(ConvNetFactory):
                 std = config['strides'],\
                 pad = config['padding'],
                 act = config['act'],\
+                limit = config['limit'],\
+                dpc = 0.0,\
                 *args, **kwargs)
     @profile
     def createDecoder(self, config, opt, *args, **kwargs):
@@ -70,6 +72,9 @@ class ModelParalleleFactory(ConvNetFactory):
                 pad = config['padding'],\
                 opd = config['outpads'],\
                 act = config['act'],\
+                limit = config['limit'],\
+                bn = True,\
+                dpc = 0.0,\
                 *args, **kwargs)
 
     def createDCGAN_Dx(self, config_dcgan_dx, opt, *args, **kwargs):
@@ -82,8 +87,9 @@ class ModelParalleleFactory(ConvNetFactory):
                                      pad = config_dcgan_dx['padding'],\
                                      dil = config_dcgan_dx['dilation'],\
                                      act = config_dcgan_dx['act'],\
-                                     grp=1,bn=True,wf=False, dpc=0.250,
-                                     n_extra_layers=0)
+                                     limit = config_dcgan_dx['limit'],\
+                                     grp=1,bn=False,wf=False, dpc=0.25,
+                                     n_extra_layers=5)
         return dcgan_dx
 
     def createDCGAN_Dz(self, config_dcgan_dz, opt, *args, **kwargs):
@@ -95,7 +101,8 @@ class ModelParalleleFactory(ConvNetFactory):
                                      std = config_dcgan_dz['strides'],\
                                      pad = config_dcgan_dz['padding'],\
                                      act = config_dcgan_dz['act'],\
-                                     dil=1,grp=1,bn=True,wf=False)
+                                     limit = config_dcgan_dz['limit'],\
+                                     dil=1,grp=1,bn=False,wf=False, bias = False)
         return dcgan_dz
 
     def createDCGAN_DXZ(self,config_dcgan_dxz, opt, *args, **kwargs):
@@ -106,8 +113,9 @@ class ModelParalleleFactory(ConvNetFactory):
                                      std = config_dcgan_dxz['strides'],\
                                      pad = config_dcgan_dxz['padding'],\
                                      act = config_dcgan_dxz['act'],\
-                                     n_extra_layers=0, 
-                                     dpc=0.25,wf=False, opt=None)
+                                     limit = config_dcgan_dxz['limit'],\
+                                     n_extra_layers=0,
+                                     dpc=0.25,wf=False,bn = False, bias = True, opt=None)
         return  dcgan_dxz
 
 class DataParalleleFactory(ConvNetFactory):
@@ -133,6 +141,8 @@ class DataParalleleFactory(ConvNetFactory):
                 std = config['strides'],\
                 pad = config['padding'],\
                 act = config['act'],\
+                limit = config['limit'],\
+                dpc = 0.0,\
                 *args, **kwargs)
 
     def createDecoder(self, config, opt, *args, **kwargs):
@@ -147,6 +157,8 @@ class DataParalleleFactory(ConvNetFactory):
                 pad = config['padding'],\
                 opd = config['outpads'],\
                 act = config['act'],\
+                limit = config['limit'],\
+                dpc = 0.0\
                 *args, **kwargs)
 
     def createDCGAN_Dx(self, config_dcgan_dx, opt, *args, **kwargs):
@@ -163,7 +175,8 @@ class DataParalleleFactory(ConvNetFactory):
                      std = config_dcgan_dx['strides'],\
                      pad = config_dcgan_dx['padding'],\
                      act = config_dcgan_dx['act'],\
-                     dil = 0,grp=0,bn=True,wf=False, dpc=0.25,\
+                     limit = config_dcgan_dx['limit'],\
+                     dil = 0,grp=0,bn=False,wf=False, dpc=0.25,\
                      n_extra_layers=0)
         return dcgan_dx
 
@@ -179,7 +192,8 @@ class DataParalleleFactory(ConvNetFactory):
                      std = config_dcgan_dz['strides'],\
                      pad = config_dcgan_dz['padding'],\
                      act = config_dcgan_dz['act'],\
-                     dil=0, grp=0, bn=True,wf=False, dpc=0.0,
+                     limit = config_dcgan_dz['limit'],\
+                     dil=0, grp=0, bn=False,wf=False, dpc=0.25,
                      n_extra_layers=0)
         return dcgan_dz
 
@@ -193,7 +207,8 @@ class DataParalleleFactory(ConvNetFactory):
                      std=config_dcgan_dxz['strides'],\
                      pad=config_dcgan_dxz['padding'],\
                      act=config_dcgan_dxz['act'],\
-                     dil=0, grp=0, bn=True,wf=False, dpc=0.25,\
+                     limit = config_dcgan_dxz['limit'],\
+                     dil=0, grp=0, bn=False,wf=False, dpc=0.25,\
                      n_extra_layers=0)
 
         return dcgan_dxz
