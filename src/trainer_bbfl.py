@@ -158,7 +158,7 @@ class trainer(object):
                 self.oDdxz = reset_net(self.Ddnets,func=set_weights,lr=rlr,b1=b1,b2=b2)
                 self.optzd.append(self.oDdxz)
 
-                # pdb.set_trace()
+                pdb.set_trace()
                 # self.DsXf = net.DCGAN_Dx(opt.config['DsXf'], opt)
                 # self.Dszf = net.DCGAN_Dz(opt.config['Dszf'], opt)
                 # self.Dfxz = net.DCGAN_DXZ(opt.config['Dfxz'], opt)

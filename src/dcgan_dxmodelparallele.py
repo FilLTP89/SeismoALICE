@@ -66,6 +66,12 @@ class BasicDCGAN_Dx(Module):
         #we force the last of the out_channels to not be greater than 512
         val = n if (n<limit or increment<nly) else limit
         return val if val <= limit else limit
+    
+    def kout(self, nly, incremement, ker):
+        return ker if incremement <= nly//2+1 else ker*2
+
+    def pad(self, nly, incremement, pad):
+        return 4 if incremement == nly else pad
 
         
     def critic(self,X):
@@ -88,11 +94,13 @@ class DCGAN_Dx_1GPU(BasicDCGAN_Dx):
             act = activation[i-1]
             _bn = False if i == 1 else bn
             _dpc = 0.0 if i == nly else dpc
+            _ker = self.kout(nly,i,ker)
+            _pad = self.pad(nly,i,pad)
             # self.cnn1 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,dil =dil,\
             #         bn=_bn,dpc=_dpc,wn=False)
             _bn = bn if i == 1 else True
             self.cnn1.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, dil = dil, bias = False,\
+                ks = _ker, stride = std, pad = _pad, dil = dil, bias = False,\
                 bn = _bn, dpc = dpc, act = act))
             in_channels = out_channels
 
@@ -149,6 +157,8 @@ class DCGAN_Dx_2GPU(BasicDCGAN_Dx):
             """
             out_channels = self.lout(ndf, nly, i, limit)
             #The last activation function shall be a sigmoid function
+            _ker = self.kout(nly,i,ker)
+            _pad = self.pad(nly,i,pad)
             _bn = False if i == 1 else bn
             _dpc = 0.0 if i == nly else dpc
             act = activation[i-1]
@@ -156,7 +166,7 @@ class DCGAN_Dx_2GPU(BasicDCGAN_Dx):
             #     dil =dil,bn=_bn,dpc=_dpc)
             _bn = bn if i == 1 else True
             self.cnn1.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, dil = dil, bias = False,\
+                ks = _ker, stride = std, pad = _pad, dil = dil, bias = False,\
                 bn = _bn, dpc = dpc, act = act))
 
         """
@@ -171,9 +181,11 @@ class DCGAN_Dx_2GPU(BasicDCGAN_Dx):
             # self.cnn2 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,dil =dil,\
             #         bn=_bn,dpc=_dpc,wn=False)            
             # in_channels = out_channels 
+            _ker = self.kout(nly,i,ker)
+            _pad = self.pad(nly,i,pad)
             _bn = bn if i == 1 else True
             self.cnn2.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, dil = dil, bias = False,\
+                ks = _ker, stride = std, pad = _pad, dil = dil, bias = False,\
                 bn = _bn, dpc = dpc, act = act))
 
         for i in range(0,n_extra_layers):
@@ -228,37 +240,43 @@ class DCGAN_Dx_3GPU(BasicDCGAN_Dx):
         in_channels = nc
         for i in range(1, nly//3+1):
             out_channels = self.lout(ndf, nly, i, limit)
+            _ker = self.kout(nly,i,ker)
+            _pad = self.pad(nly,i,pad)
             act = activation[i-1]
             # _bn = False if i == 1 else bn
             # self.cnn1 += cnn1d(in_channels, out_channels, act,ker=ker,std=std,pad=pad,\
             #     dil=dil, bn=_bn,dpc=dpc)
             _bn = bn if i == 1 else True
             self.cnn1.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, dil = dil, bias = False,\
+                ks = _ker, stride = std, pad = _pad, dil = dil, bias = False,\
                 bn = _bn, dpc = dpc, act = act))
             in_channels = out_channels
 
 
         for i in range(nly//3+1, 2*nly//3+1):
             out_channels = self.lout(ndf, nly, i, limit)
+            _ker = self.kout(nly,i,ker)
+            _pad = self.pad(nly,i,pad)
             act = activation[i-1]
             # self.cnn2 += cnn1d(in_channels, out_channels, act,ker=ker,std=std,pad=pad,\
             #     dil =dil, bn=bn,dpc=dpc)
             _bn = bn if i == 1 else True
             self.cnn2.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, dil = dil, bias = False,\
+                ks = _ker, stride = std, pad = _pad, dil = dil, bias = False,\
                 bn = _bn, dpc = dpc, act = act))
             in_channels = out_channels
 
         for i in range(2*nly//3+1, nly+1):
             out_channels = self.lout(ndf, nly, i, limit)
+            _ker = self.kout(nly,i,ker)
+            _pad = self.pad(nly,i,pad)
             act = activation[i-1]
             # _dpc = 0.0 if i == nly else dpc
             # self.cnn3 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,dil =dil,\
             #         bn=bn,dpc=_dpc,wn=False)
             _bn = bn if i == 1 else True
             self.cnn3.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, dil = dil, bias = False,\
+                ks = _ker, stride = std, pad = _pad, dil = dil, bias = False,\
                 bn = _bn, dpc = dpc, act = act))
             in_channels = out_channels
 
@@ -303,49 +321,57 @@ class DCGAN_Dx_4GPU(BasicDCGAN_Dx):
         #Part I in GPU0
         for i in range(1, nly//4+1):
             out_channels = self.lout(ndf, nly, i, limit)
+            _ker = self.kout(nly,i,ker)
+            _pad = self.pad(nly,i,pad)
             act = activation[i-1]
             # _bn = False if i == 1 else bn
             # self.cnn1 += cnn1d(in_channels, out_channels, act, ker=ker,std=std,pad=pad,dil =dil,\
             #     bn=_bn,dpc=dpc)
             _bn = bn if i == 1 else True
             self.cnn1.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, dil = dil, bias = False,\
+                ks = _ker, stride = std, pad = _pad, dil = dil, bias = False,\
                 bn = _bn, dpc = dpc, act = act))
             in_channels = out_channels
 
         #Part II in GPU1
         for i in range(nly//4+1, 2*nly//4+1):
             out_channels = self.lout(ndf, nly, i, limit)
+            _ker = self.kout(nly,i,ker)
+            _pad = self.pad(nly,i,pad)
             act = activation[i-1]
             # self.cnn2 += cnn1d(in_channels, out_channels, act,ker=ker,std=std,pad=pad,dil =dil,\
             #     bn=bn,dpc=dpc)
             _bn = bn if i == 1 else True
             self.cnn2.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, dil = dil, bias = False,\
+                ks = _ker, stride = std, pad = _pad, dil = dil, bias = False,\
                 bn = _bn, dpc = dpc, act = act))
             in_channels = out_channels
         #Part III in GPU2
         for i in range(2*nly//4+1, 3*nly//4+1):
             out_channels = self.lout(ndf, nly, i, limit)
+            _ker = self.kout(nly,i,ker)
+            _pad = self.pad(nly,i,pad)
             act = activation[i-1]
             # self.cnn3 += cnn1d(in_channels, out_channels, act,ker=ker,std=std,pad=pad,dil =dil,\
             #     bn=bn,dpc=dpc)
             _bn = bn if i == 1 else True
             self.cnn3.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, dil = dil, bias = False,\
+                ks = _ker, stride = std, pad = _pad, dil = dil, bias = False,\
                 bn = _bn, dpc = dpc, act = act))
             in_channels = out_channels
 
         #Part IV in GPU3
         for i in range(3*nly//4+1, nly+1):
             out_channels = self.lout(ndf, nly, i, limit)
+            _ker = self.kout(nly,i,ker)
+            _pad = self.pad(nly,i,pad)
             act = activation[i-1]
             # _dpc = 0.0 if i == nly else dpc
             # self.cnn4 += cnn1d(in_channels,out_channels, act,ker=ker,std=std,pad=pad,dil =dil,\
             #         bn=bn,dpc=_dpc,wn=False)
             _bn = bn if i == 1 else True
             self.cnn4.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, dil = dil, bias = False,\
+                ks = _ker, stride = std, pad = _pad, dil = dil, bias = False,\
                 bn = _bn, dpc = dpc, act = act))            
             in_channels = out_channels
 

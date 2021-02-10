@@ -71,7 +71,15 @@ class BasicDecoderModelParallele(Module):
         nzd = nz
         n = nly-2-increment+1
         val = nzd*2**n if n >=0 else nch
-        return val if val <= limit else limit   
+        return val if val <= limit else limit
+
+    def kout(self, nly, incremement, ker):
+        return ker*2 if incremement <= nly//2 else ker
+
+    def pad(self, nly, incremement, pad):
+        return 4 if incremement == 1 else pad
+
+
 
 class Decoder_1GPU(BasicDecoderModelParallele):
     def __init__(self,ngpu,nz,nch,ndf,nly,act,\
@@ -88,6 +96,8 @@ class Decoder_1GPU(BasicDecoderModelParallele):
         in_channels   = nz*2
         for i in range(1, nly+1):
             out_channels = self.lout(nz, nch, nly, i, limit)
+            _ker = self.kout(nly,i, ker)
+            _pad = self.pad(nly, i, pad)
             """
             This is made in the respectful of the pytorch documentation  :
             See the reference : 
@@ -96,7 +106,7 @@ class Decoder_1GPU(BasicDecoderModelParallele):
             """
             _dpc = 0.0 if i ==nly else dpc
             _bn =  False if i == nly else bn
-            self.cnn1 += cnn1dt(in_channels,out_channels, acts[i-1],ker=ker,std=std,pad=pad,\
+            self.cnn1 += cnn1dt(in_channels,out_channels, acts[i-1],ker=_ker,std=std,pad=_pad,\
                 dil =dil, opd=opd, bn=_bn,dpc=_dpc)
             in_channels = out_channels
 
@@ -138,9 +148,12 @@ class Decoder_2GPU(BasicDecoderModelParallele) :
             pytorch documentation:
             https://pytorch.org/docs/stable/generated/torch.nn.ConvTranspose1d.html
             """
+            _ker = self.kout(nly,i, ker)
+            _pad = self.pad(nly, i, pad)
+
             _dpc = 0.0 if i==1 else dpc
             out_channels = self.lout(nz, nch,nly, i,limit)
-            self.cnn1 += cnn1dt(in_channels, out_channels, acts[i-1],ker=ker,std=std,pad=pad,\
+            self.cnn1 += cnn1dt(in_channels, out_channels, acts[i-1],ker=_ker,std=std,pad=_pad,\
                 dil =dil,opd=opd,bn=bn,dpc=_dpc)
             in_channels = out_channels
 
@@ -151,8 +164,10 @@ class Decoder_2GPU(BasicDecoderModelParallele) :
         for i in range(nly//2+1, nly+1):
             _dpc = 0.0 if i==nly else dpc
             out_channels = self.lout(nz, nch,nly, i, limit)
+            _ker = self.kout(nly,i, ker)
+            _pad = self.pad(nly, i, pad)
             _bn =  False if i == nly else bn
-            self.cnn2 += cnn1dt(in_channels,out_channels, acts[i-1],ker=ker,std=std,pad=pad,\
+            self.cnn2 += cnn1dt(in_channels,out_channels, acts[i-1],ker=_ker,std=std,pad=_pad,\
                 dil =dil,opd=opd, bn=_bn,dpc=_dpc)
             in_channels = out_channels 
 
@@ -192,23 +207,29 @@ class Decoder_3GPU(BasicDecoderModelParallele) :
         in_channels   = nz*2
         for i in range(1, nly//3+1):
             out_channels = self.lout(nz, nch,nly, i, limit)
-            self.cnn1 += cnn1dt(in_channels, out_channels, acts[i-1],ker=ker,std=std,pad=pad,\
+            _ker = self.kout(nly,i, ker)
+            _pad = self.pad(nly, i, pad)
+            self.cnn1 += cnn1dt(in_channels, out_channels, acts[i-1],ker=_ker,std=std,pad=_pad,\
                 dil =dil,opd=opd,bn=bn,dpc=dpc)
             in_channels = out_channels
 
         #Part II in the GPU1
         for i in range(nly//3+1, 2*nly//3+1):
             out_channels = self.lout(nz, nch, nly, i, limit)
-            self.cnn2 += cnn1dt(in_channels, out_channels, acts[i-1],ker=ker,std=std,pad=pad,\
+            _ker = self.kout(nly,i, ker)
+            _pad = self.pad(nly, i, pad)
+            self.cnn2 += cnn1dt(in_channels, out_channels, acts[i-1],ker=_ker,std=std,pad=_pad,\
                 dil =dil,opd=opd,bn=True,dpc=dpc)
             in_channels = out_channels
 
         #Part III in the GPU2
         for i in range(2*nly//3+1, nly+1):
             out_channels = self.lout(nz, nch, nly, i, limit)
+            _ker = self.kout(nly,i, ker)
+            _pad = self.pad(nly, i, pad)
             _dpc = 0.0 if i==nly else dpc
             _bn =  False if i == nly else bn
-            self.cnn3 += cnn1dt(in_channels,out_channels, acts[i-1],ker=ker,std=std,pad=pad,\
+            self.cnn3 += cnn1dt(in_channels,out_channels, acts[i-1],ker=_ker,std=std,pad=_pad,\
                 dil =dil,opd=opd, bn=_bn, dpc=_dpc)
             in_channels = out_channels
 
@@ -254,30 +275,38 @@ class Decoder_4GPU(BasicDecoderModelParallele) :
         in_channels   = nz*2
         for i in range(1, nly//4+1):
             out_channels = self.lout(nz, nch,nly,i, limit)
-            self.cnn1 += cnn1dt(in_channels, out_channels, acts[i-1],ker=ker,std=std,pad=pad,\
+            _ker = self.kout(nly,i, ker)
+            _pad = self.pad(nly, i, pad)
+            self.cnn1 += cnn1dt(in_channels, out_channels, acts[i-1],ker=_ker,std=std,pad=_pad,\
                 dil =dil,opd=opd,bn=bn,dpc=dpc)
             in_channels = out_channels
 
         #Part II in the GPU1
         for i in range(nly//4+1, 2*nly//4+1):
             out_channels = self.lout(nz, nch,nly,i, limit)
-            self.cnn2 += cnn1dt(in_channels, out_channels, acts[i-1],ker=ker,std=std,pad=pad,\
+            _ker = self.kout(nly,i, ker)
+            _pad = self.pad(nly, i, pad)
+            self.cnn2 += cnn1dt(in_channels, out_channels, acts[i-1],ker=_ker,std=std,pad=_pad,\
                 dil =dil,opd=opd,bn=bn,dpc=dpc)
             in_channels = out_channels
 
         #Part III in the GPU2
         for i in range(2*nly//4+1, 3*nly//4+1):
             out_channels = self.lout(nz, nch,nly,i,limit)
-            self.cnn3 += cnn1dt(in_channels, out_channels, acts[i-1],ker=ker,std=std,pad=pad,\
+            _ker = self.kout(nly,i, ker)
+            _pad = self.pad(nly, i, pad)
+            self.cnn3 += cnn1dt(in_channels, out_channels, acts[i-1],ker=_ker,std=std,pad=_pad,\
                 dil =dil,opd=opd,bn=bn,dpc=dpc)
             in_channels = out_channels
 
         #Part IV in the GPU4
         for i in range(3*nly//4+1, 4*nly//4+1):
             out_channels = self.lout(nz, nch,nly,i, limit)
+            _ker = self.kout(nly,i, ker)
+            _pad = self.pad(nly, i, pad)
             _dpc = 0.0 if i==nly else dpc
             _bn =  False if i == nly else bn
-            self.cnn4 += cnn1dt(in_channels,out_channels, acts[i-1],ker=ker,std=std,pad=pad,\
+            self.cnn4 += cnn1dt(in_channels,out_channels, acts[i-1],ker=_ker,std=std,pad=_pad,\
                 dil =dil,opd=opd, bn=_bn,dpc=_dpc)
             in_channels = out_channels
         """
