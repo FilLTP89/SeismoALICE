@@ -81,6 +81,11 @@ class DCGAN_Dz(BasicDCGAN_DzDataParallele):
 
         self.cnn = sqn(*self.cnn)
 
+        for i in range(0,n_extra_layers):
+            self.cnn1.append(ConvBlock(ni = in_channels,no=in_channels,\
+                ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
+                dpc = dpc, act = act))
+
     def forward(self, x):
         if x.is_cuda and self.ngpu > 1:
             zlf   = pll(self.cnn,x,self.gang)

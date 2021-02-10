@@ -82,6 +82,12 @@ class  DCGAN_Dz_1GPU(BasicDCGAN_Dz):
             # self.cnn1 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,\
             #         bn=_bn,dpc=dpc,wn=False)
             in_channels = out_channels
+
+        for i in range(0,n_extra_layers):
+            self.cnn1.append(ConvBlock(ni = in_channels,no=in_channels,\
+                ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
+                dpc = dpc, act = act))
+
         self.cnn1.append(Dpout(dpc = dpc))
         self.cnn1.append(activation[-1])
         self.cnn1 = sqn(*self.cnn1)
@@ -127,6 +133,11 @@ class DCGAN_Dz_2GPU(BasicDCGAN_Dz):
             self.cnn2.append(ConvBlock(ni = in_channels, no = out_channels,
                 ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
+
+        for i in range(0,n_extra_layers):
+            self.cnn2.append(ConvBlock(ni = in_channels,no=in_channels,\
+                ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
+                dpc = dpc, act = act))
 
         self.cnn1 = sqn(*self.cnn1)
         self.cnn2 = sqn(*self.cnn2)
@@ -184,6 +195,11 @@ class DCGAN_Dz_3GPU(BasicDCGAN_Dz):
             self.cnn3.append(ConvBlock(ni = in_channels, no = out_channels,
                 ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
+
+        for i in range(0,n_extra_layers):
+            self.cnn3.append(ConvBlock(ni = in_channels,no=in_channels,\
+                ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
+                dpc = dpc, act = act))
 
         self.cnn1 = sqn(*self.cnn1)
         self.cnn2 = sqn(*self.cnn2)
@@ -252,6 +268,11 @@ class DCGAN_Dz_4GPU(BasicDCGAN_Dz):
             self.cnn4.append(ConvBlock(ni = in_channels, no = out_channels,
                 ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
+
+        for i in range(0,n_extra_layers):
+            self.cnn1.append(ConvBlock(ni = in_channels,no=in_channels,\
+                ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
+                dpc = dpc, act = act))
 
         self.cnn1 = sqn(*self.cnn1)
         self.cnn2 = sqn(*self.cnn2)
