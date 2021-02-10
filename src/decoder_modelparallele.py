@@ -22,7 +22,7 @@ class DecoderModelParallele(object):
     # this methode call the Encoder class by name.
     @staticmethod
     def getDecoderByGPU(ngpu,nz,nch,ndf,nly,act,dil,\
-                 ker=2,std=2,pad=0,opd=0,grp=1,dpc=0.0,limit = 256, bn = True):
+                 ker=2,std=2,pad=0,opd=0,grp=1,dpc=0.0,limit = 256, bn = True, n_extra_layers=0):
         classname = 'Decoder_' + str(ngpu)+'GPU'
         #this following code is equivalent to calls the class it self. 
         """
@@ -35,7 +35,8 @@ class DecoderModelParallele(object):
         class_ = getattr(module,classname)
         
         return class_(ngpu = ngpu, nz = nz, nch = nch, limit = limit, bn = bn,\
-        nly = nly, act=act, ndf =ndf, ker = ker, std =std, pad = pad, opd = opd, grp=grp, dil=dil, dpc = dpc)
+        nly = nly, act=act, ndf =ndf, ker = ker, std =std, pad = pad, opd = opd,\
+         grp=grp, dil=dil, dpc = dpc,n_extra_layers=n_extra_layers)
 
 class BasicDecoderModelParallele(Module):
     """ Basic Encoder for the GPU classes"""
@@ -74,7 +75,7 @@ class BasicDecoderModelParallele(Module):
 
 class Decoder_1GPU(BasicDecoderModelParallele):
     def __init__(self,ngpu,nz,nch,ndf,nly,act,\
-                 ker=7,std=4,pad=0,opd=0,dil=0,grp=1,dpc=0.0,limit = 256, bn =  True):
+                 ker=7,std=4,pad=0,opd=0,dil=0,grp=1,dpc=0.0,limit = 256, bn =  True, n_extra_layers = 0):
         super(Decoder_1GPU, self).__init__()
         """
         In this class our intent is the generate the network and after split this latter in
@@ -98,6 +99,13 @@ class Decoder_1GPU(BasicDecoderModelParallele):
             self.cnn1 += cnn1dt(in_channels,out_channels, acts[i-1],ker=ker,std=std,pad=pad,\
                 dil =dil, opd=opd, bn=_bn,dpc=_dpc)
             in_channels = out_channels
+
+        for i in range(0,n_extra_layers):
+            #adding LeakyReLU activation function
+            self.cnn1 += cnn1dt(in_channels,in_channels, acts[0],ker=3,std=1,pad=1,\
+                dil =1, opd=0, bn=True, dpc=0.0)
+
+
         self.cnn1 = sqn(*self.cnn1)
         self.cnn1.to(self.dev0, dtype=torch.float32)
 
