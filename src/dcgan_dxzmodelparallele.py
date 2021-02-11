@@ -82,6 +82,7 @@ class DCGAN_DXZ_1GPU(BasicDCGAN_DXZ):
         self.wf = wf
         #activation 
         activation = T.activation(act,nly)
+        # pdb.set_trace()
         
         #initialisation of the input channel
         in_channels = nc
@@ -95,7 +96,7 @@ class DCGAN_DXZ_1GPU(BasicDCGAN_DXZ):
             out_channels = self.lout(nc, nly, i, limit)
             act = activation[i-1]
             self.cnn1.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, dil = dil, bias = bias,\
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = bias,\
                 bn = bn, dpc = dpc, act = act))
             # self.cnn1 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,\
             #         bn=False,bias=True, dpc=dpc,wn=False)
@@ -103,7 +104,7 @@ class DCGAN_DXZ_1GPU(BasicDCGAN_DXZ):
 
         for i in range(1, n_extra_layers+1):
             self.exf +=cnn1d(nc,nc, activation[i-1],\
-                ker=ker, std=std, pad=pad, bn=False, bias =bias, dpc=dpc, wn = False)
+                ker=3, std=1, pad=1, bn=False, bias =bias, dpc=dpc, wn = False)
 
         self.cnn1 = sqn(*self.cnn1)
         self.exf = sqn(*self.exf)
@@ -167,7 +168,7 @@ class DCGAN_DXZ_2GPU(BasicDCGAN_DXZ):
             # self.cnn1 += cnn1d(in_channels, out_channels, act,\
             #     ker=ker, std=std, pad=pad, bn=False, bias=True, dpc=dpc)
             self.cnn1.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, dil = dil, bias = bias,\
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = bias,\
                 bn = bn, dpc = dpc, act = act))
             
 
@@ -178,14 +179,14 @@ class DCGAN_DXZ_2GPU(BasicDCGAN_DXZ):
             # self.cnn2 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,\
             #         bn=False,dpc=dpc,wn=False, bias=True)
             self.cnn2.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, dil = dil, bias = bias,\
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = bias,\
                 bn = bn, dpc = dpc, act = act))
             in_channels = out_channels
 
         #This extra layer will be placed in the GPU0
         for i in range(1, n_extra_layers+1):
             self.exf +=cnn1d(nc,nc, activation[i-1],\
-                ker=ker, std=std, pad=pad, opd=opd, bn=False, dpc=dpc, bias=bias)
+                ker=3, std=1, pad=1, bn=False, dpc=dpc, bias=bias)
     
         self.cnn1 = sqn(*self.cnn1)
         self.cnn1.to(self.dev0, dtype=torch.float32)
@@ -241,7 +242,7 @@ class DCGAN_DXZ_3GPU(BasicDCGAN_DXZ):
             # self.cnn1 += cnn1d(in_channels, out_channels, act,\
             #     ker=ker, std=std, bn=False, dpc=dpc, bias=True)
             self.cnn1.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, dil = dil, bias = bias,\
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = bias,\
                 bn = bn, dpc = dpc, act = act))
             in_channels = out_channels    
 
@@ -252,7 +253,7 @@ class DCGAN_DXZ_3GPU(BasicDCGAN_DXZ):
             # self.cnn2 += cnn1d(in_channels, out_channels, act,\
             #     ker=ker, std=std, pad=pad, bn=False, dpc=dpc, bias=True)
             self.cnn2.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, dil = dil, bias = bias,\
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = bias,\
                 bn = bn, dpc = dpc, act = act))
             in_channels = out_channels 
 
@@ -263,14 +264,14 @@ class DCGAN_DXZ_3GPU(BasicDCGAN_DXZ):
             # self.cnn3 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,\
             #         bn=False,dpc=dpc,wn=False, bias=True)
             self.cnn3.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, dil = dil, bias = bias,\
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = bias,\
                 bn = bn, dpc = dpc, act = act))
             in_channels = out_channels
 
         #This extra layer will be placed in the GPU0
         for i in range(1, n_extra_layers+1):
             self.exf +=cnn1d(nc,nc, activation[i-1],\
-                ker=ker, std=std, pad=pad, bn=False, dpc=dpc, bias=bias)
+                ker=3, std=1, pad=1, bn=False, dpc=dpc, bias=bias)
 
         self.cnn1 = sqn(*self.cnn1)
         self.cnn1.to(self.dev0, dtype=torch.float32)
@@ -341,7 +342,7 @@ class DCGAN_DXZ_4GPU(BasicDCGAN_DXZ):
             # self.cnn1 += cnn1d(in_channels, out_channels, act,\
             #     ker=ker, std=std, pad=pad, bn=False, dpc=dpc, bias = True)
             self.cnn1.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, dil = dil, bias = bias,\
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = bias,\
                 bn = bn, dpc = dpc, act = act))
             in_channels = out_channels
 
@@ -352,7 +353,7 @@ class DCGAN_DXZ_4GPU(BasicDCGAN_DXZ):
             # self.cnn2 += cnn1d(in_channels, out_channels, act,\
             #     ker=ker, std=std, pad=pad, bn=False, dpc=dpc, bias=True)
             self.cnn2.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, dil = dil, bias = bias,\
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = bias,\
                 bn = bn, dpc = dpc, act = act))
             in_channels = out_channels
 
@@ -363,7 +364,7 @@ class DCGAN_DXZ_4GPU(BasicDCGAN_DXZ):
             # self.cnn3 += cnn1d(in_channels, out_channels, act,\
             #     ker=ker, std=std, pad=pad, bn=False, dpc=dpc, bias =True)
             self.cnn1.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, dil = dil, bias = bias,\
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = bias,\
                 bn = bn, dpc = dpc, act = act))
             in_channels = out_channels
 
@@ -374,7 +375,7 @@ class DCGAN_DXZ_4GPU(BasicDCGAN_DXZ):
             # self.cnn4 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,\
             #         bn=False,dpc=dpc,wn=False, bias=True)
             self.cnn1.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, dil = dil, bias = bias,\
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = bias,\
                 bn = bn, dpc = dpc, act = act))
             in_channels = out_channels
 
@@ -382,7 +383,7 @@ class DCGAN_DXZ_4GPU(BasicDCGAN_DXZ):
         #This extra layer will be placed in the GPU0
         for i in range(1, n_extra_layers+1):
             self.exf +=cnn1d(nc,nc, activation[i-1],\
-                ker=ker, std=std, pad=pad, bn=True, dpc=dpc)
+                ker=3, std=1, pad=1, bn=True, dpc=dpc)
 
         self.cnn1 = sqn(*self.cnn1)
         self.cnn1.to(self.dev0, dtype=torch.float32)

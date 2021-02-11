@@ -88,13 +88,13 @@ class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
             # self.cnn += cnn1d(in_channels, out_channels, activation[i-1],\
             #     ker=ker, std=std, pad=pad, bn=False, dpc=dpc, bias = True)
             self.cnn.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, dil = dil, bias = bias,\
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = bias,\
                 bn = bn, dpc = dpc, act = act))
             in_channels = out_channels
 
         for i in range(1, n_extra_layers+1):
             self.exf +=cnn1d(nc, nc, activation[i-1],\
-                ker=ker, std=std, pad=pad, bn=False, dpc=dpc, bias = bias)
+                ker=3, std=1, pad=1, bn=False, dpc=dpc, bias = bias)
 
         self.cnn = sqn(*self.cnn)
         self.exf = sqn(*self.exf)

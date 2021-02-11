@@ -76,7 +76,7 @@ class DCGAN_Dz(BasicDCGAN_DzDataParallele):
             # self.cnn += cnn1d(in_channels, out_channels, activation[i-1],\
             #     ker=ker, std=std, pad=pad, bn=bn, dpc=dpc)
             self.cnn1.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
 
         self.cnn = sqn(*self.cnn)

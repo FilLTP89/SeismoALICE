@@ -30,7 +30,7 @@ class DecoderDataParallele(object):
                 print("The class ",classname," does not exit")
         else:
             return Decoder(ngpu,nz,nch,ndf,nly,\
-                 ker=ker,std=std,pad=pad,opd=opd,dil=1,grp=1,dpc=dpc,limit=limit)
+                 ker=ker[i-1],std=std[i-1],pad=pad[i-1],opd=opd[i-1],dil=1,grp=1,dpc=dpc,limit=limit)
 
 
 class BasiceDecoderDataParallele(Module):
@@ -74,11 +74,11 @@ class Decoder(BasiceDecoderDataParallele):
             """
             # if we strat we initialize the cnn
             if i ==1:
-                self.cnn = cnn1dt(in_channels, out_channels, act[0],ker=ker,std=std,\
-                    pad=pad,opd=opd,bn=True,dpc=dpc)
+                self.cnn = cnn1dt(in_channels, out_channels, act[0],ker=ker[i-1],std=std[i-1],\
+                    pad=pad[i-1],opd=opd[i-1],bn=True,dpc=dpc)
             #else we conitnue adding
             else:  
-                 self.cnn += cnn1dt(in_channels,out_channels, act[i-1],ker=ker,std=std,pad=pad,opd=opd, bn=False,dpc=0.0)
+                 self.cnn += cnn1dt(in_channels,out_channels, act[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],opd=opd[i-1], bn=False,dpc=0.0)
             in_channels = out_channels
         self.cnn = sqn(*self.cnn)
 

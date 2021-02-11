@@ -78,7 +78,7 @@ class  DCGAN_Dz_1GPU(BasicDCGAN_Dz):
             out_channels = self.lout(nz, nly, ncl, i, limit)
             act = activation[i-1]
             self.cnn1.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], bias = bias, act = act, dpc = dpc, bn=bn))
             # self.cnn1 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,\
             #         bn=_bn,dpc=dpc,wn=False)
             in_channels = out_channels
@@ -121,7 +121,7 @@ class DCGAN_Dz_2GPU(BasicDCGAN_Dz):
             # self.cnn1 += cnn1d(in_channels, out_channels, act,\
             #     ker=ker, std=std, pad=pad,bn=_bn, dpc=dpc)
             self.cnn1.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
 
         #Part II is in GPU1
@@ -131,7 +131,7 @@ class DCGAN_Dz_2GPU(BasicDCGAN_Dz):
             # self.cnn2 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,\
             #         bn=bn,dpc=dpc,wn=False)
             self.cnn2.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
 
         for i in range(0,n_extra_layers):
@@ -175,7 +175,7 @@ class DCGAN_Dz_3GPU(BasicDCGAN_Dz):
             # self.cnn1 += cnn1d(in_channels, out_channels, act,\
             #     ker=ker, std=std,bn=_bn, dpc=dpc)
             self.cnn1.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
 
         for i in range(nly//3+1, 2*nly//3+1):
@@ -184,7 +184,7 @@ class DCGAN_Dz_3GPU(BasicDCGAN_Dz):
             # self.cnn2 += cnn1d(in_channels, out_channels, act,\
             #     ker=ker, std=std, pad=pad,bn=bn, dpc=dpc)
             self.cnn2.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
 
         for i in range(2*nly//3+1, nly+1):
@@ -193,7 +193,7 @@ class DCGAN_Dz_3GPU(BasicDCGAN_Dz):
             # self.cnn3 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,\
             #         bn=bn,dpc=dpc,wn=False)
             self.cnn3.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
 
         for i in range(0,n_extra_layers):
@@ -239,7 +239,7 @@ class DCGAN_Dz_4GPU(BasicDCGAN_Dz):
             # self.cnn1 += cnn1d(in_channels, out_channels, act,\
             #     ker=ker, std=std, pad=pad, bn=_bn, dpc=dpc)
             self.cnn1.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
 
         for i in range(nly//4+1, 2*nly//4+1):
@@ -248,7 +248,7 @@ class DCGAN_Dz_4GPU(BasicDCGAN_Dz):
             # self.cnn2 += cnn1d(in_channels, out_channels, act,\
             #     ker=ker, std=std, pad=pad, bn=bn, dpc=dpc)
             self.cnn2.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
 
         for i in range(2*nly//4+1, 3*nly//4+1):
@@ -257,7 +257,7 @@ class DCGAN_Dz_4GPU(BasicDCGAN_Dz):
             # self.cnn3 += cnn1d(in_channels, out_channels, act,\
             #     ker=ker, std=std, pad=pad, bn=bn, dpc=dpc)
             self.cnn3.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
 
         for i in range(3*nly//4+1, nly+1):
@@ -266,7 +266,7 @@ class DCGAN_Dz_4GPU(BasicDCGAN_Dz):
             # self.cnn4 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,\
             #         bn=bn,dpc=dpc,wn=False)
             self.cnn4.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, bias = bias, act = act, dpc = dpc, bn=bn))
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
 
         for i in range(0,n_extra_layers):

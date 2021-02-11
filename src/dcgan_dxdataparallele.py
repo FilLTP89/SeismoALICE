@@ -78,7 +78,7 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
             #     ker=ker, std=std, pad=pad, dil=dil, bn=_bn, dpc=_dpc )
             _bn = bn if i == 1 else True
             self.cnn.append(ConvBlock(ni = in_channels, no = out_channels,
-                ks = ker, stride = std, pad = pad, dil = dil, bias = False,\
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = False,\
                 bn = _bn, dpc = dpc, act = act))
             in_channels = out_channels
 

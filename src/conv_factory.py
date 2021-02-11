@@ -103,7 +103,8 @@ class ModelParalleleFactory(ConvNetFactory):
                                      pad = config_dcgan_dz['padding'],\
                                      act = config_dcgan_dz['act'],\
                                      limit = config_dcgan_dz['limit'],\
-                                     dil=1,grp=1,bn=False,wf=False, bias = False)
+                                     dil= config_dcgan_dz["dilation"],\
+                                     grp=1,bn=False,wf=False, bias = False)
         return dcgan_dz
 
     def createDCGAN_DXZ(self,config_dcgan_dxz, opt, *args, **kwargs):
@@ -115,6 +116,7 @@ class ModelParalleleFactory(ConvNetFactory):
                                      pad = config_dcgan_dxz['padding'],\
                                      act = config_dcgan_dxz['act'],\
                                      limit = config_dcgan_dxz['limit'],\
+                                     dil = config_dcgan_dxz['dilation'],\
                                      n_extra_layers=0,
                                      dpc=0.25,wf=False,bn = False, bias = True, opt=None)
         return  dcgan_dxz
@@ -177,7 +179,8 @@ class DataParalleleFactory(ConvNetFactory):
                      pad = config_dcgan_dx['padding'],\
                      act = config_dcgan_dx['act'],\
                      limit = config_dcgan_dx['limit'],\
-                     dil = 0,grp=0,bn=False,wf=False, dpc=0.25,\
+                     dil = config_dcgan_dx['dilation'],\
+                     grp=0,bn=False,wf=False, dpc=0.25,\
                      n_extra_layers=0)
         return dcgan_dx
 
@@ -194,7 +197,8 @@ class DataParalleleFactory(ConvNetFactory):
                      pad = config_dcgan_dz['padding'],\
                      act = config_dcgan_dz['act'],\
                      limit = config_dcgan_dz['limit'],\
-                     dil=0, grp=0, bn=False,wf=False, dpc=0.25,
+                     dil = config_dcgan_dz['dilation'],\
+                     grp =0, bn=False,wf=False, dpc=0.25,
                      n_extra_layers=0)
         return dcgan_dz
 
@@ -209,7 +213,8 @@ class DataParalleleFactory(ConvNetFactory):
                      pad=config_dcgan_dxz['padding'],\
                      act=config_dcgan_dxz['act'],\
                      limit = config_dcgan_dxz['limit'],\
-                     dil=0, grp=0, bn=False,wf=False, dpc=0.25,\
+                     dil=config_dcgan_dxz['dilation'],\
+                     grp=0, bn=False,wf=False, dpc=0.25,\
                      n_extra_layers=0)
 
         return dcgan_dxz

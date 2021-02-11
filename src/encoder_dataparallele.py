@@ -65,17 +65,17 @@ class Encoder(BasicEncoderDataParallele):
         for i in range(1, nly+1):
             if i ==1 and with_noise:
             #We take the first layers for adding noise to the system if the condition is set
-                self.cnn = cnn1d(nch*2,ndf,act[0],ker=ker,std=std,pad=pad,dil=dil, bn=bn,dpc=dpc,wn=True ,\
+                self.cnn = cnn1d(nch*2,ndf,act[0],ker=ker[i-1][i-1],std=std[i-1],pad=pad[i-1],dil=dil[i-1], bn=bn,dpc=dpc,wn=True ,\
                               dtm=dtm,ffr=ffr,wpc=wpc,dev=self.dev)
             # esle if we not have a noise but we at the strating network
             elif i == 1:
-                self.cnn = cnn1d(nch*2,ndf,act[0],ker=ker,std=std,pad=pad,dil=dil,bn=bn,dpc=dpc,wn=True)
+                self.cnn = cnn1d(nch*2,ndf,act[0],ker=ker[i-1],std=std[i-1],pad=pad[i-1],dil=dil[i-1],bn=bn,dpc=dpc,wn=True)
             #else we proceed normaly
             else:
                 out_channels = self.lout(nz,nch,nly,i,limit)
                 _bn = False if i == nly else bn
                 _dpc = 0.0 if i == nly else dpc
-                self.cnn += cnn1d(in_channels,out_channels, act[i-1], ker=ker,std=std,pad=pad,dil=dil,\
+                self.cnn += cnn1d(in_channels,out_channels, act[i-1], ker=ker[i-1],std=std[i-1],pad=pad[i-1],dil=dil[i-1],\
                         bn=_bn,dpc=_dpc,wn=False) 
             in_channels = out_channels
         self.cnn = sqn(*self.cnn)
