@@ -244,9 +244,9 @@ class H5ls:
         self.names = names
         self.nsy= nsy-1
         self.xw = xw
-        self.w = windows.tukey(xw,5./100.)
-        self.ths = -999.9*np.ones(shape=(nsy,3,xw))
-        self.pga = -999.9*np.ones(shape=(nsy,3))
+        self.w = windows.tukey(xw,5./100.).astype(np.float32)
+        self.ths = np.zeros(shape=(nsy,3,xw),dtype=np.float32)
+        self.pga = np.zeros(shape=(nsy,3),dtype=np.float32)
  
     def __call__(self, name, h5obj):
         # only h5py datasets have dtype attribute, so we can search on this
@@ -257,31 +257,17 @@ class H5ls:
             self.names.append(name)
             bi = int(h5obj.attrs['p_arrival_sample'])
             for j in range(3):
-                self.ths[self.nsy,j,:] = detrend(h5obj[bi:bi+self.xw,j])*self.w
-                self.pga[self.nsy,j]   = np.abs(self.ths[self.nsy,j,:]).max()
-                self.ths[self.nsy,j,:] = self.ths[self.nsy,j,:]/self.pga[self.nsy,j]
-                self.pga[self.nsy,j]   = np.abs(self.ths[self.nsy,j,:]).max()
+                ths = h5obj[bi:bi+self.xw,j].astype(np.float32)
+                self.ths[self.nsy,j,:len(ths)] = detrend(ths)*self.w[:len(ths)]
+                self.pga[self.nsy,j]   = np.abs(self.ths[self.nsy,j,:]).max().astype(np.float32)
+                self.ths[self.nsy,j,:] /= self.pga[self.nsy,j]
                 self.nsy-=1
 
 
 
-def stead_dataset_dask(src,batch_percent,workers,
+def stead_dataset_dask(comm,rank,size,src,batch_percent,workers,
     Xwindow,zwindow,nzd,nzf,md,nsy,device):
     
-    size = 1
-
-    from mpi4py import MPI
-    rank = MPI.COMM_WORLD.rank
-    size = MPI.COMM_WORLD.Get_size()
-    # from dask_mpi import initialize
-    # initialize()
-
-    # from dask.distributed import Client, wait, futures_of
-    # client = Client()
-
-    # from toolz import first
-    # from collections import defaultdict
-
     meta = {'network_code':'str','receiver_code':'str','receiver_type':'str',
         'receiver_latitude':np.float64,'receiver_longitude':np.float64,'receiver_elevation_m':np.float64,
         'p_arrival_sample':np.float64,'p_status':'str','p_weight':np.float64,'p_travel_sec':np.float64,
@@ -296,82 +282,124 @@ def stead_dataset_dask(src,batch_percent,workers,
         'source_distance_km':np.float64,'back_azimuth_deg':np.float64,'snr_db':'str',
         'coda_end_sample':np.float64,'trace_start_time':'str','trace_category':'str',
         'trace_name':'str'}
+
     vtm = md['dtm']*np.arange(0,md['ntm'])
+    
     tar     = np.zeros((nsy,2))
-    trn_set  = -999.9*np.ones(shape=(nsy,3,md['ntm']))
-    pgat_set = -999.9*np.ones(shape=(nsy,3))
-    psat_set = -999.9*np.ones(shape=(1,1,1))
+
     eqm = dd.read_csv(urlpath=src.replace('.hdf5','.csv').replace('waveforms','metadata'),
         na_values='None',dtype=meta).query('trace_category == "earthquake_local"').query('source_magnitude>=3.5')
     eqm = eqm.sample(frac=nsy/len(eqm),replace=True).reset_index(drop=True).set_index("trace_name",sorted=True)
     
-    h5ls = H5ls(nsy=int(nsy/size),names=eqm.index.compute().to_list(),xw=Xwindow)
+    nsy_loc = len(eqm)//size
 
-    with h5py.File(src,'r',driver='mpio',comm=MPI.COMM_WORLD) as f:
+    nsy = nsy_loc*size
+    trn_set  = -999.9*np.ones(shape=(nsy,3,md['ntm']),dtype=np.float32)
+    thf_set  = -999.9*np.ones(shape=(nsy,3,md['ntm']),dtype=np.float32)
+
+    pgat_set = -999.9*np.ones(shape=(nsy,3),dtype=np.float32)
+    pgaf_set = -999.9*np.ones(shape=(nsy,3),dtype=np.float32)
+
+    psat_set = -999.9*np.ones(shape=(1,1,1),dtype=np.float32)
+    psaf_set = -999.9*np.ones(shape=(1,1,1),dtype=np.float32)
+    
+    trn_loc  = -999.9*np.ones(shape=(nsy_loc,3,md['ntm']),dtype=np.float32)
+    thf_loc  = -999.9*np.ones(shape=(nsy_loc,3,md['ntm']),dtype=np.float32)
+
+    pgat_loc = -999.9*np.ones(shape=(nsy_loc,3),dtype=np.float32)
+    pgaf_loc = -999.9*np.ones(shape=(nsy_loc,3),dtype=np.float32)
+    
+    h5ls = H5ls(nsy=nsy_loc,names=eqm.index.compute().to_list(),xw=Xwindow)
+    with h5py.File(src,'r',driver='mpio',comm=comm) as f:
         dsets = f['earthquake']['local']
         # this will now visit all objects inside the hdf5 file and store datasets in h5ls.names
         dsets.visititems(h5ls)
-        trn_set  = h5ls.ths
-        pgat_set = h5ls.pga
+        trn_loc  = h5ls.ths
+        pgat_loc = h5ls.pga
     f.close()
-    pgat_set = np2t(np.float32(pgat_set))
-    trn_set = np2t(trn_set).float()
-    
-    ths_fsc = []
 
-    partition = {'all': range(0,nsy)}
-    trn = max(1,int(batch_percent[0]*nsy))
-    tst = max(1,int(batch_percent[1]*nsy))
-    vld = max(1,nsy-trn-tst)
-    
-    wnz_set   = tFT(nsy,nzd,zwindow)
-    wnz_set.resize_(nsy,nzd,zwindow).normal_(**rndm_args)
-    wnf_set   = tFT(nsy,nzf,zwindow)
-    wnf_set.resize_(nsy,nzf,zwindow).normal_(**rndm_args)
-    thf_set = lowpass_biquad(trn_set,1./md['dtm'],md['cutoff'])
-    pgaf_set = -999.9*np.ones(shape=(nsy,3))
-    psaf_set = -999.9*np.ones(shape=(nsy,3,md['nTn']))
-    
-    for i in range(thf_set.shape[0]):
+    trn_loc  = np2t(np.float32(trn_loc))
+    pgat_loc = np2t(np.float32(pgat_loc))
+
+    thf_loc = lowpass_biquad(trn_loc,1./md['dtm'],md['cutoff'])
+
+    for i in range(thf_loc.shape[0]):
         for j in range(3):
-            pgaf_set[i,j] = np.abs(thf_set[i,j,:].data.numpy()).max(axis=-1)
-            _,psa,_,_,_ = rsp(md['dtm'],thf_set.data[i,j,:].numpy(),md['vTn'],5.)
-            psaf_set[i,j,:] = psa.reshape((md['nTn']))
-            print("psa proceed ...",i,j)
-    pgat_set = np2t(np.float32(pgat_set))    
-    pgaf_set = np2t(np.float32(pgaf_set))
-    psat_set = np2t(np.float32(psat_set))
-    psaf_set = np2t(np.float32(psaf_set))
+            pgaf_loc[i,j] = np.abs(thf_loc[i,j,:].data.numpy()).max(axis=-1)
+            #_,psa,_,_,_ = rsp(md['dtm'],thf_set.data[i,j,:].numpy(),md['vTn'],5.)
+            # psaf_set[i,j,:] = psa.reshape((md['nTn']))
+            
+    pgat_loc = np2t(np.float32(pgat_loc))    
+    pgaf_loc = np2t(np.float32(pgaf_loc))
+    # psat_set = np2t(np.float32(psat_set))
+    # psaf_set = np2t(np.float32(psaf_set))
+
+    wnz_loc = tFT(nsy_loc,nzd,zwindow).resize_(nsy_loc,nzd,zwindow).normal_(**rndm_args)
+    wnf_loc = tFT(nsy_loc,nzf,zwindow).resize_(nsy_loc,nzf,zwindow).normal_(**rndm_args)
         
-    tar[:,0] = eqm['source_magnitude'].to_numpy(np.float32)
-    tar[:,1] = eqm['source_depth_km'].to_numpy(np.float32)
-    
+    tar = eqm[['source_magnitude','source_depth_km']].compute().to_numpy(np.float32)
     nhe = tar.shape[1] 
     tar_fsc = select_scaler(method='fit_transform',\
                             scaler='StandardScaler')
-    tar = operator_map['fit_transform'](tar_fsc,tar)
+    tar_loc = operator_map['fit_transform'](tar_fsc,tar)
     lab_enc = LabelEncoder()
     for i in range(nhe):
-        tar[:,i] = lab_enc.fit_transform(tar[:,i])
+        tar_loc[:,i] = lab_enc.fit_transform(tar_loc[:,i])
     from sklearn.preprocessing import MultiLabelBinarizer
     one_hot = MultiLabelBinarizer(classes=range(64))
-    tar = np2t(np.float32(one_hot.fit_transform(tar)))
-    from plot_tools import plot_ohe
-    plot_ohe(tar)
-    fsc = {'lab_enc':lab_enc,'tar':tar_fsc,'ths_fsc':ths_fsc,\
-           'one_hot':one_hot,'ncat':tar.shape[1]}
-    tar = (psat_set,psaf_set,tar)
-    ths = thsTensorData(trn_set,thf_set,wnz_set,wnf_set,tar,partition['all'])
-    print("values ....")
-    # RANDOM SPLIT
-    idx,\
-    ths_trn = random_split(ths,[trn,vld,tst])
-    ths_trn,\
-    ths_tst,\
-    ths_vld = ths_trn
-    # [TODO]GATHER
-    print("OK")
-    return ths_trn,ths_tst,ths_vld,vtm,fsc
+    tar_loc = np2t(np.float32(one_hot.fit_transform(tar_loc)))
+    # from plot_tools import plot_ohe
+    # plot_ohe(tar)
+
+    ths_fsc = []
+    fsc = {'lab_enc':lab_enc,'tar':tar_fsc,
+           'ths_fsc':ths_fsc,
+           'one_hot':one_hot,
+           'ncat':tar.shape[1]}
+    
+
+    # recvcnt = [trn.size for _ in range(size)]
+    # recvdis = [0]
+    # for i in recvcnt[:-1]:
+    #     recvdis.append(recvdis[-1]+i)
+    
+    
+    trn_set =  comm.gather(trn_loc,root=0)
+    thf_set =  comm.gather(thf_loc,root=0)
+    wnz_set =  comm.gather(wnz_loc,root=0)
+    wnf_set =  comm.gather(wnf_loc,root=0)
+    pgat_set = comm.gather(pgat_loc,root=0)
+    pgaf_set = comm.gather(pgaf_loc,root=0)
+    tar =  comm.gather(tar_loc,root=0)
+
+    if rank == 0:
+        trn_set = torch.vstack(trn_set)
+        thf_set = torch.vstack(thf_set)
+        wnz_set = torch.vstack(wnz_set)
+        wnf_set = torch.vstack(wnf_set)
+        pgat_set = torch.vstack(pgat_set)
+        pgaf_set = torch.vstack(pgaf_set)
+        tar = torch.vstack(tar)
+    
+        tar = (psat_set,psaf_set,tar)
+
+        partition = {'all': range(0,nsy)}
+        trn = max(1,int(batch_percent[0]*nsy))
+        tst = max(1,int(batch_percent[1]*nsy))
+        vld = max(1,nsy-trn-tst)
+
+        ths = thsTensorData(trn_set,thf_set,wnz_set,wnf_set,tar,partition['all'])
+
+        # RANDOM SPLIT
+        idx,\
+        ths_trn = random_split(ths,[trn,vld,tst])
+        ths_trn,\
+        ths_tst,\
+        ths_vld = ths_trn
+           
+        return ths_trn,ths_tst,ths_vld,vtm,fsc
+    else: 
+        return None
     
     # index_counts = eqm.map_partitions(lambda _df: _df.index.value_counts().sort_index()).compute()
     # index = np.repeat(index_counts.index, index_counts.values)
