@@ -292,34 +292,44 @@ def setup():
         handle.close()
 
     elif opt.dataset == 'stead':
+        size = 1
+
+        from mpi4py import MPI
+        comm = MPI.COMM_WORLD
+        rank = MPI.COMM_WORLD.rank
+        size = MPI.COMM_WORLD.Get_size()
+        
         src = opt.dataroot
         print('dataroots:')
         print(src)
         md = {'dtm':0.01,'cutoff':opt.cutoff,'ntm':opt.imageSize}
         md['vTn'] = np.arange(0.0,3.05,0.05,dtype=np.float64)
         md['nTn'] = md['vTn'].size
-        ths_trn,ths_tst,ths_vld,vtm,fsc = stead_dataset_dask(src,
+        out = stead_dataset_dask(comm,rank,size,src,
             opt.batchPercent,opt.workers,opt.imageSize,opt.latentSize,\
             opt.nzd,opt.nzf,md=md,nsy=opt.nsy,device=device)
+        comm.barrier()
+        if rank == 0:
+            (ths_trn,ths_tst,ths_vld,vtm,fsc) = out
         #ths_trn,ths_tst,ths_vld,vtm,fsc = stead_dataset(src,
         #    opt.batchPercent,opt.imageSize,opt.latentSize,\
         #    opt.nzd,opt.nzf,md=md,nsy=opt.nsy,device=device)
-        md['fsc']=fsc
-        opt.ncls = md['fsc']['ncat']
-        # Create natural period vector 
-        opt.vTn = np.arange(0.0,3.05,0.05,dtype=np.float64)
-        opt.nTn = md['vTn'].size
-        tsave(ths_trn,'./ths_trn.pth')
-        tsave(ths_tst,'./ths_tst.pth')
-        tsave(ths_vld,'./ths_vld.pth')
-        tsave(vtm,    './vtm.pth')
-        with open('md.p', 'wb') as handle:
-                pickle.dump(md,handle)
-        handle.close()
-        with open('opt.p', 'wb') as handle:
-                pickle.dump(opt,handle)
-        print("Done!")
-        handle.close()
+            md['fsc']=fsc
+            opt.ncls = md['fsc']['ncat']
+            # Create natural period vector 
+            opt.vTn = np.arange(0.0,3.05,0.05,dtype=np.float64)
+            opt.nTn = md['vTn'].size
+            tsave(ths_trn,'./ths_trn.pth')
+            tsave(ths_tst,'./ths_tst.pth')
+            tsave(ths_vld,'./ths_vld.pth')
+            tsave(vtm,    './vtm.pth')
+            with open('md.p', 'wb') as handle:
+                    pickle.dump(md,handle)
+            handle.close()
+            with open('opt.p', 'wb') as handle:
+                    pickle.dump(opt,handle)
+            print("Done!")
+            handle.close()
         
     elif opt.dataset == 'ann2bb':
         src = opt.dataroot
