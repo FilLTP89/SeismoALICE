@@ -21,7 +21,7 @@ class DecoderModelParallele(object):
         
     # this methode call the Encoder class by name.
     @staticmethod
-    def getDecoderByGPU(ngpu,nz,nch,ndf,nly,act,dil,\
+    def getDecoderByGPU(ngpu,nz,nch,ndf,nly,act,dil,channel,\
                  ker=2,std=2,pad=0,opd=0,grp=1,dpc=0.0,limit = 256, bn = True, n_extra_layers=0):
         classname = 'Decoder_' + str(ngpu)+'GPU'
         #this following code is equivalent to calls the class it self. 
@@ -36,7 +36,7 @@ class DecoderModelParallele(object):
         
         return class_(ngpu = ngpu, nz = nz, nch = nch, limit = limit, bn = bn,\
         nly = nly, act=act, ndf =ndf, ker = ker, std =std, pad = pad, opd = opd,\
-         grp=grp, dil=dil, dpc = dpc,n_extra_layers=n_extra_layers)
+         grp=grp, dil=dil, dpc = dpc,n_extra_layers=n_extra_layers, channel = channel)
 
 class BasicDecoderModelParallele(Module):
     """ Basic Encoder for the GPU classes"""
@@ -82,7 +82,7 @@ class BasicDecoderModelParallele(Module):
 
 
 class Decoder_1GPU(BasicDecoderModelParallele):
-    def __init__(self,ngpu,nz,nch,ndf,nly,act,\
+    def __init__(self,ngpu,nz,nch,ndf,nly,act,channel,\
                  ker=7,std=4,pad=0,opd=0,dil=0,grp=1,dpc=0.0,limit = 256, bn =  True, n_extra_layers = 0):
         super(Decoder_1GPU, self).__init__()
         """
@@ -93,9 +93,9 @@ class Decoder_1GPU(BasicDecoderModelParallele):
         #initializaton of the cnn
         self.cnn = []
         acts = T.activation(act, nly)
-        in_channels   = nz*2
+        
         for i in range(1, nly+1):
-            out_channels = self.lout(nz, nch, nly, i, limit)
+            
             _ker = self.kout(nly,i, ker)
             _pad = self.pad(nly, i, pad)
             """
@@ -106,13 +106,13 @@ class Decoder_1GPU(BasicDecoderModelParallele):
             """
             _dpc = 0.0 if i ==nly else dpc
             _bn =  False if i == nly else bn
-            self.cnn1 += cnn1dt(in_channels,out_channels, acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
+            self.cnn1 += cnn1dt(channel[i-1],channel[i], acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
                 dil=dil[i-1], opd=opd[i-1], bn=_bn,dpc=_dpc)
-            in_channels = out_channels
+            
 
         for i in range(0,n_extra_layers):
             #adding LeakyReLU activation function
-            self.cnn1 += cnn1dt(in_channels,in_channels, acts[0],ker=3,std=1,pad=1,\
+            self.cnn1 += cnn1dt(channel[i-1],channel[i], acts[0],ker=3,std=1,pad=1,\
                 dil =1, opd=0, bn=True, dpc=0.0)
 
 
@@ -128,7 +128,7 @@ class Decoder_1GPU(BasicDecoderModelParallele):
         return x
 
 class Decoder_2GPU(BasicDecoderModelParallele) :
-    def __init__(self,ngpu,nz,nch,ndf,nly,act,\
+    def __init__(self,ngpu,nz,nch,ndf,nly,act,channel,\
                  ker=7,std=4,pad=0,opd=0,dil=0,grp=1,dpc=0.10,limit = 256, bn = True ):
         super(Decoder_2GPU, self).__init__()
         self.ngpu= ngpu
@@ -152,10 +152,10 @@ class Decoder_2GPU(BasicDecoderModelParallele) :
             _pad = self.pad(nly, i, pad)
 
             _dpc = 0.0 if i==1 else dpc
-            out_channels = self.lout(nz, nch,nly, i,limit)
-            self.cnn1 += cnn1dt(in_channels, out_channels, acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
+            
+            self.cnn1 += cnn1dt(channel[i-1],channel[i], acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
                 dil=dil[i-1],opd=opd[i-1],bn=bn,dpc=_dpc)
-            in_channels = out_channels
+            
 
         """
         The second loop generate the second network, which should be saved after in the GPU1
@@ -163,13 +163,13 @@ class Decoder_2GPU(BasicDecoderModelParallele) :
         #Part II in the GPU1
         for i in range(nly//2+1, nly+1):
             _dpc = 0.0 if i==nly else dpc
-            out_channels = self.lout(nz, nch,nly, i, limit)
+            
             _ker = self.kout(nly,i, ker)
             _pad = self.pad(nly, i, pad)
             _bn =  False if i == nly else bn
-            self.cnn2 += cnn1dt(in_channels,out_channels, acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
+            self.cnn2 += cnn1dt(channel[i-1],channel[i], acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
                 dil=dil[i-1],opd=opd[i-1], bn=_bn,dpc=_dpc)
-            in_channels = out_channels 
+             
 
         """
         Here we define put the network and the GPUs
@@ -196,7 +196,7 @@ class Decoder_2GPU(BasicDecoderModelParallele) :
 
 
 class Decoder_3GPU(BasicDecoderModelParallele) :
-    def __init__(self,ngpu,nz,nch,ndf,nly,act,\
+    def __init__(self,ngpu,nz,nch,ndf,nly,act,channel,\
                  ker=7,std=4,pad=0,opd=0,dil=0,grp=1,dpc=0.10,limit = 256,bn=True):
         super(Decoder_3GPU, self).__init__()
         self.ngpu= ngpu
@@ -206,32 +206,32 @@ class Decoder_3GPU(BasicDecoderModelParallele) :
         #part I in the GPU0
         in_channels   = nz*2
         for i in range(1, nly//3+1):
-            out_channels = self.lout(nz, nch,nly, i, limit)
+            
             _ker = self.kout(nly,i, ker)
             _pad = self.pad(nly, i, pad)
-            self.cnn1 += cnn1dt(in_channels, out_channels, acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
+            self.cnn1 += cnn1dt(channel[i-1],channel[i], acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
                 dil=dil[i-1],opd=opd[i-1],bn=bn,dpc=dpc)
-            in_channels = out_channels
+            
 
         #Part II in the GPU1
         for i in range(nly//3+1, 2*nly//3+1):
-            out_channels = self.lout(nz, nch, nly, i, limit)
+            
             _ker = self.kout(nly,i, ker)
             _pad = self.pad(nly, i, pad)
-            self.cnn2 += cnn1dt(in_channels, out_channels, acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
+            self.cnn2 += cnn1dt(channel[i-1],channel[i], acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
                 dil=dil[i-1],opd=opd[i-1],bn=True,dpc=dpc)
-            in_channels = out_channels
+            
 
         #Part III in the GPU2
         for i in range(2*nly//3+1, nly+1):
-            out_channels = self.lout(nz, nch, nly, i, limit)
+            
             _ker = self.kout(nly,i, ker)
             _pad = self.pad(nly, i, pad)
             _dpc = 0.0 if i==nly else dpc
             _bn =  False if i == nly else bn
-            self.cnn3 += cnn1dt(in_channels,out_channels, acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
+            self.cnn3 += cnn1dt(channel[i-1],channel[i], acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
                 dil=dil[i-1],opd=opd[i-1], bn=_bn, dpc=_dpc)
-            in_channels = out_channels
+            
 
         """
         Here we define put the network and the GPUs
@@ -274,41 +274,41 @@ class Decoder_4GPU(BasicDecoderModelParallele) :
         #part I in the GPU0
         in_channels   = nz*2
         for i in range(1, nly//4+1):
-            out_channels = self.lout(nz, nch,nly,i, limit)
+            
             _ker = self.kout(nly,i, ker)
             _pad = self.pad(nly, i, pad)
-            self.cnn1 += cnn1dt(in_channels, out_channels, acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
+            self.cnn1 += cnn1dt(channel[i-1],channel[i], acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
                 dil=dil[i-1],opd=opd[i-1],bn=bn,dpc=dpc)
-            in_channels = out_channels
+            
 
         #Part II in the GPU1
         for i in range(nly//4+1, 2*nly//4+1):
-            out_channels = self.lout(nz, nch,nly,i, limit)
+            
             _ker = self.kout(nly,i, ker)
             _pad = self.pad(nly, i, pad)
-            self.cnn2 += cnn1dt(in_channels, out_channels, acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
+            self.cnn2 += cnn1dt(channel[i-1],channel[i], acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
                 dil=dil[i-1],opd=opd[i-1],bn=bn,dpc=dpc)
-            in_channels = out_channels
+            
 
         #Part III in the GPU2
         for i in range(2*nly//4+1, 3*nly//4+1):
             out_channels = self.lout(nz, nch,nly,i,limit)
             _ker = self.kout(nly,i, ker)
             _pad = self.pad(nly, i, pad)
-            self.cnn3 += cnn1dt(in_channels, out_channels, acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
+            self.cnn3 += cnn1dt(channel[i-1],channel[i], acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
                 dil=dil[i-1],opd=opd[i-1],bn=bn,dpc=dpc)
-            in_channels = out_channels
+            
 
         #Part IV in the GPU4
         for i in range(3*nly//4+1, 4*nly//4+1):
-            out_channels = self.lout(nz, nch,nly,i, limit)
+            
             _ker = self.kout(nly,i, ker)
             _pad = self.pad(nly, i, pad)
             _dpc = 0.0 if i==nly else dpc
             _bn =  False if i == nly else bn
-            self.cnn4 += cnn1dt(in_channels,out_channels, acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
+            self.cnn4 += cnn1dt(channel[i-1],channel[i], acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
                 dil=dil[i-1],opd=opd[i-1], bn=_bn,dpc=_dpc)
-            in_channels = out_channels
+            
         """
         Here we define put the network and the GPUs
         we precise that the type will be in float32

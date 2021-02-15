@@ -647,8 +647,9 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs')
                 #     ylim=0., clim=0.)
                 # plt.savefig(os.path.join(outf,"gof_r_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
                 #             bbox_inches='tight',dpi = 300)
-                # #plt.savefig(os.path.join(outf,"gof_r_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
-                # #            format='eps',bbox_inches='tight',dpi = 300)
+                # plt.savefig(os.path.join(outf,"gof_r_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
+                #            format='eps',bbox_inches='tight',dpi = 300)
+                # print("saving gof_r_aae_%s_%u_%u ... "%(pfx,cnt,io))
                 # plt.close()
             
                 _,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))

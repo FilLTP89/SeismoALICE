@@ -158,7 +158,7 @@ class trainer(object):
                 self.oDdxz = reset_net(self.Ddnets,func=set_weights,lr=rlr,b1=b1,b2=b2)
                 self.optzd.append(self.oDdxz)
 
-                pdb.set_trace()
+                
                 # self.DsXf = net.DCGAN_Dx(opt.config['DsXf'], opt)
                 # self.Dszf = net.DCGAN_Dz(opt.config['Dszf'], opt)
                 # self.Dfxz = net.DCGAN_DXZ(opt.config['Dfxz'], opt)
@@ -408,7 +408,6 @@ class trainer(object):
     ####################
     # @profile
     def alice_train_broadband_discriminator_explicit_xz(self,Xd,zd):
-        # pdb.set_trace()
         zerograd(self.optzd)
         self.Fed.eval(),self.Gdd.eval()
         self.DsXd.train(),self.Dszd.train(),self.Ddxz.train()
@@ -771,16 +770,16 @@ class trainer(object):
                     print("\t|saving model at this checkpoint : ", epoch)
                     tsave({'epoch':epoch,'model_state_dict':self.Fed.state_dict(),
                            'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},
-                           './network/Fed_{}.pth'.format(epoch))
+                           './network/{0}/Fed_{1}.pth'.format(outf[7:],epoch))
                     tsave({'epoch':epoch,'model_state_dict':self.Gdd.state_dict(),
                            'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},
-                           './network/Gdd_{}.pth'.format(epoch))    
+                           './network/{0}/Gdd_{1}.pth'.format(outf[7:],epoch))    
                     tsave({'model_state_dict':self.Dszd.state_dict(),
-                           'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Dszd_bb_{}.pth'.format(epoch))
+                           'optimizer_state_dict':self.oDdxz.state_dict()},'./network/{0}/Dszd_bb_{1}.pth'.format(outf[7:],epoch))
                     tsave({'model_state_dict':self.DsXd.state_dict(),
-                           'optimizer_state_dict':self.oDdxz.state_dict()},'./network/DsXd_bb_{}.pth'.format(epoch))    
+                           'optimizer_state_dict':self.oDdxz.state_dict()},'./network/{0}/DsXd_bb_{1}.pth'.format(outf[7:],epoch))    
                     tsave({'model_state_dict':self.Ddxz.state_dict(),
-                           'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Ddxz_bb_{}.pth'.format(epoch))
+                           'optimizer_state_dict':self.oDdxz.state_dict()},'./network/{0}/Ddxz_bb_{1}.pth'.format(outf[7:],epoch))
         
         plt.plot_loss_explicit(losses=self.losses["Dloss_t"], key="Dloss_t", outf=outf,niter=niter)
         plt.plot_loss_explicit(losses=self.losses["Gloss_x"], key="Gloss_x", outf=outf,niter=niter)
@@ -790,12 +789,12 @@ class trainer(object):
         # plt.plot_loss_explicit(losses=self.losses["norm_grad"], key="norm_grad", outf=outf,niter=niter) 
 
         tsave({'epoch':niter,'model_state_dict':self.Fed.state_dict(),
-            'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'./network/Fed.pth')
+            'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'./network/{0}/Fed.pth'.format(outf[7:]))
         tsave({'epoch':niter,'model_state_dict':self.Gdd.state_dict(),
-            'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'./network/Gdd.pth')    
-        tsave({'model_state_dict':self.Dszd.state_dict()},'./network/Dszd_bb.pth')
-        tsave({'model_state_dict':self.DsXd.state_dict()},'./network/DsXd_bb.pth')    
-        tsave({'model_state_dict':self.Ddxz.state_dict()},'./network/Ddxz_bb.pth')
+            'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'./network/{0}/Gdd.pth'.format(outf[7:]))    
+        tsave({'model_state_dict':self.Dszd.state_dict()},'./network/{0}/Dszd_bb.pth'.format(outf[7:]))
+        tsave({'model_state_dict':self.DsXd.state_dict()},'./network/{0}/DsXd_bb.pth'.format(outf[7:]))    
+        tsave({'model_state_dict':self.Ddxz.state_dict()},'./network/{0}/Ddxz_bb.pth'.format(outf[7:]))
          
     # @profile
     def train_filtered_explicit(self):

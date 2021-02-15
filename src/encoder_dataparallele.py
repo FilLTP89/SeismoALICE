@@ -61,7 +61,7 @@ class Encoder(BasicEncoderDataParallele):
         self.ngpu= ngpu
         act = [LeakyReLU(1.0,True) for i in range(1, nly+1)]
         self.gang = range(self.ngpu)
-        in_channels = nz
+        
         for i in range(1, nly+1):
             if i ==1 and with_noise:
             #We take the first layers for adding noise to the system if the condition is set
@@ -72,10 +72,10 @@ class Encoder(BasicEncoderDataParallele):
                 self.cnn = cnn1d(nch*2,ndf,act[0],ker=ker[i-1],std=std[i-1],pad=pad[i-1],dil=dil[i-1],bn=bn,dpc=dpc,wn=True)
             #else we proceed normaly
             else:
-                out_channels = self.lout(nz,nch,nly,i,limit)
+                
                 _bn = False if i == nly else bn
                 _dpc = 0.0 if i == nly else dpc
-                self.cnn += cnn1d(in_channels,out_channels, act[i-1], ker=ker[i-1],std=std[i-1],pad=pad[i-1],dil=dil[i-1],\
+                self.cnn += cnn1d(channel[i-1],channel[i], act[i-1], ker=ker[i-1],std=std[i-1],pad=pad[i-1],dil=dil[i-1],\
                         bn=_bn,dpc=_dpc,wn=False) 
             in_channels = out_channels
         self.cnn = sqn(*self.cnn)

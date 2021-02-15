@@ -39,7 +39,7 @@ class ConvNetFactory(object):
 
 
 class ModelParalleleFactory(ConvNetFactory):
-    """
+    """act
     ModelParalleleFactory is implement the ConVNetFactory methodes
     This class is responsible to generate the Model Parallel strategy
     of Pytorch. Encoder, Decoder and Discriminators will be generated based on this approach
@@ -59,6 +59,7 @@ class ModelParalleleFactory(ConvNetFactory):
                 pad = config['padding'],
                 act = config['act'],\
                 limit = config['limit'],\
+                channel = config['channel'],\
                 dpc = 0.0,\
                 *args, **kwargs)
     @profile
@@ -73,6 +74,7 @@ class ModelParalleleFactory(ConvNetFactory):
                 opd = config['outpads'],\
                 act = config['act'],\
                 limit = config['limit'],\
+                channel = config['channel'],\
                 bn = True,\
                 dpc = 0.0,\
                 n_extra_layers=0,\
@@ -89,6 +91,7 @@ class ModelParalleleFactory(ConvNetFactory):
                                      dil = config_dcgan_dx['dilation'],\
                                      act = config_dcgan_dx['act'],\
                                      limit = config_dcgan_dx['limit'],\
+                                     channel = config_dcgan_dx['channel'],\
                                      grp=1,bn=False,wf=False, dpc=0.25,
                                      n_extra_layers=1)
         return dcgan_dx
@@ -103,6 +106,7 @@ class ModelParalleleFactory(ConvNetFactory):
                                      pad = config_dcgan_dz['padding'],\
                                      act = config_dcgan_dz['act'],\
                                      limit = config_dcgan_dz['limit'],\
+                                     channel = config_dcgan_dz['channel'],\
                                      dil= config_dcgan_dz["dilation"],\
                                      grp=1,bn=False,wf=False, bias = False)
         return dcgan_dz
@@ -117,6 +121,7 @@ class ModelParalleleFactory(ConvNetFactory):
                                      act = config_dcgan_dxz['act'],\
                                      limit = config_dcgan_dxz['limit'],\
                                      dil = config_dcgan_dxz['dilation'],\
+                                     channel = config_dcgan_dxz['channel'],\
                                      n_extra_layers=0,
                                      dpc=0.25,wf=False,bn = False, bias = True, opt=None)
         return  dcgan_dxz
@@ -145,6 +150,7 @@ class DataParalleleFactory(ConvNetFactory):
                 pad = config['padding'],\
                 act = config['act'],\
                 limit = config['limit'],\
+                channel = config['channel'],\
                 dpc = 0.0,\
                 *args, **kwargs)
 
@@ -161,6 +167,7 @@ class DataParalleleFactory(ConvNetFactory):
                 opd = config['outpads'],\
                 act = config['act'],\
                 limit = config['limit'],\
+                channel = config['channel'],\
                 dpc = 0.0\
                 *args, **kwargs)
 
@@ -180,6 +187,7 @@ class DataParalleleFactory(ConvNetFactory):
                      act = config_dcgan_dx['act'],\
                      limit = config_dcgan_dx['limit'],\
                      dil = config_dcgan_dx['dilation'],\
+                     channel = config_dcgan_dx['channel'],\
                      grp=0,bn=False,wf=False, dpc=0.25,\
                      n_extra_layers=0)
         return dcgan_dx
@@ -198,6 +206,7 @@ class DataParalleleFactory(ConvNetFactory):
                      act = config_dcgan_dz['act'],\
                      limit = config_dcgan_dz['limit'],\
                      dil = config_dcgan_dz['dilation'],\
+                     channel = config_dcgan_dz['channel'],\
                      grp =0, bn=False,wf=False, dpc=0.25,
                      n_extra_layers=0)
         return dcgan_dz
@@ -214,6 +223,7 @@ class DataParalleleFactory(ConvNetFactory):
                      act=config_dcgan_dxz['act'],\
                      limit = config_dcgan_dxz['limit'],\
                      dil=config_dcgan_dxz['dilation'],\
+                     channel = config_dcgan_dxz['channel'],\
                      grp=0, bn=False,wf=False, dpc=0.25,\
                      n_extra_layers=0)
 

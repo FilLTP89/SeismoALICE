@@ -25,7 +25,7 @@ class EncoderModelParallele(object):
         
     # this methode call the Encoder class by name.
     @staticmethod
-    def getEncoderByGPU(ngpu,dev, nz, nch, ndf, nly, ker, std, pad, act, dil,grp=1,bn=True,\
+    def getEncoderByGPU(ngpu,dev, nz, nch, ndf, nly, ker, std, pad, act, dil,channel, grp=1,bn=True,\
                  dpc=0.0,limit = 256,\
                  with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2):
         """
@@ -40,7 +40,7 @@ class EncoderModelParallele(object):
 
         return class_(ngpu = ngpu, dev =dev, nz = nz, nch = nch,\
         nly = nly, ndf=ndf, ker = ker, std =std, pad = pad, act=act, dil = dil, grp =grp, bn = bn,\
-        dpc=dpc, with_noise = with_noise, dtm=dtm, ffr =ffr, wpc = wpc,limit = limit)
+        dpc=dpc, with_noise = with_noise, dtm=dtm, ffr =ffr, wpc = wpc,limit = limit, channel= channel)
 
 class BasicEncoderModelParallele(Module):
     def __init__(self):
@@ -87,15 +87,14 @@ class BasicEncoderModelParallele(Module):
 
 
 class Encoder_1GPU(BasicEncoderModelParallele):
-    def __init__(self,ngpu,dev, nz,nch,ndf,nly, act,dil, ker=2,std=2,pad=0,grp=1,bn=True,\
+    def __init__(self,ngpu,dev, nz,nch,ndf,nly, act,dil, channel,ker=2,std=2,pad=0,grp=1,bn=True,\
                  dpc=0.10,limit = 256,\
                  with_noise=True,dtm=0.01,ffr=0.16,wpc=5.e-2):
         super(Encoder_1GPU, self).__init__()
         self.ngpu= ngpu
         acts = T.activation(act, nly)
         # pdb.set_trace()
-        in_channels = nz
-        out_channels = 0
+        
         # lin = 4096
         for i in range(1, nly+1):
             # ker[i-1] = self.kout(nly,i,ker)
@@ -104,20 +103,19 @@ class Encoder_1GPU(BasicEncoderModelParallele):
             # lin = lout
             if i ==1 and with_noise:
             #We take the first layers for adding noise to the system if the condition is set
-                self.cnn1 = cnn1d(nch*2,nz, acts[0],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dil = dil[i-1], dpc=0.0,wn=True ,\
-                    dtm = dtm, ffr = ffr, wpc = wpc,\
-                    dev='cuda:0')
+                self.cnn1 = cnn1d(channel[i-1],channel[i], acts[0],ker=ker[i-1],std=std[i-1],\
+                    pad=pad[i-1],bn=bn,dil = dil[i-1], dpc=0.0,wn=True ,\
+                    dtm = dtm, ffr = ffr, wpc = wpc,dev='cuda:0')
             # esle if we not have a noise but we at the strating network
             elif i == 1:
-                self.cnn1 = cnn1d(nch*2,nz, acts[0],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=0.0,wn=False)
+                self.cnn1 = cnn1d(channel[i-1],channel[i], acts[0],ker=ker[i-1],std=std[i-1],\
+                    pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=0.0,wn=False)
             #else we proceed normaly
             else:
-                out_channels = self.cout(nz,nch,nly,i,limit)
                 _bn  = False if i == nly else bn
                 _dpc = 0.0 if i == nly else dpc 
-                self.cnn1 += cnn1d(in_channels,out_channels, acts[i-1], ker=ker[i-1],std=std[i-1],pad=pad[i-1],dil=dil[i-1],\
-                        bn=_bn,dpc=_dpc,wn=False)
-                in_channels = out_channels
+                self.cnn1 += cnn1d(channel[i-1], channel[i], acts[i-1], ker=ker[i-1],\
+                    std=std[i-1],pad=pad[i-1], dil=dil[i-1], bn=_bn, dpc=_dpc, wn=False)
             
         self.cnn1 = sqn(*self.cnn1)
         self.cnn1.to(self.dev0,dtype=torch.float32)
@@ -131,45 +129,37 @@ class Encoder_1GPU(BasicEncoderModelParallele):
         return x
 
 class Encoder_2GPU(BasicEncoderModelParallele):
-    def __init__(self,ngpu,dev, nz,nch,ndf,nly, act,dil, ker=2,std=2,pad=0,grp=1,bn=True,\
+    def __init__(self,ngpu,dev, nz,nch,ndf,nly, act,dil, channel, ker=2,std=2,pad=0,grp=1,bn=True,\
                  dpc=0.10,\
                  with_noise=True,dtm=0.01,ffr=0.16,wpc=5.e-2):
         super(Encoder_2GPU, self).__init__()
         self.ngpu= ngpu
         acts = T.activation(act, nly)
-        in_channels = nz 
-        out_channels = 0
+       
         # lin = 4096
         #Part I in the GPU0
         for i in range(1, nly//2+1):
-            # ker[i-1] = self.kout(nly,i,ker)
-            # lout = self.lout(lin, std, ker, pad, dil)
-            # _pad = self.pad(nly,i,pad,lin,lout, dil, ker, std)
+            
             if i ==1 and with_noise:
             #We take the first layers for adding noise to the system if the condition is set
-                self.cnn1 = cnn1d(nch*2,nz,acts[0],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=0.0,wn=True ,\
+                self.cnn1 = cnn1d(channel[i-1],channel[i],acts[0],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=0.0,wn=True ,\
                     dtm = dtm, ffr = ffr, wpc = wpc,\
                     dev='cuda:0')
             # esle if we not have a noise but we at the strating network
             elif i == 1:
-                self.cnn1 = cnn1d(nch*2,nz,acts[0],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=0.0,wn=False)
+                self.cnn1 = cnn1d(channel[i-1],channel[i],acts[0],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=0.0,wn=False)
             #else we proceed normally
             else:
-                out_channels = self.cout(nz,nch,nly,i,limit)
-                self.cnn1 += cnn1d(in_channels, out_channels,acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=dpc,wn=False)
-                in_channels = out_channels
+                self.cnn1 += cnn1d(channel[i-1],channel[i],acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=dpc,wn=False)
+                
 
         #Part II in the GPU1
         for i in range(nly//2+1, nly+1):
-            out_channels = self.cout(nz,nch,nly,i,limit)
-            # ker[i-1] = self.kout(nly,i,ker)
-            # lout = self.lout(lin, std, ker, pad, dil)
-            # _pad = self.pad(nly,i,pad,lin,lout, dil, ker, std)
             _bn  = False if i == nly else bn
             _dpc = 0.0 if i == nly else dpc 
-            self.cnn2 += cnn1d(in_channels,out_channels, acts[i-1], ker=ker[i-1],std=std[i-1],pad=pad[i-1],dil=dil[i-1],\
+            self.cnn2 += cnn1d(channel[i-1],channel[i], acts[i-1], ker=ker[i-1],std=std[i-1],pad=pad[i-1],dil=dil[i-1],\
                         bn=_bn,dpc=_dpc,wn=False)
-            in_channels = out_channels
+            
 
         self.cnn1 = sqn(*self.cnn1)
         self.cnn2 = sqn(*self.cnn2)
@@ -187,13 +177,12 @@ class Encoder_2GPU(BasicEncoderModelParallele):
         return x
 
 class Encoder_3GPU(BasicEncoderModelParallele):
-    def __init__(self,ngpu,dev, nz,nch,ndf,nly, act,dil, ker=2,std=2,pad=0,grp=1,bn=True,\
+    def __init__(self,ngpu,dev, nz,nch,ndf,nly, act,dil, channel, ker=2,std=2,pad=0,grp=1,bn=True,\
                  dpc=0.10,\
                  with_noise=True,dtm=0.01,ffr=0.16,wpc=5.e-2):
         super(Encoder_3GPU, self).__init__()
         self.ngpu = ngpu
-        in_channels = nz
-        out_channels = 0
+        
         #initialization
         acts = T.activation(act, nly)
         #Part I in the GPU0
@@ -203,37 +192,35 @@ class Encoder_3GPU(BasicEncoderModelParallele):
             # _pad = self.pad(nly,i,pad,lin,lout, dil, ker, std)
             if i == 1 and with_noise:
             #We take the first layers for adding noise to the system if the condition is set
-                self.cnn1 = cnn1d(nch*2,nz,acts[0],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=0.0,wn=True ,\
+                self.cnn1 = cnn1d(channel[i-1],channel[i],acts[0],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=0.0,wn=True ,\
                     dtm = dtm, ffr = ffr, wpc = wpc,\
                     dev='cuda:0')
             # esle if we not have a noise but we at the strating network
             elif i == 1:
-                self.cnn1 = cnn1d(nch*2,nz,acts[0],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=0.0,wn=False)
+                self.cnn1 = cnn1d(channel[i-1],channel[i],acts[0],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=0.0,wn=False)
             #else we proceed normaly
             else:
-                out_channels = self.cout(nz,nch,nly,i,limit)
-                self.cnn1 += cnn1d(in_channels, out_channels,acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=dpc,wn=False)
-                in_channels = out_channels
+                
+                self.cnn1 += cnn1d(channel[i-1],channel[i],acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=dpc,wn=False)
+                
 
         #Part II in the GPU1
         for i in range(nly//3+1, 2*nly//3+1):
-            out_channels = self.cout(nz,nch,nly,i,limit)
-            # ker[i-1] = self.kout(nly,i,ker)
-            # _pad = self.pad(nly,i,pad,in_channels, out_channels, dil, ker, std)
-            self.cnn2 += cnn1d(in_channels, out_channels,acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=dpc,wn=False)
-            in_channels = out_channels
+            
+            self.cnn2 += cnn1d(channel[i-1],channel[i],acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=dpc,wn=False)
+            
 
         #Part III in the GPU2
         for i in range(2*nly//3+1, nly+1):
-            out_channels = self.cout(nz,nch,nly,i,limit)
+            
             # ker[i-1] = self.kout(nly,i,ker)
             # lout = self.lout(lin, std, ker, pad, dil)
             # _pad = self.pad(nly,i,pad,lin,lout, dil, ker, std)
             # _bn = False if i == nly else bn
             _dpc = 0.0 if i == nly else dpc 
-            self.cnn3 += cnn1d(in_channels,out_channels, acts[i-1], ker=ker[i-1],std=std[i-1],pad=pad[i-1],dil=dil[i-1],\
+            self.cnn3 += cnn1d(channel[i-1],channel[i], acts[i-1], ker=ker[i-1],std=std[i-1],pad=pad[i-1],dil=dil[i-1],\
                         bn=_bn,dpc=_dpc,wn=False)
-            in_channels = out_channels
+            
         
         self.cnn1 = sqn(*self.cnn1)
         self.cnn2 = sqn(*self.cnn2)
@@ -257,7 +244,7 @@ class Encoder_3GPU(BasicEncoderModelParallele):
 
 
 class Encoder_4GPU(BasicEncoderModelParallele):
-    def __init__(self,ngpu,dev, nz,nch,ndf,nly, act,dil, ker=2,std=2,pad=0,grp=1,bn=True,\
+    def __init__(self,ngpu,dev, nz,nch,ndf,nly, act,dil,channel, ker=2,std=2,pad=0,grp=1,bn=True,\
                  dpc=0.10,\
                  with_noise=True,dtm=0.01,ffr=0.16,wpc=5.e-2):
         super(Encoder_4GPU, self).__init__()
@@ -274,47 +261,47 @@ class Encoder_4GPU(BasicEncoderModelParallele):
             # _pad = self.pad(nly,i,pad,lin,lout, dil, ker, std)
             if i == 1 and with_noise:
             #We take the first layers for adding noise to the system if the condition is set
-                self.cnn1 = cnn1d(nch*2,nz,acts[0],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dpc=dpc,wn=True ,\
+                self.cnn1 = cnn1d(channel[i-1],channel[i],acts[0],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dpc=dpc,wn=True ,\
                     dtm = dtm, ffr = ffr, wpc = wpc,\
                     dev='cuda:0')
             # esle if we not have a noise but we at the strating network
             elif i == 1:
-                self.cnn1 = cnn1d(nch*2,nz,acts[0],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dpc=0.0,wn=False)
+                self.cnn1 = cnn1d(channel[i-1],channel[i],acts[0],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dpc=0.0,wn=False)
             #else we proceed normaly
             else:
-                out_channels = self.cout(nz,nch,nly,i,limit)
-                self.cnn1 += cnn1d(in_channels, out_channels,acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],dil=dil[i-1],bn=bn,dpc=dpc,wn=False)
-                in_channels = out_channels
+                
+                self.cnn1 += cnn1d(channel[i-1],channel[i],acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],dil=dil[i-1],bn=bn,dpc=dpc,wn=False)
+                
 
         #Part II in the GPU1
         for i in range(nly//4+1, 2*nly//4+1):
             # ker[i-1] = self.kout(nly,i,ker)
             # lout = self.lout(lin, std, ker, pad, dil)
             # _pad = self.pad(nly,i,pad,lin,lout, dil, ker, std)
-            out_channels = self.cout(nz,nch,nly,i,limit)
-            self.cnn2 += cnn1d(in_channels, out_channels,acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=dpc,wn=False)
-            in_channels = out_channels
+            
+            self.cnn2 += cnn1d(channel[i-1],channel[i],acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=dpc,wn=False)
+            
 
         #Part III in the GPU2
         for i in range(2*nly//4+1, 3*nly//4+1):
-            out_channels = self.cout(nz,nch,nly,i,limit)
+            
             # ker[i-1] = self.kout(nly,i,ker)
             # lout = self.lout(lin, std, ker, pad, dil)
             # _pad = self.pad(nly,i,pad,lin,lout, dil, ker, std)
-            self.cnn3 += cnn1d(in_channels, out_channels,acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=dpc,wn=False)
-            in_channels = out_channels
+            self.cnn3 += cnn1d(channel[i-1],channel[i],acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=dpc,wn=False)
+            
 
         #Part III in the GPU3
         for i in range(3*nly//4+1, nly+1):
-            out_channels = self.cout(nz,nch,nly,i,limit)
+            
             # ker[i-1] = self.kout(nly,i,ker)
             # lout = self.lout(lin, std, ker, pad, dil)
             # _pad = self.pad(nly,i,pad,lin,lout, dil, ker, std)
             _bn = False if i == nly else bn
             _dpc = 0.0 if i == nly else dpc 
-            self.cnn4 += cnn1d(in_channels,out_channels, acts[i-1], ker=ker[i-1],std=std[i-1],pad=pad[i-1],dil=dil[i-1],\
+            self.cnn4 += cnn1d(channel[i-1],channel[i], acts[i-1], ker=ker[i-1],std=std[i-1],pad=pad[i-1],dil=dil[i-1],\
                         bn=_bn,dpc=_dpc,wn=False)
-            in_channels = out_channels
+            
         
         self.cnn1 = sqn(*self.cnn1)
         self.cnn2 = sqn(*self.cnn2)

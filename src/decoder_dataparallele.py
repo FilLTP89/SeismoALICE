@@ -56,7 +56,7 @@ class BasiceDecoderDataParallele(Module):
 
 class Decoder(BasiceDecoderDataParallele):
     """docstring for Decoder"""
-    def __init__(self,ngpu,nz,nch,ndf,nly,\
+    def __init__(self,ngpu,nz,nch,ndf,nly,channel,\
                  ker=7,std=4,pad=0,opd=0,dil=1,grp=1,dpc=0.10,limit = 256):
         super(Decoder, self).__init__()
         self.ngpu= ngpu
@@ -65,7 +65,7 @@ class Decoder(BasiceDecoderDataParallele):
         in_channels   = nz
 
         for i in range(1, nly+1):
-            out_channels = self.lout(nz, nch,nly, i, limit)
+            
             """
             This is made in the respectful of the pytorch documentation  :
             See the reference : 
@@ -73,13 +73,13 @@ class Decoder(BasiceDecoderDataParallele):
 
             """
             # if we strat we initialize the cnn
-            if i ==1:
-                self.cnn = cnn1dt(in_channels, out_channels, act[0],ker=ker[i-1],std=std[i-1],\
+            if i == 1:
+                self.cnn = cnn1dt(channel[i-1],channel[i], act[0],ker=ker[i-1],std=std[i-1],\
                     pad=pad[i-1],opd=opd[i-1],bn=True,dpc=dpc)
             #else we conitnue adding
             else:  
-                 self.cnn += cnn1dt(in_channels,out_channels, act[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],opd=opd[i-1], bn=False,dpc=0.0)
-            in_channels = out_channels
+                 self.cnn += cnn1dt(channel[i-1],channel[i], act[i-1],ker=ker[i-1],\
+                    std=std[i-1],pad=pad[i-1],opd=opd[i-1], bn=False,dpc=0.0)
         self.cnn = sqn(*self.cnn)
 
 

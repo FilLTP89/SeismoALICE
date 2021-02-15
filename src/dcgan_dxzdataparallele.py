@@ -20,7 +20,7 @@ class DCGAN_DXZDataParallele(object):
         pass
         
     @staticmethod
-    def getDCGAN_DXZDataParallele(name, ngpu, nly, nc=1024,\
+    def getDCGAN_DXZDataParallele(name, ngpu, nly, channel, act, nc=1024,\
         ker=2,std=2,pad=0, dil=0,grp=0,limit = 256,\
         bn=True,wf=False, dpc=0.25, n_extra_layers= 0, bias = False, *args, **kwargs):
 
@@ -31,15 +31,15 @@ class DCGAN_DXZDataParallele(object):
                 module_name = "dcgan_dxzdataparallele"
                 module = importlib.import_module(module_name)
                 class_ = getattr(module,classname)
-                return class_(ngpu=ngpu, nc=nc, nly=nly,\
-                                ker=ker,std=std,pad=pad, dil=dil,\
+                return class_(ngpu=ngpu, nc=nc, nly=nly, channel = channel,\
+                                ker=ker,std=std,pad=pad, dil=dil, act = act,\
                                 grp=grp, bn=bn, wf=wf, dpc=dpc,\
                                 n_extra_layers=n_extra_layers, limit = limit, bias= bias)
             except Exception as e:
                 raise e
                 print("The class ", classname, " does not exit")
         else:
-            return DCGAN_DXZ(ngpu=ngpu, nc=nc, nly=nly,\
+            return DCGAN_DXZ(ngpu=ngpu, nc=nc, nly=nly, channel = channel, act = act,\
                  ker=ker,std=std,pad=pad, dil=dil, grp=grp,\
                  bn=bn, wf=wf, dpc=dpc,\
                  n_extra_layers=n_extra_layers, limit = limit, bias=bias)
@@ -62,7 +62,7 @@ class BasicDCGAN_DXZDataParallele(Module):
 
 class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
     """docstring for DCGAN_DXZ"""
-    def __init__(self,ngpu, nly,   nc=1024,\
+    def __init__(self,ngpu, nly, channel, act, nc=1024,\
         ker=2,std=2,pad=0, dil=1,grp=1,\
         bn=True,wf=False, dpc=0.25, limit =1024,\
         n_extra_layers= 0, bias=False, *args, **kwargs):
@@ -73,7 +73,7 @@ class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
         self.exf  = []
 
         #activation functions
-        activation = [LeakyReLU(1.0,True) for i in range(1, nly)]+[Sigmoid()]
+        activation = T.activation(act,nly)
 
         #initialisation of the input channel
         in_channels = nc
@@ -84,15 +84,15 @@ class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
             pytorch documentation:
             https://pytorch.org/docs/stable/generated/torch.nn.ConvTranspose1d.html
             """
-            out_channels = self.lout(nc, nly, i, limit)
+            
             # self.cnn += cnn1d(in_channels, out_channels, activation[i-1],\
             #     ker=ker, std=std, pad=pad, bn=False, dpc=dpc, bias = True)
-            self.cnn.append(ConvBlock(ni = in_channels, no = out_channels,
+            self.cnn.append(ConvBlock(ni = channel[i-1], no = channel[i],
                 ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = bias,\
                 bn = bn, dpc = dpc, act = act))
             in_channels = out_channels
 
-        for i in range(1, n_extra_layers+1):
+        for _ in range(1, n_extra_layers+1):
             self.exf +=cnn1d(nc, nc, activation[i-1],\
                 ker=3, std=1, pad=1, bn=False, dpc=dpc, bias = bias)
 

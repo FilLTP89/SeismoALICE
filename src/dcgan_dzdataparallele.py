@@ -19,7 +19,7 @@ class DCGAN_DzDataParallele(object):
         pass
 
     @staticmethod
-    def getDCGAN_DzDataParallele(name,ngpu, nc,nz, act, ncl, ndf, nly, fpd=1,\
+    def getDCGAN_DzDataParallele(name,ngpu, nc,nz, act, ncl, ndf, nly, channel, fpd=1,\
                  ker=2,std=2,pad=0, dil=0,grp=0,bn=True,wf=False, dpc=0.0,
                  n_extra_layers=0, limit = 256, bias = False):
         if name is not None:
@@ -30,14 +30,14 @@ class DCGAN_DzDataParallele(object):
                 module = importlib.import_module(module_name)
                 class_ = getattr(module,classname)
 
-                return class_(ngpu = ngpu, nc=nc, nz =nz, ncl=ncl, ndf=ndf, act=act,fpd=fpd, nly = nly,\
+                return class_(ngpu = ngpu, nc=nc, nz =nz, ncl=ncl, ndf=ndf, act=act,fpd=fpd, nly = nly,channel = channel,\
                  ker=ker,std=std,pad=pad, dil=dil,grp=grp,bn=bn,wf=wf, dpc=dpc, limit = limit,bias = bias,
                  n_extra_layers=n_extra_layers)
             except Exception as e:
                 raise e
                 print("The class ", classname, " does not exit")
         else:
-            return DCGAN_Dz(ngpu, nc=nc, ncl=ncl, nz=nz, ndf = ndf, act=act,fpd=fpd, nly = nly,\
+            return DCGAN_Dz(ngpu, nc=nc, ncl=ncl, nz=nz, ndf = ndf, act=act,fpd=fpd, nly = nly, channel = channel,\
                  ker=ker,std=std,pad=pad, dil=dil, grp=grp, bn=bn,wf=wf, dpc=dpc, limit = limit,bias = bias,\
                  n_extra_layers=n_extra_layers)
 
@@ -55,7 +55,7 @@ class BasicDCGAN_DzDataParallele(Module):
 
 class DCGAN_Dz(BasicDCGAN_DzDataParallele):
     """docstring for DCGAN_DzDataParallele"""
-    def __init__(self,ngpu, nc, ndf, nz, nly, act, fpd=0,ncl = 512,limit = 512,\
+    def __init__(self,ngpu, nc, ndf, nz, nly, act, channel, fpd=0,ncl = 512,limit = 512,\
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.250, bias = False,
                  n_extra_layers=0):
 
@@ -75,14 +75,14 @@ class DCGAN_Dz(BasicDCGAN_DzDataParallele):
             # _bn =  False if i == 1 else bn
             # self.cnn += cnn1d(in_channels, out_channels, activation[i-1],\
             #     ker=ker, std=std, pad=pad, bn=bn, dpc=dpc)
-            self.cnn1.append(ConvBlock(ni = in_channels, no = out_channels,
+            self.cnn1.append(ConvBlock(ni = channel[i-1], no = channel[i],
                 ks = ker[i-1], stride = std[i-1], pad = pad[i-1], bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
 
         self.cnn = sqn(*self.cnn)
 
-        for i in range(0,n_extra_layers):
-            self.cnn1.append(ConvBlock(ni = in_channels,no=in_channels,\
+        for _ in range(0,n_extra_layers):
+            self.cnn1.append(ConvBlock(ni = channel[i-1],no=channel[i],\
                 ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
                 dpc = dpc, act = act))
 
