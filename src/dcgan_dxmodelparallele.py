@@ -106,9 +106,11 @@ class DCGAN_Dx_1GPU(BasicDCGAN_Dx):
             The kernel = 3 and the stride = 1 not change the third dimension
         """
         for _ in range(0,n_extra_layers):
-            self.cnn1.append(ConvBlock(ni = channel[i], no = channel[i],\
-                ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
-                dpc = dpc, act = act))
+            # self.cnn1.append(ConvBlock(ni = channel[i], no = channel[i],\
+            #     ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
+            #     dpc = dpc, act = act))
+            self.cnn1+=(cnn1d(channel[i],channel[i],ker = 3, std = 1, pad = 1, dil = 1,\
+                bn = True, dpc=0.0,wn=False))
 
         self.cnn1 = sqn(*self.cnn1)
         self.cnn1.to(self.dev0, dtype=torch.float32)
@@ -187,9 +189,11 @@ class DCGAN_Dx_2GPU(BasicDCGAN_Dx):
                 bn = _bn, dpc = dpc, act = act))
 
         for _ in range(0,n_extra_layers):
-            self.cnn2.append(ConvBlock(ni = channel[i-1], no =channel[i],\
-                ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
-                dpc = dpc, act = act))
+            # self.cnn2.append(ConvBlock(ni = channel[i-1], no =channel[i],\
+            #     ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
+            #     dpc = dpc, act = act))
+            self.cnn2+=(cnn1d(channel[i],channel[i],ker = 3, std = 1, pad = 1, dil = 1,\
+                bn = True, dpc=0.0,wn=False))
 
         """
         Here we define put the network and the GPUs
@@ -279,9 +283,11 @@ class DCGAN_Dx_3GPU(BasicDCGAN_Dx):
             
 
         for _ in range(0,n_extra_layers):
-            self.cnn3.append(ConvBlock(ni = channel[i-1], no =channel[i],\
-                ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
-                dpc = dpc, act = act))
+            # self.cnn3.append(ConvBlock(ni = channel[i-1], no =channel[i],\
+            #     ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
+            #     dpc = dpc, act = act))
+            self.cnn3+=(cnn1d(channel[i],channel[i],ker = 3, std = 1, pad = 1, dil = 1,\
+                bn = True, dpc=0.0,wn=False))
 
         self.cnn1 = sqn(*self.cnn1)
         self.cnn2 = sqn(*self.cnn2)
@@ -374,9 +380,11 @@ class DCGAN_Dx_4GPU(BasicDCGAN_Dx):
             
 
         for _ in range(0,n_extra_layers):
-            self.cnn4.append(ConvBlock(ni = channel[i-1], no =channel[i],\
-                ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
-                dpc = dpc, act = act))
+            # self.cnn4.append(ConvBlock(ni = channel[i-1], no =channel[i],\
+            #     ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
+            #     dpc = dpc, act = act))
+            self.cnn4+=(cnn1d(channel[i],channel[i],ker = 3, std = 1, pad = 1, dil = 1,\
+                bn = True, dpc=0.0,wn=False))
 
         self.cnn1 = sqn(*self.cnn1)
         self.cnn1.to(self.dev0, dtype=torch.float32)

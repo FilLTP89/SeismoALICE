@@ -123,7 +123,7 @@ class ModelParalleleFactory(ConvNetFactory):
                                      dil = config_dcgan_dxz['dilation'],\
                                      channel = config_dcgan_dxz['channel'],\
                                      n_extra_layers=0,
-                                     dpc=0.25,wf=False,bn = False, bias = True, opt=None)
+                                     dpc=0.250,wf=False,bn = False, bias = True, opt=None)
         return  dcgan_dxz
 
 class DataParalleleFactory(ConvNetFactory):
@@ -188,7 +188,7 @@ class DataParalleleFactory(ConvNetFactory):
                      limit = config_dcgan_dx['limit'],\
                      dil = config_dcgan_dx['dilation'],\
                      channel = config_dcgan_dx['channel'],\
-                     grp=0,bn=False,wf=False, dpc=0.25,\
+                     grp=0,bn=False,wf=False, dpc=0.250,\
                      n_extra_layers=0)
         return dcgan_dx
 
@@ -207,7 +207,7 @@ class DataParalleleFactory(ConvNetFactory):
                      limit = config_dcgan_dz['limit'],\
                      dil = config_dcgan_dz['dilation'],\
                      channel = config_dcgan_dz['channel'],\
-                     grp =0, bn=False,wf=False, dpc=0.25,
+                     grp =0, bn=False,wf=False, dpc=0.250,
                      n_extra_layers=0)
         return dcgan_dz
 
@@ -224,7 +224,7 @@ class DataParalleleFactory(ConvNetFactory):
                      limit = config_dcgan_dxz['limit'],\
                      dil=config_dcgan_dxz['dilation'],\
                      channel = config_dcgan_dxz['channel'],\
-                     grp=0, bn=False,wf=False, dpc=0.25,\
+                     grp=0, bn=False,wf=False, dpc=0.250,\
                      n_extra_layers=0)
 
         return dcgan_dxz
