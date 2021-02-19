@@ -46,6 +46,7 @@ class BasicEncoderModelParallele(Module):
     def __init__(self):
         super(BasicEncoderModelParallele,self).__init__()
         #ordinal values of the GPUs
+        
         self.dev0 = 0
         self.dev1 = 1
         self.dev2 = 2

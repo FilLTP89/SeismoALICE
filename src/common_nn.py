@@ -368,7 +368,8 @@ def set_weights(m):
     classname = m.__class__.__name__               
     if classname.find('Conv1d') != -1 or classname.find('ConvTranspose1d') != -1:                   
         try:
-            init.xavier_uniform(m.weight)
+            # init.xavier_uniform(m.weight)
+            init.init.normal_(m.weight, mean=0.0, std=0.02)
         except:
             print("OK")
         #m.weight.data.normal_(0.0, 0.02)                                

@@ -7,7 +7,7 @@
         "dilation" : [1,1,1,1,1],
         "act"      : "Fef",
         "limit"    : 128,
-        "channel"  : [6,32,64,128,256,8]
+        "channel"  : [6,32,64,128,256,32]
     }, 
     "decoder": {
         "padding"  : [1,1,1,1,1], 
@@ -18,7 +18,7 @@
         "dilation" : [1,1,1,1,1],
         "act"      : "Gdf",
         "limit"    : 128,
-        "channel"  : [16,256,128,64,32,3]
+        "channel"  : [64,256,128,64,32,3]
     },
     "Dszf":{
         "padding"  : [0,0,0],
@@ -29,7 +29,7 @@
         "dilation" : [1,1,1],
         "act"      : "Dfz",
         "limit"    : 256,
-        "channel"  : [8,16,16,16]
+        "channel"  : [32,64,128,512]
     },
     "Dsrzf":{
         "padding"  : [0,0],
@@ -40,7 +40,7 @@
         "dilation" : [1,1],
         "act"      : "Drz",
         "limit"    : 256,
-        "channel"  : [16,16,16]
+        "channel"  : [64,64,64]
     }, 
     "DsXf":{
         "padding"  : [1,1,1,1,1],
@@ -60,7 +60,7 @@
         "dilation" : [1,1,1,1,1],
         "act"      : "Drx",
         "limit"    : 256,
-        "channel"  : [3,64,128,256,512,512]
+        "channel"  : [6,64,128,256,512,512]
     },
     "Dfxz":{
         "padding"  : [0,0,0],
@@ -72,7 +72,7 @@
         "act"      : "Dfxz",
         "nc"       : 512,
         "limit"    : 512,
-        "channel"  : [528,528,528,1]
+        "channel"  : [256,256,256,1]
     }
 
 
