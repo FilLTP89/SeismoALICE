@@ -210,6 +210,8 @@ class trainer(object):
                 self.oDfxz = reset_net(self.Dfnets,func=set_weights,lr=rlr,optim='rmsprop')
                 self.optzf.append(self.oDfxz)
 
+                pdb.set_trace()
+
             else:
                 if None not in n:
                     print("Filtered generators - no train: {0} - {1}".format(*n))
@@ -515,7 +517,7 @@ class trainer(object):
     ####################
     def alice_train_filtered_discriminator_adv_xz(self,Xf,zf):
         # Set-up training
-        # pdb.set_trace()
+        pdb.set_trace()
         zerograd(self.optzf)
         self.Fef.eval(),self.Gdf.eval()
         self.DsXf.train(),self.Dszf.train(),self.Dfxz.train()

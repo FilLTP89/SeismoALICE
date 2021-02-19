@@ -465,14 +465,17 @@ class T(object):
                  'Fed' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.LeakyReLU(1.0,inplace=True)],
                  'Gdd' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.Tanh()],
                  'Gdd2':[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.LeakyReLU(1.0,inplace=True)],
-                 'Fef' :[nn.LeakyReLU(1.0,inplace=True) for t in range(4)]+[nn.LeakyReLU(1.0,inplace=True)],
+                 'Fef' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)]+[nn.LeakyReLU(1.0,inplace=True)],
                  'Gdf' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.Tanh()],
                  'Ghz' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.LeakyReLU(1.0,inplace=True)],
                  'Dsx' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)],
+                 'Dfx' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)],
                  'Dsz' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)],
-                 'Drx' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.Sigmoid()],
-                 'Drz' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.Sigmoid()],
+                 'Dfz' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)],
+                 'Drx' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)] + [nn.Sigmoid()],
+                 'Drz' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)] + [nn.Sigmoid()],
                  'Ddxz':[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.Sigmoid()],
+                 'Dfxz':[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.Sigmoid()],
                  'DhXd':[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.Sigmoid()]
                  }
 

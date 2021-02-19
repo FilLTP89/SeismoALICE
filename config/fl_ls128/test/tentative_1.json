@@ -1,67 +1,79 @@
 {
     "encoder": {
-        "padding": 1, 
-        "kernel": 4,  
-        "strides": 2,
-        "dilation": 1, 
-        "nlayers": 5,
-        "act":"Fef"
+        "padding"  : [0,0,0,0,2], 
+        "kernel"   : [4,4,4,4,4],  
+        "strides"  : [2,2,2,2,2], 
+        "nlayers"  : 5, 
+        "dilation" : [1,1,1,1,1],
+        "act"      : "Fef",
+        "limit"    : 128,
+        "channel"  : [6,32,64,128,256,8]
     }, 
     "decoder": {
-        "padding": 1, 
-        "kernel": 4, 
-        "outpads": 0, 
-        "strides": 2,
-        "dilation": 1,
-        "nlayers": 5,
-        "act":"Gdf"
+        "padding"  : [1,1,1,1,1], 
+        "kernel"   : [4,4,4,4,4], 
+        "outpads"  : [0,0,0,0,0], 
+        "strides"  : [2,2,2,2,2],
+        "nlayers"  : 5,
+        "dilation" : [1,1,1,1,1],
+        "act"      : "Gdf",
+        "limit"    : 128,
+        "channel"  : [16,256,128,64,32,3]
     },
     "Dszf":{
-        "padding": 0,
-        "kernel": 1,
-        "strides": 1,
-        "nlayers": 3,
-        "dilation": 1,
-        "outpads": 0,
-        "act":"Dsz"
-    },
-    "DsXf":{
-        "padding": 1,
-        "kernel": 4,
-        "strides": 2,
-        "nlayers": 5,
-        "dilation": 1,
-        "outpads": 0,
-        "act":"Dsx"
-    },
-    "Dfxz":{
-        "padding": 0,
-        "kernel": 1,
-        "strides": 1,
-        "nlayers": 3,
-        "dilation": 1,
-        "outpads": 0,
-        "act":"Ddxz", 
-        "nc":256
+        "padding"  : [0,0,0],
+        "kernel"   : [1,1,1],
+        "strides"  : [1,1,1],
+        "nlayers"  : 3,
+        "outpads"  : [0,0,0],
+        "dilation" : [1,1,1],
+        "act"      : "Dfz",
+        "limit"    : 256,
+        "channel"  : [8,16,16,16]
     },
     "Dsrzf":{
-        "padding": 0,
-        "kernel": 1,
-        "strides": 1,
-        "nlayers": 2,
-        "dilation": 1,
-        "outpads": 0,
-        "act":"Drz",
-        "nz":16
+        "padding"  : [0,0],
+        "kernel"   : [1,1],
+        "strides"  : [1,1],
+        "nlayers"  : 2,
+        "outpads"  : [0,0],
+        "dilation" : [1,1],
+        "act"      : "Drz",
+        "limit"    : 256,
+        "channel"  : [16,16,16]
+    }, 
+    "DsXf":{
+        "padding"  : [1,1,1,1,1],
+        "kernel"   : [4,4,4,4,4],
+        "strides"  : [2,2,2,2,2],
+        "nlayers"  : 5,
+        "dilation" : [1,1,1,1,1],
+        "act"      : "Dfx",
+        "limit"    : 256,
+        "channel"  : [3,64,128,256,512,512]
     },
     "DsrXf":{
-        "padding": 1,
-        "kernel": 4,
-        "strides": 2,
-        "nlayers": 5,
-        "dilation": 1,
-        "outpads": 0,
-        "nc":6,
-        "act":"Drx"
+        "padding"  : [1,1,1,1,1],
+        "kernel"   : [4,4,4,4,4],
+        "strides"  : [2,2,2,2,2],
+        "nlayers"  : 5,
+        "dilation" : [1,1,1,1,1],
+        "act"      : "Drx",
+        "limit"    : 256,
+        "channel"  : [3,64,128,256,512,512]
+    },
+    "Dfxz":{
+        "padding"  : [0,0,0],
+        "kernel"   : [1,1,1],
+        "strides"  : [1,1,1],
+        "nlayers"  : 3,
+        "outpads"  : [0,0,0],
+        "dilation" : [1,1,1],
+        "act"      : "Dfxz",
+        "nc"       : 512,
+        "limit"    : 512,
+        "channel"  : [528,528,528,1]
     }
+
+
 }

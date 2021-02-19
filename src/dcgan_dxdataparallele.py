@@ -89,7 +89,7 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
         for _ in range(0,n_extra_layers):
             self.cnn.append(ConvBlock(ni = channel[i-1], no =channel[i],\
                 ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
-                dpc = dpc, act = act))
+                dpc = dpc, act = activation[-1]))
 
         self.cnn = sqn(*self.cnn)
 

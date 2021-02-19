@@ -130,7 +130,7 @@ class Encoder_1GPU(BasicEncoderModelParallele):
 
 class Encoder_2GPU(BasicEncoderModelParallele):
     def __init__(self,ngpu,dev, nz,nch,ndf,nly, act,dil, channel, ker=2,std=2,pad=0,grp=1,bn=True,\
-                 dpc=0.10,\
+                 dpc=0.10,limit = 256,\
                  with_noise=True,dtm=0.01,ffr=0.16,wpc=5.e-2):
         super(Encoder_2GPU, self).__init__()
         self.ngpu= ngpu
@@ -178,7 +178,7 @@ class Encoder_2GPU(BasicEncoderModelParallele):
 
 class Encoder_3GPU(BasicEncoderModelParallele):
     def __init__(self,ngpu,dev, nz,nch,ndf,nly, act,dil, channel, ker=2,std=2,pad=0,grp=1,bn=True,\
-                 dpc=0.10,\
+                 dpc=0.10,limit = 256,\
                  with_noise=True,dtm=0.01,ffr=0.16,wpc=5.e-2):
         super(Encoder_3GPU, self).__init__()
         self.ngpu = ngpu
@@ -245,7 +245,7 @@ class Encoder_3GPU(BasicEncoderModelParallele):
 
 class Encoder_4GPU(BasicEncoderModelParallele):
     def __init__(self,ngpu,dev, nz,nch,ndf,nly, act,dil,channel, ker=2,std=2,pad=0,grp=1,bn=True,\
-                 dpc=0.10,\
+                 dpc=0.10,limit = 256,\
                  with_noise=True,dtm=0.01,ffr=0.16,wpc=5.e-2):
         super(Encoder_4GPU, self).__init__()
         self.ngpu = ngpu
