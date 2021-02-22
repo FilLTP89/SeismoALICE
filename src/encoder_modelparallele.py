@@ -133,7 +133,7 @@ class Encoder_1GPU(BasicEncoderModelParallele):
     def forward(self,x):
         x = x.to(self.dev0,dtype=torch.float32)
         x = self.cnn1(x)
-        torch.cuda.empty_cache()
+        
         if not self.trainig:
             x = x.detach()
         return x

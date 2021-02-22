@@ -64,13 +64,15 @@ class DCGAN_Dz(BasicDCGAN_DzDataParallele):
         #activation functions
         activation = T.activation(act,nly)
 
+        self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
+                ks = ker[0], stride = std[0], pad = pad[0], dil = dil[0],\
+                bn = False, act = activation[0], dpc = dpc))
+
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
         self.cnn  = []
 
-        in_channels =  nz
-
-        for i in range(1,nly+1):
+        for i in range(2,nly+1):
             out_channels = self.lout(nz, nly, ncl, i, limit)
             # _bn =  False if i == 1 else bn
             # self.cnn += cnn1d(in_channels, out_channels, activation[i-1],\
@@ -79,19 +81,43 @@ class DCGAN_Dz(BasicDCGAN_DzDataParallele):
                 ks = ker[i-1], stride = std[i-1], pad = pad[i-1], bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
 
-        self.cnn = sqn(*self.cnn)
-
         for _ in range(0,n_extra_layers):
             self.cnn1.append(ConvBlock(ni = channel[i-1],no=channel[i],\
                 ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
                 dpc = dpc, act = act))
 
-    def forward(self, x):
-        if x.is_cuda and self.ngpu > 1:
-            zlf   = pll(self.cnn,x,self.gang)
-            torch.cuda.empty_cache()
+        self.exf = self.cnn1[:-1]
+        self.cnn.append(Dpout(dpc = dpc))
+        self.cnn.append(activation[-1])
+        self.cnn = self.prc + self.cnn1
+        
+        self.cnn = sqn(*self.cnn)
+        self.cnn.to(self.dev0, dtype = torch.float32)
+
+        self.prc = sqn(*self.prc)
+        self.prc.to(self.dev0, dtype = torch.float32)
+
+    def extraction(self,X):
+        X = self.prc(X)
+        f = [self.exf[0](X)]
+        for l in range(1,len(self.exf)):
+            f.append(self.exf[l](f[l-1]))
+        return f
+    
+    def forward(self,X):
+        if X.is_cuda and self.ngpu > 1:
+            z = pll(self.ann,X,self.gang)
+            if self.wf:
+                #f = pll(self.extraction,X,self.gang)
+                f = self.extraction(X)
         else:
-            zlf   = self.cnn(x)
+            z = self.ann(X)
+            if self.wf:
+                f = self.extraction(X)
         if not self.training:
-            zlf=zlf.detach()
-        return zlf  
+            z = z.detach()
+        
+        if self.wf:
+            return z,f
+        else:
+            return z

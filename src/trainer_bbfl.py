@@ -332,15 +332,13 @@ class trainer(object):
 
     ''' Methode that discriminate real and fake signal for filtred type '''
     def discriminate_filtered_xz(self,Xf,Xfr,zf,zfr):
-        pdb.set_trace()
+        
+        # Discriminate real
         ftz = self.Dszf(zfr)
         ftX = self.DsXf(Xf)
         zrc = zcat(ftX[0],ftz[0])
         ftr = ftz[1]+ftX[1]
-        #rehspae de dimension to be a [m,n,1] tensor before passing this to the model
-        shape = zrc.shape
-        z =  zrc.reshape(shape[0],shape[1],1)
-        ftXz = self.Dfxz(z)
+        ftXz = self.Dfxz(zrc)
         DXz  = ftXz[0]
         ftr += ftXz[1]
         
@@ -349,12 +347,11 @@ class trainer(object):
         ftX = self.DsXf(Xfr)
         zrc = zcat(ftX[0],ftz[0])
         ftf = ftz[1]+ftX[1]
-        #rehspae de dimension to be a [m,n,1] tensor before passing this to the model
-        shape = zrc.shape
-        z =  zrc.reshape(shape[0],shape[1],1)
-        ftzX = self.Dfxz(z)
+        ftzX = self.Dfxz(zrc)
         DzX  = ftzX[0]
         ftf += ftzX[1]
+        
+        return DXz,DzX,ftr,ftf
         
         return DXz,DzX,ftr,ftf
     
@@ -557,12 +554,13 @@ class trainer(object):
         
         Dreal_X,Dfake_X = self.discriminate_filtered_xx(Xf,X_rec)
 
-        #warning in the perpose of using the BCEloss the value should be greater than zero, 
+        # warning in the perpose of using the BCEloss the value should be greater than zero, 
         # so we apply a boolean indexing. BCEloss use log for calculation so the negative value
         # will lead to isses. Why do we have negative value? the LeakyReLU is not tranform negative value to zero
         # I recommanded using activation's function that values between 0 and 1, like sigmoid
         
-        Dloss_ali_X = self.bce_loss(Dreal_X,o1l(Dreal_X))+self.bce_loss(Dfake_X,o1l(Dfake_X))
+        Dloss_ali_X = self.bce_loss(Dreal_X,o1l(Dreal_X))+\
+                      self.bce_loss(Dfake_X,o1l(Dfake_X))
         Dloss_ali_X = Dloss_ali_X
             
         # 4. Cross-Discriminate ZZ

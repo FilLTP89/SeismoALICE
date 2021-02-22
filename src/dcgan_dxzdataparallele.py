@@ -93,9 +93,10 @@ class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
             in_channels = out_channels
 
         for _ in range(1, n_extra_layers+1):
-            self.exf +=cnn1d(nc, nc, activation[i-1],\
+            self.cnn +=cnn1d(nc, nc, activation[i-1],\
                 ker=3, std=1, pad=1, bn=False, dpc=dpc, bias = bias)
 
+        self.exf = self.cnn[:-1]
         self.cnn = sqn(*self.cnn)
         self.exf = sqn(*self.exf)
         self.features_to_prob = torch.nn.Sequential(
@@ -110,16 +111,21 @@ class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
         return f
 
     def forward(self,x):
-        if x.is_cuda and self.ngpu > 1:
-            zlf = pll(self.cnn,x,self.gang)
-            zfl = torch.reshape(X,(-1,1))
-            zfl = pll(self.features_to_prob,zfl, self.gang)
-            # torch.cuda.empty_cache()
+        if X.is_cuda and self.ngpu > 1:
+            z = pll(self.cnn,X,self.gang)
+            if self.wf:
+                #f = pll(self.extraction,X,self.gang)
+                f = self.extraction(X)
         else:
-            zlf = self.cnn(x)
+            z = self.ann(X)
+            if self.wf:
+                f = self.extraction(X)
         if not self.training:
-            zlf=zlf.detach()
-        return zlf
+            z = z.detach()
+        if self.wf:
+            return z,f
+        else:
+            return z
 
     def critic(self,X):
         X = self.forward(X)

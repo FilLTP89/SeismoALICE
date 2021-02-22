@@ -58,6 +58,7 @@ class BasicDCGAN_DXZ(Module):
         self.cnn4 = []
 
         self.exf = []
+        self.wf = True 
 
         self.training = True
 
@@ -84,10 +85,8 @@ class DCGAN_DXZ_1GPU(BasicDCGAN_DXZ):
         #activation 
         activation = T.activation(act,nly)
         # pdb.set_trace()
-        
         #initialisation of the input channel
         
-
         for i in range(1, nly+1):
             """
             The whole value of stride, kernel and padding should be generated accordingn to the 
@@ -101,14 +100,16 @@ class DCGAN_DXZ_1GPU(BasicDCGAN_DXZ):
                 bn = bn, dpc = dpc, act = act))
             # self.cnn1 += cnn1d(in_channels,nc, act, ker=ker,std=std,pad=pad,\
             #         bn=False,bias=True, dpc=dpc,wn=False)
-            
 
         for _ in range(1, n_extra_layers+1):
-            self.exf +=cnn1d(nc,nc, activation[i-1],\
+            self.cnn +=cnn1d(nc,nc, activation[i-1],\
                 ker=3, std=1, pad=1, bn=False, bias =bias, dpc=dpc, wn = False)
+
+        self.exf = self.cnn1[:-1]
 
         self.cnn1 = sqn(*self.cnn1)
         self.exf = sqn(*self.exf)
+
         self.cnn1.to(self.dev0, dtype=torch.float32)
         self.exf.to(self.dev0, dtype=torch.float32)
 
@@ -124,19 +125,18 @@ class DCGAN_DXZ_1GPU(BasicDCGAN_DXZ):
         return f
 
     def forward(self,x):
-        x = x.to(self.dev0,dtype=torch.float32)
-        x = self.cnn1(x)
-        # x =  torch.reshape(x,(-1,1))
-        # x = self.features_to_prob(x)
-        
+        z = x.to(self.dev0,dtype=torch.float32)
+        z = self.cnn1(z)
+
         if self.wf:
             f =  self.extraction(x)
         if not self.training:
-            x=x.detach()
+            z = z.detach()
+
         if self.wf:
-            return x,f
+            return z,f
         else:
-            return x
+            return z
 
     def critic(self,X):
         X = self.forward(X)
@@ -185,8 +185,10 @@ class DCGAN_DXZ_2GPU(BasicDCGAN_DXZ):
 
         #This extra layer will be placed in the GPU0
         for _ in range(1, n_extra_layers+1):
-            self.exf +=cnn1d(nc,nc, activation[i-1],\
+            self.cnn2 +=cnn1d(nc,nc, activation[i-1],\
                 ker=3, std=1, pad=1, bn=False, dpc=dpc, bias=bias)
+
+        self.exf = self.cnn2[:-1]
     
         self.cnn1 = sqn(*self.cnn1)
         self.cnn1.to(self.dev0, dtype=torch.float32)
@@ -203,17 +205,20 @@ class DCGAN_DXZ_2GPU(BasicDCGAN_DXZ):
         ).to(self.dev1, dtype=torch.float32)
 
     def forward(self,x):
-        x = x.to(self.dev0,dtype=torch.float32)
-        x = self.cnn1(x)
-        x = x.to(self.dev1,dtype=torch.float32)
-        x = self.cnn2(x)
-        # x =  torch.reshape(x,(-1,1))
-        # x = self.features_to_prob(x)
-
-        # torche.cuda.empty_cache()
+        z = x.to(self.dev0,dtype=torch.float32)
+        z = self.cnn1(z)
+        z = z.to(self.dev1,dtype=torch.float32)
+        z = self.cnn2(z)
+        
+        if self.wf:
+            f =  self.extraction(x)
         if not self.training:
-            z = x.detach()
-        return z
+            z = z.detach()
+
+        if self.wf:
+            return z,f
+        else:
+            return z
 
     def critic(self,X):
         X = self.forward(X)
@@ -270,8 +275,10 @@ class DCGAN_DXZ_3GPU(BasicDCGAN_DXZ):
 
         #This extra layer will be placed in the GPU0
         for i in range(1, n_extra_layers+1):
-            self.exf +=cnn1d(nc,nc, activation[i-1],\
+            self.cnn3 +=cnn1d(nc,nc, activation[i-1],\
                 ker=3, std=1, pad=1, bn=False, dpc=dpc, bias=bias)
+
+        self.exf = self.cnn3[:-1]
 
         self.cnn1 = sqn(*self.cnn1)
         self.cnn1.to(self.dev0, dtype=torch.float32)
@@ -298,23 +305,22 @@ class DCGAN_DXZ_3GPU(BasicDCGAN_DXZ):
         return f 
 
     def forward(self,x):
-        x = x.to(self.dev0,dtype=torch.float32)
-        x = self.cnn1(x)
-        x = x.to(self.dev1,dtype=torch.float32)
-        x = self.cnn2(x)
-        x = x.to(self.dev2,dtype=torch.float32)
-        x = self.cnn3(x)
-        # x =  torch.reshape(x,(-1,1))
-        # x = self.features_to_prob(x)
-        # torch.cuda.empty_cache()
+        z = x.to(self.dev0,dtype=torch.float32)
+        z = self.cnn1(z)
+        z = z.to(self.dev1,dtype=torch.float32)
+        z = self.cnn2(z)
+        z = z.to(self.dev2,dtype=torch.float32)
+        z = self.cnn3(z)
+        
         if self.wf:
             f =  self.extraction(x)
         if not self.training:
-            x=x.detach()
+            z = z.detach()
+
         if self.wf:
-            return x,f
+            return z,f
         else:
-            return x
+            return z
 
     def critic(self,X):
         X = self.forward(X)
@@ -363,7 +369,7 @@ class DCGAN_DXZ_4GPU(BasicDCGAN_DXZ):
             act = activation[i-1]
             # self.cnn3 += cnn1d(in_channels, nc, act,\
             #     ker=ker, std=std, pad=pad, bn=False, dpc=dpc, bias =True)
-            self.cnn1.append(ConvBlock(ni = channel[i-1], no = channel[i],
+            self.cnn3.append(ConvBlock(ni = channel[i-1], no = channel[i],
                 ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = bias,\
                 bn = bn, dpc = dpc, act = act))
             
@@ -374,16 +380,16 @@ class DCGAN_DXZ_4GPU(BasicDCGAN_DXZ):
             act = activation[i-1]
             # self.cnn4 += cnn1d(in_channels,nc, act, ker=ker,std=std,pad=pad,\
             #         bn=False,dpc=dpc,wn=False, bias=True)
-            self.cnn1.append(ConvBlock(ni = channel[i-1], no = channel[i],
+            self.cnn4.append(ConvBlock(ni = channel[i-1], no = channel[i],
                 ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = bias,\
                 bn = bn, dpc = dpc, act = act))
             
-
-         
         #This extra layer will be placed in the GPU0
         for i in range(1, n_extra_layers+1):
-            self.exf +=cnn1d(nc,nc, activation[i-1],\
+            self.cnn4 +=cnn1d(nc,nc, activation[i-1],\
                 ker=3, std=1, pad=1, bn=True, dpc=dpc)
+
+        self.exf = self.cnn1[:-1]
 
         self.cnn1 = sqn(*self.cnn1)
         self.cnn1.to(self.dev0, dtype=torch.float32)
@@ -413,25 +419,24 @@ class DCGAN_DXZ_4GPU(BasicDCGAN_DXZ):
         return f
 
     def forward(self, x):
-        x = x.to(self.dev0,dtype=torch.float32)
-        x = self.cnn1(x)
-        x = x.to(self.dev1,dtype=torch.float32)
-        x = self.cnn2(x)
-        x = x.to(self.dev2,dtype=torch.float32)
-        x = self.cnn3(x)
-        x = x.to(self.dev3,dtype=torch.float32)
-        x = self.cnn4(x)
-        # x =  torch.reshape(x,(-1,1))
-        # x = self.features_to_prob(x)
-        # torch.cuda.empty_cache()
+        z = x.to(self.dev0,dtype=torch.float32)
+        z = self.cnn1(z)
+        z = z.to(self.dev1,dtype=torch.float32)
+        z = self.cnn2(z)
+        z = z.to(self.dev2,dtype=torch.float32)
+        z = self.cnn3(z)
+        z = z.to(self.dev3,dtype=torch.float32)
+        z = self.cnn4(z)
+
         if self.wf:
             f =  self.extraction(x)
         if not self.training:
-            x = x.detach()
+            z = z.detach()
+
         if self.wf:
-            return x,f
+            return z,f
         else:
-            return x
+            return z
 
     def critic(self,X):
         X = self.forward(X)
