@@ -332,7 +332,7 @@ class trainer(object):
 
     ''' Methode that discriminate real and fake signal for filtred type '''
     def discriminate_filtered_xz(self,Xf,Xfr,zf,zfr):
-        # pdb.set_trace()
+        pdb.set_trace()
         ftz = self.Dszf(zfr)
         ftX = self.DsXf(Xf)
         zrc = zcat(ftX[0],ftz[0])
@@ -518,7 +518,7 @@ class trainer(object):
     ####################
     def alice_train_filtered_discriminator_adv_xz(self,Xf,zf):
         # Set-up training
-        # pdb.set_trace()
+        pdb.set_trace()
         zerograd(self.optzf)
         self.Fef.eval(),self.Gdf.eval()
         self.DsXf.train(),self.Dszf.train(),self.Dfxz.train()

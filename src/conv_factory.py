@@ -92,8 +92,8 @@ class ModelParalleleFactory(ConvNetFactory):
                                      act = config_dcgan_dx['act'],\
                                      limit = config_dcgan_dx['limit'],\
                                      channel = config_dcgan_dx['channel'],\
-                                     grp=1,bn=False,wf=False, dpc=0.40,
-                                     n_extra_layers=1)
+                                     grp=1,bn=True,wf=True, dpc=0.40,
+                                     n_extra_layers=0)
         return dcgan_dx
 
     def createDCGAN_Dz(self, config_dcgan_dz, opt, *args, **kwargs):

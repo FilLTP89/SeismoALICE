@@ -45,8 +45,11 @@ class EncoderModelParallele(object):
 class BasicEncoderModelParallele(Module):
     def __init__(self):
         super(BasicEncoderModelParallele,self).__init__()
+
+        #variable to call frozen model
+        self.model = None
+
         #ordinal values of the GPUs
-        
         self.dev0 = 0
         self.dev1 = 1
         self.dev2 = 2
@@ -94,8 +97,14 @@ class Encoder_1GPU(BasicEncoderModelParallele):
         super(Encoder_1GPU, self).__init__()
         self.ngpu= ngpu
         acts = T.activation(act, nly)
-        # pdb.set_trace()
-        
+
+        # #loading model
+        # self.model = torch.load(PATH)
+        # self.model.eval()
+        # #frozen layers
+        #  for param in self.model.parameters():
+        #     param.requires_grad = False
+
         # lin = 4096
         for i in range(1, nly+1):
             # ker[i-1] = self.kout(nly,i,ker)

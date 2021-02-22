@@ -57,8 +57,11 @@ class BasicDCGAN_Dx(Module):
 
         #trainings
         self.training = True
-
-
+        self.wf       = True
+        self.prc      = []
+        self.exf      = []
+        self.extra    = []
+        self.final    = []
 
     def lout(self, nz, nly, increment, limit):
         #Here we specify the logic of the  in_channels/channel[i]
@@ -73,8 +76,10 @@ class BasicDCGAN_Dx(Module):
     def pad(self, nly, incremement, pad):
         return 4 if incremement == nly else pad
 
-        
     def critic(self,X):
+        pass
+
+    def extraction(self,X):
         pass
 
 
@@ -84,51 +89,73 @@ class DCGAN_Dx_1GPU(BasicDCGAN_Dx):
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.250,
                  n_extra_layers=0):
         super(DCGAN_Dx_1GPU, self).__init__()
-        
         #activation code
         activation = T.activation(act, nly)
-        for i in range(1, nly+1):
+
+        #extraction features 
+        self.wf = wf
+
+        #building network
+        self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
+                ks = ker[0], stride = std[0], pad = pad[0], dil = dil[0],\
+                bn = False, act = activation[0], dpc = dpc))
+
+        for i in range(2, nly+1):
             act = activation[i-1]
             _bn = False if i == 1 else bn
             _dpc = 0.0 if i == nly else dpc
-            # _ker = self.kout(nly,i,ker)
-            # _pad = self.pad(nly,i,pad)
-            # self.cnn1 += cnn1d(in_channels,channel[i], act, ker=ker,std=std,pad=pad,dil =dil,\
-            #         bn=_bn,dpc=_dpc,wn=False)
-            # print(channel[i-1],channel[i])
-            # _bn = bn if i == 1 else True
             self.cnn1.append(ConvBlock(ni = channel[i-1], no = channel[i],
                 ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = False,\
-                bn = _bn, dpc = dpc, act = act))
-        # pdb.set_trace()  
+                bn = _bn, dpc = dpc, act = act)) 
 
         """
             The kernel = 3 and the stride = 1 not change the third dimension
         """
         for _ in range(0,n_extra_layers):
-            # self.cnn1.append(ConvBlock(ni = channel[i], no = channel[i],\
-            #     ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
-            #     dpc = dpc, act = act))
-            self.cnn1+=[Conv1d(in_channels = channel[i],out_channels=channel[i],kernel_size = 3, stride = 1, padding=1, bias=False)]
-            self.cnn1+=[BatchNorm1d(channel[i])]
-            self.cnn1+=[Dpout(dpc=dpc)]
-            self.cnn1+=[activation[-1]]
+            self.extra+=[Conv1d(in_channels = channel[i],out_channels=channel[i],\
+                kernel_size = 3, stride = 1, padding=1, bias=False)]
 
+        self.final+=[Conv1d(channel[i], channel[i], 3, padding=1, bias=False)]
+        self.final+=[BatchNorm1d(channel[i])]
+        self.final+=[Dpout(dpc=dpc)]
+        self.final+=[activation[-1]]
+
+        #compute values 
+        self.exf  = self.cnn1
+        self.cnn1 = self.prc + self.cnn1 + self.extra + self.final
+
+        #creating sequentially the Network
         self.cnn1 = sqn(*self.cnn1)
-        self.cnn1.to(self.dev0, dtype=torch.float32)
+        self.cnn1.to(self.dev0, dtype = torch.float32)
+
+        self.prc = sqn(*self.prc)
+        self.prc.to(self.dev0, dtype = torch.float32)
 
         self.features_to_prob = torch.nn.Sequential(
             torch.nn.Linear(channel[i], 1),
             torch.nn.Sigmoid()
         ).to(self.dev0, dtype=torch.float32)
 
+    def extraction(self,X):
+        X = self.prc(X)
+        f = [self.exf[0](X)]
+        for l in range(1,len(self.exf)):
+            f.append(self.exf[l](f[l-1]))
+        return f
+
     def forward(self,x):
+        # pdb.set_trace()
         x.to(self.dev0,dtype=torch.float32)
-        x = self.cnn1(x)
+        z = self.cnn1(x)
+        if self.wf:
+            f = self.extraction(x)
         # torch.cuda.empty_cache()
         if not self.training:
-            x=x.detach()
-        return x
+            z=z.detach()
+        if self.wf:
+            return z,f
+        else:
+            return z
 
     def critc(self,X):
         X = forward(X)
@@ -145,22 +172,24 @@ class DCGAN_Dx_2GPU(BasicDCGAN_Dx):
         self.ngpu= ngpu
 
 
-        #activation code
-        activation = T.activation(act, nly)
+        #extraction features 
+        self.wf = wf
+
+        #building network
+        self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
+                ks = ker[0], stride = std[0], pad = pad[0], dil = dil[0],\
+                bn = False, act = activation[0], dpc = dpc))
+
 
         #part I in the GPU0
         in_channels   = nc
-        for i in range(1, nly//2+1):
+        for i in range(2, nly//2+1):
             
             """
             The whole value of stride, kernel and padding should be generated accordingn to the 
             pytorch documentation:
             https://pytorch.org/docs/stable/generated/torch.nn.ConvTranspose1d.html
             """
-            
-            #The last activation function shall be a sigmoid function
-            # _ker = self.kout(nly,i,ker)
-            # _pad = self.pad(nly,i,pad)
             _bn = False if i == 1 else bn
             _dpc = 0.0 if i == nly else dpc
             act = activation[i-1]
@@ -178,32 +207,29 @@ class DCGAN_Dx_2GPU(BasicDCGAN_Dx):
         for i in range(nly//2+1, nly+1):
             
             act = activation[i-1]
-            # _bn = False if i == 1 else bn
-            # _dpc = 0.0 if i == nly else dpc
-            # self.cnn2 += cnn1d(in_channels,channel[i], act, ker=ker,std=std,pad=pad,dil =dil,\
-            #         bn=_bn,dpc=_dpc,wn=False)            
-            #  
-            # _ker = self.kout(nly,i,ker)
-            # _pad = self.pad(nly,i,pad)
             _bn = bn if i == 1 else True
             self.cnn2.append(ConvBlock(ni = channel[i-1], no =channel[i],
                 ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = False,\
                 bn = _bn, dpc = dpc, act = act))
 
         for _ in range(0,n_extra_layers):
-            # self.cnn2.append(ConvBlock(ni = channel[i-1], no =channel[i],\
-            #     ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
-            #     dpc = dpc, act = act))
-            self.cnn2+=[Conv1d(in_channels = channel[i],out_channels=channel[i],kernel_size = 3, stride = 1, padding=1, bias=False)]
-            self.cnn2+=[BatchNorm1d(channel[i])]
-            self.cnn2+=[Dpout(dpc=dpc)]
-            self.cnn2+=[activation[-1]]
+            self.extra+=[Conv1d(in_channels = channel[i],out_channels=channel[i],\
+                kernel_size = 3, stride = 1, padding=1, bias=False)]
+
+        self.final+=[Conv1d(channel[i], channel[i], 3, padding=1, bias=False)]
+        self.final+=[BatchNorm1d(channel[i])]
+        self.final+=[Dpout(dpc=dpc)]
+        self.final+=[activation[-1]]
 
         """
         Here we define put the network and the GPUs
         we precise that the type will be in float32
         non_blocking = True to free memory when it is not needed anymore
         """
+        self.exf  = self.cnn1 + self.cnn2
+        self.cnn1 = self.prc + self.cnn1
+        self.cnn2 = self.cnn2 + self.extra + self.final
+
         self.cnn1 = sqn(*self.cnn1)
         self.cnn1.to(self.dev0, dtype=torch.float32)
 
@@ -215,18 +241,30 @@ class DCGAN_Dx_2GPU(BasicDCGAN_Dx):
             torch.nn.Sigmoid()
         ).to(self.dev1, dtype=torch.float32)
 
+    def extraction(self,X):
+        X = self.prc(X)
+        f = [self.exf[0](X)]
+        for l in range(1,len(self.exf)):
+            f.append(self.exf[l](f[l-1]))
+        return f
+
     def forward(self, x):
         x = x.to(self.dev0,dtype=torch.float32)
-        x = self.cnn1(x)
+        z = self.cnn1(x)
         
-        x = x.to(self.dev1,dtype=torch.float32)
-        x = self.cnn2(x)
-        # torch.cuda.empty_cache()
+        z = z.to(self.dev1,dtype=torch.float32)
+        z = self.cnn2(z)
+        
+        if self.wf:
+            f = self.extraction(x)
+
         if not self.training:
-            x=x.detach()
-            return x
+            z=z.detach()
+
+        if self.wf:
+            return z,f
         else:
-            return x
+            return z
 
     def critc(self,X):
         X = forward(X)
@@ -240,11 +278,15 @@ class DCGAN_Dx_3GPU(BasicDCGAN_Dx):
                  n_extra_layers=0):
         super(DCGAN_Dx_3GPU, self).__init__()
         
+        #extraction features 
+        self.wf = wf
 
-        #activation code
-        activation = T.activation(act, nly)
-        in_channels = nc
-        for i in range(1, nly//3+1):
+        #building network
+        self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
+                ks = ker[0], stride = std[0], pad = pad[0], dil = dil[0],\
+                bn = False, act = activation[0], dpc = dpc))
+
+        for i in range(2, nly//3+1):
             
             # _ker = self.kout(nly,i,ker)
             # _pad = self.pad(nly,i,pad)
@@ -257,8 +299,6 @@ class DCGAN_Dx_3GPU(BasicDCGAN_Dx):
                 ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = False,\
                 bn = _bn, dpc = dpc, act = act))
             
-
-
         for i in range(nly//3+1, 2*nly//3+1):
             
             # _ker = self.kout(nly,i,ker)
@@ -269,8 +309,7 @@ class DCGAN_Dx_3GPU(BasicDCGAN_Dx):
             _bn = bn if i == 1 else True
             self.cnn2.append(ConvBlock(ni = channel[i-1], no =channel[i],
                 ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = False,\
-                bn = _bn, dpc = dpc, act = act))
-            
+                bn = _bn, dpc = dpc, act = act))            
 
         for i in range(2*nly//3+1, nly+1):
             
@@ -287,13 +326,17 @@ class DCGAN_Dx_3GPU(BasicDCGAN_Dx):
             
 
         for _ in range(0,n_extra_layers):
-            # self.cnn3.append(ConvBlock(ni = channel[i-1], no =channel[i],\
-            #     ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
-            #     dpc = dpc, act = act))
-            self.cnn3+=[Conv1d(in_channels = channel[i],out_channels=channel[i],kernel_size = 3, stride = 1, padding=1, bias=False)]
-            self.cnn3+=[BatchNorm1d(channel[i])]
-            self.cnn3+=[Dpout(dpc=dpc)]
-            self.cnn3+=[activation[-1]]
+            self.extra+=[Conv1d(in_channels = channel[i],out_channels=channel[i],\
+                kernel_size = 3, stride = 1, padding=1, bias=False)]
+
+        self.final+=[Conv1d(channel[i], channel[i], 3, padding=1, bias=False)]
+        self.final+=[BatchNorm1d(channel[i])]
+        self.final+=[Dpout(dpc=dpc)]
+        self.final+=[activation[-1]]
+
+        self.exf  = self.cnn1 + self.cnn2 +  self.cnn3
+        self.cnn1 = self.prc + self.cnn1
+        self.cnn3 = self.cnn3 + self.extra + self.final
 
         self.cnn1 = sqn(*self.cnn1)
         self.cnn2 = sqn(*self.cnn2)
@@ -304,16 +347,20 @@ class DCGAN_Dx_3GPU(BasicDCGAN_Dx):
         self.cnn3.to(self.dev2,dtype=torch.float32)
         
     def forward(self, x):
-        x = x.to(self.dev0,dtype=torch.float32)
-        x = self.cnn1(x)
-        x = x.to(self.dev1,dtype=torch.float32)
-        x = self.cnn2(x)
-        x = x.to(self.dev2,dtype=torch.float32)
-        x = self.cnn3(x)
+        z = x.to(self.dev0,dtype=torch.float32)
+        z = self.cnn1(z)
+        z = z.to(self.dev1,dtype=torch.float32)
+        z = self.cnn2(z)
+        z = z.to(self.dev2,dtype=torch.float32)
+        z = self.cnn3(z)
         # torch.cuda.empty_cache()
         if not self.training:
-            x = x.detach()
-        return x
+            z = z.detach()
+
+        if self.wf:
+            return z,f
+        else:
+            return z
 
 class DCGAN_Dx_4GPU(BasicDCGAN_Dx):
     """docstring for DCGAN_Dx_4GPU"""
@@ -322,14 +369,16 @@ class DCGAN_Dx_4GPU(BasicDCGAN_Dx):
                  n_extra_layers=0):
         super(DCGAN_Dx_4GPU, self).__init__()
 
-        #activation code
-        activation = T.activation(act, nly)
+        #extraction features 
+        self.wf = wf
 
-        #initialization of the channel
-        in_channels =  nc
+        #building network
+        self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
+                ks = ker[0], stride = std[0], pad = pad[0], dil = dil[0],\
+                bn = False, act = activation[0], dpc = dpc))
 
         #Part I in GPU0
-        for i in range(1, nly//4+1):
+        for i in range(2, nly//4+1):
             
             # _ker = self.kout(nly,i,ker)
             # _pad = self.pad(nly,i,pad)
@@ -386,13 +435,17 @@ class DCGAN_Dx_4GPU(BasicDCGAN_Dx):
             
 
         for _ in range(0,n_extra_layers):
-            # self.cnn4.append(ConvBlock(ni = channel[i-1], no =channel[i],\
-            #     ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
-            #     dpc = dpc, act = act))
-            self.cnn4+=[Conv1d(in_channels = channel[i],out_channels=channel[i],kernel_size = 3, stride = 1, padding=1, bias=False)]
-            self.cnn4+=[BatchNorm1d(channel[i])]
-            self.cnn4+=[Dpout(dpc=dpc)]
-            self.cnn4+=[activation[-1]]
+            self.extra+=[Conv1d(in_channels = channel[i],out_channels=channel[i],\
+                kernel_size = 3, stride = 1, padding=1, bias=False)]
+
+        self.final+=[Conv1d(channel[i], channel[i], 3, padding=1, bias=False)]
+        self.final+=[BatchNorm1d(channel[i])]
+        self.final+=[Dpout(dpc=dpc)]
+        self.final+=[activation[-1]]
+
+        self.exf  = self.cnn1 + self.cnn2 + self.cnn3 + self.cnn4
+        self.cnn1 = self.prc + self.cnn1
+        self.cnn4 = self.cnn4 + self.extra + self.final
 
         self.cnn1 = sqn(*self.cnn1)
         self.cnn1.to(self.dev0, dtype=torch.float32)
@@ -408,15 +461,22 @@ class DCGAN_Dx_4GPU(BasicDCGAN_Dx):
 
 
     def forward(self, x):
-        x = x.to(self.dev0,dtype=torch.float32)
-        x = self.cnn1(x)
-        x = x.to(self.dev1,dtype=torch.float32)
-        x = self.cnn2(x)
-        x = x.to(self.dev2,dtype=torch.float32)
-        x = self.cnn3(x)
-        x = x.to(self.dev3,dtype=torch.float32)
-        x = self.cnn4(x)
-        # torch.cuda.empty_cache()
+        z = x.to(self.dev0,dtype=torch.float32)
+        z = self.cnn1(z)
+        z = z.to(self.dev1,dtype=torch.float32)
+        z = self.cnn2(z)
+        z = z.to(self.dev2,dtype=torch.float32)
+        z = self.cnn3(z)
+        z = z.to(self.dev3,dtype=torch.float32)
+        z = self.cnn4(z)
+        
+        if self.wf:
+            f = self.extraction(x)
+
         if not self.training:
-            x = x.dexietach()
-        return x
+            z = z.detach()
+            
+        if self.wf:
+            return z,f
+        else:
+            return x
