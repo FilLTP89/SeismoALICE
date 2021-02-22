@@ -45,6 +45,11 @@ class BasicDCGAN_DxDataParallele(Module):
     def __init__(self):
         super(BasicDCGAN_DxDataParallele, self).__init__()
         self.training = True
+        self.wf       = True
+        self.prc      = []
+        self.exf      = []
+        self.extra    = []
+        self.final    = []
 
     def lout(self,nz, nly, increment, limit):
         #Here we specify the logic of the  in_channels/out_channels
@@ -68,8 +73,15 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
         #activation code
         activation = T.activation(act,nly)
 
-        in_channels =  nc
-        for i in range(1, nly+1):
+        #extraction features 
+        self.wf = wf
+
+        #building network
+        self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
+                ks = ker[0], stride = std[0], pad = pad[0], dil = dil[0],\
+                bn = False, act = activation[0], dpc = dpc))
+
+        for i in range(2, nly+1):
             
             _bn = False if i == 1 else bn
             _dpc = 0.0 if i == nly else dpc
@@ -78,30 +90,45 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
             #     ker=ker, std=std, pad=pad, dil=dil, bn=_bn, dpc=_dpc )
             _bn = bn if i == 1 else True
             self.cnn.append(ConvBlock(ni = channel[i-1], no =channel[i],
-                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = False,\
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1],\
+                bias = False,\
                 bn = _bn, dpc = dpc, act = act))
 
         for _ in range(0,n_extra_layers):
-            self.cnn.append(ConvBlock(ni = channel[i-1], no =channel[i],\
-                ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
-                dpc = dpc, act = act))
+            self.extra+=[Conv1d(in_channels = channel[i],out_channels=channel[i],\
+                kernel_size = 3, stride = 1, padding=1, bias=False)]
 
-        for _ in range(0,n_extra_layers):
-            self.cnn.append(ConvBlock(ni = channel[i-1], no =channel[i],\
-                ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
-                dpc = dpc, act = activation[-1]))
+        self.final+=[Conv1d(channel[i], channel[i], 3, padding=1, bias=False)]
+        self.final+=[BatchNorm1d(channel[i])]
+        self.final+=[Dpout(dpc=dpc)]
+        self.final+=[activation[-1]]
+
+        self.exf = self.cnn
+        self.cnn = self.prc + self.cnn + self.extra + self.final
 
         self.cnn = sqn(*self.cnn)
+        self.prc = sqn(*self.prc)
 
+    def extraction(self,X):
+        X = self.prc(X)
+        f = [self.exf[0](X)]
+        for l in range(1,len(self.exf)):
+            f.append(self.exf[l](f[l-1]))
+        return f
 
-    def foward(self,x):
-        if x.is_cuda and self.ngpu > 1:
-            zlf   = pll(self.cnn,x,self.gang)
-            # torch.cuda.empty_cache()
+    def forward(self,X):
+        if X.is_cuda and self.ngpu > 1:
+            z = pll(self.cnn,X,self.gang)
+            if self.wf:
+                #f = pll(self.extraction,X,self.gang)
+                f = self.extraction(X)
         else:
-            zlf   = self.cnn(x)
+            z = self.cnn(X)
+            if self.wf:
+                f = self.extraction(X)
         if not self.training:
-            zlf=zlf.detach()
-        return zlf
-        
-        
+            z = z.detach()
+        if self.wf:
+            return z,f
+        else:
+            return z

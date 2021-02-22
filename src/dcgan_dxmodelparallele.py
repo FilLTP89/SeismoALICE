@@ -91,7 +91,7 @@ class DCGAN_Dx_1GPU(BasicDCGAN_Dx):
         super(DCGAN_Dx_1GPU, self).__init__()
         #activation code
         activation = T.activation(act, nly)
-
+        
         #extraction features 
         self.wf = wf
 
