@@ -88,4 +88,5 @@ class Encoder(BasicEncoderDataParallele):
             zlf   = self.cnn(x)
         if not self.training:
             zlf =zlf.detach()
+        torch.cuda.empty_cache()
         return zlf

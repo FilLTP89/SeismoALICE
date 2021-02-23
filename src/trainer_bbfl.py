@@ -158,7 +158,7 @@ class trainer(object):
                 self.oDdxz = reset_net(self.Ddnets,func=set_weights,lr=rlr,b1=b1,b2=b2)
                 self.optzd.append(self.oDdxz)
 
-                # pdb.set_trace()
+                pdb.set_trace()
                 # self.DsXf = net.DCGAN_Dx(opt.config['DsXf'], opt)
                 # self.Dszf = net.DCGAN_Dz(opt.config['Dszf'], opt)
                 # self.Dfxz = net.DCGAN_DXZ(opt.config['Dfxz'], opt)
@@ -313,7 +313,7 @@ class trainer(object):
     ''' Methode that discriminate real and fake signal for broadband type '''
     # @profile
     def discriminate_broadband_xz(self,Xd,Xdr,zd,zdr):
-        # pdb.set_trace()
+        # pdb.set_tra()
         a = self.DsXd(Xd)
         b = self.Dszd(zdr)
         
@@ -387,6 +387,7 @@ class trainer(object):
 
     # @profile
     def discriminate_filtered_zz(self,zf,zfr):
+        # pdb.set_trace()
         Dreal = self.Dsrzf(zcat(zf,zf ))
         Dfake = self.Dsrzf(zcat(zf,zfr))
         return Dreal,Dfake
@@ -515,7 +516,7 @@ class trainer(object):
     ####################
     def alice_train_filtered_discriminator_adv_xz(self,Xf,zf):
         # Set-up training
-        pdb.set_trace()
+        # pdb.set_trace()
         zerograd(self.optzf)
         self.Fef.eval(),self.Gdf.eval()
         self.DsXf.train(),self.Dszf.train(),self.Dfxz.train()
@@ -567,11 +568,13 @@ class trainer(object):
         # pdb.set_trace()
         Dreal_z,Dfake_z = self.discriminate_filtered_zz(zf,z_rec)
 
-        Dloss_ali_z = self.bce_loss(Dreal_z,o1l(Dreal_z))+self.bce_loss(Dfake_z,o0l(Dfake_z))
+        Dloss_ali_z = self.bce_loss(Dreal_z,o1l(Dreal_z))+\
+                      self.bce_loss(Dfake_z,o0l(Dfake_z))
         Dloss_ali_z
 
         # Total loss
-        Dloss = Dloss_ali + 10*Dloss_ali_X + 100*Dloss_ali_z
+        # Dloss = Dloss_ali + 10*Dloss_ali_X + 100*Dloss_ali_z
+        Dloss = Dloss_ali + Dloss_ali_X + Dloss_ali_z
         Dloss.backward(),self.oDfxz.step(),clipweights(self.Dfnets),zerograd(self.optzf)
         self.losses['Dloss'].append(Dloss.tolist())  
         self.losses['Dloss_ali'].append(Dloss_ali.tolist())  
@@ -620,12 +623,12 @@ class trainer(object):
  
         # 3. Cross-Discriminate XX
         _,Dfake_X = self.discriminate_filtered_xx(Xf,X_rec)
-        Gloss_ali_X = self.bce_loss(Dfake_X,o1l(Dfake_X))
+        Gloss_ali_X = self.bce_loss(Dfake_X[0],o1l(Dfake_X[0]))
         Gloss_cycle_X = torch.mean(torch.abs(Xf-X_rec))
         
         # 4. Cross-Discriminate ZZ
         _,Dfake_z = self.discriminate_filtered_zz(zf,z_rec)
-        Gloss_ali_z = self.bce_loss(Dfake_z,o1l(Dfake_z))
+        Gloss_ali_z = self.bce_loss(Dfake_z[0],o1l(Dfake_z[0]))
         Gloss_cycle_z = torch.mean(torch.abs(zf-z_rec)**2)
 
         # Total Loss

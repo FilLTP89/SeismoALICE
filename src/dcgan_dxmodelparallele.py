@@ -147,6 +147,7 @@ class DCGAN_Dx_1GPU(BasicDCGAN_Dx):
         # pdb.set_trace()
         x.to(self.dev0,dtype=torch.float32)
         z = self.cnn1(x)
+        torch.cuda.empty_cache()
         if self.wf:
             f = self.extraction(x)
         # torch.cuda.empty_cache()

@@ -76,6 +76,8 @@ class  DCGAN_Dz_1GPU(BasicDCGAN_Dz):
         #activation functions
         activation = T.activation(act, nly)
 
+        self.wf = wf
+
         self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
                 ks = ker[0], stride = std[0], pad = pad[0], dil = dil[0],\
                 bn = False, act = activation[0], dpc = dpc))
@@ -132,6 +134,8 @@ class DCGAN_Dz_2GPU(BasicDCGAN_Dz):
         
         #activation functions
         activation = T.activation(act, nly)
+
+        self.wf = wf
 
         self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
                 ks = ker[0], stride = std[0], pad = pad[0], dil = dil[0],\
@@ -210,6 +214,8 @@ class DCGAN_Dz_3GPU(BasicDCGAN_Dz):
 
         #activation 
         activation = T.activation(act, nly)
+
+        self.wf = wf
 
         self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
                 ks = ker[0], stride = std[0], pad = pad[0], dil = dil[0],\
@@ -297,6 +303,8 @@ class DCGAN_Dz_4GPU(BasicDCGAN_Dz):
         
         #activation 
         activation = T.activation(act, nly)
+
+        self.wf = wf
         
         self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
                 ks = ker[0], stride = std[0], pad = pad[0], dil = dil[0],\

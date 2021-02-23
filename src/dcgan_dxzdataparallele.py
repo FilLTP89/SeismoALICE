@@ -75,6 +75,8 @@ class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
         #activation functions
         activation = T.activation(act,nly)
 
+        self.wf = wf
+
         #initialisation of the input channel
         in_channels = nc
 

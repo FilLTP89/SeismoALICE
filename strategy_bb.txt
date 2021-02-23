@@ -1,3 +1,3 @@
 encoder,decoder,extra
-broadband,./network/bb_ls4_nf8_nzd128/Fed_4000.pth,./network/bb_ls4_nf8_nzd128/Gdd_4000.pth,-
+broadband,None,None,-
 

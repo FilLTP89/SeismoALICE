@@ -125,6 +125,7 @@ class Decoder_1GPU(BasicDecoderModelParallele):
         # torch.cuda.empty_cache()
         if not self.training:
             x=x.detach()
+        torch.cuda.empty_cache()
         return x
 
 class Decoder_2GPU(BasicDecoderModelParallele) :
@@ -188,10 +189,10 @@ class Decoder_2GPU(BasicDecoderModelParallele) :
 
         x = x.to(self.dev1,dtype=torch.float32)
         x = self.cnn2(x)
-
-        torch.cuda.empty_cache()
+        # torch.cuda.empty_cache()
         if not self.training:
             x=x.detach()
+        torch.cuda.empty_cache()
         return x
 
 
@@ -257,9 +258,10 @@ class Decoder_3GPU(BasicDecoderModelParallele) :
         x = x.to(self.dev2,dtype=torch.float32)
         x = self.cnn3(x)
         
-        torch.cuda.empty_cache()
+        # torch.cuda.empty_cache()
         if not self.training:
             x=x.detach()
+        torch.cuda.empty_cache()
         return x
 
 class Decoder_4GPU(BasicDecoderModelParallele) :
@@ -339,7 +341,8 @@ class Decoder_4GPU(BasicDecoderModelParallele) :
         x = x.to(self.dev3,dtype=torch.float32)
         x = self.cnn4(x)
 
-        torch.cuda.empty_cache()
+        # torch.cuda.empty_cache()
         if not self.training:
             x=x.detach()
+        torch.cuda.empty_cache()
         return x

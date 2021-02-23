@@ -29,7 +29,8 @@
         "dilation" : [1,1,1],
         "act"      : "Dfz",
         "limit"    : 256,
-        "channel"  : [8,16,16,16]
+        "channel"  : [8,16,16,16],
+        "wf"       : "True"
     },
     "Dsrzf":{
         "padding"  : [0,0],
@@ -40,7 +41,8 @@
         "dilation" : [1,1],
         "act"      : "Drz",
         "limit"    : 256,
-        "channel"  : [16,16,16]
+        "channel"  : [16,16,16],
+        "wf"       : "False"
     }, 
     "DsXf":{
         "padding"  : [1,1,1,1,1],
@@ -50,7 +52,8 @@
         "dilation" : [1,1,1,1,1],
         "act"      : "Dfx",
         "limit"    : 256,
-        "channel"  : [3,64,128,256,512,512]
+        "channel"  : [3,64,128,256,512,512],
+        "wf"       : "True"
     },
     "DsrXf":{
         "padding"  : [1,1,1,1,1],
@@ -60,7 +63,8 @@
         "dilation" : [1,1,1,1,1],
         "act"      : "Drx",
         "limit"    : 256,
-        "channel"  : [6,64,128,256,512,512]
+        "channel"  : [6,64,128,256,512,512],
+        "wf"       : "False"
     },
     "Dfxz":{
         "padding"  : [0,0,0],
@@ -72,7 +76,8 @@
         "act"      : "Dfxz",
         "nc"       : 512,
         "limit"    : 512,
-        "channel"  : [528,528,528,1]
+        "channel"  : [528,528,528,1],
+        "wf"       : "True"
     }
 
 

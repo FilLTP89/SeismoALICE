@@ -368,8 +368,8 @@ def set_weights(m):
     classname = m.__class__.__name__               
     if classname.find('Conv1d') != -1 or classname.find('ConvTranspose1d') != -1:                   
         try:
-            # init.xavier_uniform(m.weight)
-            init.normal_(m.weight, mean=0.0, std=0.02)
+            init.xavier_uniform(m.weight)
+            # init.normal_(m.weight, mean=0.0, std=0.02)
         except:
             print("warnings no initialization is made training may not work")
         #m.weight.data.normal_(0.0, 0.02)                                
@@ -494,3 +494,9 @@ class T(object):
                  'DhXd':[nn.LeakyReLU(1.0,inplace=True) for t in range(nly+1)]
                  }
         return acts[typo][name]
+
+    @staticmethod
+    def load_model(path):
+        net = Module()
+        net.load_state_dict(torch.load(path)['model_state_dict'])
+        return net

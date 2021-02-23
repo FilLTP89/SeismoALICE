@@ -64,6 +64,8 @@ class DCGAN_Dz(BasicDCGAN_DzDataParallele):
         #activation functions
         activation = T.activation(act,nly)
 
+        self.wf = wf
+
         self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
                 ks = ker[0], stride = std[0], pad = pad[0], dil = dil[0],\
                 bn = False, act = activation[0], dpc = dpc))

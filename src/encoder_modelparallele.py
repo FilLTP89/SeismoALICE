@@ -26,7 +26,7 @@ class EncoderModelParallele(object):
     # this methode call the Encoder class by name.
     @staticmethod
     def getEncoderByGPU(ngpu,dev, nz, nch, ndf, nly, ker, std, pad, act, dil,channel, grp=1,bn=True,\
-                 dpc=0.0,limit = 256,\
+                 dpc=0.0,limit = 256, path="",\
                  with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2):
         """
         We define a method responsible to call an instance of the class by name. 
@@ -38,7 +38,7 @@ class EncoderModelParallele(object):
         module = importlib.import_module(module_name)
         class_ = getattr(module,classname)
 
-        return class_(ngpu = ngpu, dev =dev, nz = nz, nch = nch,\
+        return class_(ngpu = ngpu, dev =dev, nz = nz, nch = nch,path=path,\
         nly = nly, ndf=ndf, ker = ker, std =std, pad = pad, act=act, dil = dil, grp =grp, bn = bn,\
         dpc=dpc, with_noise = with_noise, dtm=dtm, ffr =ffr, wpc = wpc,limit = limit, channel= channel)
 
@@ -92,18 +92,24 @@ class BasicEncoderModelParallele(Module):
 
 class Encoder_1GPU(BasicEncoderModelParallele):
     def __init__(self,ngpu,dev, nz,nch,ndf,nly, act,dil, channel,ker=2,std=2,pad=0,grp=1,bn=True,\
-                 dpc=0.10,limit = 256,\
+                 dpc=0.10,limit = 256,path="",\
                  with_noise=True,dtm=0.01,ffr=0.16,wpc=5.e-2):
         super(Encoder_1GPU, self).__init__()
+        pdb.set_trace()
         self.ngpu= ngpu
         acts = T.activation(act, nly)
 
-        # #loading model
-        # self.model = torch.load(PATH)
-        # self.model.eval()
-        # #frozen layers
-        #  for param in self.model.parameters():
-        #     param.requires_grad = False
+        # try:
+        #     #try to fine if a learning model is passed to
+        #     self.cnn1 = T.load_model(path) if path else []
+
+        #     #frozen layers
+        #     for param in self.cnn1.parameters():
+        #         param.requires_grad = False
+        # except Exception as e:
+        #     raise e
+        # else:
+        #     pass
 
         # lin = 4096
         for i in range(1, nly+1):
@@ -113,12 +119,12 @@ class Encoder_1GPU(BasicEncoderModelParallele):
             # lin = lout
             if i ==1 and with_noise:
             #We take the first layers for adding noise to the system if the condition is set
-                self.cnn1 = cnn1d(channel[i-1],channel[i], acts[0],ker=ker[i-1],std=std[i-1],\
+                self.cnn1 += cnn1d(channel[i-1],channel[i], acts[0],ker=ker[i-1],std=std[i-1],\
                     pad=pad[i-1],bn=bn,dil = dil[i-1], dpc=0.0,wn=True ,\
                     dtm = dtm, ffr = ffr, wpc = wpc,dev='cuda:0')
             # esle if we not have a noise but we at the strating network
             elif i == 1:
-                self.cnn1 = cnn1d(channel[i-1],channel[i], acts[0],ker=ker[i-1],std=std[i-1],\
+                self.cnn1 += cnn1d(channel[i-1],channel[i], acts[0],ker=ker[i-1],std=std[i-1],\
                     pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=0.0,wn=False)
             #else we proceed normaly
             else:
@@ -181,9 +187,10 @@ class Encoder_2GPU(BasicEncoderModelParallele):
         x = self.cnn1(x)
         x = x.to(self.dev1,dtype=torch.float32)
         x = self.cnn2(x)
-        torch.cuda.empty_cache()
+        
         if not self.trainig:
             x = x.detach()
+        torch.cuda.empty_cache()
         return x
 
 class Encoder_3GPU(BasicEncoderModelParallele):
@@ -247,9 +254,9 @@ class Encoder_3GPU(BasicEncoderModelParallele):
         x = x.to(self.dev2,dtype=torch.float32)
         x = self.cnn3(x)
 
-        torch.cuda.empty_cache()
         if not self.trainig:
             x = x.detach()
+        torch.cuda.empty_cache()
         return x
 
 
@@ -335,8 +342,8 @@ class Encoder_4GPU(BasicEncoderModelParallele):
         x = x.to(self.dev3,dtype=torch.float32)
         x = self.cnn4(x)
 
-        torch.cuda.empty_cache()
         if not self.trainig:
             x = x.detach()
+        torch.cuda.empty_cache()
         return x
 
