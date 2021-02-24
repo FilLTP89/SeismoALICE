@@ -250,22 +250,19 @@ class H5ls:
  
     def __call__(self, name, h5obj):
         # only h5py datasets have dtype attribute, so we can search on this
-        if hasattr(h5obj,'dtype') and \
-            not name in self.names and \
-            self.nsy>=0:
-
-            self.names.append(name)
-            bi = int(h5obj.attrs['p_arrival_sample'])
-            for j in range(3):
-                ths = h5obj[bi:bi+self.xw,j].astype(np.float32)
-                self.ths[self.nsy,j,:len(ths)] = detrend(ths)*self.w[:len(ths)]
-                self.pga[self.nsy,j]   = np.abs(self.ths[self.nsy,j,:]).max().astype(np.float32)
-                self.ths[self.nsy,j,:] /= self.pga[self.nsy,j]
-                self.nsy-=1
+        if name in self.names:
+            if hasattr(h5obj,'dtype') and self.nsy>=0:
+                bi = int(h5obj.attrs['p_arrival_sample'])
+                for j in range(3):
+                    ths = h5obj[bi:bi+self.xw,j].astype(np.float32)
+                    self.ths[self.nsy,j,:len(ths)] = detrend(ths)*self.w[:len(ths)]
+                    self.pga[self.nsy,j]   = np.abs(self.ths[self.nsy,j,:]).max().astype(np.float32)
+                    self.ths[self.nsy,j,:] /= self.pga[self.nsy,j]
+                    self.nsy-=1
 
 
 
-def stead_dataset_dask(comm,rank,size,src,batch_percent,workers,
+def stead_dataset_dask(comm,size,rank,src,batch_percent,workers,
     Xwindow,zwindow,nzd,nzf,md,nsy,device):
     
     meta = {'network_code':'str','receiver_code':'str','receiver_type':'str',
@@ -294,6 +291,7 @@ def stead_dataset_dask(comm,rank,size,src,batch_percent,workers,
     nsy_loc = len(eqm)//size
 
     nsy = nsy_loc*size
+
     trn_set  = -999.9*np.ones(shape=(nsy,3,md['ntm']),dtype=np.float32)
     thf_set  = -999.9*np.ones(shape=(nsy,3,md['ntm']),dtype=np.float32)
 
@@ -309,7 +307,9 @@ def stead_dataset_dask(comm,rank,size,src,batch_percent,workers,
     pgat_loc = -999.9*np.ones(shape=(nsy_loc,3),dtype=np.float32)
     pgaf_loc = -999.9*np.ones(shape=(nsy_loc,3),dtype=np.float32)
     
-    h5ls = H5ls(nsy=nsy_loc,names=eqm.index.compute().to_list(),xw=Xwindow)
+    h5ls = H5ls(nsy=nsy_loc,
+        names=eqm.index.compute().to_list()[rank*nsy_loc:(rank+1)*nsy_loc],
+        xw=Xwindow)
     with h5py.File(src,'r',driver='mpio',comm=comm) as f:
         dsets = f['earthquake']['local']
         # this will now visit all objects inside the hdf5 file and store datasets in h5ls.names
@@ -364,42 +364,40 @@ def stead_dataset_dask(comm,rank,size,src,batch_percent,workers,
     #     recvdis.append(recvdis[-1]+i)
     
     
-    trn_set =  comm.gather(trn_loc,root=0)
-    thf_set =  comm.gather(thf_loc,root=0)
-    wnz_set =  comm.gather(wnz_loc,root=0)
-    wnf_set =  comm.gather(wnf_loc,root=0)
-    pgat_set = comm.gather(pgat_loc,root=0)
-    pgaf_set = comm.gather(pgaf_loc,root=0)
-    tar =  comm.gather(tar_loc,root=0)
+    # trn_set =  comm.gather(trn_loc,root=0)
+    # thf_set =  comm.gather(thf_loc,root=0)
+    # wnz_set =  comm.gather(wnz_loc,root=0)
+    # wnf_set =  comm.gather(wnf_loc,root=0)
+    # pgat_set = comm.gather(pgat_loc,root=0)
+    # pgaf_set = comm.gather(pgaf_loc,root=0)
+    # tar =  comm.gather(tar_loc,root=0)
 
-    if rank == 0:
-        trn_set = torch.vstack(trn_set)
-        thf_set = torch.vstack(thf_set)
-        wnz_set = torch.vstack(wnz_set)
-        wnf_set = torch.vstack(wnf_set)
-        pgat_set = torch.vstack(pgat_set)
-        pgaf_set = torch.vstack(pgaf_set)
-        tar = torch.vstack(tar)
+    # if rank == 0:
+    #     trn_set = torch.vstack(trn_set)
+    #     thf_set = torch.vstack(thf_set)
+    #     wnz_set = torch.vstack(wnz_set)
+    #     wnf_set = torch.vstack(wnf_set)
+    #     pgat_set = torch.vstack(pgat_set)
+    #     pgaf_set = torch.vstack(pgaf_set)
+    #     tar = torch.vstack(tar)
     
-        tar = (psat_set,psaf_set,tar)
+    tar = (psat_set,psaf_set,tar)
 
-        partition = {'all': range(0,nsy)}
-        trn = max(1,int(batch_percent[0]*nsy))
-        tst = max(1,int(batch_percent[1]*nsy))
-        vld = max(1,nsy-trn-tst)
+    partition = {'all': range(0,nsy)}
+    trn = max(1,int(batch_percent[0]*nsy))
+    tst = max(1,int(batch_percent[1]*nsy))
+    vld = max(1,nsy-trn-tst)
 
-        ths = thsTensorData(trn_set,thf_set,wnz_set,wnf_set,tar,partition['all'])
+    ths = thsTensorData(trn_loc,thf_loc,wnz_loc,wnf_loc,tar,partition['all'])
 
-        # RANDOM SPLIT
-        idx,\
-        ths_trn = random_split(ths,[trn,vld,tst])
-        ths_trn,\
-        ths_tst,\
-        ths_vld = ths_trn
-           
-        return ths_trn,ths_tst,ths_vld,vtm,fsc
-    else: 
-        return None
+    # RANDOM SPLIT
+    idx,\
+    ths_trn = random_split(ths,[trn,vld,tst])
+    ths_trn,\
+    ths_tst,\
+    ths_vld = ths_trn
+       
+    return ths_trn,ths_tst,ths_vld,vtm,fsc
     
     # index_counts = eqm.map_partitions(lambda _df: _df.index.value_counts().sort_index()).compute()
     # index = np.repeat(index_counts.index, index_counts.values)
