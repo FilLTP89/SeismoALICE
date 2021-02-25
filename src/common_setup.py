@@ -16,7 +16,7 @@ warnings.filterwarnings("ignore")
 import argparse
 import os
 import sys
-from os.path import join as osj
+from os.path import join as opj
 import numpy as np
 import random
 import pickle 
@@ -34,7 +34,7 @@ from torch.utils.data import ConcatDataset as tdu_cat
 import torch.backends.cudnn as cudnn
 from common_model import get_truncated_normal
 from database_sae import load_dataset,synth_dataset
-from database_sae import stead_dataset,stead_dataset_dask,ann2bb_dataset
+from database_sae import STEADdataset,ann2bb_dataset
 from database_sae import deepbns_dataset
 from database_sae import mdof_dataset
 import pandas as pd
@@ -93,14 +93,9 @@ def setup():
     FloatTensor = tcuda.FloatTensor if opt.cuda else tFT
     LongTensor = tcuda.LongTensor if opt.cuda else tLT
     
-
-
-    print("|parser has finished his job ...")
-    
     #get number of thread in the environment (CPUs)
     opt.ntask =  torch.get_num_threads()
-    # opt.ntask =  2
-    
+        
     #get number of GPUs in the system environment
     opt.ngpu = torch.cuda.device_count()
     #to no detray propagation values of the gpus
@@ -119,32 +114,7 @@ def setup():
     except OSError:
         print("|file {}.json not found".format(opt.config))
         opt.config =  None
-        print("|The programm style proceed ...")
         pass
-
-    # try:
-    #     if sys.platform == 'linux':
-    #         # Distributed package only covers collective communications with Gloo
-    #         # backend and FileStore on Windows platform. Set init_method parameter
-    #         # in init_process_group to a local file.
-    #         # Example init_method="file:///f:/libtmp/some_file"
-    #         init_method="file:///gpfs/workdir/jacquetg/SeismoALICE/temp.txt"
-
-    #         # initialize the process group
-    #         dist.init_process_group(
-    #             "gloo",
-    #             init_method=init_method,
-    #             rank=rank,
-    #             world_size=world_size
-    #         )
-    #     else:
-    #         os.environ['MASTER_ADDR'] = 'localhost'
-    #         os.environ['MASTER_PORT'] = '12355'
-
-    #         # initialize the process group
-    #         dist.init_process_group("gloo", rank=rank, world_size=world_size)
-    # except Exception as e:
-    #     raise e
 
     if opt.manualSeed is None:
         opt.manualSeed = random.randint(1, 10000)
@@ -198,13 +168,13 @@ def setup():
     elif opt.dataset == 'folder':
         src = opt.dataroot.split(',')
         for n in range(len(src)):
-            src[n] = osj(src[n],'*.*.*.mseed')
+            src[n] = opj(src[n],'*.*.*.mseed')
         print('dataroots:')
         print(src)
 
         inv = opt.inventory.split(',')
         for n in range(len(inv)):
-            inv[n] = osj(opt.dataroot,'sxml',inv[n])
+            inv[n] = opj(opt.dataroot,'sxml',inv[n])
         print('inventories:')
         print(inv)
 
@@ -225,14 +195,14 @@ def setup():
         tsave(vtm,    './vtm.pth')
     
     elif '.pth' in opt.dataset:
-        ths_trn = tload(osj(opt.dataroot,'ths_trn_'+opt.dataset))
-        ths_tst = tload(osj(opt.dataroot,'ths_tst_'+opt.dataset))
-        ths_vld = tload(osj(opt.dataroot,'ths_vld_'+opt.dataset))
-        vtm     = tload(osj(opt.dataroot,'vtm.pth'))
-        pickle_off = open(osj(opt.dataroot,"md.p"),"rb")
+        ths_trn = tload(opj(opt.dataroot,'ths_trn_'+opt.dataset))
+        ths_tst = tload(opj(opt.dataroot,'ths_tst_'+opt.dataset))
+        ths_vld = tload(opj(opt.dataroot,'ths_vld_'+opt.dataset))
+        vtm     = tload(opj(opt.dataroot,'vtm.pth'))
+        pickle_off = open(opj(opt.dataroot,"md.p"),"rb")
         md = pickle.load(pickle_off)
         pickle_off.close()
-        pickle_off = open(osj(opt.dataroot,"opt.p"),"rb")
+        pickle_off = open(opj(opt.dataroot,"opt.p"),"rb")
         optt = pickle.load(pickle_off)
         pickle_off.close()
         
@@ -266,7 +236,7 @@ def setup():
         opt = optt
     
     elif opt.dataset == 'deepbns':
-        src = osj(opt.dataroot,"Hybrid_Database.h5")
+        src = opj(opt.dataroot,"Hybrid_Database.h5")
         print('dataroots:')
         print(src)
         md = {'dtm':9.452707692307693e-06,'cutoff':opt.cutoff,'ntm':opt.imageSize}
@@ -292,44 +262,32 @@ def setup():
         handle.close()
 
     elif opt.dataset == 'stead':
-        size = 1
-
-        from mpi4py import MPI
-        comm = MPI.COMM_WORLD
-        rank = MPI.COMM_WORLD.rank
-        size = MPI.COMM_WORLD.Get_size()
-        
+                
         src = opt.dataroot
         print('dataroots:')
         print(src)
         md = {'dtm':0.01,'cutoff':opt.cutoff,'ntm':opt.imageSize}
         md['vTn'] = np.arange(0.0,3.05,0.05,dtype=np.float64)
         md['nTn'] = md['vTn'].size
-        out = stead_dataset_dask(comm,rank,size,src,
-            opt.batchPercent,opt.workers,opt.imageSize,opt.latentSize,\
+        ths_trn,ths_tst,ths_vld,vtm,fsc = STEADdataset(src,
+            opt.batchPercent,opt.imageSize,opt.latentSize,\
             opt.nzd,opt.nzf,md=md,nsy=opt.nsy,device=device)
-        comm.barrier()
-        if rank == 0:
-            (ths_trn,ths_tst,ths_vld,vtm,fsc) = out
-        #ths_trn,ths_tst,ths_vld,vtm,fsc = stead_dataset(src,
-        #    opt.batchPercent,opt.imageSize,opt.latentSize,\
-        #    opt.nzd,opt.nzf,md=md,nsy=opt.nsy,device=device)
-            md['fsc']=fsc
-            opt.ncls = md['fsc']['ncat']
-            # Create natural period vector 
-            opt.vTn = np.arange(0.0,3.05,0.05,dtype=np.float64)
-            opt.nTn = md['vTn'].size
-            tsave(ths_trn,'./ths_trn.pth')
-            tsave(ths_tst,'./ths_tst.pth')
-            tsave(ths_vld,'./ths_vld.pth')
-            tsave(vtm,    './vtm.pth')
-            with open('md.p', 'wb') as handle:
-                    pickle.dump(md,handle)
-            handle.close()
-            with open('opt.p', 'wb') as handle:
-                    pickle.dump(opt,handle)
-            print("Done!")
-            handle.close()
+        md['fsc']=fsc
+        opt.ncls = md['fsc']['ncat']
+        # Create natural period vector 
+        opt.vTn = np.arange(0.0,3.05,0.05,dtype=np.float64)
+        opt.nTn = md['vTn'].size
+        tsave(ths_trn,'./ths_trn.pth')
+        tsave(ths_tst,'./ths_tst.pth')
+        tsave(ths_vld,'./ths_vld.pth')
+        tsave(vtm,    './vtm.pth')
+        with open('md.p', 'wb') as handle:
+                pickle.dump(md,handle)
+        handle.close()
+        with open('opt.p', 'wb') as handle:
+                pickle.dump(opt,handle)
+        print("Done!")
+        handle.close()
         
     elif opt.dataset == 'ann2bb':
         src = opt.dataroot

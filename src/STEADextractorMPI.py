@@ -6,7 +6,7 @@ import mpi4py
 mpi4py.rc.initialize = False
 mpi4py.rc.finalize = False
 from mpi4py import MPI
-import extract_stead as extSTEAD
+import STEAD2pthMPI as s2p
 
 u'''General informations'''
 __author__ = "Filippo Gatti"
@@ -28,7 +28,7 @@ def main():
     rank = MPI.COMM_WORLD.Get_rank()    # Get the current rank
     hostname = MPI.Get_processor_name() # Get the hostname
     
-    extSTEAD.setup(comm,size,rank)
+    s2p.to_pth(comm,size,rank)
     MPI.Finalize()
     
 if __name__=="__main__":
