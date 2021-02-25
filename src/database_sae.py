@@ -201,42 +201,6 @@ def random_split(ths,lngs,idx=None):
     return idx,[Subset(ths,idx[off-lng:off]) 
         for off,lng in zip(_accumulate(lngs),lngs)]
 
-# def get_h5_groups(fname, group):
-#     h5f = open(fname, 'rb')
-#     return h5py.File(h5f, 'r').get(group)[:]  # note the [:] which gets all data as a numpy array
-
-# def get_h5_STEAD_waveforms(fnm,key):
-#     lazy = [dask.delayed(get_h5_groups)(fnm,k) for k in range(key)]
-#     arrays = [dd.from_delayed(x,shape=shape,dtype=np.float32) for x in lazy]
-#     return pd.DataFrame.from_dict({'a':[x + 1, x + 2]})
-
-# @delayed()
-# def make_daskdf(fnm,key):
-#     df_list = []
-#     for k in key:
-#         df_list.append(get_h5_groups(fnm,k))
-#     df = pd.concat(df_list, axis=0)
-#     return df
-# my_dask_script.py
-
-# Set up Dask workers from within an MPI job using the dask_mpi project
-# See https://dask-mpi.readthedocs.io/en/latest/
-def print_data_and_rank(chunks: list):
-    """ Fake function that mocks out how an MPI function should operate
-
-    -   It takes in a list of chunks of data that are present on this machine
-    -   It does whatever it wants to with this data and MPI
-        Here for simplicity we just print the data and print the rank
-    -   Maybe it returns something
-    """
-    rank = comm.Get_rank()
-
-    for chunk in chunks:
-        print("on rank:", rank)
-        print(chunk)
-
-    return sum(chunk.sum() for chunk in chunks)
-
 class H5ls:
     def __init__(self,nsy=0,names=[],xw=1):
         # Store an empty list for dataset names
@@ -263,9 +227,7 @@ class H5ls:
                 self.ths[self.nsy,j,:] /= self.pga[self.nsy,j]
                 self.nsy-=1
 
-
-
-def stead_dataset_dask(comm,rank,size,src,batch_percent,workers,
+def STEADdatasetMPI(comm,size,rank,src,batch_percent,workers,
     Xwindow,zwindow,nzd,nzf,md,nsy,device):
     
     meta = {'network_code':'str','receiver_code':'str','receiver_type':'str',
@@ -427,7 +389,7 @@ def stead_dataset_dask(comm,rank,size,src,batch_percent,workers,
     # client.close()
     
 
-def stead_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
+def STEADdataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
     print('Enter in the stead_dataset function ...') 
     vtm = md['dtm']*np.arange(0,md['ntm'])
     tar     = np.zeros((nsy,2))
