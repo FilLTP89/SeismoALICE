@@ -8,10 +8,6 @@ from copy import deepcopy
 # from profile_support import profile
 from common_nn import *
 from common_torch import * 
-# from dcgaae_model import Encoder, Decoder
-# from dcgaae_model import DCGAN_Dx, DCGAN_Dz
-# from dcgaae_model import *
-# from dcgaae_model import DenseEncoder
 import plot_tools as plt
 from generate_noise import latent_resampling, noise_generator
 from generate_noise import lowpass_biquad
@@ -25,6 +21,7 @@ import pdb
 from conv_factory import *
 import GPUtil
 from torch.nn.parallel import DistributedDataParallel as DDP
+from pl_bolts.datamodules.async_dataloader import AsynchronousLoader
 # from pytorchsummary.torchsummary import summary
 # import numpy as np
 
@@ -173,7 +170,7 @@ class trainer(object):
         self.strategy=strategy
         self.ngpu = ngpu
 
-        nzd =  opt.nzd
+        nzd = opt.nzd
         ndf = opt.ndf
         
         # the follwings variable are the instance for the object Module from 
@@ -1074,31 +1071,29 @@ class trainer(object):
         globals().update(opt.__dict__)
         error = {}
         for epoch in range(niter):
-            for b,batch in enumerate(trn_loader):
-                # Load batch
-                # pdb.set_trace()
-                xd_data,_,zd_data,_,_,_,_ = batch
-                Xd = Variable(xd_data).to(ngpu-1,non_blocking=True) # BB-signal
-                zd = Variable(zd_data).to(ngpu-1,non_blocking=True)
-                # Train G/D
-                for _ in range(5):
-                    self.alice_train_broadband_discriminator_explicit_xz(Xd,zd)
-                    torch.cuda.empty_cache()
+            for np in range(opt.dataloaders):
+                ths_trn = tload(opj(opt.dataroot,'ths_trn_ns{:>d}_nt{:>d}_ls{:>d}_nzf{:>d}_nzd{:>d}_{:>d}.pth'.format(nsy,
+                    opt.signalSize,opt.latentSize,opt.nzf,opt.nzd,np)))
+                # ths_tst = tload(opj(opt.dataroot,'ths_tst_{:>d}{:s}'.format(np,opt.dataset)))
+                # ths_vld = tload(opj(opt.dataroot,'ths_vld_{:>d}{:s}'.format(np,opt.dataset)))
+                trn_loader = AsynchronousLoader(trn_loader, device=device)
                 
-                for _ in range(1):
-                    self.alice_train_broadband_generator_explicit_xz(Xd,zd)
-                    torch.cuda.empty_cache()
-
-                # # pdb.set_trace()
-                # err = self._error(self.Fed, self.Gdd,Xd,zd,device)
-                # a =  err.cpu().data.numpy().tolist()
-                # #error in percentage (%)
-                # if b in error:
-                #     error[b] = np.append(error[b], a)
-                # else:
-                #     error[b] = a
+                for b,batch in enumerate(trn_loader):
+                    # Load batch
+                    # pdb.set_trace()
+                    xd_data,_,zd_data,_,_,_,_ = batch
+                    Xd = Variable(xd_data).to(ngpu-1,non_blocking=True) # BB-signal
+                    zd = Variable(zd_data).to(ngpu-1,non_blocking=True)
+                    # Train G/D
+                    for _ in range(5):
+                        self.alice_train_broadband_discriminator_explicit_xz(Xd,zd)
+                        torch.cuda.empty_cache()
+                    
+                    for _ in range(1):
+                        self.alice_train_broadband_generator_explicit_xz(Xd,zd)
+                        torch.cuda.empty_cache()
             
-            GPUtil.showUtilization(all=True)
+                GPUtil.showUtilization(all=True)
 
             
             str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
@@ -1121,17 +1116,14 @@ class trainer(object):
                            'optimizer_state_dict':self.oDdxz.state_dict()},'./network/DsXd_bb_{}.pth'.format(epoch))    
                     tsave({'model_state_dict':self.Ddxz.state_dict(),
                            'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Ddxz_bb_{}.pth'.format(epoch))
-        # pdb.set_trace()
-        # plt.plot_loss_dict(nb=niter,losses=self.losses,title='loss_classic',outf=outf)
+        
         plt.plot_loss_explicit(losses=self.losses["Dloss_t"], key="Dloss_t", outf=outf,niter=niter)
         plt.plot_loss_explicit(losses=self.losses["Gloss_x"], key="Gloss_x", outf=outf,niter=niter)
         plt.plot_loss_explicit(losses=self.losses["Gloss_z"], key="Gloss_z", outf=outf,niter=niter)
         plt.plot_loss_explicit(losses=self.losses["Gloss_z"], key="Gloss_z", outf=outf,niter=niter)
         plt.plot_loss_explicit(losses=self.losses["Gloss_t"], key="Gloss_t", outf=outf,niter=niter)
         plt.plot_loss_explicit(losses=self.losses["norm_grad"], key="norm_grad", outf=outf,niter=niter)
-        # pdb.set_trace()
-        # plt.plot_error(error,outf=outf)
-        # del self.losses
+        
 
         tsave({'epoch':niter,'model_state_dict':self.Fed.state_dict(),
             'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'./network/Fed.pth')
@@ -1147,6 +1139,7 @@ class trainer(object):
         globals().update(self.cv)
         globals().update(opt.__dict__)
         error = {}
+        trn_loader = AsynchronousLoader(trn_loader, device=device)
         for epoch in range(niter):
             for b,batch in enumerate(trn_loader):
                 # Load batch
