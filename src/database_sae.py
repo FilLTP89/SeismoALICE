@@ -228,8 +228,7 @@ class H5ls:
                 self.nsy-=1
 
 def STEADdatasetMPI(comm,size,rank,src,batch_percent,workers,
-    Xwindow,zwindow,nzd,nzf,md,nsy,device):
-    
+    Xwindow,zwindow,nzd,nzf,md,nsy,gather=False):
     meta = {'network_code':'str','receiver_code':'str','receiver_type':'str',
         'receiver_latitude':np.float64,'receiver_longitude':np.float64,'receiver_elevation_m':np.float64,
         'p_arrival_sample':np.float64,'p_status':'str','p_weight':np.float64,'p_travel_sec':np.float64,
@@ -251,11 +250,14 @@ def STEADdatasetMPI(comm,size,rank,src,batch_percent,workers,
 
     eqm = dd.read_csv(urlpath=src.replace('.hdf5','.csv').replace('waveforms','metadata'),
         na_values='None',dtype=meta).query('trace_category == "earthquake_local"').query('source_magnitude>=3.5')
+    
+    
     eqm = eqm.sample(frac=nsy/len(eqm),replace=True).reset_index(drop=True).set_index("trace_name",sorted=True)
     
-    nsy_loc = len(eqm)//size
+    nsy_set = len(eqm)//size
 
-    nsy = nsy_loc*size
+    nsy = nsy_set*size
+
     trn_set  = -999.9*np.ones(shape=(nsy,3,md['ntm']),dtype=np.float32)
     thf_set  = -999.9*np.ones(shape=(nsy,3,md['ntm']),dtype=np.float32)
 
@@ -265,51 +267,53 @@ def STEADdatasetMPI(comm,size,rank,src,batch_percent,workers,
     psat_set = -999.9*np.ones(shape=(1,1,1),dtype=np.float32)
     psaf_set = -999.9*np.ones(shape=(1,1,1),dtype=np.float32)
     
-    trn_loc  = -999.9*np.ones(shape=(nsy_loc,3,md['ntm']),dtype=np.float32)
-    thf_loc  = -999.9*np.ones(shape=(nsy_loc,3,md['ntm']),dtype=np.float32)
+    trn_set  = -999.9*np.ones(shape=(nsy_set,3,md['ntm']),dtype=np.float32)
+    thf_set  = -999.9*np.ones(shape=(nsy_set,3,md['ntm']),dtype=np.float32)
 
-    pgat_loc = -999.9*np.ones(shape=(nsy_loc,3),dtype=np.float32)
-    pgaf_loc = -999.9*np.ones(shape=(nsy_loc,3),dtype=np.float32)
+    pgat_set = -999.9*np.ones(shape=(nsy_set,3),dtype=np.float32)
+    pgaf_set = -999.9*np.ones(shape=(nsy_set,3),dtype=np.float32)
     
-    h5ls = H5ls(nsy=nsy_loc,names=eqm.index.compute().to_list(),xw=Xwindow)
+    h5ls = H5ls(nsy=nsy_set,
+        names=eqm.index.compute().to_list()[rank*nsy_set:(rank+1)*nsy_set],
+        xw=Xwindow)
     with h5py.File(src,'r',driver='mpio',comm=comm) as f:
         dsets = f['earthquake']['local']
         # this will now visit all objects inside the hdf5 file and store datasets in h5ls.names
         dsets.visititems(h5ls)
-        trn_loc  = h5ls.ths
-        pgat_loc = h5ls.pga
+        trn_set  = h5ls.ths
+        pgat_set = h5ls.pga
     f.close()
 
-    trn_loc  = np2t(np.float32(trn_loc))
-    pgat_loc = np2t(np.float32(pgat_loc))
+    trn_set  = np2t(np.float32(trn_set))
+    pgat_set = np2t(np.float32(pgat_set))
 
-    thf_loc = lowpass_biquad(trn_loc,1./md['dtm'],md['cutoff'])
+    thf_set = lowpass_biquad(trn_set,1./md['dtm'],md['cutoff'])
 
-    for i in range(thf_loc.shape[0]):
+    for i in range(thf_set.shape[0]):
         for j in range(3):
-            pgaf_loc[i,j] = np.abs(thf_loc[i,j,:].data.numpy()).max(axis=-1)
+            pgaf_set[i,j] = np.abs(thf_set[i,j,:].data.numpy()).max(axis=-1)
             #_,psa,_,_,_ = rsp(md['dtm'],thf_set.data[i,j,:].numpy(),md['vTn'],5.)
             # psaf_set[i,j,:] = psa.reshape((md['nTn']))
             
-    pgat_loc = np2t(np.float32(pgat_loc))    
-    pgaf_loc = np2t(np.float32(pgaf_loc))
+    pgat_set = np2t(np.float32(pgat_set))    
+    pgaf_set = np2t(np.float32(pgaf_set))
     # psat_set = np2t(np.float32(psat_set))
     # psaf_set = np2t(np.float32(psaf_set))
 
-    wnz_loc = tFT(nsy_loc,nzd,zwindow).resize_(nsy_loc,nzd,zwindow).normal_(**rndm_args)
-    wnf_loc = tFT(nsy_loc,nzf,zwindow).resize_(nsy_loc,nzf,zwindow).normal_(**rndm_args)
+    wnz_set = tFT(nsy_set,nzd,zwindow).resize_(nsy_set,nzd,zwindow).normal_(**rndm_args)
+    wnf_set = tFT(nsy_set,nzf,zwindow).resize_(nsy_set,nzf,zwindow).normal_(**rndm_args)
         
     tar = eqm[['source_magnitude','source_depth_km']].compute().to_numpy(np.float32)
     nhe = tar.shape[1] 
     tar_fsc = select_scaler(method='fit_transform',\
                             scaler='StandardScaler')
-    tar_loc = operator_map['fit_transform'](tar_fsc,tar)
+    tar_set = operator_map['fit_transform'](tar_fsc,tar)
     lab_enc = LabelEncoder()
     for i in range(nhe):
-        tar_loc[:,i] = lab_enc.fit_transform(tar_loc[:,i])
+        tar_set[:,i] = lab_enc.fit_transform(tar_set[:,i])
     from sklearn.preprocessing import MultiLabelBinarizer
     one_hot = MultiLabelBinarizer(classes=range(64))
-    tar_loc = np2t(np.float32(one_hot.fit_transform(tar_loc)))
+    tar_set = np2t(np.float32(one_hot.fit_transform(tar_set)))
     # from plot_tools import plot_ohe
     # plot_ohe(tar)
 
@@ -318,33 +322,47 @@ def STEADdatasetMPI(comm,size,rank,src,batch_percent,workers,
            'ths_fsc':ths_fsc,
            'one_hot':one_hot,
            'ncat':tar.shape[1]}
-    
 
-    # recvcnt = [trn.size for _ in range(size)]
-    # recvdis = [0]
-    # for i in recvcnt[:-1]:
-    #     recvdis.append(recvdis[-1]+i)
-    
-    
-    trn_set =  comm.gather(trn_loc,root=0)
-    thf_set =  comm.gather(thf_loc,root=0)
-    wnz_set =  comm.gather(wnz_loc,root=0)
-    wnf_set =  comm.gather(wnf_loc,root=0)
-    pgat_set = comm.gather(pgat_loc,root=0)
-    pgaf_set = comm.gather(pgaf_loc,root=0)
-    tar =  comm.gather(tar_loc,root=0)
+    tar = (psat_set,psaf_set,tar)
 
-    if rank == 0:
-        trn_set = torch.vstack(trn_set)
-        thf_set = torch.vstack(thf_set)
-        wnz_set = torch.vstack(wnz_set)
-        wnf_set = torch.vstack(wnf_set)
-        pgat_set = torch.vstack(pgat_set)
-        pgaf_set = torch.vstack(pgaf_set)
-        tar = torch.vstack(tar)
-    
-        tar = (psat_set,psaf_set,tar)
+    if gather:
+        md['nsy'] = nsy
+        trn_set =  comm.gather(trn_set,root=0)
+        thf_set =  comm.gather(thf_set,root=0)
+        wnz_set =  comm.gather(wnz_set,root=0)
+        wnf_set =  comm.gather(wnf_set,root=0)
+        pgat_set = comm.gather(pgat_set,root=0)
+        pgaf_set = comm.gather(pgaf_set,root=0)
+        tar =  comm.gather(tar_set,root=0)
 
+        if rank == 0:
+            trn_set = torch.vstack(trn_set)
+            thf_set = torch.vstack(thf_set)
+            wnz_set = torch.vstack(wnz_set)
+            wnf_set = torch.vstack(wnf_set)
+            pgat_set = torch.vstack(pgat_set)
+            pgaf_set = torch.vstack(pgaf_set)
+            tar = torch.vstack(tar)
+    
+            partition = {'all': range(0,nsy)}
+            trn = max(1,int(batch_percent[0]*nsy))
+            tst = max(1,int(batch_percent[1]*nsy))
+            vld = max(1,nsy-trn-tst)
+
+            ths = thsTensorData(trn_set,thf_set,wnz_set,wnf_set,tar,partition['all'])
+
+            # RANDOM SPLIT
+            idx,\
+            ths_trn = random_split(ths,[trn,vld,tst])
+            ths_trn,\
+            ths_tst,\
+            ths_vld = ths_trn
+               
+            return ths_trn,ths_tst,ths_vld,vtm,fsc
+        else:
+            return None
+    else:
+        md['nsy'] = nsy_set
         partition = {'all': range(0,nsy)}
         trn = max(1,int(batch_percent[0]*nsy))
         tst = max(1,int(batch_percent[1]*nsy))
@@ -402,7 +420,7 @@ def STEADdataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
     eqd = h5py.File(src,'r')['earthquake']['local']
     eqm = pd.read_csv(opj(src.split('/waveforms')[0],'metadata_'+\
                           src.split('waveforms_')[-1].split('.hdf5')[0]+'.csv'))
-    eqm = eqm.loc[eqm['trace_category'] == 'earthquake_local']
+    eqm = eqm.loc[eqm['trace_category'] == 'earthquake_setal']
     eqm = eqm.loc[eqm['source_magnitude'] >= 3.5]
     eqm = eqm.sample(frac=nsy/len(eqm)).reset_index(drop=True)
     w = windows.tukey(md['ntm'],5/100)

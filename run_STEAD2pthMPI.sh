@@ -17,4 +17,4 @@
  
 export PYTHONPATH="./src"
 
-mpirun --use-hwthread-cpus -np 12 python3 STEADextractorMPI.py --dataroot=$HOME/Data/Filippo/aeolus/STEAD/waveforms_11_13_19.hdf5 --dataset='stead' --cutoff=1. --imageSize=4096 --latentSize=4 --nzd=128 --workers=2 --nsy=100 --batchSize=50
+mpirun --use-hwthread-cpus -np 12 python3 ./src/STEADextractorMPI.py --dataroot=$HOME/Data/Filippo/aeolus/STEAD/waveforms_11_13_19.hdf5 --dataset='stead' --cutoff=1. --signalSize=4096 --latentSize=4 --nzd=128 --workers=2 --nsy=10000 --batchSize=50

@@ -47,8 +47,9 @@ def setup():
     parser = argparse.ArgumentParser()
     parser.add_argument('--actions', default='../actions_bb.txt',help='define actions txt')
     parser.add_argument('--strategy', default='../strategy_bb.txt',help='define strategy txt')
-    parser.add_argument('--dataset', default='mdof',help='folder | synth | pth | stead | ann2bb | deepbns | mdof')  #nt4096_ls128_nzf8_nzd32.pth
-    parser.add_argument('--dataroot', default='D:\\Luca\\Dati\\Filippo_data\\damaged_1_1T',help='Path to dataset') # '/home/filippo/Data/Filippo/aeolus/ann2bb_as4_') # '/home/filippo/Data/Filippo/aeolus/STEAD/waveforms_11_13_19.hdf5',help='path to dataset') # './database/stead'
+    parser.add_argument('--dataset', default='mdof',help='folder | synth | pth | stead | ann2bb | deepbns | mdof')
+    parser.add_argument('--dataloaders', type=int, default=1, help="number of dataloaders for recursive training")
+    parser.add_argument('--dataroot', default='D:\\Luca\\Dati\\Filippo_data\\damaged_1_1T',help='Path to dataset')
     parser.add_argument('--inventory',default='RM07.xml,LXRA.xml,SRN.xml',help='inventories')
     parser.add_argument('--workers', type=int, help='number of data loading workers', default=2)
     parser.add_argument('--batchSize', type=int, default=5, help='input batch size')
@@ -199,13 +200,14 @@ def setup():
         tsave(vtm,    './vtm.pth')
     
     elif '.pth' in opt.dataset:
-        ths_trn = tload(opj(opt.dataroot,'ths_trn_'+opt.dataset))
-        ths_tst = tload(opj(opt.dataroot,'ths_tst_'+opt.dataset))
-        ths_vld = tload(opj(opt.dataroot,'ths_vld_'+opt.dataset))
-        vtm     = tload(opj(opt.dataroot,'vtm.pth'))
-        pickle_off = open(opj(opt.dataroot,"md.p"),"rb")
-        md = pickle.load(pickle_off)
-        pickle_off.close()
+        
+        # ths_trn = tload(opj(opt.dataroot,'ths_trn_'+opt.dataset))
+        # ths_tst = tload(opj(opt.dataroot,'ths_tst_'+opt.dataset))
+        # ths_vld = tload(opj(opt.dataroot,'ths_vld_'+opt.dataset))
+        vtm = tload(opj(opt.dataroot,'vtm.pth'))
+        # pickle_off = open(opj(opt.dataroot,"md.p"),"rb")
+        # md = pickle.load(pickle_off)
+        # pickle_off.close()
         pickle_off = open(opj(opt.dataroot,"opt.p"),"rb")
         optt = pickle.load(pickle_off)
         pickle_off.close()
@@ -293,7 +295,6 @@ def setup():
         handle.close()
         with open('opt.p', 'wb') as handle:
                 pickle.dump(opt,handle)
-        print("Done!")
         handle.close()
         
     elif opt.dataset == 'ann2bb':
@@ -351,8 +352,8 @@ def setup():
     params = {'batch_size': opt.batchSize,\
               'shuffle': True,'num_workers':int(opt.workers)}
     
-    trn_loader,tst_loader,vld_loader = \
-        dataset2loader(ths_trn,ths_tst,ths_vld,**params)  
+    # trn_loader,tst_loader,vld_loader = \
+    #     dataset2loader(ths_trn,ths_tst,ths_vld,**params)  
 #         dataset2loader(ths_trn,thf_trn,wnz_trn,\
 #                        ths_tst,thf_tst,wnz_tst,\
 #                        ths_vld,thf_vld,wnz_vld,\
@@ -369,14 +370,15 @@ def setup():
     strategy = dict(strategy['strategy'].to_dict(),**tract,**trplt,**trcmp,**trdis)
     opt.strategy = strategy
     cv = {'parser':parser,'opt':opt,'vtm':vtm,\
-          'trn_loader':trn_loader,\
-          'tst_loader':tst_loader,\
-          'vld_loader':vld_loader,\
+          # 'trn_loader':trn_loader,\
+          # 'tst_loader':tst_loader,\
+          # 'vld_loader':vld_loader,\
           'params':params,\
           'device':device,\
           'FloatTensor':FloatTensor,\
           'LongTensor':LongTensor,\
-          'md':md}
+          # 'md':md
+          }
     return cv
 
 def cleanup():
