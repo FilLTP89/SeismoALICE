@@ -469,6 +469,7 @@ class T(object):
                  'Fef' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)]+[nn.LeakyReLU(1.0,inplace=True)],
                  'Gdf' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.Tanh()],
                  'Ghz' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.LeakyReLU(1.0,inplace=True)],
+                 'Fhz' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.LeakyReLU(1.0,inplace=True)],
                  'Dsx' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)],
                  'Dfx' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)],
                  'Dsz' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)],
@@ -477,7 +478,7 @@ class T(object):
                  'Drz' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)] + [nn.Sigmoid()],
                  'Ddxz':[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.Sigmoid()],
                  'Dfxz':[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.Sigmoid()],
-                 'DhXd':[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.Sigmoid()]
+                 'DhXd':[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)] + [nn.Sigmoid()]
                  }
 
         acts['WGAN']  = {

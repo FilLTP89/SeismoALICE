@@ -8,13 +8,17 @@ from copy import deepcopy
 from profile_support import profile
 from common_nn import *
 from common_torch import * 
-from dcgaae_model import Encoder, Decoder
-from dcgaae_model import DCGAN_Dx, DCGAN_Dz
+# from dcgaae_model import Encoder, Decoder
+# from dcgaae_model import DCGAN_Dx, DCGAN_Dz
 # from dcgaae_model import DCGAN_DXX, DCGAN_DZZ, DCGAN_DXZ
-from dcgaae_model import DenseEncoder
+# from dcgaae_model import DenseEncoder
 import plot_tools as plt
 from generate_noise import latent_resampling, noise_generator
 from generate_noise import lowpass_biquad
+import pdb
+from conv_factory import *
+import json
+from pytorch_summary import summary
 rndm_args = {'mean': 0, 'std': 1}
 
 u'''General informations'''
@@ -159,19 +163,27 @@ class trainer(object):
         flagT=False
         flagF=False
         t = [y.lower() for y in list(self.strategy.keys())]
+         #we determine in which kind of environnement we are 
+        if(opt.ntask ==1 and opt.ngpu >=1):
+            print('ModelParallele to be builded ...')
+            factory = ModelParalleleFactory()
+        elif(opt.ntask >1 and opt.ngpu >=1):
+            print('DataParallele to be builded ...')
+            factory = DataParalleleFactory()
+        else:
+            print('environ not found')
+        net = Network(factory)
         if 'broadband' in t:
             self.style='ALICE'
             act = acts[self.style]
             flagT = True
             n = self.strategy['broadband']
             print("Loading broadband generators")
+            # pdb.set_trace()
             # Encoder broadband Fed
-            self.Fed = Encoder(ngpu=ngpu,dev=device,nz=nzd,nzcl=0,nch=2*nch_tot,
-                               ndf=ndf,szs=md['ntm'],nly=nly,ker=4,std=2,\
-                               pad=0,dil=1,grp=1,dpc=0.0,act=act['Fed']).to(device)
+            self.Fed = net.Encoder(opt.config["Fed"],opt)
             # Decoder broadband Gdd
-            self.Gdd = Decoder(ngpu=ngpu,nz=2*nzd,nch=nch_tot,ndf=ndf//(2**(5-nly)),nly=nly,ker=4,std=2,pad=0,\
-                               opd=0,dpc=0.0,act=act['Gdd']).to(device)
+            self.Gdd = net.Decoder(opt.config["Gdd"],opt)
             if self.strategy['tract']['broadband'] or self.strategy['trdis']['hybrid']:
                 if None in n:
                     self.FGd = [self.Fed,self.Gdd]
@@ -184,12 +196,10 @@ class trainer(object):
                     self.oGdxz = Adam(ittc(self.Fed.parameters(),self.Gdd.parameters()),
                                       lr=glr,betas=(b1,b2))#,weight_decay=None)
                 self.optzd.append(self.oGdxz)
-                self.Dszd = DCGAN_Dz(ngpu=ngpu,nz=nzd,ncl=512,n_extra_layers=1,dpc=0.25,
-                                     bn=False,activation=act['Dsz']).to(device)
-                self.DsXd = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
-                                     n_extra_layers=0,dpc=0.25,activation=act['Dsx']).to(device)
-                self.Ddxz = DCGAN_DXZ(ngpu=ngpu,nc=1024,n_extra_layers=2,dpc=0.25,
-                                      activation=act['Ddxz']).to(device)    
+                self.Dszd = net.DCGAN_Dz(opt.config["Dszd"], opt)
+                self.DsXd = net.DCGAN_Dx(opt.config["DsXd"], opt)
+                self.Ddxz = net.DCGAN_DXZ(opt.config["Ddxz"], opt)
+
                 self.Ddnets.append(self.DsXd)  
                 self.Ddnets.append(self.Dszd)
                 self.Ddnets.append(self.Ddxz)
@@ -211,13 +221,9 @@ class trainer(object):
             #import pdb
             #pdb.pdb.set_trace()
             print("Loading filtered generators")
-            print(nz*2,nch, ndf)
-            self.Fef = Encoder(ngpu=ngpu,dev=device,nz=nzf,nzcl=0,nch=2*nch_tot,
-                               ndf=ndf,szs=md['ntm'],nly=5,ker=4,std=2,\
-                               pad=0,dil=1,grp=1,dpc=0.0,\
-                               act=act['Fef']).to(device)
-            self.Gdf = Decoder(ngpu=ngpu,nz=2*nzf,nch=nch_tot,ndf=ndf,nly=5,ker=4,std=2,pad=0,\
-                               opd=0,dpc=0.0,act=act['Gdf']).to(device)
+            # print(nz*2,nch, ndf)
+            self.Fef = net.Encoder(opt.config["Fef"], opt)
+            self.Gdf = net.Decoder(opt.config["Gdf"], opt)
             if self.strategy['tract']['filtered']:
                 if None in n:        
                     self.FGf = [self.Fef,self.Gdf]
@@ -230,21 +236,15 @@ class trainer(object):
                     self.oGfxz = Adam(ittc(self.Fef.parameters(),self.Gdf.parameters()),
                                       lr=glr,betas=(b1,b2),weight_decay=0.00001)
                 self.optzf.append(self.oGfxz)
-                self.Dszf = DCGAN_Dz(ngpu=ngpu,nz=nzf,ncl=2*nzf,n_extra_layers=2,dpc=0.25,bn=False,
-                                     activation=act['Dsz'],wf=True).to(device)
-                self.DsXf = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
-                                     n_extra_layers=0,dpc=0.25,activation=act['Dsx'],
-                                     wf=True).to(device)
-                self.Dfxz = DCGAN_DXZ(ngpu=ngpu,nc=512+2*nzf,n_extra_layers=2,dpc=0.25,
-                                      activation=act['Ddxz'],wf=True).to(device)
+                self.Dszf = net.DCGAN_Dz(opt.config["Dszf"], opt)
+                self.DsXf = net.DCGAN_Dx(opt.config["DsXf"], opt)
+                self.Dfxz = net.DCGAN_DXZ(opt.config["Dfxz"], opt)
                 self.Dfnets.append(self.DsXf)
                 self.Dfnets.append(self.Dszf)
                 self.Dfnets.append(self.Dfxz)
                 # recontruction
-                self.Dsrzf = DCGAN_Dz(ngpu=ngpu,nz=2*nzf,ncl=2*nzf,n_extra_layers=1,dpc=0.25,
-                                      bn=False,activation=act['Drz']).to(device)
-                self.DsrXf = DCGAN_Dx(ngpu=ngpu,isize=256,nc=2*nch_tot,ncl=512,ndf=64,fpd=1,
-                                      n_extra_layers=0,dpc=0.25,activation=act['Drx']).to(device)
+                self.Dsrzf = net.DCGAN_Dz()
+                self.DsrXf = net.DCGAN_Dx()
                 self.Dfnets.append(self.DsrXf)
                 self.Dfnets.append(self.Dsrzf)
                 self.oDfxz = reset_net(self.Dfnets,func=set_weights,lr=rlr,optim='rmsprop')
@@ -265,12 +265,8 @@ class trainer(object):
             #                   ndf=ndf,szs=md['ntm'],nly=5,ker=4,std=2,\
             #                   pad=0,dil=1,grp=1,dpc=0.0,\
             #                   act=act['Fef']).to(device)
-            self.Fhz = Decoder(ngpu=ngpu,nz=2*nzd,nch=nzf,ndf=ndf,nly=3,ker=3,std=1,pad=1,\
-                               opd=0,dpc=0.0,act=act['Fhz']).to(device)
-            self.Ghz = Encoder(ngpu=ngpu,dev=device,nz=nzd,nzcl=0,nch=2*nzf,
-                               ndf=nzf*4,szs=32,nly=3,ker=3,std=1,\
-                               pad=1,dil=1,grp=1,dpc=0.0,bn=True,
-                               act=act['Ghz']).to(device)
+            self.Fhz = net.Decoder(opt.config["Fhz"],opt)
+            self.Ghz = net.Encoder(opt.config["Ghz"],opt)
             if None not in n:
                 print("Hybrid generators - NO TRAIN: {0} - {1}".format(*n))
                 self.Fhz.load_state_dict(tload(n[0])['model_state_dict'])
@@ -282,34 +278,20 @@ class trainer(object):
                 else:
                     self.oGhxz = reset_net([self.Fhz,self.Ghz],func=set_weights,lr=glr,b1=b1,b2=b2)
                 self.optzh.append(self.oGhxz)
-                self.Dsrzd = DCGAN_DXZ(ngpu=ngpu,nc=2*nzd,n_extra_layers=2,dpc=0.25,
-                                       activation=act['Ddxz'],wf=False).to(device)
-                self.Dsrzf = DCGAN_DXZ(ngpu=ngpu,nc=2*nzf,n_extra_layers=2,dpc=0.25,
-                                       activation=act['Ddxz'],wf=False).to(device)
+                self.Dsrzd = net.DCGAN_DXZ(opt.config["Dsrzd"],opt)
+                self.Dsrzf = net.DCGAN_DXZ(opt.config["Dsrzf"],opt)
                 self.Dhnets.append(self.Dsrzd)
                 self.Dhnets.append(self.Dsrzf)
                 if self.style=='WGAN':
                     print("Discriminator Optimizer for WGAN")
-                    self.DsrXd = Encoder(ngpu=ngpu,dev=device,nz=1,nzcl=0,nch=2*nch_tot,
-                                     ndf=ndf,szs=md['ntm'],nly=3,ker=3,std=2,\
-                                     pad=1,dil=1,grp=1,dpc=0.25,bn=False,\
-                                     act=act['DhXd']).to(device)
-                    self.DsrXf = Encoder(ngpu=ngpu,dev=device,nz=1,nzcl=0,nch=2*nch_tot,
-                                     ndf=ndf,szs=md['ntm'],nly=3,ker=3,std=2,\
-                                     pad=1,dil=1,grp=1,dpc=0.25,bn=False,\
-                                     act=act['DhXd']).to(device)
+                    self.DsrXd = net.Encoder(opt.config["DsrXd"],opt)
+                    self.DsrXf = net.Encoder(opt.config["DsrXf"],opt)
                     self.Dhnets.append(self.DsrXd)
                     self.Dhnets.append(self.DsrXf)
                     self.oDhzdzf = reset_net(self.Dhnets,func=set_weights,lr=rlr,optim='rmsprop')
                 else:
-                    self.DsrXd = Encoder(ngpu=ngpu,dev=device,nz=1,nzcl=0,nch=2*nch_tot,
-                                     ndf=ndf,szs=md['ntm'],nly=5,ker=3,std=2,\
-                                     pad=1,dil=1,grp=1,dpc=0.25,bn=True,\
-                                     act=act['DhXd']).to(device)
-                    self.DsrXf = Encoder(ngpu=ngpu,dev=device,nz=1,nzcl=0,nch=2*nch_tot,
-                                     ndf=ndf,szs=md['ntm'],nly=5,ker=3,std=2,\
-                                     pad=1,dil=1,grp=1,dpc=0.25,bn=True,\
-                                     act=act['DhXd']).to(device)
+                    self.DsrXd = net.Encoder(opt.config["DsrXd"],opt)
+                    self.DsrXf = net.Encoder(opt.config["DsrXf"],opt)
                     self.Dhnets.append(self.DsrXd)
                     self.Dhnets.append(self.DsrXf)
                     self.oDhzdzf = reset_net(self.Dhnets,func=set_weights,lr=rlr,b1=b1,b2=b2)
@@ -398,6 +380,7 @@ class trainer(object):
         zd_inp = zcat(self.Fed(zcat(Xd,wnxd)),wnzd) # zf_inp = zcat(zf,wnzf)
          
         # 2. Generate conditional samples
+        # pdb.set_trace()
         zd_gen = self.Ghz(zf_inp)
         zf_gen = self.Fhz(zd_inp)
         # 3. Cross-Discriminate ZZ

@@ -122,8 +122,6 @@ class trainer(object):
             # pdb.set_trace()
             # # Encoder broadband Fed
             self.Fed = net.Encoder(opt.config["encoder"],opt)
-           
-
             # # Decoder broadband Gdd
             self.Gdd = net.Decoder(opt.config["decoder"],opt)
             
