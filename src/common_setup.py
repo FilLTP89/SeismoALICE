@@ -85,6 +85,10 @@ def setup():
     parser.set_defaults(stack=False,ftune=False,feat=False,plot=True)
     opt = parser.parse_args()
 
+
+    # import pdb
+    # pdb.set_trace()
+
     u'''Set-up GPU and CUDA'''
     opt.cuda = True if (tcuda.is_available() and opt.cuda) else False
     opt.nch = 3
@@ -93,8 +97,6 @@ def setup():
     FloatTensor = tcuda.FloatTensor if opt.cuda else tFT
     LongTensor = tcuda.LongTensor if opt.cuda else tLT
     
-
-
     print("|parser has finished his job ...")
     
     #get number of thread in the environment (CPUs)
@@ -228,7 +230,8 @@ def setup():
         ths_trn = tload(osj(opt.dataroot,'ths_trn_'+opt.dataset))
         ths_tst = tload(osj(opt.dataroot,'ths_tst_'+opt.dataset))
         ths_vld = tload(osj(opt.dataroot,'ths_vld_'+opt.dataset))
-        vtm     = tload(osj(opt.dataroot,'vtm.pth'))
+        # vtm     = tload(osj(opt.dataroot,'vtm.pth'))
+        vtm     = tload(osj(opt.dataroot,'vtm_'+opt.dataset))
         pickle_off = open(osj(opt.dataroot,"md.p"),"rb")
         md = pickle.load(pickle_off)
         pickle_off.close()
@@ -293,8 +296,10 @@ def setup():
 
     elif opt.dataset == 'stead':
         src = opt.dataroot
+
         print('dataroots:')
         print(src)
+        
         md = {'dtm':0.01,'cutoff':opt.cutoff,'ntm':opt.imageSize}
         md['vTn'] = np.arange(0.0,3.05,0.05,dtype=np.float64)
         md['nTn'] = md['vTn'].size
@@ -306,10 +311,12 @@ def setup():
         # Create natural period vector 
         opt.vTn = np.arange(0.0,3.05,0.05,dtype=np.float64)
         opt.nTn = md['vTn'].size
-        tsave(ths_trn,'./ths_trn.pth')
-        tsave(ths_tst,'./ths_tst.pth')
-        tsave(ths_vld,'./ths_vld.pth')
-        tsave(vtm,    './vtm.pth')
+        
+        extension= "_nt{0}_ls{1}_nzf{2}_nzd{3}.pth".format(opt.imageSize,opt.latentSize,opt.nzf,opt.nzd)
+        tsave(ths_trn,'./ths_trn'+extension)
+        tsave(ths_tst,'./ths_tst'+extension)
+        tsave(ths_vld,'./ths_vld'+extension)
+        tsave(vtm,    './vtm'+extension)
         with open('md.p', 'wb') as handle:
                 pickle.dump(md,handle)
         handle.close()

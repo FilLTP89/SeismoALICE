@@ -83,7 +83,6 @@ class Encoder(BasicEncoderDataParallele):
     def forward(self,x):
         if x.is_cuda and self.ngpu > 1:
             zlf   = pll(self.cnn,x,self.gang)
-            torch.cuda.empty_cache()
         else:
             zlf   = self.cnn(x)
         if not self.training:

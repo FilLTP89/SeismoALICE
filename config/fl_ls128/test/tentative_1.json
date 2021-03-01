@@ -7,7 +7,8 @@
         "dilation" : [1,1,1,1,1],
         "act"      : "Fef",
         "limit"    : 128,
-        "channel"  : [6,32,64,128,256,8]
+        "channel"  : [6,32,64,128,256,8],
+        "path"     : ""
     }, 
     "decoder": {
         "padding"  : [1,1,1,1,1], 
@@ -18,7 +19,8 @@
         "dilation" : [1,1,1,1,1],
         "act"      : "Gdf",
         "limit"    : 128,
-        "channel"  : [16,256,128,64,32,3]
+        "channel"  : [16,256,128,64,32,3],
+        "path"     : ""
     },
     "Dszf":{
         "padding"  : [0,0,0],

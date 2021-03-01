@@ -496,7 +496,19 @@ class T(object):
         return acts[typo][name]
 
     @staticmethod
-    def load_model(path):
+    def load_broadband_encoder():
         net = Module()
-        net.load_state_dict(torch.load(path)['model_state_dict'])
+        try:
+            net = torch.load("./network/trained/nzd32/Fed.pth")
+        except Exception as e:
+            raise e
+        return net
+
+    @staticmethod
+    def load_broadband_decoder():
+        net = Module()
+        try:
+            net = torch.load("./network/trained/nzd32/Gdd.pth")
+        except Exception as e:
+            raise e
         return net

@@ -95,21 +95,16 @@ class Encoder_1GPU(BasicEncoderModelParallele):
                  dpc=0.10,limit = 256,path="",\
                  with_noise=True,dtm=0.01,ffr=0.16,wpc=5.e-2):
         super(Encoder_1GPU, self).__init__()
-        pdb.set_trace()
+        
         self.ngpu= ngpu
         acts = T.activation(act, nly)
-
-        # try:
-        #     #try to fine if a learning model is passed to
-        #     self.cnn1 = T.load_model(path) if path else []
-
-        #     #frozen layers
-        #     for param in self.cnn1.parameters():
+        
+        # pretrained = True
+        # if pretrained:
+        #     self.model = T.load_broadband_encoder()
+        #     # Freeze model weights
+        #     for param in self.model.parameters():
         #         param.requires_grad = False
-        # except Exception as e:
-        #     raise e
-        # else:
-        #     pass
 
         # lin = 4096
         for i in range(1, nly+1):
@@ -132,8 +127,12 @@ class Encoder_1GPU(BasicEncoderModelParallele):
                 _dpc = 0.0 if i == nly else dpc 
                 self.cnn1 += cnn1d(channel[i-1], channel[i], acts[i-1], ker=ker[i-1],\
                     std=std[i-1],pad=pad[i-1], dil=dil[i-1], bn=_bn, dpc=_dpc, wn=False)
-            
-        self.cnn1 = sqn(*self.cnn1)
+        
+        self.cnn1  = sqn(*self.cnn1)
+        # pdb.set_trace()
+        # if pretrained:
+        #     self.model.cnn1[-1] = self.cnn1
+        #     self.cnn1 = self.model
         self.cnn1.to(self.dev0,dtype=torch.float32)
 
     def forward(self,x):

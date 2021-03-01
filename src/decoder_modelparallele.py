@@ -22,7 +22,7 @@ class DecoderModelParallele(object):
     # this methode call the Encoder class by name.
     @staticmethod
     def getDecoderByGPU(ngpu,nz,nch,ndf,nly,act,dil,channel,\
-                 ker=2,std=2,pad=0,opd=0,grp=1,dpc=0.0,limit = 256, bn = True, n_extra_layers=0):
+                 ker=2,std=2,pad=0,opd=0,grp=1,dpc=0.0,path='',limit = 256, bn = True, n_extra_layers=0):
         classname = 'Decoder_' + str(ngpu)+'GPU'
         #this following code is equivalent to calls the class it self. 
         """
@@ -34,7 +34,7 @@ class DecoderModelParallele(object):
         module = importlib.import_module(module_name)
         class_ = getattr(module,classname)
         
-        return class_(ngpu = ngpu, nz = nz, nch = nch, limit = limit, bn = bn,\
+        return class_(ngpu = ngpu, nz = nz, nch = nch, limit = limit, bn = bn, path=path,\
         nly = nly, act=act, ndf =ndf, ker = ker, std =std, pad = pad, opd = opd,\
          grp=grp, dil=dil, dpc = dpc,n_extra_layers=n_extra_layers, channel = channel)
 
@@ -83,16 +83,21 @@ class BasicDecoderModelParallele(Module):
 
 class Decoder_1GPU(BasicDecoderModelParallele):
     def __init__(self,ngpu,nz,nch,ndf,nly,act,channel,\
-                 ker=7,std=4,pad=0,opd=0,dil=0,grp=1,dpc=0.0,limit = 256, bn =  True, n_extra_layers = 0):
+                 ker=7,std=4,pad=0,opd=0,dil=0,path='',grp=1,dpc=0.0,limit = 256, bn =  True, n_extra_layers = 0):
         super(Decoder_1GPU, self).__init__()
         """
         In this class our intent is the generate the network and after split this latter in
         the whole GPUs allowed. Here this class is if we got only one GPU
         """
-        self.ngpu= ngpu
+        self.ngpu  = ngpu
         #initializaton of the cnn
-        self.cnn = []
-        acts = T.activation(act, nly)
+        self.cnn   = []
+        acts       = T.activation(act, nly)
+        # self.model = T.load_broadband_decoder()
+
+        # # Freeze model weights
+        # for param in self.model.parameters():
+        #     param.requires_grad = False
         
         for i in range(1, nly+1):
             
@@ -115,8 +120,9 @@ class Decoder_1GPU(BasicDecoderModelParallele):
             self.cnn1 += cnn1dt(channel[i-1],channel[i], acts[0],ker=3,std=1,pad=1,\
                 dil =1, opd=0, bn=True, dpc=0.0)
 
-
+        # pdb.set_trace()
         self.cnn1 = sqn(*self.cnn1)
+        # self.cnn1[-1] = self.model
         self.cnn1.to(self.dev0, dtype=torch.float32)
 
     def forward(self,x):
@@ -130,7 +136,7 @@ class Decoder_1GPU(BasicDecoderModelParallele):
 
 class Decoder_2GPU(BasicDecoderModelParallele) :
     def __init__(self,ngpu,nz,nch,ndf,nly,act,channel,\
-                 ker=7,std=4,pad=0,opd=0,dil=0,grp=1,dpc=0.10,limit = 256, bn = True ):
+                 ker=7,std=4,pad=0,opd=0,dil=0,path='',grp=1,dpc=0.10,limit = 256, bn = True ):
         super(Decoder_2GPU, self).__init__()
         self.ngpu= ngpu
         acts = T.activation(act, nly)
@@ -198,7 +204,7 @@ class Decoder_2GPU(BasicDecoderModelParallele) :
 
 class Decoder_3GPU(BasicDecoderModelParallele) :
     def __init__(self,ngpu,nz,nch,ndf,nly,act,channel,\
-                 ker=7,std=4,pad=0,opd=0,dil=0,grp=1,dpc=0.10,limit = 256,bn=True):
+                 ker=7,std=4,pad=0,opd=0,dil=0,path='',grp=1,dpc=0.10,limit = 256,bn=True):
         super(Decoder_3GPU, self).__init__()
         self.ngpu= ngpu
 
@@ -266,7 +272,7 @@ class Decoder_3GPU(BasicDecoderModelParallele) :
 
 class Decoder_4GPU(BasicDecoderModelParallele) :
     def __init__(self,ngpu,nz,nch,ndf,nly,act,\
-                 ker=7,std=4,pad=0,opd=0,dil=0,grp=1,dpc=0.10, limit = 256,bn = True):
+                 ker=7,std=4,pad=0,opd=0,dil=0,path='',grp=1,dpc=0.10, limit = 256,bn = True):
         super(Decoder_4GPU, self).__init__()
         self.ngpu= ngpu
         

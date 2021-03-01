@@ -158,7 +158,7 @@ class trainer(object):
                 self.oDdxz = reset_net(self.Ddnets,func=set_weights,lr=rlr,b1=b1,b2=b2)
                 self.optzd.append(self.oDdxz)
 
-                pdb.set_trace()
+                # pdb.set_trace()
                 # self.DsXf = net.DCGAN_Dx(opt.config['DsXf'], opt)
                 # self.Dszf = net.DCGAN_Dz(opt.config['Dszf'], opt)
                 # self.Dfxz = net.DCGAN_DXZ(opt.config['Dfxz'], opt)
@@ -313,7 +313,7 @@ class trainer(object):
     ''' Methode that discriminate real and fake signal for broadband type '''
     # @profile
     def discriminate_broadband_xz(self,Xd,Xdr,zd,zdr):
-        # pdb.set_tra()
+        # pdb.set_trace()
         a = self.DsXd(Xd)
         b = self.Dszd(zdr)
         
@@ -751,8 +751,8 @@ class trainer(object):
                 # Load batch
                 # pdb.set_trace()
                 xd_data,_,zd_data,_,_,_,_ = batch
-                Xd = Variable(xd_data).to(ngpu-1,non_blocking=True) # BB-signal
-                zd = Variable(zd_data).to(ngpu-1,non_blocking=True)
+                Xd = Variable(xd_data).to(ngpu-1) # BB-signal
+                zd = Variable(zd_data).to(ngpu-1)
                 # Train G/D
                 for _ in range(5):
                     self.alice_train_broadband_discriminator_explicit_xz(Xd,zd)
@@ -894,19 +894,28 @@ class trainer(object):
             print(str)
             if save_checkpoint:
                 if epoch%save_checkpoint==0:
-                    print("saving model at this checkpoint, talk few minutes ...")
+                    print("saving model at this checkpoint, less than 2 minutes ...")
                     tsave({'epoch':epoch,'model_state_dict':self.Fef.state_dict(),
                            'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
-                           'Fef_{}.pth'.format(epoch))
+                           './network/{0}/Fef_{1}.pth'.format(outf[7:],epoch))
                     tsave({'epoch':epoch,'model_state_dict':self.Gdf.state_dict(),
                            'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
-                           'Gdf_{}.pth'.format(epoch))    
+                           './network/{0}/Gdf_{1}.pth'.format(outf[7:],epoch))    
                     tsave({'model_state_dict':self.Dszf.state_dict(),
-                           'optimizer_state_dict':self.oDfxz.state_dict()},'./network/Dszd_fl_{}.pth'.format(epoch))
+                           'optimizer_state_dict':self.oDfxz.state_dict()},'./network/{0}/Dszd_fl_{1}.pth'.format(outf[7:],epoch))
                     tsave({'model_state_dict':self.DsXf.state_dict(),
-                           'optimizer_state_dict':self.oDfxz.state_dict()},'./network/DsXd_fl_{}.pth'.format(epoch))    
+                           'optimizer_state_dict':self.oDfxz.state_dict()},'./network/{0}/DsXd_fl_{1}.pth'.format(outf[7:],epoch))    
                     tsave({'model_state_dict':self.Dfxz.state_dict(),
-                           'optimizer_state_dict':self.oDfxz.state_dict()},'./network/Ddxz_fl_{}.pth'.format(epoch))
+                           'optimizer_state_dict':self.oDfxz.state_dict()},'./network/{0}/Ddxz_fl_{1}.pth'.format(outf[7:],epoch))
+        
+        plt.plot_loss_explicit(losses=self.losses["Gloss"], key="Gloss", outf=outf,niter=niter)
+        plt.plot_loss_explicit(losses=self.losses["Dloss"], key="Dloss", outf=outf,niter=niter)
+        plt.plot_loss_explicit(losses=self.losses["Gloss_ftm"], key="Gloss_ftm", outf=outf,niter=niter)
+        plt.plot_loss_explicit(losses=self.losses["Gloss_ali_X"], key="Gloss_ali_X", outf=outf,niter=niter)
+        plt.plot_loss_explicit(losses=self.losses["Gloss_ali_z"], key="Gloss_ali_z", outf=outf,niter=niter)
+        plt.plot_loss_explicit(losses=self.losses["Gloss_cycle_X"], key="Gloss_cycle_X", outf=outf,niter=niter)
+        plt.plot_loss_explicit(losses=self.losses["Gloss_cycle_z"], key="Gloss_cycle_z", outf=outf,niter=niter)
+
         tsave({'epoch':niter,'model_state_dict':self.Fef.state_dict(),
             'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses},'./network/Fef.pth')
         tsave({'epoch':niter,'model_state_dict':self.Gdf.state_dict(),

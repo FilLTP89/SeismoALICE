@@ -127,7 +127,7 @@ class DCGAN_DXZ_1GPU(BasicDCGAN_DXZ):
     def forward(self,x):
         z = x.to(self.dev0,dtype=torch.float32)
         z = self.cnn1(z)
-
+        torch.cuda.empty_cache()
         if self.wf:
             f =  self.extraction(x)
         if not self.training:

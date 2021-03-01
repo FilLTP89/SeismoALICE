@@ -51,7 +51,6 @@ class ModelParalleleFactory(ConvNetFactory):
         pass
     
     def createEncoder(self, config, opt, *args, **kwargs):
-        pdb.set_trace()
         path = config["path"] if "path" in config else ""
         return EncoderModelParallele.getEncoderByGPU(ngpu=opt.ngpu, dev = opt.dev,\
                 nz  = opt.nzd, nch=opt.nch, ndf = opt.ndf,\
