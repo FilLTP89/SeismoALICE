@@ -411,7 +411,7 @@ class trainer(object):
         self.Fed.eval(),self.Gdd.eval()
         self.DsXd.train(),self.Dszd.train(),self.Ddxz.train()
         
-        # pdb.set_trace()
+        pdb.set_trace()
         # 0. Generate noise
         wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,device,rndm_args)
 
@@ -513,6 +513,7 @@ class trainer(object):
     ##### FILTERED #####
     ####################
     def alice_train_filtered_discriminator_adv_xz(self,Xf,zf):
+#OK
         # Set-up training
         # pdb.set_trace()
         zerograd(self.optzf)
@@ -580,6 +581,7 @@ class trainer(object):
         self.losses['Dloss_ali_z'].append(Dloss_ali_z.tolist())
         
     def alice_train_filtered_generator_adv_xz(self,Xf,zf):
+#OK
         # Set-up training
         zerograd(self.optzf)
         self.Fef.train(),self.Gdf.train()
@@ -857,6 +859,7 @@ class trainer(object):
             'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},'./network/Gdf.pth')
 
     def train_filtered(self):
+#OK
         print("[!] In function train_filtred ... ")
         globals().update(self.cv)
         globals().update(opt.__dict__)

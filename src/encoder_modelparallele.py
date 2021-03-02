@@ -48,6 +48,7 @@ class BasicEncoderModelParallele(Module):
 
         #variable to call frozen model
         self.model = None
+        self.splits = 10
 
         #ordinal values of the GPUs
         self.dev0 = 0
@@ -136,12 +137,27 @@ class Encoder_1GPU(BasicEncoderModelParallele):
         self.cnn1.to(self.dev0,dtype=torch.float32)
 
     def forward(self,x):
-        x = x.to(self.dev0,dtype=torch.float32)
-        x = self.cnn1(x)
         
+        ret    = []
+        splits = iter(x.split(self.splits, dim = 0))
+        s_next = next(splits)
+        s_prev = self.cnn1(s_next).to(self.dev0)
+
+        for s_next in splits:
+            # s_prev = self.cnn1(s_prev)
+            ret.append(s_prev)
+            s_prev = self.cnn1(s_next).to(self.dev0)
+
+        # s_prev = self.cnn1(s_prev)
+        ret.append(s_prev)
+        torch.cuda.empty_cache()
+        # x = x.to(self.dev0,dtype=torch.float32)
+        # x = self.cnn1(x)
         if not self.trainig:
             x = x.detach()
-        return x
+            return x
+        else:
+            return torch.cat(ret).to(self.dev0)
 
 class Encoder_2GPU(BasicEncoderModelParallele):
     def __init__(self,ngpu,dev, nz,nch,ndf,nly, act,dil, channel, ker=2,std=2,pad=0,grp=1,bn=True,\
@@ -149,6 +165,7 @@ class Encoder_2GPU(BasicEncoderModelParallele):
                  with_noise=True,dtm=0.01,ffr=0.16,wpc=5.e-2):
         super(Encoder_2GPU, self).__init__()
         self.ngpu= ngpu
+        self.splits = 5
         acts = T.activation(act, nly)
        
         # lin = 4096
@@ -182,15 +199,30 @@ class Encoder_2GPU(BasicEncoderModelParallele):
         self.cnn2.to(self.dev1,dtype=torch.float32)
 
     def forward(self,x):
-        x = x.to(self.dev0,dtype=torch.float32)
-        x = self.cnn1(x)
-        x = x.to(self.dev1,dtype=torch.float32)
-        x = self.cnn2(x)
+
+        splits = iter(x.split(self.splits,dim = 0))
+        s_next = next(splits)
+        s_prev = self.cnn1(s_next).to(self.dev1)
+        ret    = []
+
+        for s_next in splits:
+            s_prev = self.cnn2(s_prev)
+            ret.append(s_prev)
+            s_prev = self.cnn1(s_next).to(self.dev1)
+
+        s_prev = self.cnn2(s_prev)
+        ret.append(s_prev)
+
+        # x = x.to(self.dev0,dtype=torch.float32)
+        # x = self.cnn1(x)
+        # x = x.to(self.dev1,dtype=torch.float32)
+        # x = self.cnn2(x)
         
         if not self.trainig:
             x = x.detach()
-        torch.cuda.empty_cache()
-        return x
+            return x
+        else:
+            return torch.cat(ret)
 
 class Encoder_3GPU(BasicEncoderModelParallele):
     def __init__(self,ngpu,dev, nz,nch,ndf,nly, act,dil, channel, ker=2,std=2,pad=0,grp=1,bn=True,\

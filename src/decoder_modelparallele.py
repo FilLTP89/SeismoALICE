@@ -46,6 +46,8 @@ class BasicDecoderModelParallele(Module):
         self.dev1 = 1
         self.dev2 = 2
         self.dev3 = 3
+
+        self.splits = 10
         """
         The CNN code will be split in two parts of the GPUs
         """
@@ -126,13 +128,26 @@ class Decoder_1GPU(BasicDecoderModelParallele):
         self.cnn1.to(self.dev0, dtype=torch.float32)
 
     def forward(self,x):
-        x = x.to(self.dev0, dtype=torch.float32)
-        x = self.cnn1(x)
+        ret = []
+        splits = iter(x.split(self.splits, dim = 0))
+        s_next = next(splits)
+        s_prev = self.cnn1(s_next).to(self.dev0)
+
+        for s_next in splits:
+            # s_prev = self.cnn1(s_prev)
+            ret.append(s_prev)
+            s_prev = self.cnn1(s_next).to(self.dev0)
+
+        # s_prev = self.cnn1(s_prev)
+        ret.append(s_prev)
+        torch.cuda.empty_cache()
+        # x = x.to(self.dev0, dtype=torch.float32)
+        # x = self.cnn1(x)
         # torch.cuda.empty_cache()
         if not self.training:
-            x=x.detach()
-        torch.cuda.empty_cache()
-        return x
+            x = x.detach()
+        
+        return torch.cat(ret).to(self.dev0)
 
 class Decoder_2GPU(BasicDecoderModelParallele) :
     def __init__(self,ngpu,nz,nch,ndf,nly,act,channel,\
