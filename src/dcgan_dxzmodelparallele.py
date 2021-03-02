@@ -58,7 +58,8 @@ class BasicDCGAN_DXZ(Module):
         self.cnn4 = []
 
         self.exf = []
-        self.wf = True 
+        self.wf = True
+        self.splits = 10
 
         self.training = True
 
@@ -126,7 +127,8 @@ class DCGAN_DXZ_1GPU(BasicDCGAN_DXZ):
 
     def forward(self,x):
         z = x.to(self.dev0,dtype=torch.float32)
-        z = self.cnn1(z)
+        # z = self.cnn1(z)
+        z =  T._forward_1G(x,self.cnn1, self.splits)
         torch.cuda.empty_cache()
         if self.wf:
             f =  self.extraction(x)

@@ -128,30 +128,30 @@ class Decoder_1GPU(BasicDecoderModelParallele):
         self.cnn1.to(self.dev0, dtype=torch.float32)
 
     def forward(self,x):
-        ret = []
-        splits = iter(x.split(self.splits, dim = 0))
-        s_next = next(splits)
-        s_prev = self.cnn1(s_next).to(self.dev0)
+        # ret    = []
+        # splits = iter(x.split(self.splits, dim = 0))
+        # s_next = next(splits)
+        # s_prev = self.cnn1(s_next).to(self.dev0)
 
-        for s_next in splits:
-            # s_prev = self.cnn1(s_prev)
-            ret.append(s_prev)
-            s_prev = self.cnn1(s_next).to(self.dev0)
+        # for s_next in splits:
+        #     # s_prev = self.cnn1(s_prev)
+        #     ret.append(s_prev)
+        #     s_prev = self.cnn1(s_next).to(self.dev0)
 
-        # s_prev = self.cnn1(s_prev)
-        ret.append(s_prev)
+        # # s_prev = self.cnn1(s_prev)
+        # ret.append(s_prev)
+        # x = torch.cat(ret).to(self.dev0)
+        x = T._forward_1G(x,self.cnn1, self.splits)
         torch.cuda.empty_cache()
-        # x = x.to(self.dev0, dtype=torch.float32)
+        # x = x.to(self.dev0,dtype=torch.float32)
         # x = self.cnn1(x)
-        # torch.cuda.empty_cache()
         if not self.training:
             x = x.detach()
-        
-        return torch.cat(ret).to(self.dev0)
+        return x
 
 class Decoder_2GPU(BasicDecoderModelParallele) :
     def __init__(self,ngpu,nz,nch,ndf,nly,act,channel,\
-                 ker=7,std=4,pad=0,opd=0,dil=0,path='',grp=1,dpc=0.10,limit = 256, bn = True ):
+                 ker=7,std=4,pad=0,opd=0,dil=0,path='',grp=1,dpc=0.10,limit = 256, bn = True,n_extra_layers = 0):
         super(Decoder_2GPU, self).__init__()
         self.ngpu= ngpu
         acts = T.activation(act, nly)
@@ -219,7 +219,7 @@ class Decoder_2GPU(BasicDecoderModelParallele) :
 
 class Decoder_3GPU(BasicDecoderModelParallele) :
     def __init__(self,ngpu,nz,nch,ndf,nly,act,channel,\
-                 ker=7,std=4,pad=0,opd=0,dil=0,path='',grp=1,dpc=0.10,limit = 256,bn=True):
+                 ker=7,std=4,pad=0,opd=0,dil=0,path='',grp=1,dpc=0.10,limit = 256,bn=True,n_extra_layers = 0):
         super(Decoder_3GPU, self).__init__()
         self.ngpu= ngpu
 
@@ -287,7 +287,7 @@ class Decoder_3GPU(BasicDecoderModelParallele) :
 
 class Decoder_4GPU(BasicDecoderModelParallele) :
     def __init__(self,ngpu,nz,nch,ndf,nly,act,\
-                 ker=7,std=4,pad=0,opd=0,dil=0,path='',grp=1,dpc=0.10, limit = 256,bn = True):
+                 ker=7,std=4,pad=0,opd=0,dil=0,path='',grp=1,dpc=0.10, limit = 256,bn = True,n_extra_layers = 0):
         super(Decoder_4GPU, self).__init__()
         self.ngpu= ngpu
         

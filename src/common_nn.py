@@ -506,6 +506,75 @@ class T(object):
         return net
 
     @staticmethod
+    def _forward_1G(x, cnn1, split = 20):
+        ret    = []
+        splits = iter(x.split(split, dim = 0))
+        s_next = next(splits)
+        s_prev = cnn1(s_next).to(0)
+
+        for s_next in splits:
+            # s_prev = self.cnn1(s_prev)
+            ret.append(s_prev)
+            s_prev = cnn1(s_next).to(0)
+
+        # s_prev = self.cnn1(s_prev)
+        ret.append(s_prev)
+        return torch.cat(ret).to(0)
+
+    @staticmethod
+    def _forward_2G(x, cnn1, cnn2, split = 20):
+        ret    = []
+        splits = iter(x.split(split, dim = 0))
+        s_next = next(splits)
+        s_prev = cnn1(s_next).to(1)
+
+        for s_next in splits:
+            s_prev = cnn2(s_prev)
+            ret.append(s_prev)
+            s_prev = cnn1(s_next).to(0)
+
+        s_prev = cnn2(s_prev)
+        ret.append(s_prev)
+        return torch.cat(ret).to(3)
+    @staticmethod
+    def _forward_3G(x, cnn1, cnn2, cnn3, split = 20):
+        ret    = []
+        splits = iter(x.split(split, dim = 0))
+        s_next = next(splits)
+        s_prev = cnn1(s_next).to(1)
+
+        for s_next in splits:
+            s_prev = cnn2(s_prev).to(2)
+            s_prev = cnn3(s_prev)
+            ret.append(s_prev)
+            s_prev = cnn1(s_next).to(0)
+
+        s_prev = cnn2(s_prev).to(2)
+        s_prev = cnn3(s_prev)
+        ret.append(s_prev)
+        return torch.cat(ret).to(2)
+
+    @staticmethod
+    def _forward_4G(x, cnn1, cnn2, cnn3, cnn4, split = 20):
+        ret    = []
+        splits = iter(x.split(split, dim = 0))
+        s_next = next(splits)
+        s_prev = cnn1(s_next).to(1)
+
+        for s_next in splits:
+            s_prev = cnn2(s_prev).to(2)
+            s_prev = cnn3(s_prev).to(3)
+            s_prev = cnn4(s_prev)
+            ret.append(s_prev)
+            s_prev = cnn1(s_next).to(0)
+
+        s_prev = cnn2(s_prev).to(2)
+        s_prev = cnn3(s_prev).to(3)
+        s_prev = cnn4(s_prev)
+        ret.append(s_prev)
+        return torch.cat(ret).to(3)
+
+    @staticmethod
     def load_broadband_decoder():
         net = Module()
         try:

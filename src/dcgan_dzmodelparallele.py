@@ -55,6 +55,7 @@ class BasicDCGAN_Dz(Module):
             #training test
             self.training =  True
             self.wf = True
+            self.splits = 10
             self.prc = []
             self.exf = []
 
@@ -107,7 +108,8 @@ class  DCGAN_Dz_1GPU(BasicDCGAN_Dz):
         self.prc.to(self.dev0, dtype = torch.float32)
 
     def extraction(self,X):
-        X = self.prc(X)
+        # X = self.prc(X)
+        X =  T._forward_1G(X,self.prc, self.splits)
         f = [self.exf[0](X)]
         for l in range(1,len(self.exf)):
             f.append(self.exf[l](f[l-1]))
@@ -115,7 +117,8 @@ class  DCGAN_Dz_1GPU(BasicDCGAN_Dz):
 
     def forward(self, x):
         z = x.to(self.dev0, dtype=torch.float32)
-        z = self.cnn1(x)
+        # z = self.cnn1(x)
+        z =  T._forward_1G(x,self.cnn1, self.splits)
         torch.cuda.empty_cache()
         if self.wf:
             f = self.extraction(x)

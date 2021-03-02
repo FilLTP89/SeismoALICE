@@ -23,6 +23,7 @@ class DCGAN_DxModelParallele(object):
     def getDCGAN_DxByGPU(ngpu, nc, ncl, ndf, nly,act,channel, fpd=0,\
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.25, limit = 256,
                  n_extra_layers=0,isize=256):
+        # pdb.set_trace()
         classname = 'DCGAN_Dx_' + str(ngpu)+'GPU'
         #this following code is equivalent to calls the class it self. 
         """
@@ -35,8 +36,8 @@ class DCGAN_DxModelParallele(object):
         class_ = getattr(module,classname)
 
         return class_(ngpu = ngpu, isize = isize, nc = nc, ncl = ncl, ndf = ndf, channel = channel, fpd = fpd, act=act,\
-                        nly = nly, ker=ker ,std=std, pad=pad, dil=dil, grp=grp, bn=bn, wf = wf, dpc=dpc,\
-                        n_extra_layers = n_extra_layers, limit = limit)
+            nly = nly, ker=ker ,std=std, pad=pad, dil=dil, grp=grp, bn=bn, wf = wf, dpc=dpc,\
+            n_extra_layers = n_extra_layers, limit = limit)
 
 
 class BasicDCGAN_Dx(Module):
@@ -58,6 +59,7 @@ class BasicDCGAN_Dx(Module):
         #trainings
         self.training = True
         self.wf       = True
+        self.splits   = 10
         self.prc      = []
         self.exf      = []
         self.extra    = []
@@ -81,7 +83,6 @@ class BasicDCGAN_Dx(Module):
 
     def extraction(self,X):
         pass
-
 
 class DCGAN_Dx_1GPU(BasicDCGAN_Dx):
     """docstring for DCGAN_Dx_1GPU"""
@@ -137,7 +138,8 @@ class DCGAN_Dx_1GPU(BasicDCGAN_Dx):
         ).to(self.dev0, dtype=torch.float32)
 
     def extraction(self,X):
-        X = self.prc(X)
+        # X = self.prc(X)
+        X =  T._forward_1G(X,self.prc, self.splits)
         f = [self.exf[0](X)]
         for l in range(1,len(self.exf)):
             f.append(self.exf[l](f[l-1]))
@@ -146,7 +148,8 @@ class DCGAN_Dx_1GPU(BasicDCGAN_Dx):
     def forward(self,x):
         # pdb.set_trace()
         x.to(self.dev0,dtype=torch.float32)
-        z = self.cnn1(x)
+        # z = self.cnn1(x)
+        z =  T._forward_1G(x,self.cnn1, self.splits)
         torch.cuda.empty_cache()
         if self.wf:
             f = self.extraction(x)
@@ -162,11 +165,9 @@ class DCGAN_Dx_1GPU(BasicDCGAN_Dx):
         X = forward(X)
         return self.features_to_prob(X)
 
-
-
 class DCGAN_Dx_2GPU(BasicDCGAN_Dx):
     """docstring for DCGAN_Dx_2GPU"""
-    def __init__(self, ngpu, nc, ncl, ndf, nly,act, channel,fpd=1,isize=256, limit = 256,\
+    def __init__(self, ngpu, nc, ncl, ndf, nly, act, channel, fpd=1, isize=256, limit = 256,\
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.250,
                  n_extra_layers=0):
         super(DCGAN_Dx_2GPU, self).__init__()
@@ -185,7 +186,6 @@ class DCGAN_Dx_2GPU(BasicDCGAN_Dx):
         #part I in the GPU0
         in_channels   = nc
         for i in range(2, nly//2+1):
-            
             """
             The whole value of stride, kernel and padding should be generated accordingn to the 
             pytorch documentation:
@@ -271,10 +271,9 @@ class DCGAN_Dx_2GPU(BasicDCGAN_Dx):
         X = forward(X)
         return self.features_to_prob(X)
 
-
 class DCGAN_Dx_3GPU(BasicDCGAN_Dx):
     """docstring for DCGAN_Dx_3GPU"""
-    def __init__(self, ngpu, nc, ncl, ndf, nly,act, channel, fpd=1, isize=256,limit = 256,\
+    def __init__(self, ngpu, nc, ncl, ndf, nly, act, channel, fpd=1, isize=256, limit = 256,\
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.250,
                  n_extra_layers=0):
         super(DCGAN_Dx_3GPU, self).__init__()
@@ -365,8 +364,8 @@ class DCGAN_Dx_3GPU(BasicDCGAN_Dx):
 
 class DCGAN_Dx_4GPU(BasicDCGAN_Dx):
     """docstring for DCGAN_Dx_4GPU"""
-    def __init__(self, ngpu, nc, ncl, ndf, nly,act, channel, fpd=1, isize=256,limit = 256,\
-                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.25,
+    def __init__(self, ngpu, nc, ncl, ndf, nly, act, channel, fpd=1, isize=256, limit = 256,\
+                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.250,
                  n_extra_layers=0):
         super(DCGAN_Dx_4GPU, self).__init__()
 
