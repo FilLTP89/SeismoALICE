@@ -110,7 +110,7 @@ class  DCGAN_Dz_1GPU(BasicDCGAN_Dz):
 
     def extraction(self,X):
         # X = self.prc(X)
-        X =  T._forward_1G(X,self.prc, self.splits)
+        X =  T._forward_1G(X,self.prc)
         f = [self.exf[0](X)]
         for l in range(1,len(self.exf)):
             f.append(self.exf[l](f[l-1]))
@@ -201,7 +201,7 @@ class DCGAN_Dz_2GPU(BasicDCGAN_Dz):
 
         # z = z.to(self.dev1,dtype = torch.float32)
         # z = self.cnn2(z)
-        z =  T._forward_2G(x, self.cnn1, self.cnn2, self.splits)
+        z =  T._forward_2G(x, self.cnn1, self.cnn2)
 
         if self.wf:
             f = self.extraction(x)

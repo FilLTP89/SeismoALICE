@@ -22,6 +22,7 @@ import pdb
 from conv_factory import *
 import GPUtil
 from torch.nn.parallel import DistributedDataParallel as DDP
+import time
 
 
 rndm_args = {'mean': 0, 'std': 1}
@@ -746,6 +747,7 @@ class trainer(object):
         globals().update(self.cv)
         globals().update(opt.__dict__)
         error = {}
+        start_time = time.time()
         for epoch in range(niter):
             for b,batch in enumerate(trn_loader):
                 # Load batch
@@ -761,7 +763,9 @@ class trainer(object):
                 for _ in range(1):
                     self.alice_train_broadband_generator_explicit_xz(Xd,zd)
                     torch.cuda.empty_cache()
-            
+            if epoch%10== 0:
+                print("--- {} minutes ---".format((time.time() - start_time)/60))
+
             GPUtil.showUtilization(all=True)
             
             str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]

@@ -46,8 +46,8 @@ class BasicDCGAN_DXZ(Module):
     def __init__(self):
         super(BasicDCGAN_DXZ, self).__init__()
         #Oridnal number of the GPUs
-        self.dev0 = 0
-        self.dev1 = 1
+        self.dev0 = 'cuda:0'
+        self.dev1 = 'cuda:1'
         self.dev2 = 2
         self.dev3 = 3
 
@@ -120,15 +120,16 @@ class DCGAN_DXZ_1GPU(BasicDCGAN_DXZ):
         ).to(self.dev0, dtype=torch.float32)
 
     def extraction(self, x):
-        f = [self.exf[0](x)]
+        f = [ T._forward_1G(x,self.exf[0])]
         for l in range(1,len(self.exf)):
             f.append(self.exf[l](f[l-1]))
         return f
 
     def forward(self,x):
+        # pdb.set_trace()
         z = x.to(self.dev0,dtype=torch.float32)
         # z = self.cnn1(z)
-        z =  T._forward_1G(x,self.cnn1)
+        z =  T._forward_1G(z,self.cnn1)
         torch.cuda.empty_cache()
         if self.wf:
             f =  self.extraction(x)
@@ -189,14 +190,13 @@ class DCGAN_DXZ_2GPU(BasicDCGAN_DXZ):
         for _ in range(1, n_extra_layers+1):
             self.cnn2 +=cnn1d(nc,nc, activation[i-1],\
                 ker=3, std=1, pad=1, bn=False, dpc=dpc, bias=bias)
-
+        # pdb.set_trace()
         self.exf = self.cnn2[:-1]
-    
         self.cnn1 = sqn(*self.cnn1)
-        self.cnn1.to(self.dev0, dtype=torch.float32)
+        self.cnn1 = self.cnn1.to(self.dev0, dtype=torch.float32)
 
         self.cnn2 = sqn(*self.cnn2)
-        self.cnn2.to(self.dev1, dtype=torch.float32)
+        self.cnn2 = self.cnn2.to(self.dev1, dtype=torch.float32)
 
         self.exf =  sqn(*self.exf)
         self.exf.to(self.dev0, dtype=torch.float32)
@@ -206,13 +206,19 @@ class DCGAN_DXZ_2GPU(BasicDCGAN_DXZ):
             torch.nn.LeakyReLU(negative_slope=1.0, inplace=True)
         ).to(self.dev1, dtype=torch.float32)
 
+    def extraction(self, x):
+        f = [ T._forward_1G(x,self.exf[0])]
+        for l in range(1,len(self.exf)):
+            f.append(self.exf[l](f[l-1]))
+        return f
+
     def forward(self,x):
-        # pdb.set_trace()
+        self.cnn2 = self.cnn2.to(self.dev1)
         x = x.to(self.dev0,dtype=torch.float32)
-        # z = self.cnn1(z)
+        # z = self.cnn1(x)
         # z = z.to(self.dev1,dtype=torch.float32)
         # z = self.cnn2(z)
-        z = T._forward_2G(x,self.cnn1,self.cnn2,self.splits)
+        z = T._forward_2G(x, self.cnn1, self.cnn2)
         if self.wf:
             f =  self.extraction(x)
         if not self.training:

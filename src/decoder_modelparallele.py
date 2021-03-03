@@ -210,7 +210,7 @@ class Decoder_2GPU(BasicDecoderModelParallele) :
 
         # x = x.to(self.dev1,dtype=torch.float32)
         # x = self.cnn2(x)
-        x = T._forward_2G(x,self.cnn1,self.cnn2,self.splits)
+        x = T._forward_2G(x,self.cnn1,self.cnn2)
         torch.cuda.empty_cache()
         if not self.training:
             x=x.detach()

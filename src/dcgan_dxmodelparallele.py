@@ -245,18 +245,18 @@ class DCGAN_Dx_2GPU(BasicDCGAN_Dx):
         return f
 
     def forward(self, x):
+        # pdb.set_trace()
         x = x.to(self.dev0,dtype=torch.float32)
         # z = self.cnn1(x)
-        
         # z = z.to(self.dev1,dtype=torch.float32)
         # z = self.cnn2(z)
-        z = T._forward_2G(x,self.cnn1,self.cnn2, self.splits)
+        z = T._forward_2G(x,self.cnn1,self.cnn2)
         torch.cuda.empty_cache()
         if self.wf:
             f = self.extraction(x)
 
         if not self.training:
-            z=z.detach()
+            z = z.detach()
 
         if self.wf:
             return z,f
