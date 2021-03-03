@@ -24,6 +24,7 @@ class DCGAN_DzModelParallele(object):
     def getDCGAN_DzByGPU(ngpu, nz, nly, act, channel, ncl=512, fpd=0, n_extra_layers=1, dpc=0.25,
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False,limit = 256, bias =  False):
         #we assign the code name
+        # pdb.set_trace()
         classname = 'DCGAN_Dz_' + str(ngpu)+'GPU'
 
         module_name = "dcgan_dzmodelparallele"

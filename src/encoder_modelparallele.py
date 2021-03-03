@@ -263,7 +263,7 @@ class Encoder_3GPU(BasicEncoderModelParallele):
             # ker[i-1] = self.kout(nly,i,ker)
             # lout = self.lout(lin, std, ker, pad, dil)
             # _pad = self.pad(nly,i,pad,lin,lout, dil, ker, std)
-            # _bn = False if i == nly else bn
+            _bn  = False if i == nly else bn
             _dpc = 0.0 if i == nly else dpc 
             self.cnn3 += cnn1d(channel[i-1],channel[i], acts[i-1], ker=ker[i-1],std=std[i-1],pad=pad[i-1],dil=dil[i-1],\
                         bn=_bn,dpc=_dpc,wn=False)

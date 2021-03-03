@@ -1,5 +1,3 @@
-from torch.nn.modules import activation
-
 u'''AE design'''
 from torch.nn.modules import activation
 u'''AE design'''
@@ -13,6 +11,8 @@ import pdb
 from torch import device as tdev
 import importlib
 
+
+
 class DCGAN_DxModelParallele(object):
     """docstring for DCGAN_Dx"""
     def __init__(self, *arg, **kwargs):
@@ -24,13 +24,10 @@ class DCGAN_DxModelParallele(object):
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.25, limit = 256,
                  n_extra_layers=0,isize=256):
         # pdb.set_trace()
+        # pdb.set_trace()
         classname = 'DCGAN_Dx_' + str(ngpu)+'GPU'
-        #this following code is equivalent to calls the class it self. 
-        """
-        Here we define a methode, in which the purpose is to call and return a class by the name 
-        This is made in the purpose of spliting the whole network in the GPUs allowed. There for 
-        This suppose that one node of ngpu is present in the configuraton of the environement. 
-        """  
+        # classname = 'kout'
+
         module_name = "dcgan_dxmodelparallele"
         module = importlib.import_module(module_name)
         class_ = getattr(module,classname)
@@ -83,8 +80,8 @@ class BasicDCGAN_Dx(Module):
 
     def extraction(self,X):
         pass
-
-class DCGAN_Dx_1GPU(BasicDCGAN_Dx):
+# 
+class  DCGAN_Dx_1GPU(BasicDCGAN_Dx):
     """docstring for DCGAN_Dx_1GPU"""
     def __init__(self, ngpu, nc, ncl, ndf, nly, act, channel, fpd=1, isize=256, limit = 256,\
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.250,
@@ -166,22 +163,20 @@ class DCGAN_Dx_1GPU(BasicDCGAN_Dx):
         return self.features_to_prob(X)
 
 class DCGAN_Dx_2GPU(BasicDCGAN_Dx):
-    """docstring for DCGAN_Dx_2GPU"""
+    """docstring for DCGAN_Dx_1GPU"""
     def __init__(self, ngpu, nc, ncl, ndf, nly, act, channel, fpd=1, isize=256, limit = 256,\
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.250,
                  n_extra_layers=0):
         super(DCGAN_Dx_2GPU, self).__init__()
-        self.ngpu= ngpu
-
-
+        self.ngpu = ngpu
         #extraction features 
         self.wf = wf
-
-        #building network
+        # building network
+        activation = T.activation(act, nly)
+        
         self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
                 ks = ker[0], stride = std[0], pad = pad[0], dil = dil[0],\
                 bn = False, act = activation[0], dpc = dpc))
-
 
         #part I in the GPU0
         in_channels   = nc
@@ -280,14 +275,13 @@ class DCGAN_Dx_3GPU(BasicDCGAN_Dx):
         
         #extraction features 
         self.wf = wf
-
+        activation = T.activation(act, nly)
         #building network
         self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
                 ks = ker[0], stride = std[0], pad = pad[0], dil = dil[0],\
                 bn = False, act = activation[0], dpc = dpc))
 
         for i in range(2, nly//3+1):
-            
             # _ker = self.kout(nly,i,ker)
             # _pad = self.pad(nly,i,pad)
             act = activation[i-1]
@@ -371,7 +365,7 @@ class DCGAN_Dx_4GPU(BasicDCGAN_Dx):
 
         #extraction features 
         self.wf = wf
-
+        activation = T.activation(act, nly)
         #building network
         self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
                 ks = ker[0], stride = std[0], pad = pad[0], dil = dil[0],\

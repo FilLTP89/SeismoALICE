@@ -119,7 +119,7 @@ class trainer(object):
             n = self.strategy['broadband']
             print("Loading broadband generators")
 
-            pdb.set_trace()
+            # pdb.set_trace()
             # # Encoder broadband Fed
             self.Fed = net.Encoder(opt.config["encoder"],opt)
             # # Decoder broadband Gdd
@@ -411,7 +411,7 @@ class trainer(object):
         self.Fed.eval(),self.Gdd.eval()
         self.DsXd.train(),self.Dszd.train(),self.Ddxz.train()
         
-        pdb.set_trace()
+        # pdb.set_trace()
         # 0. Generate noise
         wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,device,rndm_args)
 
