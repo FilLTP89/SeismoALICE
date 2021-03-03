@@ -506,7 +506,7 @@ class T(object):
         return net
 
     @staticmethod
-    def _forward_1G(x, cnn1, split = 20):
+    def _forward_1G(x, cnn1, split = 80):
         ret    = []
         splits = iter(x.split(split, dim = 0))
         s_next = next(splits)
@@ -523,19 +523,29 @@ class T(object):
 
     @staticmethod
     def _forward_2G(x, cnn1, cnn2, split = 20):
+        # import pdb
+        # pdb.set_trace()
+        cnn1.to(0)
+        cnn2.to(1)
         ret    = []
         splits = iter(x.split(split, dim = 0))
         s_next = next(splits)
         s_prev = cnn1(s_next).to(1)
+        # import pdb
+        # pdb.set_trace()
 
         for s_next in splits:
+             # A. s_prev runs on cuda:1
             s_prev = cnn2(s_prev)
             ret.append(s_prev)
-            s_prev = cnn1(s_next).to(0)
+
+            # B. s_next runs on cuda:0, which can run concurrently with A
+            s_prev = cnn1(s_next).to(1)
 
         s_prev = cnn2(s_prev)
         ret.append(s_prev)
-        return torch.cat(ret).to(3)
+
+        return torch.cat(ret)
     @staticmethod
     def _forward_3G(x, cnn1, cnn2, cnn3, split = 20):
         ret    = []

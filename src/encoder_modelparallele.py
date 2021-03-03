@@ -48,7 +48,7 @@ class BasicEncoderModelParallele(Module):
 
         #variable to call frozen model
         self.model = None
-        self.splits = 10
+        self.splits = 1
 
         #ordinal values of the GPUs
         self.dev0 = 0
@@ -137,7 +137,7 @@ class Encoder_1GPU(BasicEncoderModelParallele):
         self.cnn1.to(self.dev0,dtype=torch.float32)
 
     def forward(self,x):
-        x = T._forward_1G(x,self.cnn1, self.splits)
+        x = T._forward_1G(x,self.cnn1)
         # ret    = []
         # splits = iter(x.split(self.splits, dim = 0))
         # s_next = next(splits)
@@ -199,29 +199,14 @@ class Encoder_2GPU(BasicEncoderModelParallele):
         self.cnn2.to(self.dev1,dtype=torch.float32)
 
     def forward(self,x):
-        splits = iter(x.split(self.splits,dim = 0))
-        s_next = next(splits)
-        s_prev = self.cnn1(s_next).to(self.dev1)
-        ret    = []
+        x = x.to(self.dev0,dtype=torch.float32)
+        x = T._forward_2G(x,self.cnn1,self.cnn2,self.splits)
 
-        for s_next in splits:
-            s_prev = self.cnn2(s_prev)
-            ret.append(s_prev)
-            s_prev = self.cnn1(s_next).to(self.dev1)
-
-        s_prev = self.cnn2(s_prev)
-        ret.append(s_prev)
-
-        # x = x.to(self.dev0,dtype=torch.float32)
-        # x = self.cnn1(x)
-        # x = x.to(self.dev1,dtype=torch.float32)
-        # x = self.cnn2(x)
-        
         if not self.training:
             x = x.detach()
             return x
         else:
-            return torch.cat(ret)
+            return x
 
 class Encoder_3GPU(BasicEncoderModelParallele):
     def __init__(self,ngpu,dev, nz,nch,ndf,nly, act,dil, channel, ker=2,std=2,pad=0,grp=1,bn=True,\

@@ -56,7 +56,7 @@ class BasicDCGAN_Dx(Module):
         #trainings
         self.training = True
         self.wf       = True
-        self.splits   = 10
+        self.splits   = 1
         self.prc      = []
         self.exf      = []
         self.extra    = []
@@ -136,7 +136,7 @@ class  DCGAN_Dx_1GPU(BasicDCGAN_Dx):
 
     def extraction(self,X):
         # X = self.prc(X)
-        X =  T._forward_1G(X,self.prc, self.splits)
+        X =  T._forward_1G(X,self.prc)
         f = [self.exf[0](X)]
         for l in range(1,len(self.exf)):
             f.append(self.exf[l](f[l-1]))
@@ -146,7 +146,7 @@ class  DCGAN_Dx_1GPU(BasicDCGAN_Dx):
         # pdb.set_trace()
         x.to(self.dev0,dtype=torch.float32)
         # z = self.cnn1(x)
-        z =  T._forward_1G(x,self.cnn1, self.splits)
+        z =  T._forward_1G(x,self.cnn1)
         torch.cuda.empty_cache()
         if self.wf:
             f = self.extraction(x)
@@ -173,7 +173,7 @@ class DCGAN_Dx_2GPU(BasicDCGAN_Dx):
         self.wf = wf
         # building network
         activation = T.activation(act, nly)
-        
+
         self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
                 ks = ker[0], stride = std[0], pad = pad[0], dil = dil[0],\
                 bn = False, act = activation[0], dpc = dpc))
@@ -246,11 +246,12 @@ class DCGAN_Dx_2GPU(BasicDCGAN_Dx):
 
     def forward(self, x):
         x = x.to(self.dev0,dtype=torch.float32)
-        z = self.cnn1(x)
+        # z = self.cnn1(x)
         
-        z = z.to(self.dev1,dtype=torch.float32)
-        z = self.cnn2(z)
-        
+        # z = z.to(self.dev1,dtype=torch.float32)
+        # z = self.cnn2(z)
+        z = T._forward_2G(x,self.cnn1,self.cnn2, self.splits)
+        torch.cuda.empty_cache()
         if self.wf:
             f = self.extraction(x)
 
@@ -339,17 +340,30 @@ class DCGAN_Dx_3GPU(BasicDCGAN_Dx):
         self.cnn1.to(self.dev0,dtype=torch.float32)
         self.cnn2.to(self.dev1,dtype=torch.float32)
         self.cnn3.to(self.dev2,dtype=torch.float32)
+
+    def extraction(self,X):
+        X = self.prc(X)
+        f = [self.exf[0](X)]
+        for l in range(1,len(self.exf)):
+            f.append(self.exf[l](f[l-1]))
+        return f
         
     def forward(self, x):
-        z = x.to(self.dev0,dtype=torch.float32)
-        z = self.cnn1(z)
-        z = z.to(self.dev1,dtype=torch.float32)
-        z = self.cnn2(z)
-        z = z.to(self.dev2,dtype=torch.float32)
-        z = self.cnn3(z)
-        # torch.cuda.empty_cache()
+        x = x.to(self.dev0,dtype=torch.float32)
+        # z = x.to(self.dev0,dtype=torch.float32)
+        # z = self.cnn1(z)
+        # z = z.to(self.dev1,dtype=torch.float32)
+        # z = self.cnn2(z)
+        # z = z.to(self.dev2,dtype=torch.float32)
+        # z = self.cnn3(z)
+        x = T._forward_3G(x, self.cnn1, self.cnn2, self.cnn3, self.splits)
+        torch.cuda.empty_cache()
+
+        if self.wf:
+            f = self.extraction(x)
+
         if not self.training:
-            z = z.detach()
+            z=z.detach()
 
         if self.wf:
             return z,f
