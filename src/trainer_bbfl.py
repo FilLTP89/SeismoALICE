@@ -23,7 +23,7 @@ from conv_factory import *
 import GPUtil
 from torch.nn.parallel import DistributedDataParallel as DDP
 import time
-
+import torch.distributed as dist
 
 rndm_args = {'mean': 0, 'std': 1}
 
@@ -61,6 +61,7 @@ class trainer(object):
     
         self.cv = cv
         self.gr_norm = []
+
         # define as global variable the cv object. 
         # And therefore this latter is become accessible to the methods in this class
         globals().update(cv)
@@ -70,6 +71,7 @@ class trainer(object):
         # passing the content of file ./strategy_bb_*.txt
         self.strategy=strategy
         self.ngpu = ngpu
+        # dist.init_process_group("gloo", rank=ngpu, world_size=1)
 
         nzd =  opt.nzd
         ndf = opt.ndf
@@ -331,7 +333,7 @@ class trainer(object):
 
     ''' Methode that discriminate real and fake signal for filtred type '''
     def discriminate_filtered_xz(self,Xf,Xfr,zf,zfr):
-        
+        # pdb.set_trace()
         # Discriminate real
         ftz = self.Dszf(zfr)
         ftX = self.DsXf(Xf)
@@ -573,8 +575,8 @@ class trainer(object):
         Dloss_ali_z
 
         # Total loss
-        # Dloss = Dloss_ali + 10*Dloss_ali_X + 100*Dloss_ali_z
-        Dloss = Dloss_ali + Dloss_ali_X + Dloss_ali_z
+        Dloss = Dloss_ali + 10*Dloss_ali_X + 100*Dloss_ali_z
+        # Dloss = Dloss_ali + Dloss_ali_X + Dloss_ali_z
         Dloss.backward(),self.oDfxz.step(),clipweights(self.Dfnets),zerograd(self.optzf)
         self.losses['Dloss'].append(Dloss.tolist())  
         self.losses['Dloss_ali'].append(Dloss_ali.tolist())  
@@ -624,13 +626,21 @@ class trainer(object):
  
         # 3. Cross-Discriminate XX
         _,Dfake_X = self.discriminate_filtered_xx(Xf,X_rec)
-        Gloss_ali_X = self.bce_loss(Dfake_X[0],o1l(Dfake_X[0]))
+
+        #ALICE
+        #Gloss_ali_X = self.bce_loss(Dfake_X[0],o1l(Dfake_X[0]))
+        #WGAN
+        Gloss_ali_X = -(1.-torch.mean(Dfake_X[0]))
+
         Gloss_cycle_X = torch.mean(torch.abs(Xf-X_rec))
         
         # 4. Cross-Discriminate ZZ
         _,Dfake_z = self.discriminate_filtered_zz(zf,z_rec)
-        Gloss_ali_z = self.bce_loss(Dfake_z[0],o1l(Dfake_z[0]))
-        Gloss_cycle_z = torch.mean(torch.abs(zf-z_rec)**2)
+        #ALICE
+        #Gloss_ali_z = self.bce_loss(Dfake_z[0],o1l(Dfake_z[0]))
+        #WGAN
+        Gloss_ali_z = -(1.-torch.mean(Dfake_z[0]))
+        Gloss_cycle_z = torch.mean(torch.abs(zf-z_rec))
 
         # Total Loss
         Gloss = (Gloss_ftm*0.7+Gloss_ali  *0.3)*(1.-0.7)/2.0 + \

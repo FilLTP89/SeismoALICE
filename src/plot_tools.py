@@ -18,7 +18,7 @@ from generate_noise import latent_resampling, noise_generator
 from common_torch import tfft, trnd, tfnp, tnan, o0s
 from database_sae import arias_intensity
 import torch
-from obspy.signal.tf_misfit import plot_tf_gofs
+from obspy.signal.tf_misfit import plot_tf_gofs, eg,pg
 from obspy.signal.tf_misfit import eg, pg
 from sklearn.covariance import EmpiricalCovariance
 from sklearn.datasets import make_gaussian_quantiles
@@ -609,6 +609,8 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs')
     #Qec.to(dev),Pdc.to(dev)
     Qec.eval(),Pdc.eval()
     cnt=0
+    EG = []
+    PG = []
     sns.set(style="whitegrid")
     clr = sns.color_palette('tab10',5)
     if tag=='broadband':
@@ -645,6 +647,7 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs')
                     bottom=0.125, h_1=0.2,h_2=0.125,h_3=0.2, w_1=0.2,w_2=0.6,
                     w_cb=0.01, d_cb=0.0,show=False,plot_args=['k', 'r', 'b'],
                     ylim=0., clim=0.)
+
                 plt.savefig(os.path.join(outf,"gof_r_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
                             bbox_inches='tight',dpi = 300)
                 plt.savefig(os.path.join(outf,"gof_r_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
@@ -746,6 +749,10 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs')
                         bottom=0.125, h_1=0.2,h_2=0.125,h_3=0.2, w_1=0.2,w_2=0.6,
                         w_cb=0.01, d_cb=0.0,show=False,plot_args=['k', 'r', 'b'],
                         ylim=0., clim=0.)
+                EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=20.0,nf=100,w0=6,norm='global',
+                    st2_isref=True,a=10.,k=1))
+                PG.append(pg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=20.0,nf=100,w0=6,norm='global',
+                    st2_isref=True,a=10.,k=1))
                 plt.savefig(os.path.join(outf,"gof_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
                             bbox_inches='tight',dpi = 300)
                 print("saving gof_aae_%s_%u_%u ... "%(pfx,cnt,io))
@@ -778,6 +785,13 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs')
                 # print("saving res_r_aae_%s_%u_%u ... "%(pfx,cnt,io))
                 
                 cnt += 1
+            plt.scatter(EG,PG,c = 'red')
+            plt.xlabel("EG")
+            plt.ylabel("PG")
+            plt.savefig(os.path.join(outf,"gof_eg_pg.png"),\
+                            bbox_inches='tight',dpi = 300)
+            print("saving gof_eg_pg")
+            plt.close()
 
 def plot_ohe(ohe):
     df = pd.DataFrame(np.nan,\

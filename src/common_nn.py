@@ -506,7 +506,7 @@ class T(object):
         return net
 
     @staticmethod
-    def _forward_1G(x, cnn1, split = 50):
+    def _forward_1G(x, cnn1, split = 5):
         ret    = []
         splits = iter(x.split(split, dim = 0))
         s_next = next(splits)
