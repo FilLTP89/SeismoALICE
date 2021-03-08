@@ -647,7 +647,10 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs')
                     bottom=0.125, h_1=0.2,h_2=0.125,h_3=0.2, w_1=0.2,w_2=0.6,
                     w_cb=0.01, d_cb=0.0,show=False,plot_args=['k', 'r', 'b'],
                     ylim=0., clim=0.)
-
+                EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
+                    st2_isref=True,a=10.,k=1))
+                PG.append(pg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
+                    st2_isref=True,a=10.,k=1))
                 plt.savefig(os.path.join(outf,"gof_r_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
                             bbox_inches='tight',dpi = 300)
                 plt.savefig(os.path.join(outf,"gof_r_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
@@ -721,8 +724,9 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs')
             #    plt.savefig(os.path.join(outf,"res_p_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
             #                format='eps',bbox_inches='tight',dpi = 500)
             #    plt.close()
-               
             #    cnt += 1
+        print("savefig eg_pg ...")
+        plot_eg_pg(EG,PG, outf)
             
     elif 'filtered' in tag:
         for _,batch in enumerate(trn_set):
@@ -785,13 +789,15 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs')
                 # print("saving res_r_aae_%s_%u_%u ... "%(pfx,cnt,io))
                 
                 cnt += 1
-            plt.scatter(EG,PG,c = 'red')
-            plt.xlabel("EG")
-            plt.ylabel("PG")
-            plt.savefig(os.path.join(outf,"gof_eg_pg.png"),\
-                            bbox_inches='tight',dpi = 300)
-            print("saving gof_eg_pg")
-            plt.close()
+            print("savefig eg_pg ...")
+            plot_eg_pg(EG,PG, outf)
+        # plt.scatter(EG,PG,c = 'red')
+        # plt.xlabel("EG")
+        # plt.ylabel("PG")
+        # plt.savefig(os.path.join(outf,"gof_eg_pg.png"),\
+        #                 bbox_inches='tight',dpi = 300)
+        # print("saving gof_eg_pg")
+        # plt.close()
 
 def plot_ohe(ohe):
     df = pd.DataFrame(np.nan,\
@@ -1722,3 +1728,47 @@ def seismo_test(tag,Fef,Gdd,Ghz,Fed,Ddxz,DsXd,Dszd,DsrXd,dev,trn_set,pfx,outf):
         plt.savefig(os.path.join(outf,"Dtest_hyb_%s.eps"%(pfx['ann2bb'])),\
                     format='eps',bbox_inches='tight',dpi = 500)
         print("plot Gy(Fy(y)) gofs")
+
+
+def plot_eg_pg(x,y, outf):
+    # definitions for the axes
+    left, width = 0.1, 0.65
+    bottom, height = 0.1, 0.65
+    spacing = 0.005
+
+
+    rect_scatter = [left, bottom, width, height]
+    rect_histx = [left, bottom + height + spacing, width, 0.2]
+    rect_histy = [left + width + spacing, bottom, 0.2, height]
+
+    # start with a rectangular Figure
+    plt.figure(figsize=(8, 8))
+
+    ax_scatter = plt.axes(rect_scatter)
+    ax_scatter.tick_params(direction='in', top=True, right=True)
+    ax_histx = plt.axes(rect_histx)
+    ax_histx.tick_params(direction='in', labelbottom=False)
+    ax_histy = plt.axes(rect_histy)
+    ax_histy.tick_params(direction='in', labelleft=False)
+
+    # the scatter plot:
+    ax_scatter.scatter(x, y)
+    
+
+    # now determine nice limits by hand:
+    binwidth = 0.25
+    lim = np.ceil(np.abs([x, y]).max() / binwidth) * binwidth
+    ax_scatter.set_xlim((0, lim))
+    ax_scatter.set_ylim((0, lim))
+
+    bins = np.arange(-lim, lim + binwidth, binwidth)
+    ax_histx.hist(x, bins=bins)
+    ax_histy.hist(y, bins=bins, orientation='horizontal')
+
+    ax_histx.set_xlim(ax_scatter.get_xlim())
+    ax_histy.set_ylim(ax_scatter.get_ylim())
+
+    plt.savefig(os.path.join(outf,"gof_eg_pg.png"),\
+                        bbox_inches='tight',dpi = 300)
+    print("saving gof_eg_pg")
+    plt.close()

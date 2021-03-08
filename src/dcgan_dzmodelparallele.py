@@ -177,7 +177,7 @@ class DCGAN_Dz_2GPU(BasicDCGAN_Dz):
         self.cnn2.append(activation[-1])
 
         self.cnn1 = self.prc + self.cnn1
-
+        
         self.cnn1 = sqn(*self.cnn1)
         self.cnn2 = sqn(*self.cnn2)
 

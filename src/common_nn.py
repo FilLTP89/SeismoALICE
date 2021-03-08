@@ -506,7 +506,7 @@ class T(object):
         return net
 
     @staticmethod
-    def _forward_1G(x, cnn1, split = 5):
+    def _forward_1G(x, cnn1, split = 60):
         ret    = []
         splits = iter(x.split(split, dim = 0))
         s_next = next(splits)
@@ -522,7 +522,7 @@ class T(object):
         return torch.cat(ret).to(0)
 
     @staticmethod
-    def _forward_2G(x, cnn1, cnn2, split = 80):
+    def _forward_2G(x, cnn1, cnn2, split = 60):
         # import pdb
         # pdb.set_trace()
         ret    = []

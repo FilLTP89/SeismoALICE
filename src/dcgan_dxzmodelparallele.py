@@ -12,6 +12,7 @@ import torch
 import pdb
 from torch import device as tdev
 import importlib
+import copy
 
 class DCGAN_DXZModelParallele(object):
     """docstring for DiscriminatorModelParallele"""
@@ -46,8 +47,8 @@ class BasicDCGAN_DXZ(Module):
     def __init__(self):
         super(BasicDCGAN_DXZ, self).__init__()
         #Oridnal number of the GPUs
-        self.dev0 = 'cuda:0'
-        self.dev1 = 'cuda:1'
+        self.dev0 = 0
+        self.dev1 = 1
         self.dev2 = 2
         self.dev3 = 3
 
@@ -105,8 +106,8 @@ class DCGAN_DXZ_1GPU(BasicDCGAN_DXZ):
         for _ in range(1, n_extra_layers+1):
             self.cnn +=cnn1d(nc,nc, activation[i-1],\
                 ker=3, std=1, pad=1, bn=False, bias =bias, dpc=dpc, wn = False)
-
-        self.exf = self.cnn1[:-1]
+        # any changes made to a copy of object do not reflect in the original object
+        self.exf = copy.deepcopy(self.cnn1[:-1])
 
         self.cnn1 = sqn(*self.cnn1)
         self.exf = sqn(*self.exf)
@@ -158,8 +159,6 @@ class DCGAN_DXZ_2GPU(BasicDCGAN_DXZ):
         self.wf = wf
         activation = T.activation(act,nly)
 
-        
-
         #part I in the GPU0
         for i in range(1, nly//2+1):
             """
@@ -174,7 +173,6 @@ class DCGAN_DXZ_2GPU(BasicDCGAN_DXZ):
                 ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = bias,\
                 bn = bn, dpc = dpc, act = act))
             
-
         #Part II in the GPU1
         for i in range(nly//2+1, nly+1):
             
@@ -185,19 +183,19 @@ class DCGAN_DXZ_2GPU(BasicDCGAN_DXZ):
                 ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = bias,\
                 bn = bn, dpc = dpc, act = act))
             
-
         #This extra layer will be placed in the GPU0
         for _ in range(1, n_extra_layers+1):
             self.cnn2 +=cnn1d(nc,nc, activation[i-1],\
                 ker=3, std=1, pad=1, bn=False, dpc=dpc, bias=bias)
         # pdb.set_trace()
-        self.exf = self.cnn2[:-1]
-        self.cnn1 = sqn(*self.cnn1)
-        self.cnn1 = self.cnn1.to(self.dev0, dtype=torch.float32)
+        self.exf = copy.deepcopy(self.cnn2[:-1])
 
-        self.cnn2 = sqn(*self.cnn2)
-        self.cnn2 = self.cnn2.to(self.dev1, dtype=torch.float32)
+        self.cnn1 = sqn(*self.cnn1).to(self.dev0,dtype=torch.float32)
+        self.cnn2 = sqn(*self.cnn2).to(self.dev1,dtype=torch.float32)
 
+        #self.cnn2.to(self.dev1,dtype=torch.float32)
+        #self.cnn1.to(self.dev0,dtype=torch.float32)
+        
         self.exf =  sqn(*self.exf)
         self.exf.to(self.dev0, dtype=torch.float32)
 
@@ -213,7 +211,8 @@ class DCGAN_DXZ_2GPU(BasicDCGAN_DXZ):
         return f
 
     def forward(self,x):
-        self.cnn2 = self.cnn2.to(self.dev1)
+        # pdb.set_trace()
+        
         x = x.to(self.dev0,dtype=torch.float32)
         # z = self.cnn1(x)
         # z = z.to(self.dev1,dtype=torch.float32)

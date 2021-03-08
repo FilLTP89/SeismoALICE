@@ -314,7 +314,7 @@ class trainer(object):
     ''' Methode that discriminate real and fake signal for broadband type '''
     # @profile
     def discriminate_broadband_xz(self,Xd,Xdr,zd,zdr):
-        # pdb.set_trace()
+        pdb.set_trace()
         a = self.DsXd(Xd)
         b = self.Dszd(zdr)
         
@@ -757,6 +757,7 @@ class trainer(object):
         globals().update(self.cv)
         globals().update(opt.__dict__)
         error = {}
+        
         start_time = time.time()
         for epoch in range(niter):
             for b,batch in enumerate(trn_loader):

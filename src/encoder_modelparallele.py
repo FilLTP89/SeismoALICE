@@ -200,7 +200,7 @@ class Encoder_2GPU(BasicEncoderModelParallele):
 
     def forward(self,x):
         x = x.to(self.dev0,dtype=torch.float32)
-        x = T._forward_2G(x,self.cnn1,self.cnn2)
+        x = T._forward_2G(x, self.cnn1, self.cnn2)
 
         if not self.training:
             x = x.detach()
