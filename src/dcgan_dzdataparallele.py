@@ -11,6 +11,7 @@ from common_nn import *
 import torch
 import pdb
 from torch import device as tdev
+import copy
 
 class DCGAN_DzDataParallele(object):
     """docstring for DCGAN_DzDataParallele"""
@@ -65,6 +66,7 @@ class DCGAN_Dz(BasicDCGAN_DzDataParallele):
         activation = T.activation(act,nly)
 
         self.wf = wf
+        layers = []
 
         self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
                 ks = ker[0], stride = std[0], pad = pad[0], dil = dil[0],\
@@ -82,22 +84,28 @@ class DCGAN_Dz(BasicDCGAN_DzDataParallele):
             self.cnn1.append(ConvBlock(ni = channel[i-1], no = channel[i],
                 ks = ker[i-1], stride = std[i-1], pad = pad[i-1], bias = bias, act = act, dpc = dpc, bn=bn))
             in_channels = out_channels
+            layers.append(ConvBlock(ni = channel[i-1],no=channel[i],\
+                    ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
+                    dpc = dpc, act = act))
 
         for _ in range(0,n_extra_layers):
             self.cnn1.append(ConvBlock(ni = channel[i-1],no=channel[i],\
                 ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
                 dpc = dpc, act = act))
 
-        self.exf = self.cnn1[:-1]
+        self.exf = layers[:-1]
         self.cnn.append(Dpout(dpc = dpc))
         self.cnn.append(activation[-1])
         self.cnn = self.prc + self.cnn1
         
         self.cnn = sqn(*self.cnn)
-        self.cnn.to(self.dev0, dtype = torch.float32)
-
+        self.cnn.to(device)
+        
         self.prc = sqn(*self.prc)
-        self.prc.to(self.dev0, dtype = torch.float32)
+        self.prc.to(device)
+
+        self.exf = sqn(*self.exf)
+        self.exf.to(device)
 
     def extraction(self,X):
         X = self.prc(X)
@@ -108,7 +116,7 @@ class DCGAN_Dz(BasicDCGAN_DzDataParallele):
     
     def forward(self,X):
         if X.is_cuda and self.ngpu > 1:
-            z = pll(self.ann,X,self.gang)
+            z = T._forward(X, self.cnn, self.gang)
             if self.wf:
                 #f = pll(self.extraction,X,self.gang)
                 f = self.extraction(X)

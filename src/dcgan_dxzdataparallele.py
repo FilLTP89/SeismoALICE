@@ -97,10 +97,10 @@ class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
         for _ in range(1, n_extra_layers+1):
             self.cnn +=cnn1d(nc, nc, activation[i-1],\
                 ker=3, std=1, pad=1, bn=False, dpc=dpc, bias = bias)
-
-        self.exf = self.cnn[:-1]
-        self.cnn = sqn(*self.cnn)
-        self.exf = sqn(*self.exf)
+        #copy a part of the cnn network only. So the modification of cnn after will not affect the exf !
+        self.exf = copy.deepcopy(self.cnn[:-1])
+        self.cnn = sqn(*self.cnn).to(device)
+        self.exf = sqn(*self.exf).to(device)
         self.features_to_prob = torch.nn.Sequential(
             torch.nn.Linear(out_channels, 1),
             torch.nn.LeakyReLU(negative_slope=1.0, inplace=True)
@@ -112,9 +112,10 @@ class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
             f.append(self.exf[l](f[l-1]))
         return f
 
-    def forward(self,x):
+    def forward(self,X):
         if X.is_cuda and self.ngpu > 1:
-            z = pll(self.cnn,X,self.gang)
+            # z = pll(self.cnn,X,self.gang)
+            z = T._forward(X, self.cnn, self.gang)
             if self.wf:
                 #f = pll(self.extraction,X,self.gang)
                 f = self.extraction(X)

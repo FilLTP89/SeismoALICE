@@ -122,7 +122,7 @@ class trainer(object):
             n = self.strategy['broadband']
             print("Loading broadband generators")
 
-            # pdb.set_trace()
+            pdb.set_trace()
             # # Encoder broadband Fed
             self.Fed = net.Encoder(opt.config["encoder"],opt)
             # # Decoder broadband Gdd
@@ -314,7 +314,7 @@ class trainer(object):
     ''' Methode that discriminate real and fake signal for broadband type '''
     # @profile
     def discriminate_broadband_xz(self,Xd,Xdr,zd,zdr):
-        pdb.set_trace()
+        # pdb.set_trace()
         a = self.DsXd(Xd)
         b = self.Dszd(zdr)
         
@@ -776,6 +776,7 @@ class trainer(object):
                     torch.cuda.empty_cache()
             if epoch%10== 0:
                 print("--- {} minutes ---".format((time.time() - start_time)/60))
+                
 
             GPUtil.showUtilization(all=True)
             

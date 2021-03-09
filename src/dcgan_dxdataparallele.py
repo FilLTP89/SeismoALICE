@@ -106,8 +106,8 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
         self.exf = self.cnn
         self.cnn = self.prc + self.cnn + self.extra + self.final
 
-        self.cnn = sqn(*self.cnn)
-        self.prc = sqn(*self.prc)
+        self.cnn = sqn(*self.cnn).to(device)
+        self.prc = sqn(*self.prc).to(device)
 
     def extraction(self,X):
         X = self.prc(X)
@@ -118,7 +118,8 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
 
     def forward(self,X):
         if X.is_cuda and self.ngpu > 1:
-            z = pll(self.cnn,X,self.gang)
+            # z = pll(self.cnn,X,self.gang)
+            z = T._forward(X, self.cnn, self.gang)
             if self.wf:
                 #f = pll(self.extraction,X,self.gang)
                 f = self.extraction(X)

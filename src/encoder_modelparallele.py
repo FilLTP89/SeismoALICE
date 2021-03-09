@@ -12,6 +12,7 @@ import torch
 import pdb
 from torch import device as tdev
 import importlib
+import copy
 
 class EncoderModelParallele(object):
     """
@@ -99,14 +100,14 @@ class Encoder_1GPU(BasicEncoderModelParallele):
         
         self.ngpu= ngpu
         acts = T.activation(act, nly)
-        
-        # pretrained = True
-        # if pretrained:
-        #     self.model = T.load_broadband_encoder()
-        #     # Freeze model weights
-        #     for param in self.model.parameters():
-        #         param.requires_grad = False
+        # pdb.set_trace()
 
+        if path:
+            self.model = T.load_net(path)
+            # Freeze model weights
+            for param in self.model.parameters():
+                param.requires_grad = False
+        # pdb.set_trace()
         # lin = 4096
         for i in range(1, nly+1):
             # ker[i-1] = self.kout(nly,i,ker)
@@ -131,9 +132,9 @@ class Encoder_1GPU(BasicEncoderModelParallele):
         
         self.cnn1  = sqn(*self.cnn1)
         # pdb.set_trace()
-        # if pretrained:
-        #     self.model.cnn1[-1] = self.cnn1
-        #     self.cnn1 = self.model
+        if path:
+            self.model.cnn1[-1] = copy.deepcopy(self.cnn1)
+            self.cnn1 = self.model
         self.cnn1.to(self.dev0,dtype=torch.float32)
 
     def forward(self,x):

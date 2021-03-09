@@ -257,8 +257,8 @@ def stead_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
     wnz_set.resize_(nsy,nzd,zwindow).normal_(**rndm_args)
     wnf_set   = tFT(nsy,nzf,zwindow)
     wnf_set.resize_(nsy,nzf,zwindow).normal_(**rndm_args)
-    thf_set = trn_set #lowpass_biquad(trn_set,1./md['dtm'],md['cutoff'])
-    # thf_set  = lowpass_biquad(trn_set,1./md['dtm'],md['cutoff'])
+    # thf_set = trn_set #lowpass_biquad(trn_set,1./md['dtm'],md['cutoff'])
+    thf_set  = lowpass_biquad(trn_set,1./md['dtm'],md['cutoff'])
     pgaf_set = -999.9*np.ones(shape=(nsy,3))
     psaf_set = -999.9*np.ones(shape=(nsy,3,md['nTn']))
     

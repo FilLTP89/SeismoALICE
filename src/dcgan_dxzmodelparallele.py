@@ -286,7 +286,7 @@ class DCGAN_DXZ_3GPU(BasicDCGAN_DXZ):
             self.cnn3 +=cnn1d(nc,nc, activation[i-1],\
                 ker=3, std=1, pad=1, bn=False, dpc=dpc, bias=bias)
 
-        self.exf = self.cnn3[:-1]
+        self.exf = copy.deepcopy(self.cnn3[:-1])
 
         self.cnn1 = sqn(*self.cnn1)
         self.cnn1.to(self.dev0, dtype=torch.float32)
@@ -397,7 +397,7 @@ class DCGAN_DXZ_4GPU(BasicDCGAN_DXZ):
             self.cnn4 +=cnn1d(nc,nc, activation[i-1],\
                 ker=3, std=1, pad=1, bn=True, dpc=dpc)
 
-        self.exf = self.cnn1[:-1]
+        self.exf = copy.deepcopy(self.cnn1[:-1])
 
         self.cnn1 = sqn(*self.cnn1)
         self.cnn1.to(self.dev0, dtype=torch.float32)

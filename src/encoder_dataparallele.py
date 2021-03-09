@@ -78,11 +78,12 @@ class Encoder(BasicEncoderDataParallele):
                 self.cnn += cnn1d(channel[i-1],channel[i], act[i-1], ker=ker[i-1],std=std[i-1],pad=pad[i-1],dil=dil[i-1],\
                         bn=_bn,dpc=_dpc,wn=False) 
             in_channels = out_channels
-        self.cnn = sqn(*self.cnn)
+        self.cnn = sqn(*self.cnn).to(device)
 
     def forward(self,x):
         if x.is_cuda and self.ngpu > 1:
-            zlf   = pll(self.cnn,x,self.gang)
+            # zlf   = pll(self.cnn,x,self.gang)
+            zlf = T._forward(x, self.cnn, self.gang)
         else:
             zlf   = self.cnn(x)
         if not self.training:

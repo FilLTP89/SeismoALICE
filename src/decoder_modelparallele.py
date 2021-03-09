@@ -95,12 +95,14 @@ class Decoder_1GPU(BasicDecoderModelParallele):
         #initializaton of the cnn
         self.cnn   = []
         acts       = T.activation(act, nly)
-        # self.model = T.load_broadband_decoder()
 
-        # # Freeze model weights
-        # for param in self.model.parameters():
-        #     param.requires_grad = False
-        
+        pdb.set_trace()
+        if path:
+            self.model = T.load_net(path)
+            # Freeze model weights
+            for param in self.model.parameters():
+                param.requires_grad = False
+        pdb.set_trace()
         for i in range(1, nly+1):
             
             _ker = self.kout(nly,i, ker)
@@ -124,6 +126,7 @@ class Decoder_1GPU(BasicDecoderModelParallele):
 
         # pdb.set_trace()
         self.cnn1 = sqn(*self.cnn1)
+
         # self.cnn1[-1] = self.model
         self.cnn1.to(self.dev0, dtype=torch.float32)
 

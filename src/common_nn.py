@@ -505,8 +505,25 @@ class T(object):
             raise e
         return net
 
+    @staticmethod 
+    def _forward(x, cnn, gang, split = 60):
+        ret    = []
+        splits = iter(x.split(split, dim = 0))
+        s_next = next(splits)
+        s_prev = pll(cnn,s_next, gang)
+
+        for s_next in splits:
+            # s_prev = self.cnn1(s_prev)
+            ret.append(s_prev)
+            s_prev = pll(cnn,s_next, gang)
+
+        # s_prev = self.cnn1(s_prev)
+        ret.append(s_prev)
+        return torch.cat(ret)
+
+
     @staticmethod
-    def _forward_1G(x, cnn1, split = 60):
+    def _forward_1G(x, cnn1, split = 5):
         ret    = []
         splits = iter(x.split(split, dim = 0))
         s_next = next(splits)
@@ -522,7 +539,7 @@ class T(object):
         return torch.cat(ret).to(0)
 
     @staticmethod
-    def _forward_2G(x, cnn1, cnn2, split = 60):
+    def _forward_2G(x, cnn1, cnn2, split = 5):
         # import pdb
         # pdb.set_trace()
         ret    = []
@@ -583,10 +600,10 @@ class T(object):
         return torch.cat(ret).to(3)
 
     @staticmethod
-    def load_broadband_decoder():
+    def load_net(path):
         net = Module()
         try:
-            net = torch.load("./network/trained/nzd32/Gdd.pth")
+            net = torch.load(path)
         except Exception as e:
             raise e
         return net
