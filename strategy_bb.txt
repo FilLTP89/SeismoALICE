@@ -1,3 +1,3 @@
 encoder,decoder,extra
-broadband,./network/bb_ls128_nf8_nzd32/tweak/Fed_5000.pth,./network/bb_ls128_nf8_nzd32/tweak/Gdd_5000.pth,-
+broadband,None,None,-
 

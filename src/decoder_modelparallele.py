@@ -96,13 +96,13 @@ class Decoder_1GPU(BasicDecoderModelParallele):
         self.cnn   = []
         acts       = T.activation(act, nly)
 
-        pdb.set_trace()
+        # pdb.set_trace()
         if path:
             self.model = T.load_net(path)
             # Freeze model weights
             for param in self.model.parameters():
                 param.requires_grad = False
-        pdb.set_trace()
+        # pdb.set_trace()
         for i in range(1, nly+1):
             
             _ker = self.kout(nly,i, ker)
@@ -124,7 +124,7 @@ class Decoder_1GPU(BasicDecoderModelParallele):
             self.cnn1 += cnn1dt(channel[i-1],channel[i], acts[0],ker=3,std=1,pad=1,\
                 dil =1, opd=0, bn=True, dpc=0.0)
 
-        pdb.set_trace()
+        # pdb.set_trace()
         self.cnn1 = sqn(*self.cnn1)
         if path: 
             self.cnn1[-1] = self.model
