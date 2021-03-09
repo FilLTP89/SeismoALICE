@@ -124,10 +124,10 @@ class Decoder_1GPU(BasicDecoderModelParallele):
             self.cnn1 += cnn1dt(channel[i-1],channel[i], acts[0],ker=3,std=1,pad=1,\
                 dil =1, opd=0, bn=True, dpc=0.0)
 
-        # pdb.set_trace()
+        pdb.set_trace()
         self.cnn1 = sqn(*self.cnn1)
-
-        # self.cnn1[-1] = self.model
+        if path: 
+            self.cnn1[-1] = self.model
         self.cnn1.to(self.dev0, dtype=torch.float32)
 
     def forward(self,x):
