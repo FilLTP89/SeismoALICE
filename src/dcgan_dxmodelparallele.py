@@ -10,6 +10,7 @@ import torch
 import pdb
 from torch import device as tdev
 import importlib
+import copy
 
 
 
@@ -22,19 +23,18 @@ class DCGAN_DxModelParallele(object):
     @staticmethod
     def getDCGAN_DxByGPU(ngpu, nc, ncl, ndf, nly,act,channel, fpd=0,\
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.25, limit = 256,
-                 n_extra_layers=0,isize=256):
+                 n_extra_layers=0,isize=256,path = ''):
         # pdb.set_trace()
         # pdb.set_trace()
         classname = 'DCGAN_Dx_' + str(ngpu)+'GPU'
         # classname = 'kout'
-
         module_name = "dcgan_dxmodelparallele"
         module = importlib.import_module(module_name)
         class_ = getattr(module,classname)
 
         return class_(ngpu = ngpu, isize = isize, nc = nc, ncl = ncl, ndf = ndf, channel = channel, fpd = fpd, act=act,\
             nly = nly, ker=ker ,std=std, pad=pad, dil=dil, grp=grp, bn=bn, wf = wf, dpc=dpc,\
-            n_extra_layers = n_extra_layers, limit = limit)
+            n_extra_layers = n_extra_layers, limit = limit, path=path)
 
 
 class BasicDCGAN_Dx(Module):
@@ -85,13 +85,20 @@ class  DCGAN_Dx_1GPU(BasicDCGAN_Dx):
     """docstring for DCGAN_Dx_1GPU"""
     def __init__(self, ngpu, nc, ncl, ndf, nly, act, channel, fpd=1, isize=256, limit = 256,\
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.250,
-                 n_extra_layers=0):
+                 n_extra_layers=0,path = ''):
         super(DCGAN_Dx_1GPU, self).__init__()
         #activation code
         activation = T.activation(act, nly)
         
         #extraction features 
         self.wf = wf
+        self.net = []
+        # pdb.set_trace()
+        if path:
+            self.cnn1 = T.load_net(path)
+            # Freeze model weights
+            for param in self.cnn1.parameters():
+                param.requires_grad = False
 
         #building network
         self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
@@ -102,7 +109,7 @@ class  DCGAN_Dx_1GPU(BasicDCGAN_Dx):
             act = activation[i-1]
             _bn = False if i == 1 else bn
             _dpc = 0.0 if i == nly else dpc
-            self.cnn1.append(ConvBlock(ni = channel[i-1], no = channel[i],
+            self.net.append(ConvBlock(ni = channel[i-1], no = channel[i],
                 ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = False,\
                 bn = _bn, dpc = dpc, act = act)) 
 
@@ -120,10 +127,16 @@ class  DCGAN_Dx_1GPU(BasicDCGAN_Dx):
 
         #compute values 
         self.exf  = self.cnn1
-        self.cnn1 = self.prc + self.cnn1 + self.extra + self.final
-
+        self._net = self.prc + self.net + self.extra + self.final
+        self._net = sqn(*self._net)
+        self.net  = sqn(*self.net)
         #creating sequentially the Network
-        self.cnn1 = sqn(*self.cnn1)
+        # pdb.set_trace()
+        if path:
+            self.cnn1.cnn1[4] = self.net
+        else:   
+            self.cnn1 = self._net
+
         self.cnn1.to(self.dev0, dtype = torch.float32)
 
         self.prc = sqn(*self.prc)
@@ -166,13 +179,16 @@ class DCGAN_Dx_2GPU(BasicDCGAN_Dx):
     """docstring for DCGAN_Dx_1GPU"""
     def __init__(self, ngpu, nc, ncl, ndf, nly, act, channel, fpd=1, isize=256, limit = 256,\
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.250,
-                 n_extra_layers=0):
+                 n_extra_layers=0,path = ''):
         super(DCGAN_Dx_2GPU, self).__init__()
         self.ngpu = ngpu
         #extraction features 
         self.wf = wf
         # building network
         activation = T.activation(act, nly)
+
+
+        
 
         self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
                 ks = ker[0], stride = std[0], pad = pad[0], dil = dil[0],\
@@ -271,7 +287,7 @@ class DCGAN_Dx_3GPU(BasicDCGAN_Dx):
     """docstring for DCGAN_Dx_3GPU"""
     def __init__(self, ngpu, nc, ncl, ndf, nly, act, channel, fpd=1, isize=256, limit = 256,\
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.250,
-                 n_extra_layers=0):
+                 n_extra_layers=0,path = ''):
         super(DCGAN_Dx_3GPU, self).__init__()
         
         #extraction features 
@@ -374,7 +390,7 @@ class DCGAN_Dx_4GPU(BasicDCGAN_Dx):
     """docstring for DCGAN_Dx_4GPU"""
     def __init__(self, ngpu, nc, ncl, ndf, nly, act, channel, fpd=1, isize=256, limit = 256,\
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.250,
-                 n_extra_layers=0):
+                 n_extra_layers=0,path = ''):
         super(DCGAN_Dx_4GPU, self).__init__()
 
         #extraction features 

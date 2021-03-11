@@ -539,7 +539,7 @@ class T(object):
         return torch.cat(ret).to(0)
 
     @staticmethod
-    def _forward_2G(x, cnn1, cnn2, split = 5):
+    def _forward_2G(x, cnn1, cnn2, split = 2):
         # import pdb
         # pdb.set_trace()
         ret    = []

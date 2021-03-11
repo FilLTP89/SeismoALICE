@@ -23,7 +23,7 @@ class DCGAN_DXZModelParallele(object):
     @staticmethod
     def getDCGAN_DXZByGPU(ngpu, nc, nly,act, channel,\
                  ker,std,pad,dil=1,grp=1,bn=True,wf=False,\
-                 n_extra_layers=0, limit = 256,
+                 n_extra_layers=0, limit = 256, path='',
                  dpc=0.25, bias = True, opt=None, *args, **kwargs):
         classname = 'DCGAN_DXZ_' + str(ngpu)+'GPU'
         #this following code is equivalent to calls the class it self. 
@@ -37,7 +37,7 @@ class DCGAN_DXZModelParallele(object):
         class_ = getattr(module, classname)
 
         return class_(ngpu = ngpu, nc = nc, nly = nly, act=act, channel = channel,\
-                     n_extra_layers = n_extra_layers,\
+                     n_extra_layers = n_extra_layers, path=path,\
                      dpc = dpc, wf =wf, opt=opt, ker = ker, std = std, pad = pad, dil=dil,\
                      grp =grp, bn = bn, limit = limit, bias = bias)
 
@@ -78,15 +78,21 @@ class DCGAN_DXZ_1GPU(BasicDCGAN_DXZ):
     """docstring for DCGAN_DXZ"""
     def __init__(self, ngpu, nc, nly,act, channel,\
                  ker=1,std=1,pad=0, dil=1,grp=1,bn=True,wf=False,\
-                 n_extra_layers=0,limit = 1024,\
+                 n_extra_layers=0,limit = 1024,path='',\
                  dpc=0.250, bias = True, opt=None, *args, **kwargs):
 
         super(DCGAN_DXZ_1GPU, self).__init__()
         
         self.wf = wf
+        self.net = []
         #activation 
         activation = T.activation(act,nly)
         # pdb.set_trace()
+        if path:
+            self.cnn1 = T.load_net(path)
+            # Freeze model weights
+            for param in self.cnn1.parameters():
+                param.requires_grad = False
         #initialisation of the input channel
         
         for i in range(1, nly+1):
@@ -97,19 +103,23 @@ class DCGAN_DXZ_1GPU(BasicDCGAN_DXZ):
             """
             
             act = activation[i-1]
-            self.cnn1.append(ConvBlock(ni = channel[i-1], no = channel[i],
+            self.net.append(ConvBlock(ni = channel[i-1], no = channel[i],
                 ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = bias,\
                 bn = bn, dpc = dpc, act = act))
             # self.cnn1 += cnn1d(in_channels,nc, act, ker=ker,std=std,pad=pad,\
             #         bn=False,bias=True, dpc=dpc,wn=False)
 
         for _ in range(1, n_extra_layers+1):
-            self.cnn +=cnn1d(nc,nc, activation[i-1],\
+            self.net +=cnn1d(nc,nc, activation[i-1],\
                 ker=3, std=1, pad=1, bn=False, bias =bias, dpc=dpc, wn = False)
         # any changes made to a copy of object do not reflect in the original object
-        self.exf = copy.deepcopy(self.cnn1[:-1])
+        self.exf = copy.deepcopy(self.net[:-1])
 
-        self.cnn1 = sqn(*self.cnn1)
+        self.net = sqn(*self.net)
+        # pdb.set_trace()
+        if not path: 
+            self.cnn1 = self.net
+
         self.exf = sqn(*self.exf)
 
         self.cnn1.to(self.dev0, dtype=torch.float32)
@@ -152,7 +162,7 @@ class DCGAN_DXZ_2GPU(BasicDCGAN_DXZ):
     """docstring for DCGAN_DXZ_2GPU"""
     def __init__(self, ngpu, nc, nly,act, channel,\
                  ker=1,std=1,pad=0, dil=1,grp=1,bn=True,wf=False,\
-                 n_extra_layers=0, limit = 1024,\
+                 n_extra_layers=0, limit = 1024,path='',\
                  dpc=0.250, bias = True, opt=None, *args, **kwargs):
         super(DCGAN_DXZ_2GPU, self).__init__()
        
@@ -238,7 +248,7 @@ class DCGAN_DXZ_3GPU(BasicDCGAN_DXZ):
     """docstring for DCGAN_DXZ_GPU"""
     def __init__(self, ngpu, nc, nly,act, channel,\
                  ker=1,std=1,pad=0, dil=1,grp=1,bn=True,wf=False,\
-                 n_extra_layers=0,limit = 1024,\
+                 n_extra_layers=0,limit = 1024,path='',\
                  dpc=0.250,bias = True, opt=None, *arg, **kwargs):
         super(DCGAN_DXZ_3GPU, self).__init__()
 
@@ -339,7 +349,7 @@ class DCGAN_DXZ_4GPU(BasicDCGAN_DXZ):
     """docstring for DCGAN_DXZ_4GPU"""
     def __init__(self, ngpu, nc, nly,act,\
                  ker=1,std=1,pad=0, dil=1, grp=1, bn=True,wf=False,\
-                 n_extra_layers=0,limit = 1024,\
+                 n_extra_layers=0,limit = 1024,path='',\
                  dpc=0.250,bias = True, opt=None, *args, **kwargs):
         super(DCGAN_DXZ_4GPU, self).__init__()
         

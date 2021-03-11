@@ -22,7 +22,7 @@ class DCGAN_DzModelParallele(object):
 
     @staticmethod
     def getDCGAN_DzByGPU(ngpu, nz, nly, act, channel, ncl=512, fpd=0, n_extra_layers=1, dpc=0.25,
-                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False,limit = 256, bias =  False):
+                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False,limit = 256, bias =  False, path=''):
         #we assign the code name
         # pdb.set_trace()
         classname = 'DCGAN_Dz_' + str(ngpu)+'GPU'
@@ -34,7 +34,7 @@ class DCGAN_DzModelParallele(object):
         return class_(ngpu = ngpu, nz = nz, nly = nly, act=act, ncl = ncl,channel = channel,\
                     n_extra_layers = n_extra_layers, dpc =dpc,\
                     ker=ker, std=std, pad = pad, dil=dil, grp=grp,\
-                    bn =bn, wf = wf, limit = limit, bias = bias)
+                    bn =bn, wf = wf, limit = limit, bias = bias, path = path)
 
 
 class BasicDCGAN_Dz(Module):
@@ -72,7 +72,7 @@ class BasicDCGAN_Dz(Module):
 class  DCGAN_Dz_1GPU(BasicDCGAN_Dz):
     """docstring for  DCGAN_Dz_1GPU"""
     def __init__(self, ngpu, nz, nly,act, channel,  ncl=512, fpd=1, n_extra_layers=1, dpc=0.25,
-                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False,limit = 256, bias = False):
+                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False,limit = 256, bias = False, path=''):
         super(DCGAN_Dz_1GPU, self).__init__()
 
         #activation functions
@@ -80,6 +80,13 @@ class  DCGAN_Dz_1GPU(BasicDCGAN_Dz):
 
         self.wf = wf
         layers = []
+
+        # pdb.set_trace()
+        if path:
+            self.model = T.load_net(path)
+            # Freeze model weights
+            for param in self.model.parameters():
+                param.requires_grad = False
 
         self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
                 ks = ker[0], stride = std[0], pad = pad[0], dil = dil[0],\
@@ -108,8 +115,11 @@ class  DCGAN_Dz_1GPU(BasicDCGAN_Dz):
         self.cnn1.append(Dpout(dpc = dpc))
         self.cnn1.append(activation[-1])
         self.cnn1 = self.prc + self.cnn1
+        self.cnn1 =sqn(*self.cnn1)
         
-        self.cnn1 = sqn(*self.cnn1)
+        if path:
+            self.cnn1[-1] = self.model
+
         self.cnn1.to(self.dev0, dtype = torch.float32)
 
         self.prc = sqn(*self.prc)
@@ -140,7 +150,7 @@ class  DCGAN_Dz_1GPU(BasicDCGAN_Dz):
 class DCGAN_Dz_2GPU(BasicDCGAN_Dz):
     """docstring for DCGAN_Dz_2GPU"""
     def __init__(self, ngpu, nz, nly, act, channel,ncl=512, fpd=1, n_extra_layers=1, dpc=0.25,
-                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False,limit = 256, bias = False):
+                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False,limit = 256, bias = False,path=''):
         super(DCGAN_Dz_2GPU, self).__init__()
         
         #activation functions
@@ -230,7 +240,7 @@ class DCGAN_Dz_2GPU(BasicDCGAN_Dz):
 class DCGAN_Dz_3GPU(BasicDCGAN_Dz):
     """docstring for DCGAN_Dz_3GPU"""
     def __init__(self, ngpu, nz, nly, act, channel, ncl=512, fpd=1, n_extra_layers=1, dpc=0.25,
-                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, limit = 256, bias = False):
+                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, limit = 256, bias = False,path=''):
         super(DCGAN_Dz_3GPU, self).__init__()
 
         #activation 
@@ -334,7 +344,7 @@ class DCGAN_Dz_3GPU(BasicDCGAN_Dz):
 class DCGAN_Dz_4GPU(BasicDCGAN_Dz):
     """docstring for DCGAN_Dz_4GPU"""
     def __init__(self, ngpu, nz, nly, act,channel, ncl=512, fpd=1, n_extra_layers=1, dpc=0.25,
-                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False,limit = 256, bias = False):
+                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False,limit = 256, bias = False,path=''):
         super(DCGAN_Dz_4GPU, self).__init__()
         
         #activation 
