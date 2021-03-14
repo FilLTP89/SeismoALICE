@@ -26,7 +26,8 @@ class EncoderModelParallele(object):
         
     # this methode call the Encoder class by name.
     @staticmethod
-    def getEncoderByGPU(ngpu,dev, nz, nch, ndf, nly, ker, std, pad, act, dil,channel, grp=1,bn=True,\
+    def getEncoderByGPU(ngpu,dev, nz, nch, ndf, nly, ker, std, pad, act, dil,\
+                 channel, grp=1,bn=True,\
                  dpc=0.0,limit = 256, path="",\
                  with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2):
         """

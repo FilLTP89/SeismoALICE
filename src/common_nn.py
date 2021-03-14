@@ -312,6 +312,7 @@ def zerograd(optz):
     for o in optz: 
         if o is not None:
             o.zero_grad()
+    # exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
         
 def penalty(loss,params,typ,lam=1.e-5):
     pen = {'L1':1,'L2':2}
@@ -506,7 +507,7 @@ class T(object):
         return net
 
     @staticmethod 
-    def _forward(x, cnn, gang, split = 60):
+    def _forward(x, cnn, gang, split = 25):
         ret    = []
         splits = iter(x.split(split, dim = 0))
         s_next = next(splits)
@@ -523,7 +524,7 @@ class T(object):
 
 
     @staticmethod
-    def _forward_1G(x, cnn1, split = 5):
+    def _forward_1G(x, cnn1, split = 50):
         ret    = []
         splits = iter(x.split(split, dim = 0))
         s_next = next(splits)
@@ -539,7 +540,7 @@ class T(object):
         return torch.cat(ret).to(0)
 
     @staticmethod
-    def _forward_2G(x, cnn1, cnn2, split = 2):
+    def _forward_2G(x, cnn1, cnn2, split = 20):
         # import pdb
         # pdb.set_trace()
         ret    = []

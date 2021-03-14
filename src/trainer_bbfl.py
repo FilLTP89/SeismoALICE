@@ -23,6 +23,7 @@ from conv_factory import *
 import GPUtil
 from torch.nn.parallel import DistributedDataParallel as DDP
 import time
+import os
 import torch.distributed as dist
 
 rndm_args = {'mean': 0, 'std': 1}
@@ -95,6 +96,7 @@ class trainer(object):
         self.oGdxz=None
         self.oGfxz=None
         self.oGhxz=None
+        self.dp_mode = True
         
         flagT=False
         flagF=False
@@ -103,16 +105,22 @@ class trainer(object):
         """
             This part is for training with the broadband signal
         """
+        #we are getting number of cpus 
+        cpus  =  int(os.environ.get('SLURM_NPROCS'))
         #we determine in which kind of environnement we are 
-        if(opt.ntask ==1 and opt.ngpu >=1):
+        if(cpus ==1 and opt.ngpu >=1):
             print('ModelParallele to be builded ...')
+            self.dp_mode = False
             factory = ModelParalleleFactory()
-        elif(opt.ntask >1 and opt.ngpu >=1):
+        elif(cpus >1 and opt.ngpu >=1):
             print('DataParallele to be builded ...')
             factory = DataParalleleFactory()
+            self.dp_mode = True
         else:
             print('environ not found')
         net = Network(factory)
+
+        pdb.set_trace()
 
         if 'broadband' in t:
             self.style='ALICE'
@@ -122,7 +130,7 @@ class trainer(object):
             n = self.strategy['broadband']
             print("Loading broadband generators")
 
-            pdb.set_trace()
+            # pdb.set_trace()
             # # Encoder broadband Fed
             self.Fed = net.Encoder(opt.config["encoder"],opt)
             # # Decoder broadband Gdd
@@ -416,6 +424,7 @@ class trainer(object):
         
         # pdb.set_trace()
         # 0. Generate noise
+        place = opt.dev if self.dp_mode else ngpu-1
         wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,device,rndm_args)
 
 
@@ -445,7 +454,7 @@ class trainer(object):
             
         # Dloss_ali+= penalty_wgangp * Dgrad_loss
         # Total loss
-        Dloss = Dloss_ali.to(ngpu-1)
+        Dloss = Dloss_ali.to(place)
         # print("\t||Dloss :", Dloss)
         Dloss.backward()
         # torch.cuda.empty_cache()
@@ -462,15 +471,16 @@ class trainer(object):
         self.Fed.train(),self.Gdd.train()
         self.DsXd.train(),self.Dszd.train(),self.Ddxz.train()
         # 0. Generate noise
+        place = opt.dev if self.dp_mode else ngpu-1
         wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,device,rndm_args)
         #Put wnx and wnz and the same device of X_inp and z_inp
-        wnx = wnx.to(ngpu-1)
-        wnz = wnz.to(ngpu-1)
+        wnx = wnx.to(Xd.device)
+        wnz = wnz.to(zd.device)
         # 1. Concatenate inputs
         X_inp = zcat(Xd,wnx)
         z_inp = zcat(zd,wnz)
+
         # 2. Generate conditional samples
-        
         X_gen = self.Gdd(z_inp)
         z_gen = self.Fed(X_inp)
         # z_gen = latent_resampling(self.Fed(X_inp),nzd,wn1)
@@ -479,7 +489,7 @@ class trainer(object):
         # pdb.set_trace()
         Dxz,Dzx = self.discriminate_broadband_xz(Xd,X_gen,zd,z_gen)
         # 4. Compute ALI Generator loss WGAN
-        Gloss_ali = torch.mean(-Dxz +Dzx).to(ngpu-1)
+        Gloss_ali = torch.mean(-Dxz +Dzx).to(device)
         # 0. Generate noise
         wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,device,rndm_args)
         # # passign values to the CPU 0
@@ -492,14 +502,15 @@ class trainer(object):
         z_gen = zcat(z_gen,wnz.to(z_gen.device))
         
         # 2. Generate reconstructions
-        X_rec = self.Gdd(z_gen).to(ngpu-1)
-        z_rec = self.Fed(X_gen).to(ngpu-1)
+
+        X_rec = self.Gdd(z_gen).to(place)
+        z_rec = self.Fed(X_gen).to(place)
         # 3. Cross-Discriminate XX
         # pdb.set_trace()
-        Gloss_cycle_X = torch.mean(torch.abs(Xd.to(ngpu-1)-X_rec)).to(ngpu-1)
+        Gloss_cycle_X = torch.mean(torch.abs(Xd.to(place)-X_rec)).to(place)
         
         # 4. Cross-Discriminate ZZ
-        Gloss_cycle_z = torch.mean(torch.abs(zd.to(ngpu-1)-z_rec)).to(ngpu-1)
+        Gloss_cycle_z = torch.mean(torch.abs(zd.to(place)-z_rec)).to(place)
 
         Gloss = Gloss_ali + 10. * Gloss_cycle_X + 100. * Gloss_cycle_z 
 
@@ -763,22 +774,23 @@ class trainer(object):
             for b,batch in enumerate(trn_loader):
                 # Load batch
                 # pdb.set_trace()
+                place = opt.dev if self.dp_mode else ngpu-1
                 xd_data,_,zd_data,_,_,_,_ = batch
-                Xd = Variable(xd_data).to(ngpu-1) # BB-signal
-                zd = Variable(zd_data).to(ngpu-1)
+                Xd = Variable(xd_data).to(place) # BB-signal
+                zd = Variable(zd_data).to(place)
                 # Train G/D
                 for _ in range(5):
                     self.alice_train_broadband_discriminator_explicit_xz(Xd,zd)
-                    torch.cuda.empty_cache()
+                    # torch.cuda.empty_cache()
                 
                 for _ in range(1):
                     self.alice_train_broadband_generator_explicit_xz(Xd,zd)
-                    torch.cuda.empty_cache()
+                    # torch.cuda.empty_cache()
             if epoch%10== 0:
                 print("--- {} minutes ---".format((time.time() - start_time)/60))
                 
 
-            GPUtil.showUtilization(all=True)
+            # GPUtil.showUtilization(all=True)
             
             str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
             str = 'epoch: {:>d} --- '.format(epoch)

@@ -117,8 +117,11 @@ class DCGAN_DXZ_1GPU(BasicDCGAN_DXZ):
 
         self.net = sqn(*self.net)
         # pdb.set_trace()
-        if not path: 
-            self.cnn1 = self.net
+        if path:
+            self.cnn1.cnn1[-1] = copy.deepcopy(self.net[:])
+        else: 
+            self.cnn1 = copy.deepcopy(self.net)
+        del self.net
 
         self.exf = sqn(*self.exf)
 

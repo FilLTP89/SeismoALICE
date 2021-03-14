@@ -19,18 +19,19 @@ class DecoderDataParallele(object):
         pass
     
     @staticmethod
-    def getDecoder(name,ngpu, nz, nch, nly, ndf, ker, std, pad, opd, dpc, limit):
+    def getDecoder(name,ngpu, nz, nch, nly, ndf, ker, std, pad, dil, channel,n_extra_layers,act, opd, bn, dpc,path, limit):
         if name  is not None:
             classname = 'Decoder_'+ name
             try:
                 return type(classname, (BasiceDecoderDataParallele, ), dict(ngpu = ngpu, nz = nz, nch = nch, nly = nly,\
-                 ker = ker, std =std, pad = pad, limit=limit))
+                 ker = ker, std =std, pad = pad, limit=limit, path=path,channel = channel,n_extra_layers=n_extra_layers,opd=opd, dil=dil, act=act, bn=bn))
             except Exception as e:
                 raise e
                 print("The class ",classname," does not exit")
         else:
-            return Decoder(ngpu,nz,nch,ndf,nly,\
-                 ker=ker[i-1],std=std[i-1],pad=pad[i-1],opd=opd[i-1],dil=1,grp=1,dpc=dpc,limit=limit)
+            return Decoder(ngpu = ngpu, nz = nz, nch = nch, limit = limit, bn = bn, path=path,\
+        nly = nly, act=act, ndf =ndf, ker = ker, std =std, pad = pad, opd = opd,\
+        dil=dil, dpc = dpc,n_extra_layers=n_extra_layers, channel = channel)
 
 
 class BasiceDecoderDataParallele(Module):
@@ -38,6 +39,8 @@ class BasiceDecoderDataParallele(Module):
     def __init__(self):
         super(BasiceDecoderDataParallele, self).__init__()
         self.training = True
+        self.model    = None
+        self.cnn1     = []
     
     def lout(self,nz, nch, nly, increment, limit):
         """
@@ -56,39 +59,51 @@ class BasiceDecoderDataParallele(Module):
 
 class Decoder(BasiceDecoderDataParallele):
     """docstring for Decoder"""
-    def __init__(self,ngpu,nz,nch,ndf,nly,channel,\
-                 ker=7,std=4,pad=0,opd=0,dil=1,grp=1,dpc=0.10,limit = 256):
+    def __init__(self,ngpu,nz,nch,ndf,nly,channel,act,\
+                 ker=7,std=4,pad=0,opd=0,dil=1,grp=1,dpc=0.10,limit = 256, bn=True, path='',n_extra_layers=0):
         super(Decoder, self).__init__()
         self.ngpu= ngpu
         self.gang = range(self.ngpu)
-        act = [ReLU(inplace=True) for t in range(nly-1)]+[Tanh()]
-        in_channels   = nz
-
+        acts       = T.activation(act, nly)
+        device = tdev("cuda" if torch.cuda.is_available() else "cpu")
+        # pdb.set_trace()
+        if path:
+            self.model = T.load_net(path)
+            # Freeze model weights
+            for param in self.model.parameters():
+                param.requires_grad = False
+        # pdb.set_trace()
         for i in range(1, nly+1):
-            
             """
             This is made in the respectful of the pytorch documentation  :
             See the reference : 
             https://pytorch.org/docs/stable/generated/torch.nn.ConvTranspose1d.html
 
             """
-            # if we strat we initialize the cnn
-            if i == 1:
-                self.cnn = cnn1dt(channel[i-1],channel[i], act[0],ker=ker[i-1],std=std[i-1],\
-                    pad=pad[i-1],opd=opd[i-1],bn=True,dpc=dpc)
-            #else we conitnue adding
-            else:  
-                 self.cnn += cnn1dt(channel[i-1],channel[i], act[i-1],ker=ker[i-1],\
-                    std=std[i-1],pad=pad[i-1],opd=opd[i-1], bn=False,dpc=0.0)
-        self.cnn = sqn(*self.cnn)
+            _dpc = 0.0 if i ==nly else dpc
+            _bn =  False if i == nly else bn
+            self.cnn1 += cnn1dt(channel[i-1],channel[i], acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
+                dil=dil[i-1], opd=opd[i-1], bn=_bn,dpc=_dpc)
+            
+
+        for i in range(0,n_extra_layers):
+            #adding LeakyReLU activation function
+            self.cnn1 += cnn1dt(channel[i-1],channel[i], acts[0],ker=3,std=1,pad=1,\
+                dil =1, opd=0, bn=True, dpc=0.0)
+
+        # pdb.set_trace()
+        self.cnn1 = sqn(*self.cnn1)
+        if path: 
+            self.cnn1[-1] = self.model
+        self.cnn1.to(device)
 
 
     def forward(self,zxn):
         if zxn.is_cuda and self.ngpu > 1:
-            Xr = T._forward(zxn, self.cnn, self.gang)
+            Xr = T._forward(zxn, self.cnn1, self.gang)
             # torch.cuda.empty_cache()
         else:
-            Xr = self.cnn(zxn)
+            Xr = self.cnn1(zxn)
         if not self.training:
             Xr=Xr.detach()
         torch.cuda.empty_cache()

@@ -13,6 +13,7 @@ from profile_support import profile
 import json
 import pdb
 
+
 class ConvNetFactory(object):
     """
     ConvNetFactory is to generate Encoder, Decoder and Discriminator method
@@ -156,6 +157,7 @@ class DataParalleleFactory(ConvNetFactory):
     def createEncoder(self, config, opt, *args, **kwargs):
         
         name  = config["name"] if hasattr(config, "name") else None
+        path = config["path"] if "path" in config else ""
         return EncoderDataParallele.getEncoder(name = name, ngpu = opt.ngpu,\
                 dev = opt.dev,\
                 nz = opt.nzd, nch = opt.nch,\
@@ -168,11 +170,14 @@ class DataParalleleFactory(ConvNetFactory):
                 act = config['act'],\
                 limit = config['limit'],\
                 channel = config['channel'],\
+                path = path,
                 dpc = 0.0,\
                 *args, **kwargs)
 
     def createDecoder(self, config, opt, *args, **kwargs):
         name  = config["name"] if hasattr(config, "name") else None
+        path = config["path"] if "path" in config else ""
+        n_extra_layers = config["n_extra_layers"] if "n_extra_layers" in config else 0
         return DecoderDataParallele.getDecoder(name = name, ngpu = opt.ngpu,\
                 nz = opt.nzd, nch = opt.nch,\
                 ndf = opt.ndf,\
@@ -185,7 +190,10 @@ class DataParalleleFactory(ConvNetFactory):
                 act = config['act'],\
                 limit = config['limit'],\
                 channel = config['channel'],\
-                dpc = 0.0\
+                n_extra_layers=n_extra_layers,\
+                bn= True,
+                path = path,\
+                dpc = 0.0,\
                 *args, **kwargs)
 
     def createDCGAN_Dx(self, config_dcgan_dx, opt, *args, **kwargs):
@@ -195,6 +203,7 @@ class DataParalleleFactory(ConvNetFactory):
         nc    = config_dcgan_dx["nc"] if "nc" in config_dcgan_dx else opt.nch
         wf  = json.loads(config_dcgan_dx["wf"].lower()) if "wf" in config_dcgan_dx else False
         dpc = config_dcgan_dx["dpc"] if "dpc" in config_dcgan_dx else 0.25
+        path = config_dcgan_dx["path"] if "path" in config_dcgan_dx else ""
         #DCGAN_Dx class is called here
         dcgan_dx    = DCGAN_DxDataParallele.getDCGAN_DxDataParallele(name=name, ngpu = opt.ngpu,\
                      isize= 256, nc = nc,\
@@ -207,7 +216,8 @@ class DataParalleleFactory(ConvNetFactory):
                      limit = config_dcgan_dx['limit'],\
                      dil = config_dcgan_dx['dilation'],\
                      channel = config_dcgan_dx['channel'],\
-                     grp=0,bn=False,wf=wf, dpc=0.40,\
+                     path = path,\
+                     grp=0,bn=False,wf=wf, dpc=dpc,\
                      n_extra_layers=0)
         return dcgan_dx
 
@@ -217,6 +227,7 @@ class DataParalleleFactory(ConvNetFactory):
         nz    = config_dcgan_dz["nz"]   if "nz" in config_dcgan_dz else opt.nzd
         wf  = json.loads(config_dcgan_dz["wf"].lower()) if "wf" in config_dcgan_dz else False
         dpc = config_dcgan_dz["dpc"] if "dpc" in config_dcgan_dz else 0.25
+        path = config_dcgan_dz["path"] if "path" in config_dcgan_dz else ""
         dcgan_dz    = DCGAN_DzDataParallele.getDCGAN_DzDataParallele( name =  name, ngpu = opt.ngpu,\
                      nc=opt.nch, nz = nz,\
                      ncl=512, ndf=opt.ndf, fpd=0,\
@@ -229,6 +240,7 @@ class DataParalleleFactory(ConvNetFactory):
                      dil = config_dcgan_dz['dilation'],\
                      channel = config_dcgan_dz['channel'],\
                      grp =0, bn=False,wf=wf, dpc=dpc,
+                     path = path,\
                      n_extra_layers=0)
         return dcgan_dz
 
@@ -238,7 +250,8 @@ class DataParalleleFactory(ConvNetFactory):
         nc    = config_dcgan_dxz["nc"] if "nc" in config_dcgan_dxz else 1024
         wf  = json.loads(config_dcgan_dxz["wf"].lower()) if "wf" in config_dcgan_dxz else False
         dpc = config_dcgan_dxz["dpc"] if "dpc" in config_dcgan_dxz else 0.25
-        dcgan_dxz   = DCGAN_DXZDataParallele.getDCGAN_DXZDataParallele(name = name, ngpu=opt.ngpu, nc=nc, 
+        path = config_dcgan_dxz["path"] if "path" in config_dcgan_dxz else ""
+        dcgan_dxz = DCGAN_DXZDataParallele.getDCGAN_DXZDataParallele(name = name, ngpu=opt.ngpu, nc=nc, 
                      nly=config_dcgan_dxz['nlayers'],\
                      ker=config_dcgan_dxz['kernel'],\
                      std=config_dcgan_dxz['strides'],\
@@ -248,6 +261,7 @@ class DataParalleleFactory(ConvNetFactory):
                      dil=config_dcgan_dxz['dilation'],\
                      channel = config_dcgan_dxz['channel'],\
                      grp=0, bn=False,wf=wf, dpc=dpc,\
+                     path = path,\
                      n_extra_layers=0)
 
         return dcgan_dxz

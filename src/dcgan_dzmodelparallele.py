@@ -12,7 +12,7 @@ import torch
 import pdb
 from torch import device as tdev
 import importlib
-
+import copy
 
 class DCGAN_DzModelParallele(object):
     """docstring for DCGAN_Dz"""
@@ -78,14 +78,15 @@ class  DCGAN_Dz_1GPU(BasicDCGAN_Dz):
         #activation functions
         activation = T.activation(act, nly)
 
-        self.wf = wf
-        layers = []
+        self.wf  = wf
+        self.net = []
+        layers   = []
 
         # pdb.set_trace()
         if path:
-            self.model = T.load_net(path)
+            self.cnn1 = T.load_net(path)
             # Freeze model weights
-            for param in self.model.parameters():
+            for param in self.cnn1.parameters():
                 param.requires_grad = False
 
         self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
@@ -95,7 +96,7 @@ class  DCGAN_Dz_1GPU(BasicDCGAN_Dz):
         for i in range(2,nly+1):
             
             act = activation[i-1]
-            self.cnn1.append(ConvBlock(ni = channel[i-1], no = channel[i],
+            self.net.append(ConvBlock(ni = channel[i-1], no = channel[i],
                 ks = ker[i-1], stride = std[i-1], pad = pad[i-1], bias = bias, act = act, dpc = dpc, bn=bn))
             # self.cnn1 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,\
             #         bn=_bn,dpc=dpc,wn=False)
@@ -104,21 +105,26 @@ class  DCGAN_Dz_1GPU(BasicDCGAN_Dz):
                     dpc = dpc, act = act))
 
         for k in range(0,n_extra_layers):
-            self.cnn1.append(ConvBlock(ni = channel[i-1],no=channel[i],\
+            self.net.append(ConvBlock(ni = channel[i-1],no=channel[i],\
                 ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
                 dpc = dpc, act = act))
-            
+
         # pdb.set_trace()
         self.exf = layers[:-1]
         self.exf =sqn(*self.exf).to(self.dev0)
 
-        self.cnn1.append(Dpout(dpc = dpc))
-        self.cnn1.append(activation[-1])
-        self.cnn1 = self.prc + self.cnn1
-        self.cnn1 =sqn(*self.cnn1)
+        self.net.append(Dpout(dpc = dpc))
+        self.net.append(activation[-1])
+        self.net = self.prc + self.net
+        self.net =sqn(*self.net)
         
+        # pdb.set_trace()
+
         if path:
-            self.cnn1[-1] = self.model
+            self.cnn1.cnn1[2] = copy.deepcopy(self.net[0:-2])
+        else:
+            self.cnn1 = copy.deepcopy(self.net)
+        del self.net
 
         self.cnn1.to(self.dev0, dtype = torch.float32)
 

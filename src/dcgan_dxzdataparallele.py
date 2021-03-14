@@ -11,6 +11,7 @@ from common_nn import *
 import torch
 import pdb
 from torch import device as tdev
+import copy
 
 
 class DCGAN_DXZDataParallele(object):
@@ -20,7 +21,7 @@ class DCGAN_DXZDataParallele(object):
         pass
         
     @staticmethod
-    def getDCGAN_DXZDataParallele(name, ngpu, nly, channel, act, nc=1024,\
+    def getDCGAN_DXZDataParallele(name, ngpu, nly, channel, act, path, nc=1024,\
         ker=2,std=2,pad=0, dil=0,grp=0,limit = 256,\
         bn=True,wf=False, dpc=0.25, n_extra_layers= 0, bias = False, *args, **kwargs):
 
@@ -33,13 +34,13 @@ class DCGAN_DXZDataParallele(object):
                 class_ = getattr(module,classname)
                 return class_(ngpu=ngpu, nc=nc, nly=nly, channel = channel,\
                                 ker=ker,std=std,pad=pad, dil=dil, act = act,\
-                                grp=grp, bn=bn, wf=wf, dpc=dpc,\
+                                grp=grp, bn=bn, wf=wf, dpc=dpc,path=path,\
                                 n_extra_layers=n_extra_layers, limit = limit, bias= bias)
             except Exception as e:
                 raise e
                 print("The class ", classname, " does not exit")
         else:
-            return DCGAN_DXZ(ngpu=ngpu, nc=nc, nly=nly, channel = channel, act = act,\
+            return DCGAN_DXZ(ngpu=ngpu, nc=nc, nly=nly, path = path, channel = channel, act = act,\
                  ker=ker,std=std,pad=pad, dil=dil, grp=grp,\
                  bn=bn, wf=wf, dpc=dpc,\
                  n_extra_layers=n_extra_layers, limit = limit, bias=bias)
@@ -63,23 +64,25 @@ class BasicDCGAN_DXZDataParallele(Module):
 class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
     """docstring for DCGAN_DXZ"""
     def __init__(self,ngpu, nly, channel, act, nc=1024,\
-        ker=2,std=2,pad=0, dil=1,grp=1,\
+        ker=2,std=2,pad=0, dil=1,grp=1, path='',\
         bn=True,wf=False, dpc=0.25, limit =1024,\
         n_extra_layers= 0, bias=False, *args, **kwargs):
         super(DCGAN_DXZ, self).__init__()
         self.ngpu =  ngpu
         self.gang = range(self.ngpu)
-        self.cnn  = []
-        self.exf  = []
-
-        #activation functions
-        activation = T.activation(act,nly)
-
         self.wf = wf
-
+        self.net = []
+        #activation 
+        activation = T.activation(act,nly)
+        device = tdev("cuda" if torch.cuda.is_available() else "cpu")
+        # pdb.set_trace()
+        if path:
+            self.cnn1 = T.load_net(path)
+            # Freeze model weights
+            for param in self.cnn1.parameters():
+                param.requires_grad = False
         #initialisation of the input channel
-        in_channels = nc
-
+        
         for i in range(1, nly+1):
             """
             The whole value of stride, kernel and padding should be generated accordingn to the 
@@ -87,24 +90,36 @@ class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
             https://pytorch.org/docs/stable/generated/torch.nn.ConvTranspose1d.html
             """
             
-            # self.cnn += cnn1d(in_channels, out_channels, activation[i-1],\
-            #     ker=ker, std=std, pad=pad, bn=False, dpc=dpc, bias = True)
-            self.cnn.append(ConvBlock(ni = channel[i-1], no = channel[i],
+            act = activation[i-1]
+            self.net.append(ConvBlock(ni = channel[i-1], no = channel[i],
                 ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = bias,\
                 bn = bn, dpc = dpc, act = act))
-            in_channels = out_channels
+            # self.cnn1 += cnn1d(in_channels,nc, act, ker=ker,std=std,pad=pad,\
+            #         bn=False,bias=True, dpc=dpc,wn=False)
 
         for _ in range(1, n_extra_layers+1):
-            self.cnn +=cnn1d(nc, nc, activation[i-1],\
-                ker=3, std=1, pad=1, bn=False, dpc=dpc, bias = bias)
-        #copy a part of the cnn network only. So the modification of cnn after will not affect the exf !
-        self.exf = copy.deepcopy(self.cnn[:-1])
-        self.cnn = sqn(*self.cnn).to(device)
-        self.exf = sqn(*self.exf).to(device)
+            self.net +=cnn1d(nc,nc, activation[i-1],\
+                ker=3, std=1, pad=1, bn=False, bias =bias, dpc=dpc, wn = False)
+        # any changes made to a copy of object do not reflect in the original object
+        self.exf = copy.deepcopy(self.net[:-1])
+
+        self.net = sqn(*self.net)
+        # pdb.set_trace()
+        if path:
+            self.cnn1.cnn1[-1] = copy.deepcopy(self.net[:])
+        else: 
+            self.cnn1 = copy.deepcopy(self.net)
+        del self.net
+
+        self.exf = sqn(*self.exf)
+
+        self.cnn1.to(device)
+        self.exf.to(device)
+
         self.features_to_prob = torch.nn.Sequential(
-            torch.nn.Linear(out_channels, 1),
+            torch.nn.Linear(nc, 1),
             torch.nn.LeakyReLU(negative_slope=1.0, inplace=True)
-        )
+        ).to(device)
 
     def extraction(self, x):
         f = [self.exf[0](x)]
@@ -115,12 +130,12 @@ class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
     def forward(self,X):
         if X.is_cuda and self.ngpu > 1:
             # z = pll(self.cnn,X,self.gang)
-            z = T._forward(X, self.cnn, self.gang)
+            z = T._forward(X, self.cnn1, self.gang)
             if self.wf:
                 #f = pll(self.extraction,X,self.gang)
                 f = self.extraction(X)
         else:
-            z = self.ann(X)
+            z = self.cnn1(X)
             if self.wf:
                 f = self.extraction(X)
         if not self.training:

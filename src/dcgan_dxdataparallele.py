@@ -19,7 +19,7 @@ class DCGAN_DxDataParallele(object):
         super(DCGAN_DxDataParallele, self).__init__()
         pass
     @staticmethod
-    def getDCGAN_DxDataParallele(name, ngpu, nc, ncl, ndf, nly,act,channel,fpd=0, limit = 256,\
+    def getDCGAN_DxDataParallele(name, ngpu, nc, ncl, ndf, nly,act,channel, path, fpd=0, limit = 256,\
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.0,
                  n_extra_layers=0,isize=256):
         if name is not None:
@@ -31,14 +31,14 @@ class DCGAN_DxDataParallele(object):
                 class_ = getattr(module,classname)
                 return class_(ngpu=ngpu, isize=isize, nc=nc, ncl=ncl, ndf=ndf,  channel = channel, fpd=fpd, act=act, nly=nly,\
                  ker=ker,std=std,pad=pad, dil=dil,grp=grp,bn=bn,wf=wf, dpc=dpc, limit = limit,\
-                 n_extra_layers=n_extra_layers)
+                 n_extra_layers=n_extra_layers, path=path)
             except Exception as e:
                 raise e
                 print("The class ",classname, " does not exit")
         else:
             return DCGAN_Dx(ngpu = ngpu, isize = isize, nc = nc, ncl = ncl, ndf = ndf, fpd = fpd,channel = channel,\
                         nly = nly, ker=ker ,std=std, pad=pad, dil=dil, grp=grp, bn=bn, wf = wf, dpc=dpc,\
-                        n_extra_layers = n_extra_layers,limit = limit)
+                        n_extra_layers = n_extra_layers,limit = limit,path = path, act = act)
 
 class BasicDCGAN_DxDataParallele(Module):
     """docstring for BasicDCGAN_DxDataParallele"""
@@ -50,6 +50,7 @@ class BasicDCGAN_DxDataParallele(Module):
         self.exf      = []
         self.extra    = []
         self.final    = []
+        self.cnn1     = []
 
     def lout(self,nz, nly, increment, limit):
         #Here we specify the logic of the  in_channels/out_channels
@@ -62,7 +63,7 @@ class BasicDCGAN_DxDataParallele(Module):
 class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
     """docstring for    DCGAN_Dx"""
     def __init__(self, ngpu, nc, ncl, ndf, nly,act, channel, fpd=1, isize=256, limit = 256,\
-                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.0,
+                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.0, path = '',
                  n_extra_layers=0):
 
         super(DCGAN_Dx, self).__init__()
@@ -71,10 +72,18 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
         self.cnn  = []
 
         #activation code
-        activation = T.activation(act,nly)
-
+        activation = T.activation(act, nly)
+        device = tdev("cuda" if torch.cuda.is_available() else "cpu")
+        
         #extraction features 
         self.wf = wf
+        self.net = []
+        # pdb.set_trace()
+        if path:
+            self.cnn1 = T.load_net(path)
+            # Freeze model weights
+            for param in self.cnn1.parameters():
+                param.requires_grad = False
 
         #building network
         self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
@@ -82,18 +91,16 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
                 bn = False, act = activation[0], dpc = dpc))
 
         for i in range(2, nly+1):
-            
+            act = activation[i-1]
             _bn = False if i == 1 else bn
             _dpc = 0.0 if i == nly else dpc
-            act = activation[i-1]
-            # self.cnn += cnn1d(in_channels, out_channels,act,\
-            #     ker=ker, std=std, pad=pad, dil=dil, bn=_bn, dpc=_dpc )
-            _bn = bn if i == 1 else True
-            self.cnn.append(ConvBlock(ni = channel[i-1], no =channel[i],
-                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1],\
-                bias = False,\
-                bn = _bn, dpc = dpc, act = act))
+            self.net.append(ConvBlock(ni = channel[i-1], no = channel[i],
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = False,\
+                bn = _bn, dpc = dpc, act = act)) 
 
+        """
+            The kernel = 3 and the stride = 1 not change the third dimension
+        """
         for _ in range(0,n_extra_layers):
             self.extra+=[Conv1d(in_channels = channel[i],out_channels=channel[i],\
                 kernel_size = 3, stride = 1, padding=1, bias=False)]
@@ -103,11 +110,30 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
         self.final+=[Dpout(dpc=dpc)]
         self.final+=[activation[-1]]
 
-        self.exf = self.cnn
-        self.cnn = self.prc + self.cnn + self.extra + self.final
+        #compute values 
+        self.exf  = self.net
+        self._net = self.prc + self.net + self.extra + self.final
+        self._net = sqn(*self._net)
+        self.net  = sqn(*self.net)
+        #creating sequentially the Network
 
-        self.cnn = sqn(*self.cnn).to(device)
-        self.prc = sqn(*self.prc).to(device)
+        # pdb.set_trace()
+        if path:
+            self.cnn1.cnn1[-5] = self.net[:]
+        else:   
+            self.cnn1 = self._net
+        del self.net
+        del self._net
+
+        self.cnn1.to(device)
+
+        self.prc = sqn(*self.prc)
+        self.prc.to(device)
+
+        self.features_to_prob = torch.nn.Sequential(
+            torch.nn.Linear(channel[i], 1),
+            torch.nn.Sigmoid()
+        ).to(device)
 
     def extraction(self,X):
         X = self.prc(X)
@@ -119,12 +145,12 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
     def forward(self,X):
         if X.is_cuda and self.ngpu > 1:
             # z = pll(self.cnn,X,self.gang)
-            z = T._forward(X, self.cnn, self.gang)
+            z = T._forward(X, self.cnn1, self.gang)
             if self.wf:
                 #f = pll(self.extraction,X,self.gang)
                 f = self.extraction(X)
         else:
-            z = self.cnn(X)
+            z = self.cnn1(X)
             if self.wf:
                 f = self.extraction(X)
         if not self.training:

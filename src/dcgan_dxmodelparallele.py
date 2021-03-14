@@ -126,16 +126,19 @@ class  DCGAN_Dx_1GPU(BasicDCGAN_Dx):
         self.final+=[activation[-1]]
 
         #compute values 
-        self.exf  = self.cnn1
+        self.exf  = self.net
         self._net = self.prc + self.net + self.extra + self.final
         self._net = sqn(*self._net)
         self.net  = sqn(*self.net)
         #creating sequentially the Network
+
         # pdb.set_trace()
         if path:
-            self.cnn1.cnn1[4] = self.net
+            self.cnn1.cnn1[-5] = self.net[:]
         else:   
             self.cnn1 = self._net
+        del self.net
+        del self._net
 
         self.cnn1.to(self.dev0, dtype = torch.float32)
 
