@@ -73,7 +73,7 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
 
         #activation code
         activation = T.activation(act, nly)
-        device = tdev("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = tdev("cuda" if torch.cuda.is_available() else "cpu")
         
         #extraction features 
         self.wf = wf
@@ -125,15 +125,15 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
         del self.net
         del self._net
 
-        self.cnn1.to(device)
+        self.cnn1.to(self.device)
 
         self.prc = sqn(*self.prc)
-        self.prc.to(device)
+        self.prc.to(self.device)
 
         self.features_to_prob = torch.nn.Sequential(
             torch.nn.Linear(channel[i], 1),
             torch.nn.Sigmoid()
-        ).to(device)
+        ).to(self.device)
 
     def extraction(self,X):
         X = self.prc(X)
@@ -143,7 +143,9 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
         return f
 
     def forward(self,X):
+
         if X.is_cuda and self.ngpu > 1:
+            # pdb.set_trace()
             # z = pll(self.cnn,X,self.gang)
             z = T._forward(X, self.cnn1, self.gang)
             if self.wf:

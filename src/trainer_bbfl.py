@@ -120,7 +120,7 @@ class trainer(object):
             print('environ not found')
         net = Network(factory)
 
-        pdb.set_trace()
+        # pdb.set_trace()
 
         if 'broadband' in t:
             self.style='ALICE'
@@ -781,11 +781,11 @@ class trainer(object):
                 # Train G/D
                 for _ in range(5):
                     self.alice_train_broadband_discriminator_explicit_xz(Xd,zd)
-                    # torch.cuda.empty_cache()
+                    torch.cuda.empty_cache()
                 
                 for _ in range(1):
                     self.alice_train_broadband_generator_explicit_xz(Xd,zd)
-                    # torch.cuda.empty_cache()
+                    torch.cuda.empty_cache()
             if epoch%10== 0:
                 print("--- {} minutes ---".format((time.time() - start_time)/60))
                 
