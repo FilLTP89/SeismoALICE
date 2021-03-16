@@ -245,6 +245,9 @@ class DCGAN_Dx_2GPU(BasicDCGAN_Dx):
         self.cnn1 = self.prc + self.cnn1
         self.cnn2 = self.cnn2 + self.extra + self.final
 
+        self.prc = sqn(*self.prc)
+        self.prc.to(self.dev0, dtype = torch.float32)
+
         self.cnn1 = sqn(*self.cnn1)
         self.cnn1.to(self.dev0, dtype=torch.float32)
 
@@ -257,6 +260,7 @@ class DCGAN_Dx_2GPU(BasicDCGAN_Dx):
         ).to(self.dev1, dtype=torch.float32)
 
     def extraction(self,X):
+        X = X.to(self.dev0)
         X = self.prc(X)
         f = [self.exf[0](X)]
         for l in range(1,len(self.exf)):
@@ -355,10 +359,12 @@ class DCGAN_Dx_3GPU(BasicDCGAN_Dx):
         self.cnn1 = sqn(*self.cnn1)
         self.cnn2 = sqn(*self.cnn2)
         self.cnn3 = sqn(*self.cnn3)
+        self.prc  = sqn(*self.prc)
 
         self.cnn1.to(self.dev0,dtype=torch.float32)
         self.cnn2.to(self.dev1,dtype=torch.float32)
         self.cnn3.to(self.dev2,dtype=torch.float32)
+        self.prc.to(self.dev0,dtype=torch.float32)
 
     def extraction(self,X):
         X = self.prc(X)
@@ -486,6 +492,15 @@ class DCGAN_Dx_4GPU(BasicDCGAN_Dx):
         self.cnn4 = sqn(*self.cnn4)
         self.cnn4.to(self.dev3, dtype=torch.float32)
 
+        self.prc = sqn(*self.prc)
+        self.prc.to(self.dev0, dtype =torch.float32)
+
+    def extraction(self,X):
+        X = self.prc(X)
+        f = [self.exf[0](X)]
+        for l in range(1,len(self.exf)):
+            f.append(self.exf[l](f[l-1]))
+        return f
 
     def forward(self, x):
         z = x.to(self.dev0,dtype=torch.float32)

@@ -11,6 +11,7 @@ from common_nn import *
 import torch
 import pdb
 from torch import device as tdev
+import copy
 
 class EncoderDataParallele(object):
     """docstring for EncoderDataParallele"""

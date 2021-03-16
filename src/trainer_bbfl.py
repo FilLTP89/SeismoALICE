@@ -105,6 +105,7 @@ class trainer(object):
         """
             This part is for training with the broadband signal
         """
+        # pdb.set_trace()
         #we are getting number of cpus 
         cpus  =  int(os.environ.get('SLURM_NPROCS'))
         #we determine in which kind of environnement we are 
@@ -837,6 +838,7 @@ class trainer(object):
         for epoch in range(niter):
             for b,batch in enumerate(trn_loader):
                 # Load batch
+                # pdb.set_trace()
                 _,xf_data,_,zf_data,_,_,_ = batch
                 Xf = Variable(xf_data).to(device,non_blocking=True) # LF-signal
                 zf = Variable(zf_data).to(device,non_blocking=True)
@@ -892,9 +894,11 @@ class trainer(object):
         globals().update(self.cv)
         globals().update(opt.__dict__)
         error = {}
+        start_time = time.time()
         for epoch in range(niter):
             for b,batch in enumerate(trn_loader):
                 # Load batch
+                # pdb.set_trace()
                 _,xf_data,_,zf_data,_,_,_ = batch
                 Xf = Variable(xf_data).to(device,non_blocking=True) # LF-signal
                 zf = Variable(zf_data).to(device,non_blocking=True)
@@ -914,8 +918,10 @@ class trainer(object):
                     error[b] = np.append(error[b], a)
                 else:
                     error[b] = a
-
-            GPUtil.showUtilization(all=True)
+            if epoch%10== 0:
+                print("--- {} minutes ---".format((time.time() - start_time)/60))
+             
+            # GPUtil.showUtilization(all=True)
 
             str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
             str = 'epoch: {:>d} --- '.format(epoch)

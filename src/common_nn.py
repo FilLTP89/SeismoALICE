@@ -39,6 +39,7 @@ from common_torch import tfnp,tcat,tavg
 from common_torch import trnd,ln0c,tnrm,ttns
 # NOISE 
 from generate_noise import noise_generator
+import os
 rndm_args = {'mean': 0, 'std': 1}
 eps = 1e-15  # to avoid possible numerical instabilities during backward
 b1 = 0.5
@@ -507,7 +508,7 @@ class T(object):
         return net
 
     @staticmethod 
-    def _forward(x, cnn, gang, split = 50):
+    def _forward(x, cnn, gang, split = 25):
         ret    = []
         splits = iter(x.split(split, dim = 0))
         s_next = next(splits)
@@ -524,7 +525,7 @@ class T(object):
 
 
     @staticmethod
-    def _forward_1G(x, cnn1, split = 50):
+    def _forward_1G(x, cnn1, split = 12):
         ret    = []
         splits = iter(x.split(split, dim = 0))
         s_next = next(splits)

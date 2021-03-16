@@ -1,2 +1,2 @@
 encoder,decoder,extra
-filtered,./network/fl_ls128_nf8_nzd8/Fef_6000.pth,./network/fl_ls128_nf8_nzd8/Gdf_6000.pth,-
+filtered,None,None,-
