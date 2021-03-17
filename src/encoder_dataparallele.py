@@ -108,9 +108,8 @@ class Encoder(BasicEncoderDataParallele):
 
     def forward(self,x):
         if x.is_cuda and self.ngpu > 1:
-            # zlf   = pll(self.cnn,x,self.gang)
-            x = x.to()
-            zlf = T._forward(x, self.cnn1, self.gang)
+            zlf   = pll(self.cnn1,x,self.gang)
+            # zlf = T._forward(x, self.cnn1, self.gang)
         else:
             zlf   = self.cnn1(x)
         if not self.training:

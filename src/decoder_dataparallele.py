@@ -101,7 +101,8 @@ class Decoder(BasiceDecoderDataParallele):
 
     def forward(self,zxn):
         if zxn.is_cuda and self.ngpu > 1:
-            Xr = T._forward(zxn, self.cnn1, self.gang)
+            Xr = pll(self.cnn1,x,self.gang)
+            # Xr = T._forward(zxn, self.cnn1, self.gang)
             # torch.cuda.empty_cache()
         else:
             Xr = self.cnn1(zxn)

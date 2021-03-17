@@ -226,7 +226,7 @@ class trainer(object):
                 if None not in n:
                     print("Filtered generators - no train: {0} - {1}".format(*n))
                     self.Fef.load_state_dict(tload(n[0])['model_state_dict'])
-                    self.Gdf.load_state_dict(tload(n[1])['model_state_dict'])    
+                    self.Gdf.load_state_dict(tload(n[1])['model_state_dict'])  
                 else:
                     flagF=False
 
@@ -541,7 +541,7 @@ class trainer(object):
         #make sure that noises are at the same device as data
         wnx = wnx.to(Xf.device)
         wnz = wnz.to(zf.device)
-
+        # pdb.set_trace()
         # 1. Concatenate inputs
         X_inp = zcat(Xf,wnx)
         z_inp = zcat(zf,wnz)
@@ -598,6 +598,7 @@ class trainer(object):
     def alice_train_filtered_generator_adv_xz(self,Xf,zf):
 #OK
         # Set-up training
+        # pdb.set_trace()
         zerograd(self.optzf)
         self.Fef.train(),self.Gdf.train()
         self.DsXf.train(),self.Dszf.train(),self.Dfxz.train()
@@ -898,7 +899,7 @@ class trainer(object):
         for epoch in range(niter):
             for b,batch in enumerate(trn_loader):
                 # Load batch
-                # pdb.set_trace()
+                pdb.set_trace()
                 _,xf_data,_,zf_data,_,_,_ = batch
                 Xf = Variable(xf_data).to(device,non_blocking=True) # LF-signal
                 zf = Variable(zf_data).to(device,non_blocking=True)

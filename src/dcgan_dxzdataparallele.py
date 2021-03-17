@@ -18,7 +18,7 @@ class DCGAN_DXZDataParallele(object):
     """docstring for DCGAN_DXZDataParallele"""
     def __init__(self, *args, **kwargs):
         super(DCGAN_DXZDataParallele, self).__init__()
-        pass
+        # pass
         
     @staticmethod
     def getDCGAN_DXZDataParallele(name, ngpu, nly, channel, act, path, nc=1024,\
@@ -129,8 +129,8 @@ class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
 
     def forward(self,X):
         if X.is_cuda and self.ngpu > 1:
-            # z = pll(self.cnn,X,self.gang)
-            z = T._forward(X, self.cnn1, self.gang)
+            z = pll(self.cnn1,X,self.gang)
+            # z = T._forward(X, self.cnn1, self.gang)
             if self.wf:
                 #f = pll(self.extraction,X,self.gang)
                 f = self.extraction(X)
