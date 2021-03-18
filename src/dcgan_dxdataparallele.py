@@ -149,8 +149,8 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
             z = pll(self.cnn1,X,self.gang)
             # z = T._forward(X, self.cnn1, self.gang)
             if self.wf:
-                f = pll(self.extraction,X,self.gang)
-                # f = self.extraction(X)
+                # f = pll(self.extraction,X,self.gang)
+                f = self.extraction(X)
         else:
             z = self.cnn1(X)
             if self.wf:

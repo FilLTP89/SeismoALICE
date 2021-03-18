@@ -206,6 +206,10 @@ class trainer(object):
                 self.DsXf = net.DCGAN_Dx(opt.config['DsXf']  , opt)
                 self.Dfxz = net.DCGAN_DXZ(opt.config['Dfxz'] , opt)
 
+                # pdb.set_trace()
+                # if n[2]:
+                #     self.DsXf.load_state_dict(tload(n[2])['model_state_dict'])
+
                 self.Dfnets.append(self.DsXf)
                 self.Dfnets.append(self.Dszf)
                 self.Dfnets.append(self.Dfxz)
@@ -436,9 +440,12 @@ class trainer(object):
         X_inp = zcat(Xd,wnx)
         z_inp = zcat(zd,wnz)
 
-        # 2. Generate conditional samples
+        # 2. Generate conditional samples 1 time
         X_gen = self.Gdd(z_inp)
         z_gen = self.Fed(X_inp)
+        # pdb.set_trace()
+        # X_gen = self.Gdd(zcat(wnz,self.Fed(X_inp)))
+        # z_gen = self.Fed(zcat(wnx,self.Gdd(z_inp)))
         # torch.cuda.empty_cache()
         
         # 3. Cross-Discriminate XZ
@@ -484,6 +491,8 @@ class trainer(object):
         # 2. Generate conditional samples
         X_gen = self.Gdd(z_inp)
         z_gen = self.Fed(X_inp)
+        # X_gen = self.Gdd(zcat(wnz,self.Fed(X_inp)))
+        # z_gen = self.Fed(zcat(wnx,self.Gdd(z_inp)))
         # z_gen = latent_resampling(self.Fed(X_inp),nzd,wn1)
         
         # 3. Cross-Discriminate XZ
@@ -775,7 +784,7 @@ class trainer(object):
         for epoch in range(niter):
             for b,batch in enumerate(trn_loader):
                 # Load batch
-                # pdb.set_trace()
+                # pdb.sclcet_trace()
                 place = opt.dev if self.dp_mode else ngpu-1
                 xd_data,_,zd_data,_,_,_,_ = batch
                 Xd = Variable(xd_data).to(place) # BB-signal
@@ -896,10 +905,11 @@ class trainer(object):
         globals().update(opt.__dict__)
         error = {}
         start_time = time.time()
+        # path = './network/trained/nfz8/'
         for epoch in range(niter):
             for b,batch in enumerate(trn_loader):
                 # Load batch
-                pdb.set_trace()
+                # pdb.set_trace()
                 _,xf_data,_,zf_data,_,_,_ = batch
                 Xf = Variable(xf_data).to(device,non_blocking=True) # LF-signal
                 zf = Variable(zf_data).to(device,non_blocking=True)
@@ -921,7 +931,12 @@ class trainer(object):
                     error[b] = a
             if epoch%10== 0:
                 print("--- {} minutes ---".format((time.time() - start_time)/60))
-             
+                print(" saving discriminators ...")
+                torch.save(f="./network/trained/nfz8/Dszf.pth",  obj=self.Dszf)
+                torch.save(f="./network/trained/nfz8/Dsrzf.pth", obj=self.Dsrzf)
+                torch.save(f="./network/trained/nfz8/DsXf.pth",  obj=self.DsXf)
+                torch.save(f="./network/trained/nfz8/DsrXf.pth", obj=self.DsrXf)
+                torch.save(f="./network/trained/nfz8/Dfxz.pth",  obj=self.Dfxz)
             # GPUtil.showUtilization(all=True)
 
             str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
