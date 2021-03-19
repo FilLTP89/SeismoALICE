@@ -910,7 +910,8 @@ class trainer(object):
             for b,batch in enumerate(trn_loader):
                 # Load batch
                 # pdb.set_trace()
-                _,xf_data,_,zf_data,_,_,_ = batch
+                # _,xf_data,_,zf_data,_,_,_ = batch
+                xf_data,_,zf_data,_,_,_,_ = batch # modifieddata (broadband)
                 Xf = Variable(xf_data).to(device,non_blocking=True) # LF-signal
                 zf = Variable(zf_data).to(device,non_blocking=True)
                 # print("Xf and zf", Xf.shape, zf.shape)

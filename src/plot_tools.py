@@ -24,6 +24,7 @@ from sklearn.covariance import EmpiricalCovariance
 from sklearn.datasets import make_gaussian_quantiles
 from sklearn.neighbors import KernelDensity
 from sklearn.decomposition import PCA
+import pdb
 
 from gmm import GaussianMixture 
 
@@ -730,9 +731,12 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs')
             
     elif 'filtered' in tag:
         for _,batch in enumerate(trn_set):
-            _,xf_data,_,zf_data,_,_,_,*other = batch
-            Xf = Variable(xf_data).to(dev)
-            zf = Variable(zf_data).to(dev)
+            # _,xf_data,_,zf_data,_,_,_,*other = batch
+            xt_data,xf_data,zt_data,_,_,_,_,*other = batch
+            #pdb.set_trace()
+            # tweaked value
+            Xf = Variable(xt_data).to(dev)
+            zf = Variable(zt_data).to(dev)
             wnx,wnz,wn1 = noise_generator(Xf.shape,zf.shape,dev,rndm_args)
             X_inp = zcat(Xf,wnx)
             ztr = Qec(X_inp) 
@@ -1312,7 +1316,8 @@ def plot_features(tag,Qec,Pdc,nz,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
         lb_tf=np.tile(np.arange(bst.shape[-1]).reshape((1,1,-1)),\
                 (bst.shape[0],bst.shape[1],1)).reshape(-1,bst.shape[-1])
         for b,batch in enumerate(trn_set):
-            _,xd_data,_,zd_data,_,_,_,*other = batch
+            # _,xd_data,_,zd_data,_,_,_,*other = batch
+            xd_data,xf_data,zd_data,_,_,_,_,*other = batch
             Xd = Variable(xd_data).to(dev)
             zd = Variable(zd_data).to(dev)
             wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,rndm_args)
