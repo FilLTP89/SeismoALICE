@@ -25,6 +25,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 import time
 import os
 import torch.distributed as dist
+from laploss import *
 
 rndm_args = {'mean': 0, 'std': 1}
 
@@ -167,6 +168,8 @@ class trainer(object):
                 self.Ddnets.append(self.Ddxz)
                 self.oDdxz = reset_net(self.Ddnets,func=set_weights,lr=rlr,b1=b1,b2=b2)
                 self.optzd.append(self.oDdxz)
+
+
 
                 # pdb.set_trace()
                 # self.DsXf = net.DCGAN_Dx(opt.config['DsXf'], opt)
@@ -541,6 +544,7 @@ class trainer(object):
         # Set-up training
         # pdb.set_trace()
         zerograd(self.optzf)
+        
         self.Fef.eval(),self.Gdf.eval()
         self.DsXf.train(),self.Dszf.train(),self.Dfxz.train()
         self.DsrXf.train(),self.Dsrzf.train()
@@ -563,7 +567,8 @@ class trainer(object):
         DXz,DzX,_,_ = self.discriminate_filtered_xz(Xf,X_gen,zf,z_gen)
          
         # 4. Compute ALI discriminator loss
-        Dloss_ali = -torch.mean(ln0c(DzX)+ln0c(1.0-DXz))
+        # Dloss_ali = -torch.mean(ln0c(DzX)+ln0c(1.0-DXz))
+        Dloss_ali = laploss1d(DzX,DXz)
         wnx,wnz,wn1 = noise_generator(Xf.shape,zf.shape,device,rndm_args)
         
         # 1. Concatenate inputs
@@ -585,6 +590,7 @@ class trainer(object):
         
         Dloss_ali_X = self.bce_loss(Dreal_X,o1l(Dreal_X))+\
                       self.bce_loss(Dfake_X,o1l(Dfake_X))
+        # Dloss_ali_X = laploss1d(Dreal_X, Dreal_X) + laploss1d(Dfake_X,Dfake_X)
         Dloss_ali_X = Dloss_ali_X
             
         # 4. Cross-Discriminate ZZ
@@ -593,6 +599,7 @@ class trainer(object):
 
         Dloss_ali_z = self.bce_loss(Dreal_z,o1l(Dreal_z))+\
                       self.bce_loss(Dfake_z,o0l(Dfake_z))
+        # Dloss_ali_z = laploss1d(Dreal_z,o1l(Dreal_z)) + laploss1d(Dfake_z,o1l(Dfake_z))
         Dloss_ali_z
 
         # Total loss
@@ -650,19 +657,23 @@ class trainer(object):
         _,Dfake_X = self.discriminate_filtered_xx(Xf,X_rec)
 
         #ALICE
-        #Gloss_ali_X = self.bce_loss(Dfake_X[0],o1l(Dfake_X[0]))
+        # Gloss_ali_X = self.bce_loss(Dfake_X[0],o1l(Dfake_X[0]))
+        # Gloss_ali_X = laploss1d(Dfake_X[0],o1l(Dfake_X[0]))
         #WGAN
         Gloss_ali_X = -(1.-torch.mean(Dfake_X[0]))
 
-        Gloss_cycle_X = torch.mean(torch.abs(Xf-X_rec))
+        # Gloss_cycle_X = torch.mean(torch.abs(Xf-X_rec))
+        Gloss_cycle_X = laploss1d(Xf,X_rec)
         
         # 4. Cross-Discriminate ZZ
         _,Dfake_z = self.discriminate_filtered_zz(zf,z_rec)
         #ALICE
         #Gloss_ali_z = self.bce_loss(Dfake_z[0],o1l(Dfake_z[0]))
         #WGAN
-        Gloss_ali_z = -(1.-torch.mean(Dfake_z[0]))
-        Gloss_cycle_z = torch.mean(torch.abs(zf-z_rec))
+        # Gloss_ali_z = -(1.-torch.mean(Dfake_z[0]))
+        Gloss_ali_z = laploss1d(Dfake_z[0],o1l(Dfake_z[0]))
+        # Gloss_cycle_z = torch.mean(torch.abs(zf-z_rec))
+        Gloss_cycle_z = laploss1d(zf,z_rec)
 
         # Total Loss
         Gloss = (Gloss_ftm*0.7+Gloss_ali  *0.3)*(1.-0.7)/2.0 + \
@@ -698,11 +709,12 @@ class trainer(object):
         
         # 3. Cross-Discriminate ZZ
         Dreal_z,Dfake_z = self.discriminate_hybrid_zz(zd,zd_gen)
-        if self.style=='WGAN':
-            Dloss_ali = -(torch.mean(Dreal_z)-torch.mean(Dfake_z))
-        else:
-            Dloss_ali = self.bce_loss(Dreal_z,o1l(Dreal_z))+\
-                self.bce_loss(Dfake_z,o0l(Dfake_z))
+        # if self.style=='WGAN':
+        #     Dloss_ali = -(torch.mean(Dreal_z)-torch.mean(Dfake_z))
+        # else:
+        #     Dloss_ali = self.bce_loss(Dreal_z,o1l(Dreal_z))+\
+        #         self.bce_loss(Dfake_z,o0l(Dfake_z)
+        Dloss_ali = laploss1d(Dreal_z,o1l(Dreal_z)) + laploss1d(Dfake_z,o0l(Dfake_z))
             
         # 1. Concatenate inputs
         _,wnzd,_ = noise_generator(Xd.shape,zd.shape,device,rndm_args)
@@ -713,12 +725,13 @@ class trainer(object):
         
         # 3. Cross-Discriminate XX
         Dreal_X,Dfake_X = self.discriminate_hybrid_xx(Xd,Xd_rec)
-        if self.style=='WGAN':
-            Dloss_ali_X = -(torch.mean(Dreal_X)-torch.mean(Dfake_X))
-        else:
-            Dloss_ali_X = self.bce_loss(Dreal_X,o1l(Dreal_X))+\
-                self.bce_loss(Dfake_X,o0l(Dfake_X))
-        
+        # if self.style=='WGAN':
+        #     Dloss_ali_X = -(torch.mean(Dreal_X)-torch.mean(Dfake_X))
+        # else:
+        #     Dloss_ali_X = self.bce_loss(Dreal_X,o1l(Dreal_X))+\
+        #         self.bce_loss(Dfake_X,o0l(Dfake_X))
+        Dloss_ali_X = laploss1d(Dreal_X,o1l(Dreal_X)) + laploss1d(Dfake_X,o0l(Dfake_X))
+
         # Total loss
         Dloss = Dloss_ali + Dloss_ali_X 
         Dloss.backward(),self.oDhzdzf.step()
@@ -922,6 +935,8 @@ class trainer(object):
                 for _ in range(1):
                     self.alice_train_filtered_generator_adv_xz(Xf,zf)
                     torch.cuda.empty_cache()
+
+
 
                 err = self._error(self.Fef, self.Gdf, Xf,zf,device)
                 a =  err.cpu().data.numpy().tolist()
