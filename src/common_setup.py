@@ -34,7 +34,7 @@ from torch.utils.data import ConcatDataset as tdu_cat
 import torch.backends.cudnn as cudnn
 from common_model import get_truncated_normal
 from database_sae import load_dataset,synth_dataset
-from database_sae import stead_dataset,ann2bb_dataset
+from database_sae import stead_dataset,stead_dataset_dask,ann2bb_dataset
 from database_sae import deepbns_dataset
 from database_sae import mdof_dataset
 import pandas as pd
@@ -295,6 +295,13 @@ def setup():
         handle.close()
 
     elif opt.dataset == 'stead':
+        size = 1
+
+        from mpi4py import MPI
+        comm = MPI.COMM_WORLD
+        rank = MPI.COMM_WORLD.rank
+        size = MPI.COMM_WORLD.Get_size()
+        
         src = opt.dataroot
 
         print('dataroots:')

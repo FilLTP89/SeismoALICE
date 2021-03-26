@@ -1,4 +1,10 @@
+*.csv
+*.txt
+shell/*
+imgs*
+config*
 /.vscode/
 /env
+*.pth
 call_common_setup
 call_common_setup_debug
