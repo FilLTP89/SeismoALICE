@@ -89,6 +89,9 @@ def to_pth(comm,size,rank):
     else:
         (ths_trn,ths_tst,ths_vld,vtm,fsc) = out
         
+        print("saving _ns{:>d}_nt{:>d}_ls{:>d}_nzf{:>d}_nzd{:>d}_{:>d}.pth ...".format(md['nsy'],
+                opt.signalSize,opt.latentSize,opt.nzf,opt.nzd,rank))
+
         tsave(ths_trn,opj(opt.outf,'ths_trn_ns{:>d}_nt{:>d}_ls{:>d}_nzf{:>d}_nzd{:>d}_{:>d}.pth'.format(md['nsy'],
                 opt.signalSize,opt.latentSize,opt.nzf,opt.nzd,rank)))
         tsave(ths_tst,opj(opt.outf,'ths_tst_ns{:>d}_nt{:>d}_ls{:>d}_nzf{:>d}_nzd{:>d}_{:>d}.pth'.format(md['nsy'],

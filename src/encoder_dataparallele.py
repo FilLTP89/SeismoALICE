@@ -12,6 +12,7 @@ import torch
 import pdb
 from torch import device as tdev
 import copy
+from dconv import DConv_63
 
 class EncoderDataParallele(object):
     """docstring for EncoderDataParallele"""
@@ -70,7 +71,7 @@ class Encoder(BasicEncoderDataParallele):
 
         acts = T.activation(act, nly)
         # pdb.set_trace()
-
+        dconv = DConv_63(last_channel = channel[-1], bn = False, dpc = 0.0).network()
         if path:
             self.model = T.load_net(path)
             # Freeze model weights
@@ -99,6 +100,9 @@ class Encoder(BasicEncoderDataParallele):
                 self.cnn1 += cnn1d(channel[i-1], channel[i], acts[i-1], ker=ker[i-1],\
                     std=std[i-1],pad=pad[i-1], dil=dil[i-1], bn=_bn, dpc=_dpc, wn=False)
         
+        #append the dilated convolutional network to the network
+        # pdb.set_trace()
+        self.cnn1  = self.cnn1 + dconv 
         self.cnn1  = sqn(*self.cnn1)
         # pdb.set_trace()
         if path:

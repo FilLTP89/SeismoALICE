@@ -13,7 +13,7 @@ from generate_noise import latent_resampling, noise_generator
 from generate_noise import lowpass_biquad
 from database_sae import random_split 
 from leave_p_out import k_folds
-from common_setup import dataset2loader
+from ex_common_setup import dataset2loader
 from database_sae import thsTensorData
 import json
 from pytorch_summary import summary
@@ -25,7 +25,7 @@ import time
 import os
 import torch.distributed as dist
 from laploss import *
-from pl_bolts.datamodules.async_dataloader import AsynchronousLoader
+# from pl_bolts.datamodules.async_dataloader import AsynchronousLoader
 # from pytorchsummary.torchsummary import summary
 # import numpy as np
 
@@ -492,7 +492,8 @@ class trainer(object):
         # 1. Concatenate inputs
         X_inp = zcat(Xd,wnx)
         z_inp = zcat(zd,wnz)
-
+        
+        # pdb.set_trace()
         # 2. Generate conditional samples
         X_gen = self.Gdd(z_inp)
         z_gen = self.Fed(X_inp)
@@ -525,9 +526,10 @@ class trainer(object):
         Gloss_cycle_X = torch.mean(torch.abs(Xd.to(place)-X_rec)).to(place)
         
         # 4. Cross-Discriminate ZZ
-        Gloss_cycle_z = torch.mean(torch.abs(zd.to(place)-z_rec)).to(place)
+        Gloss_cycle_z = torch.mean(torch.abs(zd-z_rec)).to(place)
+        # Gloss_cycle_z = torch.mean(torch.sum(z_rec**2,dim=1)).to(place)
 
-        Gloss = Gloss_ali + 10. * Gloss_cycle_X + 100. * Gloss_cycle_z 
+        Gloss = Gloss_ali + 10. * Gloss_cycle_X + 10* Gloss_cycle_z 
 
         Gloss.backward()
         
@@ -569,8 +571,8 @@ class trainer(object):
         DXz,DzX,_,_ = self.discriminate_filtered_xz(Xf,X_gen,zf,z_gen)
          
         # 4. Compute ALI discriminator loss
-        # Dloss_ali = -torch.mean(ln0c(DzX)+ln0c(1.0-DXz))
-        Dloss_ali = laploss1d(DzX,DXz)
+        Dloss_ali = -torch.mean(ln0c(DzX)+ln0c(1.0-DXz))
+        # Dloss_ali = laploss1d(DzX,DXz)
         wnx,wnz,wn1 = noise_generator(Xf.shape,zf.shape,device,rndm_args)
         
         # 1. Concatenate inputs
@@ -602,10 +604,14 @@ class trainer(object):
         Dloss_ali_z = self.bce_loss(Dreal_z,o1l(Dreal_z))+\
                       self.bce_loss(Dfake_z,o0l(Dfake_z))
         # Dloss_ali_z = laploss1d(Dreal_z,o1l(Dreal_z)) + laploss1d(Dfake_z,o1l(Dfake_z))
-        Dloss_ali_z
-
+        # Dloss_ali_z
+        # torch.cuda.empty_cache()
+        # GPUtil.showUtilization(all=True)
         # Total loss
+        # pdb.set_trace()
         Dloss = Dloss_ali + 10*Dloss_ali_X + 100*Dloss_ali_z
+        # print(Dloss.to("cuda"))
+        # print(Dloss)
         # Dloss = Dloss_ali + Dloss_ali_X + Dloss_ali_z
         Dloss.backward(),self.oDfxz.step(),clipweights(self.Dfnets),zerograd(self.optzf)
         self.losses['Dloss'].append(Dloss.tolist())  
@@ -664,18 +670,20 @@ class trainer(object):
         #WGAN
         Gloss_ali_X = -(1.-torch.mean(Dfake_X[0]))
 
-        # Gloss_cycle_X = torch.mean(torch.abs(Xf-X_rec))
-        Gloss_cycle_X = laploss1d(Xf,X_rec)
+        Gloss_cycle_X = torch.mean(torch.abs(Xf-X_rec))
+        # Gloss_cycle_X = laploss1d(Xf,X_rec)
         
         # 4. Cross-Discriminate ZZ
         _,Dfake_z = self.discriminate_filtered_zz(zf,z_rec)
         #ALICE
-        #Gloss_ali_z = self.bce_loss(Dfake_z[0],o1l(Dfake_z[0]))
+        Gloss_ali_z = self.bce_loss(Dfake_z[0],o1l(Dfake_z[0]))
         #WGAN
         # Gloss_ali_z = -(1.-torch.mean(Dfake_z[0]))
-        Gloss_ali_z = laploss1d(Dfake_z[0],o1l(Dfake_z[0]))
+        # Gloss_ali_z = laploss1d(Dfake_z[0],o1l(Dfake_z[0]))
+        # Gloss_cycle_z = torch.mean(torch.sum(z_rec**2,dim=1))
+        Gloss_cycle_z = torch.mean(torch.abs(zf-z_rec)**2)
         # Gloss_cycle_z = torch.mean(torch.abs(zf-z_rec))
-        Gloss_cycle_z = laploss1d(zf,z_rec)
+        # Gloss_cycle_z = laploss1d(zf,z_rec)
 
         # Total Loss
         Gloss = (Gloss_ftm*0.7+Gloss_ali  *0.3)*(1.-0.7)/2.0 + \
@@ -711,12 +719,12 @@ class trainer(object):
         
         # 3. Cross-Discriminate ZZ
         Dreal_z,Dfake_z = self.discriminate_hybrid_zz(zd,zd_gen)
-        # if self.style=='WGAN':
-        #     Dloss_ali = -(torch.mean(Dreal_z)-torch.mean(Dfake_z))
-        # else:
-        #     Dloss_ali = self.bce_loss(Dreal_z,o1l(Dreal_z))+\
-        #         self.bce_loss(Dfake_z,o0l(Dfake_z)
-        Dloss_ali = laploss1d(Dreal_z,o1l(Dreal_z)) + laploss1d(Dfake_z,o0l(Dfake_z))
+        if self.style=='WGAN':
+            Dloss_ali = -(torch.mean(Dreal_z)-torch.mean(Dfake_z))
+        else:
+            Dloss_ali = self.bce_loss(Dreal_z,o1l(Dreal_z))+\
+                self.bce_loss(Dfake_z,o0l(Dfake_z))
+        # Dloss_ali = laploss1d(Dreal_z,o1l(Dreal_z)) + laploss1d(Dfake_z,o0l(Dfake_z))
             
         # 1. Concatenate inputs
         _,wnzd,_ = noise_generator(Xd.shape,zd.shape,device,rndm_args)
@@ -727,12 +735,12 @@ class trainer(object):
         
         # 3. Cross-Discriminate XX
         Dreal_X,Dfake_X = self.discriminate_hybrid_xx(Xd,Xd_rec)
-        # if self.style=='WGAN':
-        #     Dloss_ali_X = -(torch.mean(Dreal_X)-torch.mean(Dfake_X))
-        # else:
-        #     Dloss_ali_X = self.bce_loss(Dreal_X,o1l(Dreal_X))+\
-        #         self.bce_loss(Dfake_X,o0l(Dfake_X))
-        Dloss_ali_X = laploss1d(Dreal_X,o1l(Dreal_X)) + laploss1d(Dfake_X,o0l(Dfake_X))
+        if self.style=='WGAN':
+            Dloss_ali_X = -(torch.mean(Dreal_X)-torch.mean(Dfake_X))
+        else:
+            Dloss_ali_X = self.bce_loss(Dreal_X,o1l(Dreal_X))+\
+                self.bce_loss(Dfake_X,o0l(Dfake_X))
+        # Dloss_ali_X = laploss1d(Dreal_X,o1l(Dreal_X)) + laploss1d(Dfake_X,o0l(Dfake_X))
 
         # Total loss
         Dloss = Dloss_ali + Dloss_ali_X 
@@ -855,16 +863,16 @@ class trainer(object):
                     print("\t|saving model at this checkpoint : ", epoch)
                     tsave({'epoch':epoch,'model_state_dict':self.Fed.state_dict(),
                            'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},
-                           './network/{0}/Fed_{1}.pth'.format(outf[7:],epoch))
+                           './network/{0}/Fed_{1}.pth'.format(outf[12:],epoch))
                     tsave({'epoch':epoch,'model_state_dict':self.Gdd.state_dict(),
                            'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},
-                           './network/{0}/Gdd_{1}.pth'.format(outf[7:],epoch))    
+                           './network/{0}/Gdd_{1}.pth'.format(outf[12:],epoch))    
                     tsave({'model_state_dict':self.Dszd.state_dict(),
-                           'optimizer_state_dict':self.oDdxz.state_dict()},'./network/{0}/Dszd_bb_{1}.pth'.format(outf[7:],epoch))
+                           'optimizer_state_dict':self.oDdxz.state_dict()},'./network/{0}/Dszd_bb_{1}.pth'.format(outf[12:],epoch))
                     tsave({'model_state_dict':self.DsXd.state_dict(),
-                           'optimizer_state_dict':self.oDdxz.state_dict()},'./network/{0}/DsXd_bb_{1}.pth'.format(outf[7:],epoch))    
+                           'optimizer_state_dict':self.oDdxz.state_dict()},'./network/{0}/DsXd_bb_{1}.pth'.format(outf[12:],epoch))    
                     tsave({'model_state_dict':self.Ddxz.state_dict(),
-                           'optimizer_state_dict':self.oDdxz.state_dict()},'./network/{0}/Ddxz_bb_{1}.pth'.format(outf[7:],epoch))
+                           'optimizer_state_dict':self.oDdxz.state_dict()},'./network/{0}/Ddxz_bb_{1}.pth'.format(outf[12:],epoch))
         
         plt.plot_loss_explicit(losses=self.losses["Dloss_t"], key="Dloss_t", outf=outf,niter=niter)
         plt.plot_loss_explicit(losses=self.losses["Gloss_x"], key="Gloss_x", outf=outf,niter=niter)
@@ -875,12 +883,12 @@ class trainer(object):
         
 
         tsave({'epoch':niter,'model_state_dict':self.Fed.state_dict(),
-            'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'./network/{0}/Fed.pth'.format(outf[7:]))
+            'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'./network/{0}/Fed.pth'.format(outf[12:]))
         tsave({'epoch':niter,'model_state_dict':self.Gdd.state_dict(),
-            'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'./network/{0}/Gdd.pth'.format(outf[7:]))    
-        tsave({'model_state_dict':self.Dszd.state_dict()},'./network/{0}/Dszd_bb.pth'.format(outf[7:]))
-        tsave({'model_state_dict':self.DsXd.state_dict()},'./network/{0}/DsXd_bb.pth'.format(outf[7:]))    
-        tsave({'model_state_dict':self.Ddxz.state_dict()},'./network/{0}/Ddxz_bb.pth'.format(outf[7:]))
+            'optimizer_state_dict':self.oGdxz.state_dict(),'loss':self.losses,},'./network/{0}/Gdd.pth'.format(outf[12:]))    
+        tsave({'model_state_dict':self.Dszd.state_dict()},'./network/{0}/Dszd_bb.pth'.format(outf[12:]))
+        tsave({'model_state_dict':self.DsXd.state_dict()},'./network/{0}/DsXd_bb.pth'.format(outf[12:]))    
+        tsave({'model_state_dict':self.Ddxz.state_dict()},'./network/{0}/Ddxz_bb.pth'.format(outf[12:]))
          
     # @profile
     def train_filtered_explicit(self):
@@ -914,7 +922,7 @@ class trainer(object):
                 else:
                     error[b] = a
 
-            GPUtil.showUtilization(all=True)
+            # GPUtil.showUtilization(all=True)
 
             str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
             str = 'epoch: {:>d} --- '.format(epoch)
@@ -950,12 +958,22 @@ class trainer(object):
         error = {}
         start_time = time.time()
         # path = './network/trained/nfz8/'
+        
         for epoch in range(niter):
+            # for np in range(opt.dataloaders):
+            #     ths_trn = tload(opj(opt.dataroot,'ths_trn_ns{:>d}_nt{:>d}_ls{:>d}_nzf{:>d}_nzd{:>d}_{:>d}.pth'.format(nsy,
+            #         opt.signalSize,opt.latentSize,opt.nzf,opt.nzd,np)))
+            #            # ths_tst = tload(opj(opt.dataroot,'ths_tst_{:>d}{:s}'.format(np,opt.dataset)))
+            #            # ths_vld = tload(opj(opt.dataroot,'ths_vld_{:>d}{:s}'.format(np,opt.dataset)))
+            #     trn_loader = AsynchronousLoader(trn_loader, device=device)
+            
             for b,batch in enumerate(trn_loader):
                 # Load batch
                 # pdb.set_trace()
+                # print(b)
                 # _,xf_data,_,zf_data,_,_,_ = batch
-                xf_data,_,zf_data,_,_,_,_ = batch # modifieddata (broadband)
+                
+                xf_data,_,_,_,_,_,_ = batch # modifieddata (broadband)
                 Xf = Variable(xf_data).to(device,non_blocking=True) # LF-signal
                 zf = Variable(zf_data).to(device,non_blocking=True)
                 # print("Xf and zf", Xf.shape, zf.shape)
@@ -979,11 +997,11 @@ class trainer(object):
             if epoch%10== 0:
                 print("--- {} minutes ---".format((time.time() - start_time)/60))
                 print(" saving discriminators ...")
-                torch.save(f="./network/trained/nfz8/Dszf.pth",  obj=self.Dszf)
-                torch.save(f="./network/trained/nfz8/Dsrzf.pth", obj=self.Dsrzf)
-                torch.save(f="./network/trained/nfz8/DsXf.pth",  obj=self.DsXf)
-                torch.save(f="./network/trained/nfz8/DsrXf.pth", obj=self.DsrXf)
-                torch.save(f="./network/trained/nfz8/Dfxz.pth",  obj=self.Dfxz)
+            #     torch.save(f="./network/trained/nfz8/Dszf.pth",  obj=self.Dszf)
+            #     torch.save(f="./network/trained/nfz8/Dsrzf.pth", obj=self.Dsrzf)
+            #     torch.save(f="./network/trained/nfz8/DsXf.pth",  obj=self.DsXf)
+            #     torch.save(f="./network/trained/nfz8/DsrXf.pth", obj=self.DsrXf)
+            #     torch.save(f="./network/trained/nfz8/Dfxz.pth",  obj=self.Dfxz)
             # GPUtil.showUtilization(all=True)
 
             str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
@@ -1029,6 +1047,7 @@ class trainer(object):
         for epoch in range(niter):
             for b,batch in enumerate(trn_loader):
                 # Load batch
+                pdb.set_trace()
                 xd_data,xf_data,zd_data,zf_data,_,_,_,*other = batch
                 Xd = Variable(xd_data).to(device) # BB-signal
                 Xf = Variable(xf_data).to(device) # LF-signal
@@ -1164,60 +1183,60 @@ class trainer(object):
 
         return loss(Xt,Xr)
 
-    def get_Dgrad_norm(self, Xd, Xdr, zd, zdr):
-        self.Ddxz.train()
+    # def get_Dgrad_norm(self, Xd, Xdr, zd, zdr):
+    #     self.Ddxz.train()
         
-        batch_size = Xdr.shape[0]
+    #     batch_size = Xdr.shape[0]
 
-        # Calculate interpolation
-        alpha = torch.rand( size = (batch_size, 1, 1), requires_grad=True)
-        alphaX = alpha.expand_as(Xd)
-        alphaz = alpha.expand_as(zd)
+    #     # Calculate interpolation
+    #     alpha = torch.rand( size = (batch_size, 1, 1), requires_grad=True)
+    #     alphaX = alpha.expand_as(Xd)
+    #     alphaz = alpha.expand_as(zd)
 
-        interpolated = torch.zeros_like(Xdr, requires_grad=True)
+    #     interpolated = torch.zeros_like(Xdr, requires_grad=True)
 
-        if torch.cuda.is_available():
-            alphaX = alphaX.cuda(ngpu-1)
-            alphaz = alphaz.cuda(ngpu-1)
+    #     if torch.cuda.is_available():
+    #         alphaX = alphaX.cuda(ngpu-1)
+    #         alphaz = alphaz.cuda(ngpu-1)
 
-        Xhat = alphaX*Xd+(1-alphaX)*Xdr
-        zhat = alphaz*zd+(1-alphaz)*zdr
+    #     Xhat = alphaX*Xd+(1-alphaX)*Xdr
+    #     zhat = alphaz*zd+(1-alphaz)*zdr
 
-        if torch.cuda.is_available():
-            Xhat = Xhat.cuda()
-            zhat = zhat.cuda()
+    #     if torch.cuda.is_available():
+    #         Xhat = Xhat.cuda()
+    #         zhat = zhat.cuda()
 
-        Xhat.requires_grad_(True)
-        zhat.requires_grad_(True)
+    #     Xhat.requires_grad_(True)
+    #     zhat.requires_grad_(True)
 
-        prob_interpolated = self.Ddxz.critic(zcat(self.DsXd(Xhat),self.Dszd(zhat)))
+    #     prob_interpolated = self.Ddxz.critic(zcat(self.DsXd(Xhat),self.Dszd(zhat)))
 
-        if torch.cuda.is_available():
-            grad_outputs = torch.ones(prob_interpolated.size(), requires_grad=True).cuda(ngpu-1)
-        else:
-            grad_outputs = torch.ones(prob_interpolated.size(), requires_grad=True)
+    #     if torch.cuda.is_available():
+    #         grad_outputs = torch.ones(prob_interpolated.size(), requires_grad=True).cuda(ngpu-1)
+    #     else:
+    #         grad_outputs = torch.ones(prob_interpolated.size(), requires_grad=True)
 
-        prob_interpolated.requires_grad_(True)
-        interpolated.requires_grad_(True)
-        grad_outputs.requires_grad_(True)
+    #     prob_interpolated.requires_grad_(True)
+    #     interpolated.requires_grad_(True)
+    #     grad_outputs.requires_grad_(True)
 
-        # Calculate gradients of probabilities with respect to examples
-        gradXz = torch.autograd.grad(outputs=prob_interpolated,\
-            inputs = (Xhat,zhat),\
-            grad_outputs = grad_outputs,\
-            create_graph = True,\
-            retain_graph = True,
-            only_inputs  = True)[0]
+    #     # Calculate gradients of probabilities with respect to examples
+    #     gradXz = torch.autograd.grad(outputs=prob_interpolated,\
+    #         inputs = (Xhat,zhat),\
+    #         grad_outputs = grad_outputs,\
+    #         create_graph = True,\
+    #         retain_graph = True,
+    #         only_inputs  = True)[0]
 
-        # Gradients have shape (batch_size, num_channels, img_width, img_height),
-        # so flatten to easily take norm per example in batch
-        gradXz = gradXz.view(batch_size, -1)
+    #     # Gradients have shape (batch_size, num_channels, img_width, img_height),
+    #     # so flatten to easily take norm per example in batch
+    #     gradXz = gradXz.view(batch_size, -1)
 
-        # Derivatives of the gradient close to 0 can cause problems because of
-        # the square root, so manually calculate norm and add epsilon
-        gradients_norm = torch.sqrt(torch.sum(gradXz ** 2, dim=1) + 1e-12)
+    #     # Derivatives of the gradient close to 0 can cause problems because of
+    #     # the square root, so manually calculate norm and add epsilon
+    #     gradients_norm = torch.sqrt(torch.sum(gradXz ** 2, dim=1) + 1e-12)
 
-        # Return gradient penalty
-        return gradients_norm
+    #     # Return gradient penalty
+    #     return gradients_norm
 
 

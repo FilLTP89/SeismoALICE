@@ -499,6 +499,41 @@ class T(object):
         return acts[typo][name]
 
     @staticmethod
+    def extraction_data(data= 'trn_loader'):
+        limit = 100
+        NS = []
+        EW = []
+        UD = []
+        if data == 'trn_loader':
+            for _,batch in enumerate(trn_loader):
+                # Load batch
+                # pdb.set_trace()
+                xd_data,_,_,_,_,_,_ = batch
+                Xd = Variable(xd_data)# BB-signal
+                # zd = Variable(zd_data).to(ngpu-1)
+                NS.append(Xd[:,0,:])
+                EW.append(Xd[:,1,:])
+                UD.append(Xd[:,2,:])
+            # pdb.set_trace()
+            NS = torch.cat(NS).numpy()
+            EW = torch.cat(EW).numpy()
+            UD = torch.cat(UD).numpy()
+            signals  = np.vstack((NS[0:limit,:], EW[0:limit,:], UD[0:limit,:]))
+        else:
+            try:
+                # pdb.set_trace()
+                signals = torch.load(data)
+                z1 = signals[:,0,:].cpu().detach().numpy()
+                z2 = signals[:,1,:].cpu().detach().numpy()
+                z3 = signals[:,0,:].cpu().detach().numpy()
+                signals = np.vstack((z1,z2,z3))
+            except Exception as  e:
+                print('data not found !!!')
+                raise e
+
+        return signals
+
+    @staticmethod
     def load_broadband_encoder():
         net = Module()
         try:
@@ -508,7 +543,7 @@ class T(object):
         return net
 
     @staticmethod 
-    def _forward(x, cnn, gang, split = 25):
+    def _forward(x, cnn, gang, split = 10):
         ret    = []
         splits = iter(x.split(split, dim = 0))
         s_next = next(splits)

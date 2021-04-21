@@ -146,8 +146,8 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
 
         if X.is_cuda and self.ngpu > 1:
             # pdb.set_trace()
-            z = pll(self.cnn1,X,self.gang)
-            # z = T._forward(X, self.cnn1, self.gang)
+            # z = pll(self.cnn1,X,self.gang)
+            z = T._forward(X, self.cnn1, self.gang)
             if self.wf:
                 # f = pll(self.extraction,X,self.gang)
                 f = self.extraction(X)

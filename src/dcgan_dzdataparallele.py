@@ -131,8 +131,8 @@ class DCGAN_Dz(BasicDCGAN_DzDataParallele):
     
     def forward(self,X):
         if X.is_cuda and self.ngpu > 1:
-            z = pll(self.cnn1,X,self.gang)
-            # z = T._forward(X, self.cnn1, self.gang)
+            # z = pll(self.cnn1,X,self.gang)
+            z = T._forward(X, self.cnn1, self.gang)
             if self.wf:
                 # f = self.extraction,X,self.gang)
                 f = self.extraction(X)

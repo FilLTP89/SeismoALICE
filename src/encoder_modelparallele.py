@@ -48,7 +48,7 @@ class BasicEncoderModelParallele(Module):
     def __init__(self):
         super(BasicEncoderModelParallele,self).__init__()
 
-        #variable to call frozen model
+        #v)ariable to call frozen model
         self.model = None
         self.splits = 1
 

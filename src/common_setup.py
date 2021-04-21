@@ -89,6 +89,11 @@ def setup():
 
     # import pdb
     # pdb.set_trace()
+    # os.environ['MASTER_ADDR'] = 'localhost'
+    # os.environ['MASTER_PORT'] = '12355'
+
+    # # initialize the process group
+    # dist.init_process_group("gloo", rank=rank, world_size=world_size)
 
     u'''Set-up GPU and CUDA'''
     opt.cuda = True if (tcuda.is_available() and opt.cuda) else False

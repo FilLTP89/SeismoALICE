@@ -9,9 +9,9 @@
 #SBATCH --mail-type=FAIL
 #SBATCH --export=NONE 
 
-source $HOME/load_conda_env_gpu.sh
+source $WORKDIR/load_conda_env_gpu.sh ruche
 cd ${SLURM_SUBMIT_DIR}
  
 export PYTHONPATH="./src"
-export STEADROOT="/gpfs/workdir/invsem03/STEAD/waveforms_11_13_19.hdf5 "
-mpirun --use-hwthread-cpus -np 20 python3 ./src/STEADextractorMPI.py --dataroot=${STEADROOT} --dataset='stead' --cutoff=1. --signalSize=4096 --latentSize=4 --nzd=128 --workers=2 --nsy=10000 --batchSize=50
+export STEADROOT="/gpfs/workdir/jacquetg/STEAD/waveforms_11_13_19.hdf5"
+mpirun -np 20 python ./src/STEADextractorMPI.py --dataroot=${STEADROOT} --dataset='stead' --cutoff=1. --signalSize=4096 --latentSize=4 --nzd=128 --nsy=1000 --batchSize=50

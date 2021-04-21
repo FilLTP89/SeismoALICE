@@ -163,15 +163,21 @@ class trainer(object):
         flagT=False
         flagF=False
         t = [y.lower() for y in list(self.strategy.keys())]
-         #we determine in which kind of environnement we are 
-        if(opt.ntask ==1 and opt.ngpu >=1):
+        #we determine in which kind of environnement we are
+
+        cpus  =  int(os.environ.get('SLURM_NPROCS'))
+        #we determine in which kind of environnement we are 
+        if(cpus ==1 and opt.ngpu >=1):
             print('ModelParallele to be builded ...')
+            self.dp_mode = False
             factory = ModelParalleleFactory()
-        elif(opt.ntask >1 and opt.ngpu >=1):
+        elif(cpus >1 and opt.ngpu >=1):
             print('DataParallele to be builded ...')
             factory = DataParalleleFactory()
+            self.dp_mode = True
         else:
             print('environ not found')
+        net = Network(factory)
         net = Network(factory)
         if 'broadband' in t:
             self.style='ALICE'
@@ -357,6 +363,7 @@ class trainer(object):
     
     @profile
     def discriminate_hybrid_zf(self,zf,zfr):
+        # pdb.set_trace()
         Dreal = self.Dsrzf(zcat(zf,zf ))
         Dfake = self.Dsrzf(zcat(zf,zfr))
         return Dreal,Dfake
@@ -376,6 +383,7 @@ class trainer(object):
         wnxd,wnzd,_ = noise_generator(Xd.shape,zd.shape,device,rndm_args)
          
         # 1. Concatenate inputs
+        # pdb.set_trace()
         zf_inp = zcat(self.Fef(zcat(Xf,wnxf)),wnzf) # zf_inp = zcat(zf,wnzf)
         zd_inp = zcat(self.Fed(zcat(Xd,wnxd)),wnzd) # zf_inp = zcat(zf,wnzf)
          
@@ -514,7 +522,9 @@ class trainer(object):
         globals().update(self.cv)
         globals().update(opt.__dict__)
         for epoch in range(niter):
+            # pdb.set_trace()
             for b,batch in enumerate(trn_loader):
+                # pdb.set_trace()
                 # Load batch
                 xd_data,xf_data,zd_data,zf_data,_,_,_,*other = batch
                 Xd = Variable(xd_data).to(device) # BB-signal
@@ -534,11 +544,11 @@ class trainer(object):
         #plt.plot_loss(niter,len(trn_loader),self.losses,title='loss_hybrid',outf=outf)
         
         tsave({'epoch':niter,'model_state_dict':self.Ghz.state_dict(),
-            'optimizer_state_dict':self.oGhxz.state_dict(),'loss':self.losses},'Ghz.pth')    
+            'optimizer_state_dict':self.oGhxz.state_dict(),'loss':self.losses},'./network/{0}/Ghz.pth'.format(outf[12:]))    
         tsave({'epoch':niter,'model_state_dict':self.Fhz.state_dict(),
-            'optimizer_state_dict':self.oGhxz.state_dict(),'loss':self.losses},'Fhz.pth')    
+            'optimizer_state_dict':self.oGhxz.state_dict(),'loss':self.losses},'./network/{0}/Fhz.pth'.format(outf[12:]))    
         tsave({'epoch':niter,'model_state_dict':[Dn.state_dict() for Dn in self.Dhnets],
-            'optimizer_state_dict':self.oDhzdzf.state_dict(),'loss':self.losses},'DsXz.pth')
+            'optimizer_state_dict':self.oDhzdzf.state_dict(),'loss':self.losses},'./network/{0}/DsXz.pth'.format(outf[12:]))
 
     @profile
     def train(self):
@@ -552,6 +562,8 @@ class trainer(object):
         globals().update(opt.__dict__)
         
         t = [y.lower() for y in list(self.strategy.keys())]
+        # import pdb
+        # pdb.set_trace()
 
         if 'hybrid' in t and self.strategy['trplt']['hybrid']:
             n = self.strategy['hybrid']
@@ -559,13 +571,13 @@ class trainer(object):
                 loss = tload(n[0])['loss']
             else:
                 loss = self.losses
-            #plt.plot_loss_dict(loss,nb=len(trn_loader),title='loss_hybrid',outf=outf)
-            #plt.plot_generate_hybrid_new(self.Fef,self.Gdf,self.Fed,self.Gdd,self.Fhz,self.Ghz,device,vtm,\
-            #                             trn_loader,pfx="trn_set_hb",outf=outf)
-            #plt.plot_generate_hybrid_new(self.Fef,self.Gdf,self.Fed,self.Gdd,self.Fhz,self.Ghz,device,vtm,\
-            #                             tst_loader,pfx="tst_set_hb",outf=outf)
-            #plt.plot_generate_hybrid_new(self.Fef,self.Gdf,self.Fed,self.Gdd,self.Fhz,self.Ghz,device,vtm,\
-            #                             vld_loader,pfx="vld_set_hb",outf=outf)
+            plt.plot_loss_dict(loss,nb=len(trn_loader),title='loss_hybrid',outf=outf)
+            plt.plot_generate_hybrid_new(self.Fef,self.Gdf,self.Fed,self.Gdd,self.Fhz,self.Ghz,device,vtm,\
+                                        trn_loader,pfx="trn_set_hb",outf=outf)
+            plt.plot_generate_hybrid_new(self.Fef,self.Gdf,self.Fed,self.Gdd,self.Fhz,self.Ghz,device,vtm,\
+                                        tst_loader,pfx="tst_set_hb",outf=outf)
+            plt.plot_generate_hybrid_new(self.Fef,self.Gdf,self.Fed,self.Gdd,self.Fhz,self.Ghz,device,vtm,\
+                                        vld_loader,pfx="vld_set_hb",outf=outf)
             plt.plot_gofs(tag=['hybrid'],Fef=self.Fef,Gdf=self.Gdf,Fed=self.Fed,\
                     Gdd=self.Gdd,Fhz=self.Fhz,Ghz=self.Ghz,dev=device,vtm=vtm,trn_set=trn_loader,\
                     pfx={'broadband':'set_bb','filtered':'set_fl','hybrid':'set_hb','ann2bb':'set_ann2bb_rec'},\

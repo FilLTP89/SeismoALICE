@@ -12,6 +12,7 @@ import torch
 import pdb
 from torch import device as tdev
 import copy
+from dconv import DConv_63
 
 class DecoderDataParallele(object):
     """docstring for DecoderDataParallele"""
@@ -68,6 +69,7 @@ class Decoder(BasiceDecoderDataParallele):
         acts       = T.activation(act, nly)
         device = tdev("cuda" if torch.cuda.is_available() else "cpu")
         # pdb.set_trace()
+        dconv = DConv_63(last_channel = channel[-1], bn = False, dpc = 0.0).network()
         if path:
             self.model = T.load_net(path)
             # Freeze model weights
@@ -92,8 +94,9 @@ class Decoder(BasiceDecoderDataParallele):
             self.cnn1 += cnn1dt(channel[i-1],channel[i], acts[0],ker=3,std=1,pad=1,\
                 dil =1, opd=0, bn=True, dpc=0.0)
 
-        # pdb.set_trace()
-        self.cnn1 = sqn(*self.cnn1)
+        pdb.set_trace()
+        self.cnn1  =  self.cnn1 + dconv
+        self.cnn1  = sqn(*self.cnn1)
         if path: 
             self.cnn1[-1] = self.model
         self.cnn1.to(device)
@@ -101,8 +104,8 @@ class Decoder(BasiceDecoderDataParallele):
 
     def forward(self,zxn):
         if zxn.is_cuda and self.ngpu > 1:
-            Xr = pll(self.cnn1,zxn,self.gang)
-            # Xr = T._forward(zxn, self.cnn1, self.gang)
+            # Xr = pll(self.cnn1,zxn,self.gang)
+            Xr = T._forward(zxn, self.cnn1, self.gang)
             # torch.cuda.empty_cache()
         else:
             Xr = self.cnn1(zxn)

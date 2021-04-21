@@ -6,7 +6,7 @@ u'''Required modules'''
 import warnings
 warnings.filterwarnings("ignore")
 from profile_support import profile
-import common_setup as cs
+import ex_common_setup as cs
 import trainer_bbfl as aat
 
 u'''General informations'''

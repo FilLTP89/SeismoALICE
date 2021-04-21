@@ -443,6 +443,8 @@ def plot_generate_hybrid_new(Qec,Pfc,Qdc,Pdc,Fhz,Ghz,dev,vtm,trn_set,pfx='hybrid
                     bottom=0.125, h_1=0.2,h_2=0.125,h_3=0.2, w_1=0.2,w_2=0.6,
                     w_cb=0.01, d_cb=0.0,show=False,plot_args=['k', 'r', 'b'],
                     ylim=0., clim=0.)
+            print("saving file gof_dr_aae_%s_%u_%u.png"%(pfx,cnt,io))
+            
             plt.savefig(os.path.join(outf,"gof_dr_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
                     bbox_inches='tight',dpi = 300)
             #plt.savefig(os.path.join(outf,"gof_r_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
@@ -767,30 +769,30 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs')
                 #plt.savefig(os.path.join(outf,"gof_r_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
                 #            format='eps',bbox_inches='tight',dpi = 500)
                 plt.close()
-                # hfg,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
-                # hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{x}$',linewidth=1.2)
-                # hax0.plot(vtm,gt,color=clr[3],label=r'$G_m(F_m(\mathbf{x}))$',linewidth=1.2)
-                # hax1.loglog(vfr,of,color=clr[0],label=r'$\mathbf{x}$',linewidth=2)
-                # hax1.loglog(vfr,gf,color=clr[3],label=r'$G_m(F_m(\mathbf{x}))$',linewidth=2)
-                # hax0.set_xlim(0.0,int(vtm[-1]))
-                # hax0.set_xticks(np.arange(0.0,int(vtm[-1])*11./10.,int(vtm[-1])/10.))
-                # hax0.set_ylim(-1.0,1.0)
-                # hax0.set_yticks(np.arange(-1.0,1.25,0.25))
-                # hax0.set_xlabel('t [s]',fontsize=15,fontweight='bold')
-                # hax0.set_ylabel('a(t) [1]',fontsize=15,fontweight='bold')
-                # hax0.set_title('DC-ALICE',fontsize=20,fontweight='bold')
-                # hax1.set_xlim(0.1,51.), hax1.set_xticks(np.array([0.1,1.0,10.,50.]))
-                # hax1.set_ylim(10.**-6,10.**0), hax1.set_yticks(10.**np.arange(-6,1))
-                # hax1.set_xlabel('f [Hz]',fontsize=15,fontweight='bold')
-                # hax1.set_ylabel('A(f) [1]',fontsize=15,fontweight='bold')
-                # hax0.legend(loc = "lower right",frameon=False)
-                # hax1.legend(loc = "lower right",frameon=False)
-                # plt.savefig(os.path.join(outf,"res_r_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
-                #             bbox_inches='tight',dpi = 500)
-                # plt.savefig(os.path.join(outf,"res_r_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
-                #             format='eps',bbox_inches='tight',dpi = 500)
-                # plt.close()
-                # print("saving res_r_aae_%s_%u_%u ... "%(pfx,cnt,io))
+                hfg,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
+                hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{x}$',linewidth=1.2)
+                hax0.plot(vtm,gt,color=clr[3],label=r'$G_m(F_m(\mathbf{x}))$',linewidth=1.2)
+                hax1.loglog(vfr,of,color=clr[0],label=r'$\mathbf{x}$',linewidth=2)
+                hax1.loglog(vfr,gf,color=clr[3],label=r'$G_m(F_m(\mathbf{x}))$',linewidth=2)
+                hax0.set_xlim(0.0,int(vtm[-1]))
+                hax0.set_xticks(np.arange(0.0,int(vtm[-1])*11./10.,int(vtm[-1])/10.))
+                hax0.set_ylim(-1.0,1.0)
+                hax0.set_yticks(np.arange(-1.0,1.25,0.25))
+                hax0.set_xlabel('t [s]',fontsize=15,fontweight='bold')
+                hax0.set_ylabel('a(t) [1]',fontsize=15,fontweight='bold')
+                hax0.set_title('DC-ALICE',fontsize=20,fontweight='bold')
+                hax1.set_xlim(0.1,51.), hax1.set_xticks(np.array([0.1,1.0,10.,50.]))
+                hax1.set_ylim(10.**-6,10.**0), hax1.set_yticks(10.**np.arange(-6,1))
+                hax1.set_xlabel('f [Hz]',fontsize=15,fontweight='bold')
+                hax1.set_ylabel('A(f) [1]',fontsize=15,fontweight='bold')
+                hax0.legend(loc = "lower right",frameon=False)
+                hax1.legend(loc = "lower right",frameon=False)
+                plt.savefig(os.path.join(outf,"res_r_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
+                            bbox_inches='tight',dpi = 500)
+                plt.savefig(os.path.join(outf,"res_r_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
+                            format='eps',bbox_inches='tight',dpi = 500)
+                plt.close()
+                print("saving res_r_aae_%s_%u_%u ... "%(pfx,cnt,io))
                 
                 cnt += 1
             print("savefig eg_pg ...")
@@ -1762,7 +1764,8 @@ def plot_eg_pg(x,y, outf):
 
     # now determine nice limits by hand:
     binwidth = 0.25
-    lim = np.ceil(np.abs([x, y]).max() / binwidth) * binwidth
+    # lim = np.ceil(np.abs([x, y]).max() / binwidth) * binwidth
+    lim = 10
     ax_scatter.set_xlim((0, lim))
     ax_scatter.set_ylim((0, lim))
 

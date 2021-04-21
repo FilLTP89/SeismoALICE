@@ -244,6 +244,8 @@ def STEADdatasetMPI(comm,size,rank,src,batch_percent,workers,
         'coda_end_sample':np.float64,'trace_start_time':'str','trace_category':'str',
         'trace_name':'str'}
 
+    print("STEADdatasetMPI ...")
+
     vtm = md['dtm']*np.arange(0,md['ntm'])
     
     tar     = np.zeros((nsy,2))
@@ -257,7 +259,7 @@ def STEADdatasetMPI(comm,size,rank,src,batch_percent,workers,
     nsy_set = len(eqm)//size
 
     nsy = nsy_set*size
-
+    print("priors calculations ...")
     trn_set  = -999.9*np.ones(shape=(nsy,3,md['ntm']),dtype=np.float32)
     thf_set  = -999.9*np.ones(shape=(nsy,3,md['ntm']),dtype=np.float32)
 
@@ -276,13 +278,20 @@ def STEADdatasetMPI(comm,size,rank,src,batch_percent,workers,
     h5ls = H5ls(nsy=nsy_set,
         names=eqm.index.compute().to_list()[rank*nsy_set:(rank+1)*nsy_set],
         xw=Xwindow)
-    with h5py.File(src,'r',driver='mpio',comm=comm) as f:
-        dsets = f['earthquake']['local']
-        # this will now visit all objects inside the hdf5 file and store datasets in h5ls.names
-        dsets.visititems(h5ls)
-        trn_set  = h5ls.ths
-        pgat_set = h5ls.pga
-    f.close()
+
+    print("preparing to extracting files {}".format(src))
+
+    f = h5py.File(src,'r',driver='mpio',comm=comm)
+    print("parallel extraction ...\n")
+    dsets = f['earthquake']['local']
+    # comm.barrier()
+    # this will now visit all objects inside the hdf5 file and store datasets in h5ls.names
+    dsets.visititems(h5ls)
+    trn_set  = h5ls.ths_trn
+    pgat_set = h5ls.pga
+    print("extracting hdf5 files ...")
+
+        
 
     trn_set  = np2t(np.float32(trn_set))
     pgat_set = np2t(np.float32(pgat_set))
@@ -378,8 +387,6 @@ def STEADdatasetMPI(comm,size,rank,src,batch_percent,workers,
         ths_vld = ths_trn
            
         return ths_trn,ths_tst,ths_vld,vtm,fsc
-    else: 
-        return None
     
     # index_counts = eqm.map_partitions(lambda _df: _df.index.value_counts().sort_index()).compute()
     # index = np.repeat(index_counts.index, index_counts.values)
