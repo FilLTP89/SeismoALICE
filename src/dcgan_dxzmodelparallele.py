@@ -130,8 +130,9 @@ class DCGAN_DXZ_1GPU(BasicDCGAN_DXZ):
 
         self.features_to_prob = torch.nn.Sequential(
             torch.nn.Linear(nc, 1),
-            torch.nn.LeakyReLU(negative_slope=1.0, inplace=True)
-        ).to(self.dev0, dtype=torch.float32)
+            #activation, leakyReLU if WGAN and sigmoid if GAN
+            activation[-1]
+        ).to(device).to(self.dev0, dtype=torch.float32)
 
     def extraction(self, x):
         f = [ T._forward_1G(x,self.exf[0])]
@@ -144,6 +145,8 @@ class DCGAN_DXZ_1GPU(BasicDCGAN_DXZ):
         z = x.to(self.dev0,dtype=torch.float32)
         # z = self.cnn1(z)
         z =  T._forward_1G(z,self.cnn1)
+        z =  torch.reshape(z,(-1,1))
+        z =  T._forward(z,self.features_to_prob) 
         torch.cuda.empty_cache()
         if self.wf:
             f =  self.extraction(x)

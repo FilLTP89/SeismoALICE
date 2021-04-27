@@ -12,7 +12,7 @@ import torch
 import pdb
 from torch import device as tdev
 import copy
-from dconv import DConv_63
+from dconv import DConv_62
 
 class EncoderDataParallele(object):
     """docstring for EncoderDataParallele"""
@@ -22,18 +22,18 @@ class EncoderDataParallele(object):
         
     @staticmethod
     def getEncoder(name, ngpu, dev, nz, nch, ndf, nly, ker, std,\
-                pad, dil, channel, act,limit,path, *args, **kwargs):
+                pad, dil, channel, act,limit,path, dconv, *args, **kwargs):
         
         if name is not None:
             classname = 'Encoder_'+name
             try:
-                return type(classname, (BasicEncoderDataParallele, ), dict(ngpu = ngpu,dev =dev, nz = nz, nch = nch, act=act,
+                return type(classname, (BasicEncoderDataParallele, ), dict(ngpu = ngpu,dev =dev, nz = nz, nch = nch, act=act,dconv = dconv,
                         nly = nly, ker = ker, ndf=ndf,std =std, path=path, pad = pad, dil = dil, channel=channel, limit = limit))
             except Exception as e:
                 raise e
                 print("The class ",classname, " does not exit")
         else:
-            return Encoder(ngpu = ngpu,dev =dev, ndf=ndf, nz = nz, nch = nch, act=act,
+            return Encoder(ngpu = ngpu,dev =dev, ndf=ndf, nz = nz, nch = nch, act=act, dconv = dconv,
                         nly = nly, ker = ker, std =std, pad = pad, path=path, dil = dil, channel=channel, limit = limit)
 
 class BasicEncoderDataParallele(Module):
@@ -61,7 +61,7 @@ class Encoder(BasicEncoderDataParallele):
     """docstring for Encoder"""
     def __init__(self, ngpu,dev,nz,nch,ndf,act, channel,\
                  nly,ker=7,std=4,pad=0,dil=1,grp=1,bn=True,
-                 dpc=0.0,limit = 256, path='',\
+                 dpc=0.0,limit = 256, path='',dconv = "",\
                  with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2):
         super(Encoder, self).__init__()
         self.ngpu= ngpu
@@ -71,7 +71,9 @@ class Encoder(BasicEncoderDataParallele):
 
         acts = T.activation(act, nly)
         # pdb.set_trace()
-        dconv = DConv_63(last_channel = channel[-1], bn = False, dpc = 0.0).network()
+        if dconv:
+            _dconv = DConv_62(last_channel = channel[-1], bn = False, dpc = 0.0).network()
+        
         if path:
             self.model = T.load_net(path)
             # Freeze model weights
@@ -102,7 +104,9 @@ class Encoder(BasicEncoderDataParallele):
         
         #append the dilated convolutional network to the network
         # pdb.set_trace()
-        self.cnn1  = self.cnn1 + dconv 
+        if dconv:
+            self.cnn1  = self.cnn1 + _dconv 
+
         self.cnn1  = sqn(*self.cnn1)
         # pdb.set_trace()
         if path:

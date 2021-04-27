@@ -28,7 +28,7 @@ class EncoderModelParallele(object):
     @staticmethod
     def getEncoderByGPU(ngpu,dev, nz, nch, ndf, nly, ker, std, pad, act, dil,\
                  channel, grp=1,bn=True,\
-                 dpc=0.0,limit = 256, path="",\
+                 dpc=0.0,limit = 256, path="", dconv = "",\
                  with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2):
         """
         We define a method responsible to call an instance of the class by name. 
@@ -40,7 +40,7 @@ class EncoderModelParallele(object):
         module = importlib.import_module(module_name)
         class_ = getattr(module,classname)
 
-        return class_(ngpu = ngpu, dev =dev, nz = nz, nch = nch,path=path,\
+        return class_(ngpu = ngpu, dev =dev, nz = nz, nch = nch,path=path,dconv = dconv,\
         nly = nly, ndf=ndf, ker = ker, std =std, pad = pad, act=act, dil = dil, grp =grp, bn = bn,\
         dpc=dpc, with_noise = with_noise, dtm=dtm, ffr =ffr, wpc = wpc,limit = limit, channel= channel)
 
@@ -95,7 +95,7 @@ class BasicEncoderModelParallele(Module):
 
 class Encoder_1GPU(BasicEncoderModelParallele):
     def __init__(self,ngpu,dev, nz,nch,ndf,nly, act,dil, channel,ker=2,std=2,pad=0,grp=1,bn=True,\
-                 dpc=0.10,limit = 256,path="",\
+                 dpc=0.10,limit = 256,path="",dconv = "",\
                  with_noise=True,dtm=0.01,ffr=0.16,wpc=5.e-2):
         super(Encoder_1GPU, self).__init__()
         
@@ -108,6 +108,9 @@ class Encoder_1GPU(BasicEncoderModelParallele):
             # Freeze model weights
             for param in self.model.parameters():
                 param.requires_grad = False
+
+        if dconv:
+            _dconv = DConv_62(last_channel = channel[-1], bn = False, dpc = 0.0).network()
         # pdb.set_trace()
         # lin = 4096
         for i in range(1, nly+1):
@@ -131,6 +134,9 @@ class Encoder_1GPU(BasicEncoderModelParallele):
                 self.cnn1 += cnn1d(channel[i-1], channel[i], acts[i-1], ker=ker[i-1],\
                     std=std[i-1],pad=pad[i-1], dil=dil[i-1], bn=_bn, dpc=_dpc, wn=False)
         
+        if dconv:
+            self.cnn1 = self.cnn1 + _dconv
+
         self.cnn1  = sqn(*self.cnn1)
         # pdb.set_trace()
         if path:
@@ -163,13 +169,16 @@ class Encoder_1GPU(BasicEncoderModelParallele):
 
 class Encoder_2GPU(BasicEncoderModelParallele):
     def __init__(self,ngpu,dev, nz,nch,ndf,nly, act,dil, channel, ker=2,std=2,pad=0,grp=1,bn=True,\
-                 dpc=0.10,limit = 256,path="",\
+                 dpc=0.10,limit = 256,path="",dconv = "",\
                  with_noise=True,dtm=0.01,ffr=0.16,wpc=5.e-2):
         super(Encoder_2GPU, self).__init__()
         self.ngpu= ngpu
         self.splits = 5
         acts = T.activation(act, nly)
-       
+        
+        if dconv:
+            _dconv = DConv_62(last_channel = channel[-1], bn = False, dpc = 0.0).network()
+
         # lin = 4096
         #Part I in the GPU0
         for i in range(1, nly//2+1):
@@ -194,6 +203,8 @@ class Encoder_2GPU(BasicEncoderModelParallele):
             self.cnn2 += cnn1d(channel[i-1],channel[i], acts[i-1], ker=ker[i-1],std=std[i-1],pad=pad[i-1],dil=dil[i-1],\
                         bn=_bn,dpc=_dpc,wn=False)
             
+        if dconv:
+            self.cnn2 = self.cnn2 + _dconv
 
         self.cnn1 = sqn(*self.cnn1)
         self.cnn2 = sqn(*self.cnn2)
@@ -212,13 +223,17 @@ class Encoder_2GPU(BasicEncoderModelParallele):
 
 class Encoder_3GPU(BasicEncoderModelParallele):
     def __init__(self,ngpu,dev, nz,nch,ndf,nly, act,dil, channel, ker=2,std=2,pad=0,grp=1,bn=True,\
-                 dpc=0.10,limit = 256,path="",\
+                 dpc=0.10,limit = 256,path="",dconv = "",\
                  with_noise=True,dtm=0.01,ffr=0.16,wpc=5.e-2):
         super(Encoder_3GPU, self).__init__()
         self.ngpu = ngpu
         
         #initialization
         acts = T.activation(act, nly)
+
+        if dconv:
+            _dconv = DConv_62(last_channel = channel[-1], bn = False, dpc = 0.0).network()
+
         #Part I in the GPU0
         for i in range(1, nly//3+1):
             # ker[i-1] = self.kout(nly,i,ker)
@@ -254,7 +269,9 @@ class Encoder_3GPU(BasicEncoderModelParallele):
             _dpc = 0.0 if i == nly else dpc 
             self.cnn3 += cnn1d(channel[i-1],channel[i], acts[i-1], ker=ker[i-1],std=std[i-1],pad=pad[i-1],dil=dil[i-1],\
                         bn=_bn,dpc=_dpc,wn=False)
-            
+        
+        if _dconv:
+            self.cnn3 =  self.cnn3 + _dconv
         
         self.cnn1 = sqn(*self.cnn1)
         self.cnn2 = sqn(*self.cnn2)
@@ -279,7 +296,7 @@ class Encoder_3GPU(BasicEncoderModelParallele):
 
 class Encoder_4GPU(BasicEncoderModelParallele):
     def __init__(self,ngpu,dev, nz,nch,ndf,nly, act,dil,channel, ker=2,std=2,pad=0,grp=1,bn=True,\
-                 dpc=0.10,limit = 256,path="",\
+                 dpc=0.10,limit = 256,path="",dconv = "",\
                  with_noise=True,dtm=0.01,ffr=0.16,wpc=5.e-2):
         super(Encoder_4GPU, self).__init__()
         self.ngpu = ngpu
@@ -288,6 +305,9 @@ class Encoder_4GPU(BasicEncoderModelParallele):
         # lin = 4096
         #initialization
         acts = T.activation(act, nly)
+        if dconv:
+            _dconv = DConv_62(last_channel = channel[-1], bn = False, dpc = 0.0).network()
+
         #Part I in the GPU0
         for i in range(1, nly//4+1):
             # ker[i-1] = self.kout(nly,i,ker)
@@ -335,7 +355,8 @@ class Encoder_4GPU(BasicEncoderModelParallele):
             _dpc = 0.0 if i == nly else dpc 
             self.cnn4 += cnn1d(channel[i-1],channel[i], acts[i-1], ker=ker[i-1],std=std[i-1],pad=pad[i-1],dil=dil[i-1],\
                         bn=_bn,dpc=_dpc,wn=False)
-            
+        if dconv:
+            self.cnn4 = self.cnn4 + _dconv    
         
         self.cnn1 = sqn(*self.cnn1)
         self.cnn2 = sqn(*self.cnn2)

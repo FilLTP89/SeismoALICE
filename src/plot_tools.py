@@ -587,6 +587,157 @@ def plot_generate_hybrid(Qec,Pdc,Ghz,dev,vtm,trn_set,pfx='hybrid',outf='./imgs')
             
             cnt += 1
 
+
+
+# def plot_generate_unic(Fxy,Gx,Gy,dev,vtm,trn_set,pfx='hybrid',outf='./imgs'):
+#     Fxy.to(dev),Pdc.to(dev),Ghz.to(dev)
+#     Fxy.eval(),Gx.eval(),Gy.eval()
+#     cnt=0
+#     sns.set(style="whitegrid")
+#     clr = sns.color_palette('tab10',5)
+#     for _,batch in enumerate(trn_set):
+#         #_,xt_data,zt_data,_,_,_,_ = batch
+#         y,x,zd,zf,_,_,_,*other = batch
+#         y  = y.to(dev)   # recorded signal
+#         x  = x.to(dev)   # synthetic signal
+#         zd = zd.to(dev)  # recorded signal latent space
+#         zf = zf.to(dev)  # synthetic signal latent space
+
+#         wny,wnzd,wn1 = noise_generator(y.shape,zd.shape,device,rndm_args)
+#         wnx,wnzf,wn1 = noise_generator(x.shape,zf.shape,device,rndm_args)
+
+#         y_inp  = zcat(y,wny)
+#         x_inp  = zcat(x,wnx)
+#         zd_inp = zcat(zd,wnzd)
+#         zf_inp = zcat(zf,wnzf)
+
+#         y_gen  = Gy(zd_inp)
+#         x_gen  = Gx(zf_inp)
+#         zd_gen = F_(y_inp)[:,:zd.shape[1],:]
+#         zf_gen = F_(x_inp)[:,zd.shape[1]:,:]
+
+
+#         X_fsa = tfft(x,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+#         Y_fsa = tfft(y,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+
+#         Xr_dsa = tfft(x_gen,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+#         Yr_fsa = tfft(y_gen,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+
+#         zr_dsa = tfft(zd_gen,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+#         zr_fsa = tfft(zf_gen,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+
+
+#         vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
+
+#         xd  = x_inp.cpu().data.numpy().copy()
+#         xr  = x_gen.cpu().data.numpy().copy()
+
+#         yd  = y_inp.cpu().data.numpy().copy()
+#         yr  = y_gen.cpu().data.numpy().copy()
+
+#         zd  = zd_inp.cpu().data.numpy().copy()
+#         zdr = zd_gen.cpu().data.numpy().copy()
+
+#         zf  = zf_inp.cpu().data.numpy().copy()
+#         zfr = zf_gen.cpu().data.numpy().copy()
+
+        
+#         for (io, ig) in zip(range(x.shape[0]),range(x_gen.shape[0])):
+#             # broadband signal parts
+#             ot,gt = x[io, 1, :],  x_gen[ig, 1, :]
+#             of,gf = X_fsa[io,1,:], Xr_fsa[ig,1,:]
+
+#             plot_tf_gofs(ot,gt,dt=vtm[1]-vtm[0],t0=0.0,fmin=0.1,fmax=30.0,
+#                     nf=100,w0=6,norm='global',st2_isref=True,a=10.,k=1.,left=0.1,
+#                     bottom=0.125, h_1=0.2,h_2=0.125,h_3=0.2, w_1=0.2,w_2=0.6,
+#                     w_cb=0.01, d_cb=0.0,show=False,plot_args=['k', 'r', 'b'],
+#                     ylim=0., clim=0.)
+#             plt.savefig(os.path.join(outf,"gof_fr_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
+#                     bbox_inches='tight',dpi = 300)
+#             #plt.savefig(os.path.join(outf,"gof_r_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
+#                     #            format='eps',bbox_inches='tight',dpi = 300)
+#             plt.close()
+            
+#             hfg,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
+
+#             # ploting original and generated values for filtered signals
+#             hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{x}$',linewidth=1.2)
+#             hax0.plot(vtm,gt,color=clr[3],label=r'$G_x((\mathbf{x}))$',linewidth=1.2)
+
+#             # ploting original and generated values for broadband signals
+#             hax1.loglog(vfr,of,color=clr[0],label=r'$\mathbf{x}$',linewidth=2)
+#             # hax1.loglog(vfr,ff,color=clr[1],label=r'$\mathbf{x}$',linewidth=2)
+#             hax1.loglog(vfr,gf,color=clr[3],label=r'$G_x((\mathbf{x}))$',linewidth=2)
+
+
+#             hax0.set_xlim(0.0,int(vtm[-1]))
+#             hax0.set_xticks(np.arange(0.0,int(vtm[-1])*11./10.,int(vtm[-1])/10.))
+#             hax0.set_ylim(-1.0,1.0)
+#             hax0.set_yticks(np.arange(-1.0,1.25,0.25))
+#             hax0.set_xlabel('t [s]',fontsize=15,fontweight='bold')
+#             hax0.set_ylabel('a(t) [1]',fontsize=15,fontweight='bold')
+#             hax0.set_title('DC-ALICE',fontsize=20,fontweight='bold')
+#             hax1.set_xlim(0.1,51.), hax1.set_xticks(np.array([0.1,1.0,10.,50.]))
+#             hax1.set_ylim(10.**-6,10.**0), hax1.set_yticks(10.**np.arange(-6,1))
+#             hax1.set_xlabel('f [Hz]',fontsize=15,fontweight='bold')
+#             hax1.set_ylabel('A(f) [1]',fontsize=15,fontweight='bold')
+#             hax0.legend(loc = "lower right",frameon=False)
+#             hax1.legend(loc = "lower right",frameon=False)
+#             plt.savefig(os.path.join(outf,"res_fr_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
+#                         bbox_inches='tight',dpi = 500)
+#             plt.savefig(os.path.join(outf,"res_fr_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
+#                         format='eps',bbox_inches='tight',dpi = 500)
+#             plt.close()
+#             cnt += 1
+#         cnt = 0    
+#         for (io, ig) in zip(range(y.shape[0]),range(y_gen.shape[0])):
+#             # broadband signal parts
+#             ot,gt = y[io, 1, :]  ,y_gen[ig, 1, :]
+#             of,gf,ff = y_fsa[io,1,:],yr_fsa[ig,1,:]
+
+#             plot_tf_gofs(ot,gt,dt=vtm[1]-vtm[0],t0=0.0,fmin=0.1,fmax=30.0,
+#                     nf=100,w0=6,norm='global',st2_isref=True,a=10.,k=1.,left=0.1,
+#                     bottom=0.125, h_1=0.2,h_2=0.125,h_3=0.2, w_1=0.2,w_2=0.6,
+#                     w_cb=0.01, d_cb=0.0,show=False,plot_args=['k', 'r', 'b'],
+#                     ylim=0., clim=0.)
+#             plt.savefig(os.path.join(outf,"gof_br_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
+#                     bbox_inches='tight',dpi = 300)
+#             #plt.savefig(os.path.join(outf,"gof_r_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
+#                     #            format='eps',bbox_inches='tight',dpi = 300)
+#             plt.close()
+            
+#             hfg,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
+#             hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{X}$',linewidth=1.2)
+#             hax0.plot(vtm,gt,color=clr[3],label=r'$G_x((\mathbf{x}))$',linewidth=1.2)
+
+#             hax1.loglog(vfr,of,color=clr[0],label=r'$\mathbf{y}$',linewidth=2)
+#             # hax1.loglog(vfr,ff,color=clr[1],label=r'$\mathbf{x}$',linewidth=2)
+#             hax1.loglog(vfr,gf,color=clr[3],label=r'$G_t(G_z(F_m(\mathbf{x})))$',linewidth=2)
+
+#             hax0.set_xlim(0.0,int(vtm[-1]))
+#             hax0.set_xticks(np.arange(0.0,int(vtm[-1])*11./10.,int(vtm[-1])/10.))
+#             hax0.set_ylim(-1.0,1.0)
+#             hax0.set_yticks(np.arange(-1.0,1.25,0.25))
+#             hax0.set_xlabel('t [s]',fontsize=15,fontweight='bold')
+#             hax0.set_ylabel('a(t) [1]',fontsize=15,fontweight='bold')
+#             hax0.set_title('DC-ALICE',fontsize=20,fontweight='bold')
+#             hax1.set_xlim(0.1,51.), hax1.set_xticks(np.array([0.1,1.0,10.,50.]))
+#             hax1.set_ylim(10.**-6,10.**0), hax1.set_yticks(10.**np.arange(-6,1))
+#             hax1.set_xlabel('f [Hz]',fontsize=15,fontweight='bold')
+#             hax1.set_ylabel('A(f) [1]',fontsize=15,fontweight='bold')
+#             hax0.legend(loc = "lower right",frameon=False)
+#             hax1.legend(loc = "lower right",frameon=False)
+#             plt.savefig(os.path.join(outf,"res_br_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
+#                         bbox_inches='tight',dpi = 500)
+#             plt.savefig(os.path.join(outf,"res_br_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
+#                         format='eps',bbox_inches='tight',dpi = 500)
+#             plt.close()
+            
+#             cnt += 1
+
+            # filtered signals
+
+
 def plot_error(error, outf):
     import matplotlib.pyplot as plt
     import matplotlib.ticker as mticker
@@ -611,6 +762,7 @@ def plot_error(error, outf):
 def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
     #Qec.to(dev),Pdc.to(dev)
     Qec.eval(),Pdc.eval()
+    # import pdb
     cnt=0
     EG = []
     PG = []
@@ -626,7 +778,10 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs')
             zt = Variable(zt_data).to(dev)
             wnx,wnz,wn1 = noise_generator(Xt.shape,zt.shape,dev,rndm_args)
             X_inp = zcat(Xt,wnx.to(dev))
-            ztr = Qec(X_inp).to(dev)
+            # ztr = Qec(X_inp).to(dev)
+            # pdb.set_trace()
+            ztr = Qec(X_inp)[:,:zt_data.shape[1],:] if 'unique' in pfx else Qec(X_inp)
+            ztr = ztr.to(dev)
             # ztr = latent_resampling(Qec(X_inp),zt.shape[1],wn1)
             z_inp = zcat(ztr,wnz.to(dev))
             z_pre = zcat(zt,wnz.to(dev))
@@ -654,38 +809,38 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs')
                     st2_isref=True,a=10.,k=1))
                 PG.append(pg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
                     st2_isref=True,a=10.,k=1))
-                plt.savefig(os.path.join(outf,"gof_r_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
+                plt.savefig(os.path.join(outf,"gof_bb_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
                             bbox_inches='tight',dpi = 300)
-                plt.savefig(os.path.join(outf,"gof_r_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
+                plt.savefig(os.path.join(outf,"gof_bb_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
                            format='eps',bbox_inches='tight',dpi = 300)
-                print("saving gof_r_aae_%s_%u_%u ... "%(pfx,cnt,io))
+                print("saving gof_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
                 plt.close()
             
-                # _,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
-                # hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{y}$',linewidth=1.2)
-                # hax0.plot(vtm,gt,color=clr[3],label=r'$G_t(F_t(\mathbf{y}))$',linewidth=1.2)
-                # hax1.loglog(vfr,of,color=clr[0],label=r'$\mathbf{y}$',linewidth=2)
-                # hax1.loglog(vfr,ff,color=clr[1],label=r'$\mathbf{x}$',linewidth=2)
-                # hax1.loglog(vfr,gf,color=clr[3],label=r'$G_t(F_t(\mathbf{y}))$',linewidth=2)
-                # hax0.set_xlim(0.0,int(vtm[-1]))
-                # hax0.set_xticks(np.arange(0.0,int(vtm[-1])*11./10.,int(vtm[-1])/10.))
-                # hax0.set_ylim(-1.0,1.0)
-                # hax0.set_yticks(np.arange(-1.0,1.25,0.25))
-                # hax0.set_xlabel('t [s]',fontsize=15,fontweight='bold')
-                # hax0.set_ylabel('a(t) [1]',fontsize=15,fontweight='bold')
-                # hax0.set_title('DC-ALICE',fontsize=20,fontweight='bold')
-                # hax1.set_xlim(0.1,51.), hax1.set_xticks(np.array([0.1,1.0,10.,50.]))
-                # hax1.set_ylim(10.**-6,10.**0), hax1.set_yticks(10.**np.arange(-6,1))
-                # hax1.set_xlabel('f [Hz]',fontsize=15,fontweight='bold')
-                # hax1.set_ylabel('A(f) [1]',fontsize=15,fontweight='bold')
-                # hax0.legend(loc = "lower right",frameon=False)
-                # hax1.legend(loc = "lower right",frameon=False)
-                # plt.savefig(os.path.join(outf,"res_r_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
-                #             bbox_inches='tight',dpi = 500)
-                # plt.savefig(os.path.join(outf,"res_r_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
-                #             format='eps',bbox_inches='tight',dpi = 500)
-                # print("saving res_r_aae_%s_%u_%u ... "%(pfx,cnt,io))
-                # plt.close()
+                _,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
+                hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{y}$',linewidth=1.2)
+                hax0.plot(vtm,gt,color=clr[3],label=r'$G_t(F_t(\mathbf{y}))$',linewidth=1.2)
+                hax1.loglog(vfr,of,color=clr[0],label=r'$\mathbf{y}$',linewidth=2)
+                hax1.loglog(vfr,ff,color=clr[1],label=r'$\mathbf{x}$',linewidth=2)
+                hax1.loglog(vfr,gf,color=clr[3],label=r'$G_t(F_t(\mathbf{y}))$',linewidth=2)
+                hax0.set_xlim(0.0,int(vtm[-1]))
+                hax0.set_xticks(np.arange(0.0,int(vtm[-1])*11./10.,int(vtm[-1])/10.))
+                hax0.set_ylim(-1.0,1.0)
+                hax0.set_yticks(np.arange(-1.0,1.25,0.25))
+                hax0.set_xlabel('t [s]',fontsize=15,fontweight='bold')
+                hax0.set_ylabel('a(t) [1]',fontsize=15,fontweight='bold')
+                hax0.set_title('DC-ALICE',fontsize=20,fontweight='bold')
+                hax1.set_xlim(0.1,51.), hax1.set_xticks(np.array([0.1,1.0,10.,50.]))
+                hax1.set_ylim(10.**-6,10.**0), hax1.set_yticks(10.**np.arange(-6,1))
+                hax1.set_xlabel('f [Hz]',fontsize=15,fontweight='bold')
+                hax1.set_ylabel('A(f) [1]',fontsize=15,fontweight='bold')
+                hax0.legend(loc = "lower right",frameon=False)
+                hax1.legend(loc = "lower right",frameon=False)
+                plt.savefig(os.path.join(outf,"res_bb_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
+                            bbox_inches='tight',dpi = 500)
+                plt.savefig(os.path.join(outf,"res_bb_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
+                            format='eps',bbox_inches='tight',dpi = 500)
+                print("saving res_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
+                plt.close()
                 
                 cnt += 1
 
@@ -729,19 +884,20 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs')
             #    plt.close()
             #    cnt += 1
         print("savefig eg_pg ...")
-        plot_eg_pg(EG,PG, outf)
+        plot_eg_pg(EG,PG, outf,pfx)
             
     elif 'filtered' in tag:
         for _,batch in enumerate(trn_set):
             # _,xf_data,_,zf_data,_,_,_,*other = batch
             xt_data,xf_data,zt_data,_,_,_,_,*other = batch
-            #pdb.set_trace()
             # tweaked value
             Xf = Variable(xt_data).to(dev)
             zf = Variable(zt_data).to(dev)
             wnx,wnz,wn1 = noise_generator(Xf.shape,zf.shape,dev,rndm_args)
             X_inp = zcat(Xf,wnx)
-            ztr = Qec(X_inp) 
+            # ztr = Qec(X_inp)
+            # pdb.set_trace()
+            ztr = Qec(X_inp)[:,zt_data.shape[1]:,:] if 'unique' in pfx else Qec(X_inp)
             # ztr = latent_resampling(Qec(X_inp),zf.shape[1],wn1)
             z_inp = zcat(ztr,wnz)
             Xr = Pdc(z_inp)
@@ -763,11 +919,11 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs')
                     st2_isref=True,a=10.,k=1))
                 PG.append(pg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=20.0,nf=100,w0=6,norm='global',
                     st2_isref=True,a=10.,k=1))
-                plt.savefig(os.path.join(outf,"gof_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
+                plt.savefig(os.path.join(outf,"gof_fl_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
                             bbox_inches='tight',dpi = 300)
                 print("saving gof_aae_%s_%u_%u ... "%(pfx,cnt,io))
-                #plt.savefig(os.path.join(outf,"gof_r_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
-                #            format='eps',bbox_inches='tight',dpi = 500)
+                plt.savefig(os.path.join(outf,"gof_fl_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
+                           format='eps',bbox_inches='tight',dpi = 500)
                 plt.close()
                 hfg,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
                 hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{x}$',linewidth=1.2)
@@ -787,16 +943,16 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs')
                 hax1.set_ylabel('A(f) [1]',fontsize=15,fontweight='bold')
                 hax0.legend(loc = "lower right",frameon=False)
                 hax1.legend(loc = "lower right",frameon=False)
-                plt.savefig(os.path.join(outf,"res_r_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
+                plt.savefig(os.path.join(outf,"res_fl_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
                             bbox_inches='tight',dpi = 500)
-                plt.savefig(os.path.join(outf,"res_r_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
+                plt.savefig(os.path.join(outf,"res_fl_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
                             format='eps',bbox_inches='tight',dpi = 500)
                 plt.close()
-                print("saving res_r_aae_%s_%u_%u ... "%(pfx,cnt,io))
+                print("saving res_fl_aae_%s_%u_%u ... "%(pfx,cnt,io))
                 
                 cnt += 1
             print("savefig eg_pg ...")
-            plot_eg_pg(EG,PG, outf)
+            plot_eg_pg(EG,PG, outf,pfx)
         # plt.scatter(EG,PG,c = 'red')
         # plt.xlabel("EG")
         # plt.ylabel("PG")
@@ -884,6 +1040,7 @@ def plot_gofs(tag,Fef,Gdf,Fed,Gdd,Fhz,Ghz,dev,vtm,trn_set,
         plt.savefig(os.path.join(outf,"egpg_%s.eps"%(pfx['broadband'])),\
                     format='eps',bbox_inches='tight',dpi = 500)
         print("plot Gy(Fy(y)) gofs")
+
     if 'filtered' in tag:
         bst=trn_set.dataset.dataset.inpW[idx,:,:].data.numpy()
         egpg=np.empty((len(idx),2))
@@ -1737,7 +1894,7 @@ def seismo_test(tag,Fef,Gdd,Ghz,Fed,Ddxz,DsXd,Dszd,DsrXd,dev,trn_set,pfx,outf):
         print("plot Gy(Fy(y)) gofs")
 
 
-def plot_eg_pg(x,y, outf):
+def plot_eg_pg(x,y, outf,pfx=''):
     # definitions for the axes
     left, width = 0.1, 0.65
     bottom, height = 0.1, 0.65
@@ -1776,7 +1933,7 @@ def plot_eg_pg(x,y, outf):
     ax_histx.set_xlim(ax_scatter.get_xlim())
     ax_histy.set_ylim(ax_scatter.get_ylim())
 
-    plt.savefig(os.path.join(outf,"gof_eg_pg.png"),\
+    plt.savefig(os.path.join(outf,"gof_eg_pg%s.png"%(pfx)),\
                         bbox_inches='tight',dpi = 300)
-    print("saving gof_eg_pg")
+    print("saving gof_eg_pg%s.png"%(pfx))
     plt.close()

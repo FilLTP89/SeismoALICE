@@ -52,7 +52,8 @@ class ModelParalleleFactory(ConvNetFactory):
         pass
     
     def createEncoder(self, config, opt, *args, **kwargs):
-        path = config["path"] if "path" in config else ""
+        path  = config["path"] if "path" in config else ""
+        dconv = config["dconv"] if "dconv" in config else ""
         return EncoderModelParallele.getEncoderByGPU(ngpu=opt.ngpu, dev = opt.dev,\
                 nz  = opt.nzd, nch=opt.nch, ndf = opt.ndf,\
                 nly = config['nlayers'],\
@@ -63,12 +64,14 @@ class ModelParalleleFactory(ConvNetFactory):
                 act = config['act'],\
                 limit = config['limit'],\
                 channel = config['channel'],\
+                dconv = "",\
                 dpc = 0.0,\
                 path = path,\
                 *args, **kwargs)
     @profile
     def createDecoder(self, config, opt, *args, **kwargs):
         path = config["path"] if "path" in config else ""
+        dconv = config["dconv"] if "dconv" in config else ""
         return DecoderModelParallele.getDecoderByGPU(ngpu=opt.ngpu,nz=opt.nzd,\
                 nch=opt.nch, ndf=opt.ndf,\
                 nly=config['nlayers'],\
@@ -79,6 +82,7 @@ class ModelParalleleFactory(ConvNetFactory):
                 opd = config['outpads'],\
                 act = config['act'],\
                 limit = config['limit'],\
+                dconv = "",\
                 channel = config['channel'],\
                 bn = True,\
                 dpc = 0.0,\
@@ -158,6 +162,7 @@ class DataParalleleFactory(ConvNetFactory):
         
         name  = config["name"] if hasattr(config, "name") else None
         path = config["path"] if "path" in config else ""
+        dconv = config["dconv"] if "dconv" in config else ""
         return EncoderDataParallele.getEncoder(name = name, ngpu = opt.ngpu,\
                 dev = opt.dev,\
                 nz = opt.nzd, nch = opt.nch,\
@@ -169,6 +174,7 @@ class DataParalleleFactory(ConvNetFactory):
                 pad = config['padding'],\
                 act = config['act'],\
                 limit = config['limit'],\
+                dconv = "",\
                 channel = config['channel'],\
                 path = path,
                 dpc = 0.0,\
@@ -177,6 +183,7 @@ class DataParalleleFactory(ConvNetFactory):
     def createDecoder(self, config, opt, *args, **kwargs):
         name  = config["name"] if hasattr(config, "name") else None
         path = config["path"] if "path" in config else ""
+        dconv = config["dconv"] if "dconv" in config else ""
         n_extra_layers = config["n_extra_layers"] if "n_extra_layers" in config else 0
         return DecoderDataParallele.getDecoder(name = name, ngpu = opt.ngpu,\
                 nz = opt.nzd, nch = opt.nch,\
@@ -193,6 +200,7 @@ class DataParalleleFactory(ConvNetFactory):
                 n_extra_layers=n_extra_layers,\
                 bn= True,
                 path = path,\
+                dconv = "",\
                 dpc = 0.0,\
                 *args, **kwargs)
 

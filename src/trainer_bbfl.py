@@ -24,7 +24,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 import time
 import os
 import torch.distributed as dist
-from laploss import *
+# from laploss import *
 # from pl_bolts.datamodules.async_dataloader import AsynchronousLoader
 # from pytorchsummary.torchsummary import summary
 # import numpy as np
@@ -191,9 +191,10 @@ class trainer(object):
             flagF = True
             n = self.strategy['filtered']
             print("Loading filtered generators")
+            # pdb.set_trace()
             self.Fef = net.Encoder(opt.config['encoder'], opt)
             self.Gdf = net.Decoder(opt.config['decoder'], opt)
-            
+
             if self.strategy['tract']['filtered']:
                 if None in n:        
                     self.FGf = [self.Fef,self.Gdf]
@@ -206,7 +207,7 @@ class trainer(object):
                     self.oGfxz = Adam(ittc(self.Fef.parameters(),self.Gdf.parameters()),
                                       lr=glr,betas=(b1,b2),weight_decay=0.00001)
                 self.optzf.append(self.oGfxz)
-
+                # pdb.set_trace()
                 self.Dszf = net.DCGAN_Dz(opt.config['Dszf']  , opt)
                 self.DsXf = net.DCGAN_Dx(opt.config['DsXf']  , opt)
                 self.Dfxz = net.DCGAN_DXZ(opt.config['Dfxz'] , opt)
@@ -372,7 +373,7 @@ class trainer(object):
         
         return DXz,DzX,ftr,ftf
         
-        return DXz,DzX,ftr,ftf
+        # return DXz,DzX,ftr,ftf
     
     ''' Methode that discriminate real and fake hybrid signal type'''
     def discriminate_hybrid_xz(self,Xd,Xdr,zd,zdr):
@@ -584,9 +585,9 @@ class trainer(object):
         X_rec = self.Gdf(z_gen)
         z_rec = self.Fef(X_gen) 
         # 3. Cross-Discriminate XX
-        
+        # pdb.set_trace()
         Dreal_X,Dfake_X = self.discriminate_filtered_xx(Xf,X_rec)
-
+        
         # warning in the perpose of using the BCEloss the value should be greater than zero, 
         # so we apply a boolean indexing. BCEloss use log for calculation so the negative value
         # will lead to isses. Why do we have negative value? the LeakyReLU is not tranform negative value to zero
@@ -621,7 +622,7 @@ class trainer(object):
         
     def alice_train_filtered_generator_adv_xz(self,Xf,zf):
 #OK
-        # Set-up training
+        #Set-up training
         # pdb.set_trace()
         zerograd(self.optzf)
         self.Fef.train(),self.Gdf.train()
@@ -973,7 +974,7 @@ class trainer(object):
                 # print(b)
                 # _,xf_data,_,zf_data,_,_,_ = batch
                 
-                xf_data,_,_,_,_,_,_ = batch # modifieddata (broadband)
+                xf_data,_,zf_data,_,_,_,_ = batch # modifieddata (broadband)
                 Xf = Variable(xf_data).to(device,non_blocking=True) # LF-signal
                 zf = Variable(zf_data).to(device,non_blocking=True)
                 # print("Xf and zf", Xf.shape, zf.shape)

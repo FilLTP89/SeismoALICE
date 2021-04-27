@@ -12,6 +12,7 @@ import torch
 import pdb
 from torch import device as tdev
 import importlib
+from dconv import Transopose_DConv_62
 
 class DecoderModelParallele(object):
     """docstring for EncoderModelParallele"""
@@ -21,7 +22,7 @@ class DecoderModelParallele(object):
         
     # this methode call the Encoder class by name.
     @staticmethod
-    def getDecoderByGPU(ngpu,nz,nch,ndf,nly,act,dil,channel,\
+    def getDecoderByGPU(ngpu,nz,nch,ndf,nly,act,dil,channel,dconv,\
                  ker=2,std=2,pad=0,opd=0,grp=1,dpc=0.0,path='',limit = 256, bn = True, n_extra_layers=0):
         classname = 'Decoder_' + str(ngpu)+'GPU'
         #this following code is equivalent to calls the class it self. 
@@ -35,7 +36,7 @@ class DecoderModelParallele(object):
         class_ = getattr(module,classname)
         
         return class_(ngpu = ngpu, nz = nz, nch = nch, limit = limit, bn = bn, path=path,\
-        nly = nly, act=act, ndf =ndf, ker = ker, std =std, pad = pad, opd = opd,\
+        nly = nly, act=act, ndf =ndf, ker = ker, std =std, pad = pad, opd = opd,dconv = dconv,\
          grp=grp, dil=dil, dpc = dpc,n_extra_layers=n_extra_layers, channel = channel)
 
 class BasicDecoderModelParallele(Module):
@@ -84,7 +85,7 @@ class BasicDecoderModelParallele(Module):
 
 
 class Decoder_1GPU(BasicDecoderModelParallele):
-    def __init__(self,ngpu,nz,nch,ndf,nly,act,channel,\
+    def __init__(self,ngpu,nz,nch,ndf,nly,act,channel,dconv = "",\
                  ker=7,std=4,pad=0,opd=0,dil=0,path='',grp=1,dpc=0.0,limit = 256, bn =  True, n_extra_layers = 0):
         super(Decoder_1GPU, self).__init__()
         """
@@ -102,6 +103,10 @@ class Decoder_1GPU(BasicDecoderModelParallele):
             # Freeze model weights
             for param in self.model.parameters():
                 param.requires_grad = False
+
+        if dconv:
+            _dconv = Transopose_DConv_62(last_channel = channel[-1], bn = False, dpc = 0.0).network()
+
         # pdb.set_trace()
         for i in range(1, nly+1):
             
@@ -122,8 +127,10 @@ class Decoder_1GPU(BasicDecoderModelParallele):
         for i in range(0,n_extra_layers):
             #adding LeakyReLU activation function
             self.cnn1 += cnn1dt(channel[i-1],channel[i], acts[0],ker=3,std=1,pad=1,\
-                dil =1, opd=0, bn=True, dpc=0.0)
+              dil =1, opd=0, bn=True, dpc=0.0)
 
+        if dconv:
+            self.cnn1 = self.cnn1 + _dconv
         # pdb.set_trace()
         self.cnn1 = sqn(*self.cnn1)
         if path: 
@@ -153,7 +160,7 @@ class Decoder_1GPU(BasicDecoderModelParallele):
         return x
 
 class Decoder_2GPU(BasicDecoderModelParallele) :
-    def __init__(self,ngpu,nz,nch,ndf,nly,act,channel,\
+    def __init__(self,ngpu,nz,nch,ndf,nly,act,channel,dconv = "",\
                  ker=7,std=4,pad=0,opd=0,dil=0,path='',grp=1,dpc=0.10,limit = 256, bn = True,n_extra_layers = 0):
         super(Decoder_2GPU, self).__init__()
         self.ngpu= ngpu
@@ -164,6 +171,9 @@ class Decoder_2GPU(BasicDecoderModelParallele) :
         THe first loop generate the first part of the network, 
         which will be saved in the GPU0 . 
         """
+        if dconv:
+            _dconv = Transopose_DConv_62(last_channel = channel[-1], bn = False, dpc = 0.0).network()
+
         #part I in the GPU0
         in_channels   = nz*2
         for i in range(1, nly//2+1):
@@ -194,13 +204,15 @@ class Decoder_2GPU(BasicDecoderModelParallele) :
             _bn =  False if i == nly else bn
             self.cnn2 += cnn1dt(channel[i-1],channel[i], acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
                 dil=dil[i-1],opd=opd[i-1], bn=_bn,dpc=_dpc)
-             
+        if dconv:
+            self.cnn2 = self.cnn2 + _dconv     
 
         """
         Here we define put the network and the GPUs
         we precise that the type will be in float32
         non_blocking = True to free memory when it is not needed anymore
         """
+
         self.cnn1 = sqn(*self.cnn1)
         self.cnn1.to(self.dev0,dtype=torch.float32)
 
@@ -222,12 +234,14 @@ class Decoder_2GPU(BasicDecoderModelParallele) :
 
 
 class Decoder_3GPU(BasicDecoderModelParallele) :
-    def __init__(self,ngpu,nz,nch,ndf,nly,act,channel,\
+    def __init__(self,ngpu,nz,nch,ndf,nly,act,channel,dconv = "",\
                  ker=7,std=4,pad=0,opd=0,dil=0,path='',grp=1,dpc=0.10,limit = 256,bn=True,n_extra_layers = 0):
         super(Decoder_3GPU, self).__init__()
         self.ngpu= ngpu
 
         acts = T.activation(act, nly)
+        if dconv:
+            _dconv = Transopose_DConv_62(last_channel = channel[-1], bn = False, dpc = 0.0).network()
 
         #part I in the GPU0
         in_channels   = nz*2
@@ -257,7 +271,9 @@ class Decoder_3GPU(BasicDecoderModelParallele) :
             _bn =  False if i == nly else bn
             self.cnn3 += cnn1dt(channel[i-1],channel[i], acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
                 dil=dil[i-1],opd=opd[i-1], bn=_bn, dpc=_dpc)
-            
+        
+        if dconv:
+            self.cnn3 = self.cnn3 + _dconv
 
         """
         Here we define put the network and the GPUs
@@ -297,6 +313,9 @@ class Decoder_4GPU(BasicDecoderModelParallele) :
         
 
         acts = T.activation(act, nly)
+        if dconv:
+            _dconv = Transopose_DConv_62(last_channel = channel[-1], bn = False, dpc = 0.0).network()
+
         
         #part I in the GPU0
         in_channels   = nz*2
@@ -335,7 +354,9 @@ class Decoder_4GPU(BasicDecoderModelParallele) :
             _bn =  False if i == nly else bn
             self.cnn4 += cnn1dt(channel[i-1],channel[i], acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
                 dil=dil[i-1],opd=opd[i-1], bn=_bn,dpc=_dpc)
-            
+        
+        if dconv : 
+            self.cnn4 = self.cnn4 + _dconv
         """
         Here we define put the network and the GPUs
         we precise that the type will be in float32
