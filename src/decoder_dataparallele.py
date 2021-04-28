@@ -12,7 +12,7 @@ import torch
 import pdb
 from torch import device as tdev
 import copy
-from dconv import Transopose_DConv_62
+from dconv import Transpose_DConv_62
 
 class DecoderDataParallele(object):
     """docstring for DecoderDataParallele"""
@@ -79,7 +79,7 @@ class Decoder(BasiceDecoderDataParallele):
                 param.requires_grad = False
         
         if dconv:
-            _dconv = Transopose_DConv_62(last_channel = channel[-1], bn = False, dpc = 0.0).network()
+            _dconv = Transpose_DConv_62(last_channel = channel[-1], bn = True, dpc = 0.0).network()
         # pdb.set_trace()
         for i in range(1, nly+1):
             """

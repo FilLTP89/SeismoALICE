@@ -12,7 +12,7 @@ import torch
 import pdb
 from torch import device as tdev
 import importlib
-from dconv import Transopose_DConv_62
+from dconv import Transpose_DConv_62
 
 class DecoderModelParallele(object):
     """docstring for EncoderModelParallele"""
@@ -105,7 +105,7 @@ class Decoder_1GPU(BasicDecoderModelParallele):
                 param.requires_grad = False
 
         if dconv:
-            _dconv = Transopose_DConv_62(last_channel = channel[-1], bn = False, dpc = 0.0).network()
+            _dconv = Transpose_DConv_62(last_channel = channel[-1], bn = True, dpc = 0.0).network()
 
         # pdb.set_trace()
         for i in range(1, nly+1):
@@ -172,7 +172,7 @@ class Decoder_2GPU(BasicDecoderModelParallele) :
         which will be saved in the GPU0 . 
         """
         if dconv:
-            _dconv = Transopose_DConv_62(last_channel = channel[-1], bn = False, dpc = 0.0).network()
+            _dconv = Transpose_DConv_62(last_channel = channel[-1], bn = True, dpc = 0.0).network()
 
         #part I in the GPU0
         in_channels   = nz*2
@@ -241,7 +241,7 @@ class Decoder_3GPU(BasicDecoderModelParallele) :
 
         acts = T.activation(act, nly)
         if dconv:
-            _dconv = Transopose_DConv_62(last_channel = channel[-1], bn = False, dpc = 0.0).network()
+            _dconv = Transpose_DConv_62(last_channel = channel[-1], bn = True, dpc = 0.0).network()
 
         #part I in the GPU0
         in_channels   = nz*2
@@ -314,7 +314,7 @@ class Decoder_4GPU(BasicDecoderModelParallele) :
 
         acts = T.activation(act, nly)
         if dconv:
-            _dconv = Transopose_DConv_62(last_channel = channel[-1], bn = False, dpc = 0.0).network()
+            _dconv = Transpose_DConv_62(last_channel = channel[-1], bn = True, dpc = 0.0).network()
 
         
         #part I in the GPU0

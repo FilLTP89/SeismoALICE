@@ -64,7 +64,7 @@ class ModelParalleleFactory(ConvNetFactory):
                 act = config['act'],\
                 limit = config['limit'],\
                 channel = config['channel'],\
-                dconv = "",\
+                dconv = dconv,\
                 dpc = 0.0,\
                 path = path,\
                 *args, **kwargs)
@@ -82,7 +82,7 @@ class ModelParalleleFactory(ConvNetFactory):
                 opd = config['outpads'],\
                 act = config['act'],\
                 limit = config['limit'],\
-                dconv = "",\
+                dconv = dconv,\
                 channel = config['channel'],\
                 bn = True,\
                 dpc = 0.0,\
@@ -174,7 +174,7 @@ class DataParalleleFactory(ConvNetFactory):
                 pad = config['padding'],\
                 act = config['act'],\
                 limit = config['limit'],\
-                dconv = "",\
+                dconv = dconv,\
                 channel = config['channel'],\
                 path = path,
                 dpc = 0.0,\
@@ -200,7 +200,7 @@ class DataParalleleFactory(ConvNetFactory):
                 n_extra_layers=n_extra_layers,\
                 bn= True,
                 path = path,\
-                dconv = "",\
+                dconv = dconv,\
                 dpc = 0.0,\
                 *args, **kwargs)
 

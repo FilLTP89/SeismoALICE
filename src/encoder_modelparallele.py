@@ -110,7 +110,7 @@ class Encoder_1GPU(BasicEncoderModelParallele):
                 param.requires_grad = False
 
         if dconv:
-            _dconv = DConv_62(last_channel = channel[-1], bn = False, dpc = 0.0).network()
+            _dconv = DConv_62(last_channel = channel[-1], bn = True, dpc = 0.0).network()
         # pdb.set_trace()
         # lin = 4096
         for i in range(1, nly+1):
@@ -177,7 +177,7 @@ class Encoder_2GPU(BasicEncoderModelParallele):
         acts = T.activation(act, nly)
         
         if dconv:
-            _dconv = DConv_62(last_channel = channel[-1], bn = False, dpc = 0.0).network()
+            _dconv = DConv_62(last_channel = channel[-1], bn = True, dpc = 0.0).network()
 
         # lin = 4096
         #Part I in the GPU0
@@ -232,7 +232,7 @@ class Encoder_3GPU(BasicEncoderModelParallele):
         acts = T.activation(act, nly)
 
         if dconv:
-            _dconv = DConv_62(last_channel = channel[-1], bn = False, dpc = 0.0).network()
+            _dconv = DConv_62(last_channel = channel[-1], bn = True, dpc = 0.0).network()
 
         #Part I in the GPU0
         for i in range(1, nly//3+1):
@@ -306,7 +306,7 @@ class Encoder_4GPU(BasicEncoderModelParallele):
         #initialization
         acts = T.activation(act, nly)
         if dconv:
-            _dconv = DConv_62(last_channel = channel[-1], bn = False, dpc = 0.0).network()
+            _dconv = DConv_62(last_channel = channel[-1], bn = True, dpc = 0.0).network()
 
         #Part I in the GPU0
         for i in range(1, nly//4+1):
@@ -351,7 +351,7 @@ class Encoder_4GPU(BasicEncoderModelParallele):
             # ker[i-1] = self.kout(nly,i,ker)
             # lout = self.lout(lin, std, ker, pad, dil)
             # _pad = self.pad(nly,i,pad,lin,lout, dil, ker, std)
-            _bn = False if i == nly else bn
+            _bn = True if i == nly else bn
             _dpc = 0.0 if i == nly else dpc 
             self.cnn4 += cnn1d(channel[i-1],channel[i], acts[i-1], ker=ker[i-1],std=std[i-1],pad=pad[i-1],dil=dil[i-1],\
                         bn=_bn,dpc=_dpc,wn=False)

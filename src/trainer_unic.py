@@ -21,6 +21,7 @@ from pytorch_summary import summary
 from conv_factory import *
 import GPUtil
 from torch.nn.parallel import DistributedDataParallel as DDP
+import time
 
 rndm_args = {'mean': 0, 'std': 1}
 
@@ -277,7 +278,6 @@ class trainer(object):
                        'Dloss_ali_z':[0]}
     # @profile
     def discriminate_xz(self,x,xr,z,zr):
-
         # Discriminate real
         # pdb.set_trace()
         ftz = self.Dz(zr)
@@ -414,8 +414,8 @@ class trainer(object):
         # 2. Generate conditional samples
         y_gen = self.Gy(zd_inp)
         x_gen = self.Gx(zf_inp)
-        zd_gen = self.F_(y_inp)[:,:zd.shape[1],:]
-        zf_gen = self.F_(x_inp)[:,zd.shape[1]:,:]
+        zd_gen = self.F_(y_inp)[:,:zd.shape[1]]
+        zf_gen = self.F_(x_inp)[:,zd.shape[1]:]
         # z_gen = latent_resampling(self.Fef(X_inp),nzf,wn1)
         # print("\t||X_gen : ", X_gen.shape,"\tz_gen : ",z_gen.shape)
         # 3. Cross-Discriminate XZ
@@ -445,8 +445,8 @@ class trainer(object):
         # 2. Generate reconstructions
         y_rec = self.Gy(zd_gen)
         x_rec = self.Gx(zf_gen)
-        zd_rec = self.F_(y_gen)[:,:zd.shape[1],:]
-        zf_rec = self.F_(x_gen)[:,zd.shape[1]:,:] 
+        zd_rec = self.F_(y_gen)[:,:zd.shape[1]]
+        zf_rec = self.F_(x_gen)[:,zd.shape[1]:] 
         # z_rec = latent_resampling(self.Fef(X_gen),nzf,wn1)
 
         # 3. Cross-Discriminate XX
@@ -499,8 +499,8 @@ class trainer(object):
         # 2. Generate conditional samples
         y_gen = self.Gy(zd_inp)
         x_gen = self.Gx(zf_inp)
-        zd_gen = self.F_(y_inp)[:,:zd.shape[1],:]
-        zf_gen = self.F_(x_inp)[:,zd.shape[1]:,:]
+        zd_gen = self.F_(y_inp)[:,:zd.shape[1]]
+        zf_gen = self.F_(x_inp)[:,zd.shape[1]:]
         # z_gen = latent_resampling(self.Fef(X_inp),nzf,wn1)
          
         # 3. Cross-Discriminate XZ
@@ -510,10 +510,10 @@ class trainer(object):
         # 4. Compute ALI Generator loss
         Gloss_ali = torch.mean(-Dyz+Dzy)+torch.mean(-Dxz+Dzx)
         Gloss_ftm = 0.
-        for rf,ff in zip(ftxz,ftzx):
-            Gloss_ftm += torch.mean((rf-ff)**2)
-        for rf,ff in zip(ftyz,ftzy):
-            Gloss_ftm += torch.mean((rf-ff)**2)
+        # for rf,ff in zip(ftxz,ftzx):
+        #     Gloss_ftm += torch.mean((rf-ff)**2)
+        # for rf,ff in zip(ftyz,ftzy):
+        #     Gloss_ftm += torch.mean((rf-ff)**2)
 
         # 0. Generate noise
         wny,wnzd,wn1 = noise_generator(y.shape,zd.shape,device,rndm_args)
@@ -528,8 +528,8 @@ class trainer(object):
         # 2. Generate reconstructions
         y_rec = self.Gy(zd_gen)
         x_rec = self.Gx(zf_gen)
-        zd_rec = self.F_(y_gen)[:,:zd.shape[1],:] 
-        zf_rec = self.F_(x_gen)[:,zd.shape[1]:,:] 
+        zd_rec = self.F_(y_gen)[:,:zd.shape[1]] 
+        zf_rec = self.F_(x_gen)[:,zd.shape[1]:] 
         # z_rec = latent_resampling(self.Fef(X_gen),nzf,wn1)
  
         # 3. Cross-Discriminate XX
@@ -569,6 +569,7 @@ class trainer(object):
         globals().update(opt.__dict__)
         error = {}
         place = opt.dev if self.dp_mode else ngpu-1
+        start_time = time.time()
         for epoch in range(niter):
             # for np in range(opt.dataloaders):
                 # ths_trn = tload(opj(opt.dataroot,'ths_trn_ns{:>d}_nt{:>d}_ls{:>d}_nzf{:>d}_nzd{:>d}_{:>d}.pth'.format(nsy,
@@ -592,13 +593,15 @@ class trainer(object):
                 self.alice_train_generator_adv(y,zd,x,zf)
                 torch.cuda.empty_cache()
             
-            GPUtil.showUtilization(all=True)
+            # GPUtil.showUtilization(all=True)
+            if epoch%10== 0:
+                print("--- {} minutes ---".format((time.time() - start_time)/60))
 
-            
             str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
             str = 'epoch: {:>d} --- '.format(epoch)
             str = str + ' | '.join(str1)
             print(str)
+
             
             if save_checkpoint:
                 if epoch%save_checkpoint==0:

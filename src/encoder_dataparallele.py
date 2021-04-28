@@ -63,6 +63,7 @@ class Encoder(BasicEncoderDataParallele):
                  nly,ker=7,std=4,pad=0,dil=1,grp=1,bn=True,
                  dpc=0.0,limit = 256, path='',dconv = "",\
                  with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2):
+        # pdb.set_trace()
         super(Encoder, self).__init__()
         self.ngpu= ngpu
         self.gang = range(ngpu)
@@ -72,7 +73,7 @@ class Encoder(BasicEncoderDataParallele):
         acts = T.activation(act, nly)
         # pdb.set_trace()
         if dconv:
-            _dconv = DConv_62(last_channel = channel[-1], bn = False, dpc = 0.0).network()
+            _dconv = DConv_62(last_channel = channel[-1], bn = True, dpc = 0.0).network()
         
         if path:
             self.model = T.load_net(path)
@@ -106,7 +107,9 @@ class Encoder(BasicEncoderDataParallele):
         # pdb.set_trace()
         if dconv:
             self.cnn1  = self.cnn1 + _dconv 
-
+        
+        self.cnn1 += [Flatten()]
+        self.cnn1 += DenseBlock(channel[-1]*opt.batchSize*opt.imageSize,opt.batchSize) 
         self.cnn1  = sqn(*self.cnn1)
         # pdb.set_trace()
         if path:

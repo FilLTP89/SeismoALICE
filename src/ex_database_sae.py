@@ -119,8 +119,8 @@ class thsTensorData(data_utils.Dataset):
     def __getitem__(self,idx):        
         X = self.inpX[self.idx[idx],:,:]
         Y = self.inpY[self.idx[idx],:,:]
-        Z = self.inpZ[self.idx[idx],:,:]
-        W = self.inpW[self.idx[idx],:,:]
+        Z = self.inpZ[self.idx[idx],:]
+        W = self.inpW[self.idx[idx],:]
         y,z,w = self.tar
         y = y[self.idx[idx],:,:]
         z = z[self.idx[idx],:,:]
@@ -230,10 +230,14 @@ def stead_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
     tst = max(1,int(batch_percent[1]*nsy))
     vld = max(1,nsy-trn-tst)
     
-    wnz_set   = tFT(nsy,nzd,zwindow)
-    wnz_set.resize_(nsy,nzd,zwindow).normal_(**rndm_args)
-    wnf_set   = tFT(nsy,nzf,zwindow)
-    wnf_set.resize_(nsy,nzf,zwindow).normal_(**rndm_args)
+    wnz_set   = tFT(nsy,nzd)
+    wnz_set.resize_(nsy,nzd).normal_(**rndm_args)
+    wnf_set   = tFT(nsy,nzf)
+    wnf_set.resize_(nsy,nzf).normal_(**rndm_args)
+    #wnz_set   = tFT(nsy,nzd,zwindow)
+    #wnz_set.resize_(nsy,nzd,zwindow).normal_(**rndm_args)
+    #wnf_set   = tFT(nsy,nzf,zwindow)
+    #wnf_set.resize_(nsy,nzf,zwindow).normal_(**rndm_args)
     thf_set = lowpass_biquad(trn_set,1./md['dtm'],md['cutoff'])
     pgaf_set = -999.9*np.ones(shape=(nsy,3))
     psaf_set = -999.9*np.ones(shape=(nsy,3,md['nTn']))

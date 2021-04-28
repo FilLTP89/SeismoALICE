@@ -191,7 +191,7 @@ class trainer(object):
             flagF = True
             n = self.strategy['filtered']
             print("Loading filtered generators")
-            # pdb.set_trace()
+            pdb.set_trace()
             self.Fef = net.Encoder(opt.config['encoder'], opt)
             self.Gdf = net.Decoder(opt.config['decoder'], opt)
 
@@ -559,6 +559,7 @@ class trainer(object):
         #make sure that noises are at the same device as data
         wnx = wnx.to(Xf.device)
         wnz = wnz.to(zf.device)
+        
         # pdb.set_trace()
         # 1. Concatenate inputs
         X_inp = zcat(Xf,wnx)

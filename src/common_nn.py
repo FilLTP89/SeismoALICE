@@ -166,11 +166,11 @@ def cnn1dt(in_channels,out_channels,\
     return block
 
 def DenseBlock(in_channels,out_channels,\
-               act=[Sigmoid()],dpc=0.1):
+               act=[Sigmoid()],dpc=0.1,bias=False):
 
     block = [Linear(in_channels,\
                        out_channels,\
-                       bias=False),
+                       bias=bias),
             act,Dpout(dpc=dpc)]
     
     return block
@@ -467,7 +467,7 @@ class T(object):
         acts['ALICE'] = {
                  'Fed' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.LeakyReLU(1.0,inplace=True)],
                  'Gdd' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.Tanh()],
-                 'Gdd2':[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.LeakyReLU(1.0,inplace=True)],
+                 'Gdd2':[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.ReLU(inplace=True)],
                  'Fef' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)]+[nn.LeakyReLU(1.0,inplace=True)],
                  'Gdf' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.Tanh()],
                  'Ghz' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.LeakyReLU(1.0,inplace=True)],
