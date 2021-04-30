@@ -191,7 +191,7 @@ class trainer(object):
             flagF = True
             n = self.strategy['filtered']
             print("Loading filtered generators")
-            pdb.set_trace()
+            # pdb.set_trace()
             self.Fef = net.Encoder(opt.config['encoder'], opt)
             self.Gdf = net.Decoder(opt.config['decoder'], opt)
 

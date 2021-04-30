@@ -61,24 +61,24 @@ class visualizer:
         net = Network(factory)
 
         # pdb.set_trace()
-        self.Fef = net.Encoder(opt.config['encoder'], opt)
-        self.Gdf = net.Decoder(opt.config['decoder'], opt)
-        _Fef_path = './network/bb_ls64_nf8_nzd32/Fef_1000.pth'
-        _Gdf_path = './network/bb_ls64_nf8_nzd32/Gdf_1000.pth'
-            # if self.strategy['tract']['filtered']:
-            #     if None in n:        
-            #         self.FGf = [self.Fef,self.Gdf]
-            #         self.oGfxz = reset_net(self.FGf,func=set_weights,lr=glr,b1=b1,b2=b2,
-            #                 weight_decay=0.00001)
-            #     else:
-            #         print("Filtered generators: {0} - {1}".format(*n))
-        self.Fef.load_state_dict(tload(_Fef_path)['model_state_dict'])
-        self.Gdf.load_state_dict(tload(_Gdf_path)['model_state_dict'])    
+        # self.Fef = net.Encoder(opt.config['encoder'], opt)
+        # self.Gdf = net.Decoder(opt.config['decoder'], opt)
+        # _Fef_path = './network/bb_ls64_nf8_nzd32/Fef_1000.pth'
+        # _Gdf_path = './network/bb_ls64_nf8_nzd32/Gdf_1000.pth'
+        #     # if self.strategy['tract']['filtered']:
+        #     #     if None in n:        
+        #     #         self.FGf = [self.Fef,self.Gdf]
+        #     #         self.oGfxz = reset_net(self.FGf,func=set_weights,lr=glr,b1=b1,b2=b2,
+        #     #                 weight_decay=0.00001)
+        #     #     else:
+        #     #         print("Filtered generators: {0} - {1}".format(*n))
+        # self.Fef.load_state_dict(tload(_Fef_path)['model_state_dict'])
+        # self.Gdf.load_state_dict(tload(_Gdf_path)['model_state_dict'])    
         # self.oGfxz = Adam(ittc(self.Fef.parameters(),self.Gdf.parameters()),
         #                   lr=glr,betas=(b1,b2),weight_decay=0.00001)
-
-        model_children = list(self.Fef.children())
-        pdb.set_trace()
+        self.net =  torch.load('./network/trained/nzd32/Fed.pth')
+        model_children = list(self.net.children())
+        # pdb.set_trace()
 
         for child in model_children:
           if type(child)==nn.Conv1d:
@@ -114,10 +114,10 @@ class visualizer:
             break
 
             # z_inp = zcat(zd,wnz)
-
+        # pdb.set_trace()
         #passing the values in the convnets layers
         #layers #1 : 
-        results = [conv_layers[0](X_inp[0,0,:])]
+        results = [conv_layers[0](X_inp)]
         #from #2 til the end
         for i in range(1, len(conv_layers)):
             results.append(conv_layers[i](results[-1]))
@@ -125,30 +125,48 @@ class visualizer:
 
         # pdb.set_trace()
         fs = 100 #Hz
+        t  = range(0,4097)
 
+        n = len(outputs) 
+        fig, axs= plt.subplots(n,1,figsize=(6,8), sharex = True)
         for num_layer in range(len(outputs)):
-            layer_viz = outputs[num_layer][0, :, :]
-            layer_viz = layer_viz.data
-            print("Layer ",num_layer+1)
-            for i, filter in enumerate(layer_viz):
-                if i == 16: 
-                    break
-                # pdb.set_trace()
-                x  = filter.cpu()
-                # nx = len(x)
-                f, t, Sxx = signal.spectrogram(x, fs)
-                plt.pcolormesh(t, f, Sxx, shading='gouraud')
-                plt.ylabel('Frequency [Hz]')
-                plt.xlabel('Time [sec]')
-                # plt.plot(range(len(x)), x)
-                # plt.imshow(filter, cmap='gray')
-                # plt.axis("off")
-                print("savefig results %s of layer %s ..."%(i, num_layer))
-                plt.savefig(os.path.join(outf,"filter_%s_%s.png"%(i,num_layer)),\
-                bbox_inches='tight',dpi = 300)
+            pdb.set_trace()
+            layer_viz = outputs[num_layer][0,:,:]
+            layer_viz =  layer_viz.data
+            x = layer_viz.detach().numpy()
+            axs[num_layer,0].imshow(layer_viz)
+            axs[num_layer,0].set_title('layer [%s]'%(num_layer))
+            print("savefig results of layer %s ..."%(num_layenr))
+            plt.savefig(os.path.join(outf,"filter_%s.png"%(num_layer)))
+        plt.close()
 
-            # plt.show()
-            plt.close()
+
+        # for num_layer in range(len(outputs)):
+        #     layer_viz = outputs[num_layer][0, :, :]
+        #     layer_viz = layer_viz.data
+        #     print("Layer ",num_layer+1)
+
+
+
+        #     # for i, filter in enumerate(layer_viz):
+        #     #     if i == 16: 
+        #     #         break
+        #     #     # pdb.set_trace()
+        #     #     x  = filter.cpu()
+        #         # nx = len(x)
+        #         # f, t, Sxx = signal.spectrogram(x, fs)
+        #         # plt.pcolormesh(t, f, Sxx, shading='gouraud')
+        #         # plt.ylabel('Frequency [Hz]')
+        #         # plt.xlabel('Time [sec]')
+        #         # # plt.plot(range(len(x)), x)
+        #         # # plt.imshow(filter, cmap='gray')
+        #         # # plt.axis("off")
+        #         # print("savefig results %s of layer %s ..."%(i, num_layer))
+        #         # plt.savefig(os.path.join(outf,"filter_%s_%s.png"%(i,num_layer)),\
+        #         # bbox_inches='tight',dpi = 300)
+
+        #     # plt.show()
+            
 
         # z = torch.cat(z)
         # torch.save(z, './database/tweaked/data/latent_sampling.pth')

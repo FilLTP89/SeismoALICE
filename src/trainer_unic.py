@@ -416,6 +416,9 @@ class trainer(object):
         x_gen = self.Gx(zf_inp)
         zd_gen = self.F_(y_inp)[:,:zd.shape[1]]
         zf_gen = self.F_(x_inp)[:,zd.shape[1]:]
+        # zd_gen = self.F_(y_inp)
+        # zf_gen = self.F_(x_inp)
+
         # z_gen = latent_resampling(self.Fef(X_inp),nzf,wn1)
         # print("\t||X_gen : ", X_gen.shape,"\tz_gen : ",z_gen.shape)
         # 3. Cross-Discriminate XZ
@@ -447,6 +450,8 @@ class trainer(object):
         x_rec = self.Gx(zf_gen)
         zd_rec = self.F_(y_gen)[:,:zd.shape[1]]
         zf_rec = self.F_(x_gen)[:,zd.shape[1]:] 
+        # zd_rec = self.F_(y_gen)
+        # zf_rec = self.F_(x_gen)
         # z_rec = latent_resampling(self.Fef(X_gen),nzf,wn1)
 
         # 3. Cross-Discriminate XX
@@ -466,9 +471,11 @@ class trainer(object):
         # pdb.set_trace()
         Dreal_zd,Dfake_zd = self.discriminate_zz(zd,zd_rec)
         Dreal_zf,Dfake_zf = self.discriminate_zz(zf,zf_rec)
+        # Dreal_z, Dfake_z  = self.discriminate_zz(zf,zd)
         
         Dloss_ali_z = self.bce_loss(Dreal_zd,o1l(Dreal_zd))+self.bce_loss(Dfake_zd,o0l(Dfake_zd))+\
             self.bce_loss(Dreal_zf,o1l(Dreal_zf))+self.bce_loss(Dfake_zf,o0l(Dfake_zf))
+            # self.bce_loss(Dreal_z,o1l(Dreal_z))+self.bce_loss(Dfake_z,o0l(Dfake_z))
        
         # Total loss
         Dloss = Dloss_ali + Dloss_ali_xy + Dloss_ali_z
@@ -495,12 +502,16 @@ class trainer(object):
         x_inp = zcat(x,wnx)
         zd_inp = zcat(zd,wnzd)
         zf_inp = zcat(zf,wnzf)
+
+        # pdb.set_trace()
          
         # 2. Generate conditional samples
         y_gen = self.Gy(zd_inp)
         x_gen = self.Gx(zf_inp)
         zd_gen = self.F_(y_inp)[:,:zd.shape[1]]
         zf_gen = self.F_(x_inp)[:,zd.shape[1]:]
+        # zd_gen = self.F_(y_inp)
+        # zf_gen = self.F_(x_inp)
         # z_gen = latent_resampling(self.Fef(X_inp),nzf,wn1)
          
         # 3. Cross-Discriminate XZ
@@ -510,10 +521,10 @@ class trainer(object):
         # 4. Compute ALI Generator loss
         Gloss_ali = torch.mean(-Dyz+Dzy)+torch.mean(-Dxz+Dzx)
         Gloss_ftm = 0.
-        # for rf,ff in zip(ftxz,ftzx):
-        #     Gloss_ftm += torch.mean((rf-ff)**2)
-        # for rf,ff in zip(ftyz,ftzy):
-        #     Gloss_ftm += torch.mean((rf-ff)**2)
+        for rf,ff in zip(ftxz,ftzx):
+            Gloss_ftm += torch.mean((rf-ff)**2)
+        for rf,ff in zip(ftyz,ftzy):
+            Gloss_ftm += torch.mean((rf-ff)**2)
 
         # 0. Generate noise
         wny,wnzd,wn1 = noise_generator(y.shape,zd.shape,device,rndm_args)
@@ -530,6 +541,8 @@ class trainer(object):
         x_rec = self.Gx(zf_gen)
         zd_rec = self.F_(y_gen)[:,:zd.shape[1]] 
         zf_rec = self.F_(x_gen)[:,zd.shape[1]:] 
+        # zd_rec = self.F_(y_gen) 
+        # zf_rec = self.F_(x_gen)
         # z_rec = latent_resampling(self.Fef(X_gen),nzf,wn1)
  
         # 3. Cross-Discriminate XX
@@ -543,6 +556,7 @@ class trainer(object):
         
         # 4. Cross-Discriminate ZZ
         _,Dfake_zd = self.discriminate_zz(zd,zd_rec)
+        # pdb.set_trace()
         _,Dfake_zf = self.discriminate_zz(zf,zf_rec)
         Gloss_ali_z = self.bce_loss(Dfake_zd,o1l(Dfake_zd))+self.bce_loss(Dfake_zf,o1l(Dfake_zf))
         Gloss_cycle_z = torch.mean(torch.abs(zd-zd_rec))+torch.mean(torch.abs(zf-zf_rec))
@@ -645,11 +659,13 @@ class trainer(object):
                     #        'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Ddxz_bb_{}.pth'.format(epoch))
         # pdb.set_trace()
         # plt.plot_loss_dict(nb=niter,losses=self.losses,title='loss_classic',outf=outf)
-        # plt.plot_loss_explicit(losses=self.losses["Dloss_t"], key="Dloss_t", outf=outf,niter=niter)
-        # plt.plot_loss_explicit(losses=self.losses["Gloss_x"], key="Gloss_x", outf=outf,niter=niter)
-        # plt.plot_loss_explicit(losses=self.losses["Gloss_z"], key="Gloss_z", outf=outf,niter=niter)
-        # plt.plot_loss_explicit(losses=self.losses["Gloss_z"], key="Gloss_z", outf=outf,niter=niter)
-        # plt.plot_loss_explicit(losses=self.losses["Gloss_t"], key="Gloss_t", outf=outf,niter=niter)
+        plt.plot_loss_explicit(losses=self.losses["Dloss_ali"],     key="Dloss_ali",    outf=outf,niter=niter)
+        plt.plot_loss_explicit(losses=self.losses["Dloss_ali_z"],   key="Dloss_ali_z",  outf=outf,niter=niter)
+        plt.plot_loss_explicit(losses=self.losses["Dloss_ali_xy"],  key="Dloss_ali_xy", outf=outf,niter=niter)
+        plt.plot_loss_explicit(losses=self.losses["Gloss_cycle_z"],     key="Gloss_cycle_z",    outf=outf,niter=niter)
+        plt.plot_loss_explicit(losses=self.losses["Gloss_cycle_xy"],     key="Gloss_cycle_xy",    outf=outf,niter=niter)
+        plt.plot_loss_explicit(losses=self.losses["Gloss_ali_z"],   key="Gloss_ali_z",  outf=outf,niter=niter)
+        plt.plot_loss_explicit(losses=self.losses["Gloss_ali_xy"],  key="Gloss_ali_xy", outf=outf,niter=niter)
         # plt.plot_loss_explicit(losses=self.losses["norm_grad"], key="norm_grad", outf=outf,niter=niter)
         # pdb.set_trace()
         # plt.plot_error(error,outf=outf)

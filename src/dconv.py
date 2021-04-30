@@ -60,7 +60,7 @@ class Transpose_DConv_62(DConv):
         self.padding  = [0,0,0,0,0,0,0]
         self.dilation = [2,3,4,5,6,6,5]
         self.outpads  = [0,0,0,0,0,0,0]
-        self.channels = [last_channel]+[64,128,256, 512, 1024, 2048]+[last_channel]
+        self.channels = [last_channel]+[64,128,128,128,128,128]+[last_channel]
         self.net = []
 
         #nomber of layers

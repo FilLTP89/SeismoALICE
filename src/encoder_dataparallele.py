@@ -108,8 +108,8 @@ class Encoder(BasicEncoderDataParallele):
         if dconv:
             self.cnn1  = self.cnn1 + _dconv 
         
-        self.cnn1 += [Flatten()]
-        self.cnn1 += DenseBlock(channel[-1]*opt.batchSize*opt.imageSize,opt.batchSize) 
+        # self.cnn1 += [Flatten()]
+        # self.cnn1 += DenseBlock(channel[-1]*opt.batchSize*opt.imageSize,opt.nzd) 
         self.cnn1  = sqn(*self.cnn1)
         # pdb.set_trace()
         if path:
