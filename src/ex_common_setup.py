@@ -264,10 +264,10 @@ def setup():
         # Create natural period vector 
         opt.vTn = np.arange(0.0,3.05,0.05,dtype=np.float64)
         opt.nTn = md['vTn'].size
-        tsave(ths_trn,'./ths_trn.pth')
-        tsave(ths_tst,'./ths_tst.pth')
-        tsave(ths_vld,'./ths_vld.pth')
-        tsave(vtm,    './vtm.pth')
+        tsave(ths_trn,os.path.join(outf,'ths_trn_nt{}_ls{}_nzf{}_nzd{}.pth'.format(opt.imageSize,opt.latentSize,opt.nzf, opt.nzd)))
+        tsave(ths_tst,os.path.join(outf,'ths_tst.pth_nt{}_ls{}_nzf{}_nzd{}.pth'.format(opt.imageSize,opt.latentSize,opt.nzf, opt.nzd)))
+        tsave(ths_vld,os.path.join(outf,'ths_vld.pth_nt{}_ls{}_nzf{}_nzd{}.pth'.format(opt.imageSize,opt.latentSize,opt.nzf, opt.nzd)))
+        tsave(vtm,    os.path.join(outf,'./vtm.pth_nt{}_ls{}_nzf{}_nzd{}.pth'.format(opt.imageSize,opt.latentSize,opt.nzf, opt.nzd)))
         with open('md.p', 'wb') as handle:
                 pickle.dump(md,handle)
         handle.close()

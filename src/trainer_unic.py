@@ -506,10 +506,12 @@ class trainer(object):
         # pdb.set_trace()
          
         # 2. Generate conditional samples
-        y_gen = self.Gy(zd_inp)
+        y_gen = self.Gy(zd_inp) #(100,64,64)->(100,3,4096)
         x_gen = self.Gx(zf_inp)
-        zd_gen = self.F_(y_inp)[:,:zd.shape[1]]
-        zf_gen = self.F_(x_inp)[:,zd.shape[1]:]
+        # zd_gen = self.F_(y_inp)[:,:zd.shape[1]] #(100,64,64) -> (100,[0:31],64)
+        zd_gen = self.F_(y_inp) #(100,64,64) -> (100,64,64)
+        zf_gen = self.F_(x_inp)[:,:zf.shape[1]] #(100,64,64) -> (100,[0:15],64)
+        # zf_gen = zcat(zf_gen,wnzf) # = dim zd_gen
         # zd_gen = self.F_(y_inp)
         # zf_gen = self.F_(x_inp)
         # z_gen = latent_resampling(self.Fef(X_inp),nzf,wn1)
@@ -521,26 +523,28 @@ class trainer(object):
         # 4. Compute ALI Generator loss
         Gloss_ali = torch.mean(-Dyz+Dzy)+torch.mean(-Dxz+Dzx)
         Gloss_ftm = 0.
-        for rf,ff in zip(ftxz,ftzx):
-            Gloss_ftm += torch.mean((rf-ff)**2)
-        for rf,ff in zip(ftyz,ftzy):
-            Gloss_ftm += torch.mean((rf-ff)**2)
+        # for rf,ff in zip(ftxz,ftzx):
+        #     Gloss_ftm += torch.mean((rf-ff)**2)
+        # for rf,ff in zip(ftyz,ftzy):
+        #     Gloss_ftm += torch.mean((rf-ff)**2)
 
         # 0. Generate noise
         wny,wnzd,wn1 = noise_generator(y.shape,zd.shape,device,rndm_args)
         wnx,wnzf,wn1 = noise_generator(x.shape,zf.shape,device,rndm_args)
         
         # 1. Concatenate inputs
-        y_gen = zcat(x_gen,wny)
-        x_gen = zcat(x_gen,wnx)
-        zd_gen = zcat(zd_gen,wnzd)
-        zf_gen = zcat(zf_gen,wnzf)
+        y_gen = zcat(y_gen,wny)
+        x_gen = zcat(x_gen,wnx) 
+        # zd_gen = zcat(zd_gen,wnzd) #(100,64,64)
+        zf_gen = zcat(zf_gen,wnzf) #(100,64,64)
 
         # 2. Generate reconstructions
         y_rec = self.Gy(zd_gen)
         x_rec = self.Gx(zf_gen)
-        zd_rec = self.F_(y_gen)[:,:zd.shape[1]] 
-        zf_rec = self.F_(x_gen)[:,zd.shape[1]:] 
+        # zd_rec = self.F_(y_gen)[:,:zd.shape[1]]
+        zd_rec = self.F_(y_gen)
+        zf_rec = self.F_(x_gen)[:,:zf.shape[1]] 
+
         # zd_rec = self.F_(y_gen) 
         # zf_rec = self.F_(x_gen)
         # z_rec = latent_resampling(self.Fef(X_gen),nzf,wn1)
