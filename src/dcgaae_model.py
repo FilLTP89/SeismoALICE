@@ -25,7 +25,8 @@ class DenseEncoder(Module):
         
     def forward(self,Xn):
         if Xn.is_cuda and self.ngpu > 1:
-            zlf   = pll(self.cnn,Xn,self.gang)
+            zlf=Pipe._forward(x, self.ann, slef.gang)
+            #zlf   = pll(self.cnn,Xn,self.gang)
         else:
             zlf   = self.cnn(Xn)
         if not self.training:
@@ -95,7 +96,8 @@ class EncoderDecoder(Module):
         
     def forward(self,Xn):
         if Xn.is_cuda and self.ngpu > 1:
-            zlf   = pll(self.cnn,Xn,self.gang)
+            zlf=Pipe._forward(x, self.ann, slef.gang)
+            #zlf   = pll(self.cnn,Xn,self.gang)
         else:
             zlf   = self.cnn(Xn)
         if not self.training:
@@ -166,11 +168,13 @@ class Encoder(Module):
         
     def forward(self,Xn):
         if Xn.is_cuda and self.ngpu > 1:
-            zlf   = pll(self.cnn,Xn,self.gang)
+            zlf=Pipe._forward(x, self.ann, slef.gang)
+            #zlf   = pll(self.cnn,Xn,self.gang)
         else:
             zlf   = self.cnn(Xn)
         if not self.training:
             zlf=zlf.detach()
+        torch.cuda.empty_cache()
         return zlf
 
 class Decoder(Module):
@@ -208,6 +212,7 @@ class Decoder(Module):
             Xr = self.cnn(zxn)
         if not self.training:
             Xr=Xr.detach()
+        torch.cuda.empty_cache()
         return Xr
 
 class DCGAN_D(Module):
@@ -235,7 +240,8 @@ class DCGAN_D(Module):
     
     def forward(self,X):
         if X.is_cuda and self.ngpu > 1:
-            z = pll(self.ann,X,self.gang)
+            z=Pipe._forward(x, self.ann, slef.gang)
+            #z = pll(self.ann,X,self.gang)
         else:
             z = self.ann(X)
         if not self.training:
@@ -282,7 +288,8 @@ class DCGAN_Dx(Module):
     
     def forward(self,X):
         if X.is_cuda and self.ngpu > 1:
-            z = pll(self.ann,X,self.gang)
+            z=Pipe._forward(x, self.ann, slef.gang)
+            #z = pll(self.ann,X,self.gang)
             if self.wf:
                 #f = pll(self.extraction,X,self.gang)
                 f = self.extraction(X)
@@ -293,8 +300,10 @@ class DCGAN_Dx(Module):
         if not self.training:
             z = z.detach()
         if self.wf:
+            torch.cuda.empty_cache()
             return z,f
         else:
+            torch.cuda.empty_cache()
             return z
     
 class DCGAN_Dz(Module):
@@ -325,7 +334,8 @@ class DCGAN_Dz(Module):
     
     def forward(self,X):
         if X.is_cuda and self.ngpu > 1:
-            z = pll(self.ann,X,self.gang)
+            z=Pipe._forward(x, self.ann, slef.gang)
+            #z = pll(self.ann,X,self.gang)
             if self.wf:
                 #f = pll(self.extraction,X,self.gang)
                 f = self.extraction(X)
@@ -337,8 +347,10 @@ class DCGAN_Dz(Module):
             z = z.detach()
         
         if self.wf:
+            torch.cuda.empty_cache()
             return z,f
         else:
+            torch.cuda.empty_cache()
             return z
     
 class DCGAN_G(Module):
@@ -368,7 +380,8 @@ class DCGAN_G(Module):
             
     def forward(self,z):
         if z.is_cuda and self.ngpu > 1:
-            X = pll(self.ann,z,self.gang)
+            X=Pipe._forward(x, self.ann, slef.gang)
+            #X = pll(self.ann,z,self.gang)
         else:
             X = self.ann(z)
         if not self.training:
@@ -397,7 +410,8 @@ class DCGAN_DXZ(Module):
     
     def forward(self,X):
         if X.is_cuda and self.ngpu > 1:
-            z = pll(self.ann,X,self.gang)
+            z=Pipe._forward(x, self.ann, slef.gang)
+            #z = pll(self.ann,X,self.gang)
             if self.wf:
                 #f = pll(self.extraction,X,self.gang)
                 f = self.extraction(X)
@@ -408,8 +422,10 @@ class DCGAN_DXZ(Module):
         if not self.training:
             z = z.detach()
         if self.wf:
+            torch.cuda.empty_cache()
             return z,f
         else:
+            torch.cuda.empty_cache()
             return z
 
 class DCGAN_DXX(Module):
@@ -426,11 +442,13 @@ class DCGAN_DXX(Module):
      
     def forward(self,X):
         if X.is_cuda and self.ngpu > 1:
-            z = pll(self.ann,X,self.gang)
+            z=Pipe._forward(x, self.ann, slef.gang)
+            #z = pll(self.ann,X,self.gang)
         else:
             z = self.ann(X)
         if not self.training:
             z = z.detach()
+        torch.cuda.empty_cache()
         return z
 
 class DCGAN_DZZ(Module):
@@ -447,9 +465,11 @@ class DCGAN_DZZ(Module):
      
     def forward(self,X):
         if X.is_cuda and self.ngpu > 1:
-            z = pll(self.ann,X,self.gang)
+            z=Pipe._forward(x, self.ann, slef.gang)
+            #z = pll(self.ann,X,self.gang)
         else:
             z = self.ann(X)
         if not self.training:
             z = z.detach()
+        torch.cuda.empty_cache()
         return z

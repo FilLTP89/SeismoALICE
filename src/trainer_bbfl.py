@@ -19,6 +19,7 @@ from database_sae import random_split
 from leave_p_out import k_folds
 from common_setup import dataset2loader
 from database_sae import thsTensorData
+import time
 
 rndm_args = {'mean': 0, 'std': 1}
 
@@ -709,8 +710,10 @@ class trainer(object):
 #               # Train G/D
                 for _ in range(5):
                     self.alice_train_filtered_discriminator_explicit_xz(Xf,zf)
+                    torch.cuda.empty_cache()
                 for _ in range(1):
                     self.alice_train_filtered_generator_explicit_xz(Xf,zf)
+                    torch.cuda.empty_cache()
     
             str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
             str = 'epoch: {:>d} --- '.format(epoch)
@@ -739,6 +742,7 @@ class trainer(object):
         print('Training on filtered signals') 
         globals().update(self.cv)
         globals().update(opt.__dict__)
+        start_time=time.time()
         for epoch in range(niter):
             for b,batch in enumerate(trn_loader):
                 # Load batch
@@ -756,6 +760,7 @@ class trainer(object):
             str = str + ' | '.join(str1)
             print(str)
             if epoch%save_checkpoint==0:
+                print("---{}---".format((time.time()-start_time)/60))
                 tsave({'epoch':epoch,'model_state_dict':self.Fef.state_dict(),
                        'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
                        'Fef_{}.pth'.format(epoch))

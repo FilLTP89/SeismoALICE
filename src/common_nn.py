@@ -174,6 +174,26 @@ def DenseBlock(in_channels,out_channels,\
     
     return block
 
+class pipe(object):
+    def __init__(self):
+        super(ConvBlock,self).__init__()
+        pass
+
+    @staticmethod
+    def _forward(x, cnn, gang, split = 5):#permet de decouper les batchs puis les reconstruire
+        ret    = []
+        splits = iter(x.split(split, dim = 0))
+        s_next = next(splits)
+        s_prev = pll(cnn,s_next, gang)
+
+        for s_next in splits:
+            # s_prev = self.cnn1(s_prev)
+            ret.append(s_prev)
+            s_prev = pll(cnn,s_next, gang)
+        # s_prev = self.cnn1(s_prev)
+        ret.append(s_prev)
+        return torch.cat(ret)
+
 class ConvBlock(Module):
     def __init__(self, ni, no, ks, stride, bias=False,
                  act = None, bn=True, pad=None, dpc=None):
