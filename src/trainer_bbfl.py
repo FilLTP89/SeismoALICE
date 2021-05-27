@@ -36,7 +36,7 @@ b2 = 0.9999
 nch_tot = 3
 penalty_wgangp = 10.
 nly = 5
-#self.style='ALICE'#'WGAN'
+#self.style='ALICE'#'WGAN'o
 acts={}
 acts['ALICE'] = {'Fed' :[LeakyReLU(1.0,inplace=True) for t in range(nly)]+[LeakyReLU(1.0,inplace=True)],
                  'Gdd' :[ReLU(inplace=True) for t in range(nly-1)]+[Tanh()],

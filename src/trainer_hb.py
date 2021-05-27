@@ -114,7 +114,7 @@ class trainer(object):
             act = acts[self.style]
             flagT = True
             n = self.strategy['broadband']
-            print("Loading broadband generators")
+            print("Loading broadband generators",device)
             # Encoder broadband Fed
             self.Fed = Encoder(ngpu=ngpu,dev=device,nz=nzd,nzcl=0,nch=2*nch_tot,
                                ndf=ndf,szs=md['ntm'],nly=nly,ker=4,std=2,\
@@ -148,6 +148,9 @@ class trainer(object):
             else:
                 if None not in n:
                     print("Broadband generators - NO TRAIN: {0} - {1}".format(*n))
+                    print("device",device)
+                     #self.Fed.load_state_dict(tload(n[0], map_location=torch.device('cpu'))['model_state_dict'])
+                     #self.Gdd.load_state_dict(tload(n[1], map_location=torch.device('cpu'))['model_state_dict'])
                     self.Fed.load_state_dict(tload(n[0])['model_state_dict'])
                     self.Gdd.load_state_dict(tload(n[1])['model_state_dict'])
                 else:
@@ -199,6 +202,8 @@ class trainer(object):
             else:
                 if None not in n:
                     print("Filtered generators - NO TRAIN: {0} - {1}".format(*n))
+                    #self.Fef.load_state_dict(tload(n[0], map_location=torch.device('cpu'))['model_state_dict'])
+                    #self.Gdf.load_state_dict(tload(n[1], map_location=torch.device('cpu'))['model_state_dict'])    
                     self.Fef.load_state_dict(tload(n[0])['model_state_dict'])
                     self.Gdf.load_state_dict(tload(n[1])['model_state_dict'])    
                 else:
@@ -526,14 +531,14 @@ class trainer(object):
             #plt.plot_loss_dict(loss,nb=len(trn_loader),title='loss_hybrid',outf=outf)
             #plt.plot_generate_hybrid_new(self.Fef,self.Gdf,self.Fed,self.Gdd,self.Fhz,self.Ghz,device,vtm,\
             #                             trn_loader,pfx="trn_set_hb",outf=outf)
-            #plt.plot_generate_hybrid_new(self.Fef,self.Gdf,self.Fed,self.Gdd,self.Fhz,self.Ghz,device,vtm,\
-            #                             tst_loader,pfx="tst_set_hb",outf=outf)
+            plt.plot_generate_hybrid_new(self.Fef,self.Gdf,self.Fed,self.Gdd,self.Fhz,self.Ghz,device,vtm,\
+                                         tst_loader,pfx="tst_set_hb",outf=outf)
             #plt.plot_generate_hybrid_new(self.Fef,self.Gdf,self.Fed,self.Gdd,self.Fhz,self.Ghz,device,vtm,\
             #                             vld_loader,pfx="vld_set_hb",outf=outf)
-            plt.plot_gofs(tag=['hybrid'],Fef=self.Fef,Gdf=self.Gdf,Fed=self.Fed,\
-                    Gdd=self.Gdd,Fhz=self.Fhz,Ghz=self.Ghz,dev=device,vtm=vtm,trn_set=trn_loader,\
-                    pfx={'broadband':'set_bb','filtered':'set_fl','hybrid':'set_hb','ann2bb':'set_ann2bb_rec'},\
-                    outf=outf)
+            #plt.plot_gofs(tag=['hybrid'],Fef=self.Fef,Gdf=self.Gdf,Fed=self.Fed,\
+            #        Gdd=self.Gdd,Fhz=self.Fhz,Ghz=self.Ghz,dev=device,vtm=vtm,trn_set=trn_loader,\
+            #        pfx={'broadband':'set_bb','filtered':'set_fl','hybrid':'set_hb','ann2bb':'set_ann2bb_rec'},\
+            #        outf=outf)
 
     @profile            
     def compare(self):

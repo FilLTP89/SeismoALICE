@@ -900,22 +900,22 @@ def mdof_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,ntm,mdof,wdof,tdof,wt
     vtm = md['dtm']*np.arange(0,md['ntm'])
     # initialize numpy tensors 
     tar = np.zeros((nsy,1))
-    trn_set  = -999.9*np.ones(shape=(nsy,mdof,md['ntm']))
-    thf_set  = -999.9*np.ones(shape=(nsy,mdof,md['ntm']))
+    trn_set  = -999.9*np.ones(shape=(nsy,mdof,md['ntm'])) # damaged model(broadband training)
+    thf_set  = -999.9*np.ones(shape=(nsy,mdof,md['ntm'])) # healthy model(filtered training)
     # initialize numpy tensor for normalizing original (undamaged) data
     pgat_set = -999.9*np.ones(shape=(nsy,mdof))
-    psat_set = -999.9*np.ones(shape=(nsy,mdof,md['nTn']))
+    psat_set = -999.9*np.ones(shape=(nsy,1,1))
     # initialize numpy tensor for normalizing filtered (damaged) data
     pgaf_set = -999.9*np.ones(shape=(nsy,3))
-    psaf_set = -999.9*np.ones(shape=(nsy,3,md['nTn']))
+    psaf_set = -999.9*np.ones(shape=(nsy,1,1))
     
     case_ud='damaged'
-    [mdof_ths_u,eqm_u]=mdof_case_loader(mdof,wtdof_v,src,case_ud,tdof,wdof,nsy,ntm)
-    [trn_set,pgat_set]=mdof_tuk_pyt(md,nsy,mdof,mdof_ths_u,Xwindow,trn_set,pgat_set)
+    [mdof_ths_d,eqm_d]=mdof_case_loader(mdof,wtdof_v,src,case_ud,tdof,wdof,nsy,ntm)
+    [trn_set,pgat_set]=mdof_tuk_pyt(md,nsy,mdof,mdof_ths_d,Xwindow,trn_set,pgat_set)
 
     case_ud='undamaged'
-    [mdof_ths_d,eqm_d]=mdof_case_loader(mdof,wtdof_v,src,case_ud,tdof,wdof,nsy,ntm)
-    [thf_set,pgaf_set]=mdof_tuk_pyt(md,nsy,mdof,mdof_ths_d,Xwindow,thf_set,pgaf_set)
+    [mdof_ths_u,eqm_u]=mdof_case_loader(mdof,wtdof_v,src,case_ud,tdof,wdof,nsy,ntm)
+    [thf_set,pgaf_set]=mdof_tuk_pyt(md,nsy,mdof,mdof_ths_u,Xwindow,thf_set,pgaf_set)
 
     # Define database partitioning
     ths_fsc = []
@@ -931,7 +931,7 @@ def mdof_dataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,ntm,mdof,wdof,tdof,wt
     wnf_set.resize_(nsy,nzf,zwindow).normal_(**rndm_args)
 
     # Define target (fake labels issued from metadata)  **damaged only**
-    tar[:,0]=eqm_d
+    tar[:,0]=eqm_u
     
     nhe = tar.shape[1] 
     # Scaler for metadata homogeneization
