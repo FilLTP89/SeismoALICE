@@ -759,7 +759,7 @@ def plot_error(error, outf):
     plt.close()
 
      
-def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
+def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,opt,pfx='trial',outf='./imgs'):
     #Qec.to(dev),Pdc.to(dev)
     Qec.eval(),Pdc.eval()
     # import pdb
@@ -780,9 +780,9 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs')
             X_inp = zcat(Xt,wnx.to(dev))
             # ztr = Qec(X_inp).to(dev)
             # pdb.set_trace()
-            ztr = Qec(X_inp)[:,:zt_data.shape[1],:] if 'unique' in pfx else Qec(X_inp)
+            ztr,_ = torch.split(Qec(X_inp),[opt.nzd, opt.nzf],dim=1) if 'unique' in pfx else Qec(X_inp)
             ztr = ztr.to(dev)
-            # ztr = latent_resampling(Qec(X_inp),zt.shape[1],wn1)
+             # ztr = latent_resampling(Qec(X_inp),zt.shape[1],wn1)
             z_inp = zcat(ztr,wnz.to(dev))
             z_pre = zcat(zt,wnz.to(dev))
             Xr = Pdc(z_inp)
@@ -887,17 +887,18 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,pfx='trial',outf='./imgs')
         plot_eg_pg(EG,PG, outf,pfx)
             
     elif 'filtered' in tag:
+        import pdb
         for _,batch in enumerate(trn_set):
             # _,xf_data,_,zf_data,_,_,_,*other = batch
-            xt_data,xf_data,zt_data,_,_,_,_,*other = batch
+            xt_data,xf_data,zt_data,zf_data,_,_,_,*other = batch
             # tweaked value
-            Xf = Variable(xt_data).to(dev)
-            zf = Variable(zt_data).to(dev)
+            Xf = Variable(xf_data).to(dev)
+            zf = Variable(zf_data).to(dev)
             wnx,wnz,wn1 = noise_generator(Xf.shape,zf.shape,dev,rndm_args)
             X_inp = zcat(Xf,wnx)
             # ztr = Qec(X_inp)
-            # pdb.set_trace()
-            ztr = Qec(X_inp)[:,zt_data.shape[1]:] if 'unique' in pfx else Qec(X_inp)
+            pdb.set_trace()
+            _, ztr = torch.split(Qec(X_inp),[opt.nzd, opt.nzf],dim=1) if 'unique' in pfx else Qec(X_inp)
             # ztr = latent_resampling(Qec(X_inp),zf.shape[1],wn1)
             z_inp = zcat(ztr,wnz)
             Xr = Pdc(z_inp)
