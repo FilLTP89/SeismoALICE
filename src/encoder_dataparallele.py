@@ -42,6 +42,7 @@ class BasicEncoderDataParallele(Module):
         super(BasicEncoderDataParallele, self).__init__()
         self.training = True
         self.model = None
+        self.resnet = []
         self.cnn1 = []
         
 
@@ -72,6 +73,7 @@ class Encoder(BasicEncoderDataParallele):
 
         acts = T.activation(act, nly)
         # pdb.set_trace()
+        resnet = True
         if dconv:
             _dconv = DConv_62(last_channel = channel[-1], bn = True, dpc = 0.0).network()
         
@@ -107,7 +109,8 @@ class Encoder(BasicEncoderDataParallele):
         # pdb.set_trace()
         if dconv:
             self.cnn1  = self.cnn1 + _dconv 
-        
+        # if resnet:
+        #     self.resnet = ResNetLayer(channel[-1],channel[-1]).to(device)
         # self.cnn1 += [Flatten()]
         # self.cnn1 += DenseBlock(channel[-1]*opt.batchSize*opt.imageSize,opt.nzd) 
         self.cnn1  = sqn(*self.cnn1)
@@ -121,6 +124,7 @@ class Encoder(BasicEncoderDataParallele):
         if x.is_cuda and self.ngpu > 1:
             # zlf   = pll(self.cnn1,x,self.gang)
             zlf = T._forward(x, self.cnn1, self.gang)
+            zlf = T._forward(zlf, self.resnet, self.gang)
         else:
             zlf   = self.cnn1(x)
         if not self.training:

@@ -467,7 +467,7 @@ class T(object):
         acts['ALICE'] = {
                  'Fed' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.LeakyReLU(1.0,inplace=True)],
                  'Gdd' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.Tanh()],
-                 'Gdd2':[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.ReLU(inplace=True)],
+                 'Gdd2':[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.LeakyReLU(1.0,inplace=True)],
                  'Fef' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)]+[nn.LeakyReLU(1.0,inplace=True)],
                  'Gdf' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.Tanh()],
                  'Ghz' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.LeakyReLU(1.0,inplace=True)],

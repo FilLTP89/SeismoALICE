@@ -377,7 +377,7 @@ def plot_compare_ann2bb(Qec,Pfc,Qdc,Pdc,Fhz,Ghz,dev,vtm,trn_set,pfx='hybrid',out
             plt.close()
             cnt += 1
 
-def plot_generate_hybrid_new(Qec,Pfc,Qdc,Pdc,Fhz,Ghz,dev,vtm,trn_set,pfx='hybrid',outf='./imgs'):
+def plot_generate_hybrid_new(Qec,Pfc,Qdc,Pdc,Fhz,Ghz,dev,vtm,trn_set,opt,pfx='hybrid',outf='./imgs'):
     Qec.to(dev),Pfc.to(dev)
     Qdc.to(dev),Pdc.to(dev)
     Fhz.to(dev),Ghz.to(dev)
@@ -412,8 +412,10 @@ def plot_generate_hybrid_new(Qec,Pfc,Qdc,Pdc,Fhz,Ghz,dev,vtm,trn_set,pfx='hybrid
 
         Xf_inp = zcat(Xf,wnxf)
         Xd_inp = zcat(Xd,wnxd)
-        zff = Qec(Xf_inp)
-        zdd = Qdc(Xd_inp)
+        # zff = Qec(Xf_inp)
+        _,zff = torch.split(Qec(Xf_inp),[opt.nzd, opt.nzf],dim=1)
+        # zdd = Qdc(Xd_inp)
+        zdd,_ = torch.split(Qec(Xd_inp),[opt.nzd, opt.nzf],dim=1)
 
         zdr = Ghz(zcat(zff,wnzb))
         zfr = Fhz(zcat(zdd,wnzd))
@@ -762,6 +764,8 @@ def plot_error(error, outf):
 def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,opt,pfx='trial',outf='./imgs'):
     #Qec.to(dev),Pdc.to(dev)
     Qec.eval(),Pdc.eval()
+    Qec.to(dtype =torch.float64)
+    Pdc.to(dtype =torch.float64)
     # import pdb
     cnt=0
     EG = []
@@ -773,9 +777,9 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,opt,pfx='trial',outf='./im
             #_,xt_data,zt_data,_,_,_,_ = batch
             print("Plotting signals ...")
             xt_data,xf_data,zt_data,_,_,_,_,*other = batch
-            Xt = Variable(xt_data).to(dev)
-            Xf = Variable(xf_data).to(dev)
-            zt = Variable(zt_data).to(dev)
+            Xt = Variable(xt_data).to(dev, dtype =torch.float64)
+            Xf = Variable(xf_data).to(dev, dtype =torch.float64)
+            zt = Variable(zt_data).to(dev, dtype =torch.float64)
             wnx,wnz,wn1 = noise_generator(Xt.shape,zt.shape,dev,rndm_args)
             X_inp = zcat(Xt,wnx.to(dev))
             # ztr = Qec(X_inp).to(dev)
@@ -892,12 +896,12 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,opt,pfx='trial',outf='./im
             # _,xf_data,_,zf_data,_,_,_,*other = batch
             xt_data,xf_data,zt_data,zf_data,_,_,_,*other = batch
             # tweaked value
-            Xf = Variable(xf_data).to(dev)
-            zf = Variable(zf_data).to(dev)
+            Xf = Variable(xf_data).to(dev, dtype =torch.float64)
+            zf = Variable(zf_data).to(dev, dtype =torch.float64)
             wnx,wnz,wn1 = noise_generator(Xf.shape,zf.shape,dev,rndm_args)
             X_inp = zcat(Xf,wnx)
             # ztr = Qec(X_inp)
-            pdb.set_trace()
+            # pdb.set_trace()
             _, ztr = torch.split(Qec(X_inp),[opt.nzd, opt.nzf],dim=1) if 'unique' in pfx else Qec(X_inp)
             # ztr = latent_resampling(Qec(X_inp),zf.shape[1],wn1)
             z_inp = zcat(ztr,wnz)

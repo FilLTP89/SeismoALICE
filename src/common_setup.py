@@ -24,7 +24,7 @@ from torch import cuda as tcuda
 from torch import device as tdev
 from torch import save as tsave
 from torch import load as tload
-from torch import FloatTensor as tFT
+from torch import DoubleTensor as tFT
 from torch import LongTensor as tLT
 from torch import manual_seed as mseed
 from torch.utils.data import DataLoader as tud_dload
@@ -96,11 +96,12 @@ def setup():
     # dist.init_process_group("gloo", rank=rank, world_size=world_size)
 
     u'''Set-up GPU and CUDA'''
+    torch.set_default_type(torch.float64)
     opt.cuda = True if (tcuda.is_available() and opt.cuda) else False
     opt.nch = 3
     device = tdev("cuda" if opt.cuda else "cpu")
     opt.dev = device
-    FloatTensor = tcuda.FloatTensor if opt.cuda else tFT
+    FloatTensor = tcuda.DoubleTensor if opt.cuda else tFT
     LongTensor = tcuda.LongTensor if opt.cuda else tLT
     
     #get number of thread in the environment (CPUs)
@@ -380,7 +381,7 @@ def setup():
           # 'vld_loader':vld_loader,\
           'params':params,\
           'device':device,\
-          'FloatTensor':FloatTensor,\
+          'FloatTensor':DoubleTensor,\
           'LongTensor':LongTensor,\
           # 'md':md
           }
