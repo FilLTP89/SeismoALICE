@@ -44,6 +44,8 @@ class BasicEncoderDataParallele(Module):
         self.model = None
         self.resnet = []
         self.cnn1 = []
+        self.branch_broadband = []
+        self.branch_filtered = []
         
 
     def lout(self,nz,nch, nly, increment,limit):
@@ -105,6 +107,14 @@ class Encoder(BasicEncoderDataParallele):
                 self.cnn1 += cnn1d(channel[i-1], channel[i], acts[i-1], ker=ker[i-1],\
                     std=std[i-1],pad=pad[i-1], dil=dil[i-1], bn=_bn, dpc=_dpc, wn=False)
         
+        for n in range(1,nly_bb+1):
+            self.branch_broadband += cnn1d(channel_bb[n-1], channel_bb[n], acts_bb[n-1], ker=ker_fl[n-1],\
+                    std=std_bb[n-1],pad=pad_bb[i-1], dil=dil_bb[i-1], bn=_bn, dpc=_dpc, wn=False)
+
+        for n in range(1, nly_fl+1): 
+            self.branch_filtered += cnn1d(channel_fl[n-1], channel_fl[n], acts_fl[n-1], ker=ker_fl[n-1],\
+                    std=std_bb[n-1],pad=pad_bb[i-1], dil=dil_bb[i-1], bn=_bn, dpc=_dpc, wn=False)
+
         #append the dilated convolutional network to the network
         # pdb.set_trace()
         if dconv:
@@ -114,6 +124,8 @@ class Encoder(BasicEncoderDataParallele):
         # self.cnn1 += [Flatten()]
         # self.cnn1 += DenseBlock(channel[-1]*opt.batchSize*opt.imageSize,opt.nzd) 
         self.cnn1  = sqn(*self.cnn1)
+        self.branch_broadband = sqn(*self.branch_broadband)
+        self.branch_filtered  = sqn(*self.branch_filtered)
         # pdb.set_trace()
         if path:
             self.model.cnn1[-1] = copy.deepcopy(self.cnn1)
@@ -123,11 +135,16 @@ class Encoder(BasicEncoderDataParallele):
     def forward(self,x):
         if x.is_cuda and self.ngpu > 1:
             # zlf   = pll(self.cnn1,x,self.gang)
-            zlf = T._forward(x, self.cnn1, self.gang)
-            zlf = T._forward(zlf, self.resnet, self.gang)
+            z = T._forward(x, self.cnn1, self.gang)
+            zlb = T._forward(z, self.branch_broadband, self.gang)
+            zlf = T._forward(z, self.branch_filtered, self.gang)
+
+            # zlf = T._forward(zlf, self.resnet, self.gang)
+            # zb, zf =  torch.split(zlf, [opt.nzd, opt.nzf])
         else:
-            zlf   = self.cnn1(x)
+            z     = self.cnn1(x)
+            zlb   = self.branch_broadband(z)
+            zlf   = self.branch_filtered(x)
         if not self.training:
-            zlf =zlf.detach()
-        torch.cuda.empty_cache()
-        return zlf
+            zlb, zlf = zlb.detach(), zlf.detach()
+        return zlb, zlf
