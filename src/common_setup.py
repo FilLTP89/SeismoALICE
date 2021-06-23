@@ -96,12 +96,12 @@ def setup():
     # dist.init_process_group("gloo", rank=rank, world_size=world_size)
 
     u'''Set-up GPU and CUDA'''
-    torch.set_default_type(torch.float64)
+    torch.set_default_type(torch.float32)
     opt.cuda = True if (tcuda.is_available() and opt.cuda) else False
     opt.nch = 3
     device = tdev("cuda" if opt.cuda else "cpu")
     opt.dev = device
-    FloatTensor = tcuda.DoubleTensor if opt.cuda else tFT
+    FloatTensor = tcuda.FloatTensor if opt.cuda else tFT
     LongTensor = tcuda.LongTensor if opt.cuda else tLT
     
     #get number of thread in the environment (CPUs)
@@ -153,7 +153,7 @@ def setup():
         md = {'mw':opt.mw,'dep':opt.dep,'scc':opt.scc,\
           'sst':opt.sst,'dtm':opt.dtm,'scl':opt.scl,'cutoff':opt.cutoff}
         
-        md['vTn'] = np.arange(0.0,3.05,0.05,dtype=np.float64)
+        md['vTn'] = np.arange(0.0,3.05,0.05,dtype=np.float32)
         md['nTn'] = md['vTn'].size
         ths_trn,ths_tst,ths_vld,\
         vtm,fsc = synth_dataset(opt.batchPercent,opt.imageSize,opt.latentSize,\
@@ -161,7 +161,7 @@ def setup():
         md['fsc']=fsc
         opt.ncls = md['fsc']['ncat']
         # Create natural period vector 
-        opt.vTn = np.arange(0.0,3.05,0.05,dtype=np.float64)
+        opt.vTn = np.arange(0.0,3.05,0.05,dtype=np.float32)
         opt.nTn = md['vTn'].size
 
 
@@ -252,7 +252,7 @@ def setup():
         print('dataroots:')
         print(src)
         md = {'dtm':9.452707692307693e-06,'cutoff':opt.cutoff,'ntm':opt.imageSize}
-        md['vTn'] = np.arange(0.0,3.05,0.05,dtype=np.float64)
+        md['vTn'] = np.arange(0.0,3.05,0.05,dtype=np.float32)
         md['nTn'] = md['vTn'].size
         ths_trn,ths_tst,ths_vld,\
         vtm,fsc = deepbns_dataset(src,opt.batchPercent,opt.imageSize,opt.latentSize,\
@@ -260,7 +260,7 @@ def setup():
         md['fsc']=fsc
         opt.ncls = md['fsc']['ncat']
         # Create natural period vector 
-        opt.vTn = np.arange(0.0,3.05,0.05,dtype=np.float64)
+        opt.vTn = np.arange(0.0,3.05,0.05,dtype=np.float32)
         opt.nTn = md['vTn'].size
         tsave(ths_trn,'./ths_trn.pth')
         tsave(ths_tst,'./ths_tst.pth')
@@ -281,7 +281,7 @@ def setup():
         print(src)
         
         md = {'dtm':0.01,'cutoff':opt.cutoff,'ntm':opt.imageSize}
-        md['vTn'] = np.arange(0.0,3.05,0.05,dtype=np.float64)
+        md['vTn'] = np.arange(0.0,3.05,0.05,dtype=np.float32)
         md['nTn'] = md['vTn'].size
         ths_trn,ths_tst,ths_vld,vtm,fsc = STEADdataset(src,
             opt.batchPercent,opt.imageSize,opt.latentSize,\
@@ -289,7 +289,7 @@ def setup():
         md['fsc']=fsc
         opt.ncls = md['fsc']['ncat']
         # Create natural period vector 
-        opt.vTn = np.arange(0.0,3.05,0.05,dtype=np.float64)
+        opt.vTn = np.arange(0.0,3.05,0.05,dtype=np.float32)
         opt.nTn = md['vTn'].size
         extension= "_nt{0}_ls{1}_nzf{2}_nzd{3}.pth".format(opt.imageSize,opt.latentSize,opt.nzf,opt.nzd)
         tsave(ths_trn,'./ths_trn'+extension)
@@ -308,14 +308,14 @@ def setup():
         print('dataroots:')
         print(src)
         md = {'dtm':0.005,'cutoff':opt.cutoff,'ntm':opt.imageSize}
-        md['vTn'] = np.arange(0.0,3.05,0.05,dtype=np.float64)
+        md['vTn'] = np.arange(0.0,3.05,0.05,dtype=np.float32)
         md['nTn'] = md['vTn'].size
         ths_trn,ths_tst,ths_vld,vtm,fsc,md = ann2bb_dataset(src,opt.batchPercent,opt.imageSize,opt.latentSize,\
                                     opt.nzd,opt.nzf,md=md,nsy=opt.nsy,device=device)
         md['fsc']=fsc
         opt.ncls = md['fsc']['ncat']
         # Create natural period vector 
-        opt.vTn = np.arange(0.0,3.05,0.05,dtype=np.float64)
+        opt.vTn = np.arange(0.0,3.05,0.05,dtype=np.float32)
         opt.nTn = md['vTn'].size
         tsave(ths_trn,'./ths_trn.pth')
         tsave(ths_tst,'./ths_tst.pth')
@@ -333,7 +333,7 @@ def setup():
         print('dataroots:')
         print(src)
         md = {'dtm':0.01,'cutoff':opt.cutoff,'ntm':opt.imageSize}
-        md['vTn'] = np.arange(0.0,3.05,0.05,dtype=np.float64)
+        md['vTn'] = np.arange(0.0,3.05,0.05,dtype=np.float32)
         md['nTn'] = md['vTn'].size
         
         ths_trn,ths_tst,ths_vld,vtm,fsc = mdof_dataset(src,opt.batchPercent,opt.imageSize,opt.latentSize,\
@@ -342,7 +342,7 @@ def setup():
         md['fsc']=fsc
         opt.ncls = md['fsc']['ncat']
         # Create natural period vector 
-        opt.vTn = np.arange(0.0,3.05,0.05,dtype=np.float64)
+        opt.vTn = np.arange(0.0,3.05,0.05,dtype=np.float32)
         opt.nTn = md['vTn'].size
         tsave(ths_trn,'./ths_trn.pth')
         tsave(ths_tst,'./ths_tst.pth')
@@ -381,7 +381,7 @@ def setup():
           # 'vld_loader':vld_loader,\
           'params':params,\
           'device':device,\
-          'FloatTensor':DoubleTensor,\
+          'FloatTensor':FloatTensor,\
           'LongTensor':LongTensor,\
           # 'md':md
           }

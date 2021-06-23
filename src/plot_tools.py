@@ -766,7 +766,7 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,opt,pfx='trial',outf='./im
     Qec.eval(),Pdc.eval()
     Qec.to(dtype =torch.float64)
     Pdc.to(dtype =torch.float64)
-    # import pdb
+    
     cnt=0
     EG = []
     PG = []
@@ -784,7 +784,7 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,opt,pfx='trial',outf='./im
             X_inp = zcat(Xt,wnx.to(dev))
             # ztr = Qec(X_inp).to(dev)
             # pdb.set_trace()
-            ztr,_ = torch.split(Qec(X_inp),[opt.nzd, opt.nzf],dim=1) if 'unique' in pfx else Qec(X_inp)
+            ztr = Qec(X_inp)[0] if 'unique' in pfx else Qec(X_inp)
             ztr = ztr.to(dev)
              # ztr = latent_resampling(Qec(X_inp),zt.shape[1],wn1)
             z_inp = zcat(ztr,wnz.to(dev))
@@ -891,7 +891,6 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,opt,pfx='trial',outf='./im
         plot_eg_pg(EG,PG, outf,pfx)
             
     elif 'filtered' in tag:
-        import pdb
         for _,batch in enumerate(trn_set):
             # _,xf_data,_,zf_data,_,_,_,*other = batch
             xt_data,xf_data,zt_data,zf_data,_,_,_,*other = batch
@@ -902,7 +901,7 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,opt,pfx='trial',outf='./im
             X_inp = zcat(Xf,wnx)
             # ztr = Qec(X_inp)
             # pdb.set_trace()
-            _, ztr = torch.split(Qec(X_inp),[opt.nzd, opt.nzf],dim=1) if 'unique' in pfx else Qec(X_inp)
+            ztr = Qec(X_inp)[1] if 'unique' in pfx else Qec(X_inp)
             # ztr = latent_resampling(Qec(X_inp),zf.shape[1],wn1)
             z_inp = zcat(ztr,wnz)
             Xr = Pdc(z_inp)

@@ -177,6 +177,7 @@ class DataParalleleFactory(ConvNetFactory):
                 dconv = dconv,\
                 channel = config['channel'],\
                 path = path,
+                config = config,
                 dpc = 0.0,\
                 *args, **kwargs)
 
