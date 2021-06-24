@@ -9,3 +9,5 @@ config*
 *.pth
 call_common_setup
 call_common_setup_debug
+*.ods
+*.docs
