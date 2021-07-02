@@ -93,6 +93,7 @@ class Encoder(BasicEncoderDataParallele):
         dil_bb      = config["broadband"]["dilation"]
         pad_bb      = config["broadband"]["padding"]
         nly_bb      = config["broadband"]["nlayers"]
+        dpc_bb      = config["broadband"]["dpc"]
         acts_bb     = T.activation(config["broadband"]["act"], config["broadband"]["nlayers"])
 
         #filtered part
@@ -102,6 +103,7 @@ class Encoder(BasicEncoderDataParallele):
         pad_fl      = config["filtered"]["padding"]
         nly_fl      = config["filtered"]["nlayers"]
         dil_fl      = config["filtered"]["dilation"]
+        dpc_fl      = config["filtered"]["dpc"]
         acts_fl     = T.activation(config["filtered"]["act"], config["filtered"]["nlayers"])
      
         for i in range(1, nly+1):
@@ -120,18 +122,21 @@ class Encoder(BasicEncoderDataParallele):
                     pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=0.0,wn=False)
             #else we proceed normaly
             else:
-                _bn  = False if i == nly else bn
+                _bn  = bn #False if i == nly else bn
                 _dpc = 0.0 if i == nly else dpc 
                 self.cnn1 += cnn1d(channel[i-1], channel[i], acts[i-1], ker=ker[i-1],\
                     std=std[i-1],pad=pad[i-1], dil=dil[i-1], bn=_bn, dpc=_dpc, wn=False)
-        
+        # pdb.set_trace()
         for n in range(1,nly_bb+1):
-            _bn = True if n<= nly_bb else False
+            _bn = True if n<nly_bb else False
+            _dpc = dpc_bb if n<nly_bb else 0.0
             self.branch_broadband += cnn1d(channel_bb[n-1], channel_bb[n], acts_bb[n-1], ker=ker_bb[n-1],\
                     std=std_bb[n-1],pad=pad_bb[n-1], dil=dil_bb[n-1], bn=_bn, dpc=_dpc, wn=False)
 
+        # pdb.set_trace()
         for n in range(1, nly_fl+1):
-            _bn = True if n<= nly_bb else False
+            _bn = True if n<nly_fl else False
+            _dpc = dpc_fl if n<nly_fl else 0.0
             self.branch_filtered += cnn1d(channel_fl[n-1], channel_fl[n], acts_fl[n-1], ker=ker_fl[n-1],\
                     std=std_fl[n-1],pad=pad_fl[n-1], dil=dil_fl[n-1], bn=_bn, dpc=_dpc, wn=False)
 
