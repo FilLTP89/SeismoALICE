@@ -784,7 +784,13 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,opt,pfx='trial',outf='./im
             X_inp = zcat(Xt,wnx.to(dev))
             # ztr = Qec(X_inp).to(dev)
             # pdb.set_trace()
-            ztr = Qec(X_inp)[0] if 'unique' in pfx else Qec(X_inp)
+            # ztr = Qec(X_inp)[0] if 'unique' in pfx else Qec(X_inp)
+            if 'unique' in pfx:
+                zdd_gen,zdf_gen,zdf_ind =  Qec(X_inp)
+                ztr = zcat(zdf_gen,zdd_gen)
+            else:
+                ztr = Qec(X_inp)
+
             ztr = ztr.to(dev)
              # ztr = latent_resampling(Qec(X_inp),zt.shape[1],wn1)
             z_inp = zcat(ztr,wnz.to(dev))
@@ -901,7 +907,12 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,opt,pfx='trial',outf='./im
             X_inp = zcat(Xf,wnx)
             # ztr = Qec(X_inp)
             # pdb.set_trace()
-            ztr = Qec(X_inp)[1] if 'unique' in pfx else Qec(X_inp)
+            # ztr = Qec(X_inp)[1] if 'unique' in pfx else Qec(X_inp)
+            if 'unique' in pfx:
+                zfd_ind,zfd_gen,zff_gen = Qec(X_inp)
+                ztr = zcat(zfd_gen,zff_gen)
+            else:
+                ztr = Qec(X_inp)
             # ztr = latent_resampling(Qec(X_inp),zf.shape[1],wn1)
             z_inp = zcat(ztr,wnz)
             Xr = Pdc(z_inp)

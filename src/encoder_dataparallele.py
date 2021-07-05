@@ -46,6 +46,7 @@ class BasicEncoderDataParallele(Module):
         self.cnn1 = []
         self.branch_broadband = []
         self.branch_filtered = []
+        self.branch_common = []
         
 
     def lout(self,nz,nch, nly, increment,limit):
@@ -96,6 +97,16 @@ class Encoder(BasicEncoderDataParallele):
         dpc_bb      = config["broadband"]["dpc"]
         acts_bb     = T.activation(config["broadband"]["act"], config["broadband"]["nlayers"])
 
+        #common part
+        channel_com  = config["common"]["channel"]
+        ker_com      = config["common"]["kernel"]
+        std_com      = config["common"]["strides"]
+        dil_com      = config["common"]["dilation"]
+        pad_com      = config["common"]["padding"]
+        nly_com      = config["common"]["nlayers"]
+        dpc_com      = config["common"]["dpc"]
+        acts_com     = T.activation(config["common"]["act"], config["common"]["nlayers"])
+
         #filtered part
         channel_fl  = config["filtered"]["channel"]
         ker_fl      = config["filtered"]["kernel"]
@@ -133,6 +144,12 @@ class Encoder(BasicEncoderDataParallele):
             self.branch_broadband += cnn1d(channel_bb[n-1], channel_bb[n], acts_bb[n-1], ker=ker_bb[n-1],\
                     std=std_bb[n-1],pad=pad_bb[n-1], dil=dil_bb[n-1], bn=_bn, dpc=_dpc, wn=False)
 
+        for n in range(1,nly_com+1):
+            _bn = True if n<nly_com else False
+            _dpc = dpc_bb if n<nly_com else 0.0
+            self.branch_common += cnn1d(channel_com[n-1], channel_com[n], acts_com[n-1], ker=ker_com[n-1],\
+                    std=std_com[n-1],pad=pad_com[n-1], dil=dil_com[n-1], bn=_bn, dpc=_dpc, wn=False)
+
         # pdb.set_trace()
         for n in range(1, nly_fl+1):
             _bn = True if n<nly_fl else False
@@ -153,6 +170,7 @@ class Encoder(BasicEncoderDataParallele):
         # self.cnn1 += DenseBlock(channel[-1]*opt.batchSize*opt.imatgeSize,opt.nzd) 
         self.cnn_common  = sqn(*self.cnn1)
         self.zy = sqn(*(self.branch_broadband))
+        self.zyx = sqn(*(self.branch_common))
         self.zx = sqn(*(self.branch_filtered))
         # pdb.set_trace()
         if path:
@@ -160,17 +178,20 @@ class Encoder(BasicEncoderDataParallele):
             self.cnn1 = self.model
         self.cnn_common.to(self.device)
         self.zy.to(self.device)
+        self.zyx.to(self.device)
         self.zx.to(self.device)
 
     def forward(self,x):
         if x.is_cuda and self.ngpu >=1:
-            z  = self.cnn_common(x)
-            zy =  self.zy(z)
-            zx = self.zx(z)
+            z   = self.cnn_common(x)
+            zy  =  self.zy(z)
+            zyx = self.zyx(z)
+            zx  = self.zx(z)
         else:
-            z  = self.cnn_common(x)
-            zy =  self.zy(z)
-            zx = self.zx(z)
+            z   = self.cnn_common(x)
+            zy  = self.zy(z)
+            zyx = self.zxy(z)
+            zx  = self.zx(z)
         if not self.training:
             zy, zx = zy.detach(), zx.detach()
-        return zy, zx
+        return zy, zyx, zx
