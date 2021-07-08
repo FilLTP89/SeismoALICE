@@ -107,11 +107,16 @@ class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
         self.exf = copy.deepcopy(self.net[:-1])
 
         self.net = sqn(*self.net)
+        # self.features_to_prob = torch.nn.Sequential(
+        #     torch.nn.Linear(channel[-1], 1),
+        #     #activation, leakyReLU if WGAN and sigmoid if GAN
+        #     activation[-1]
+        # )
         # pdb.set_trace()
         if path:
             self.cnn1.cnn1[-1] = copy.deepcopy(self.net[:])
         else: 
-            self.cnn1 = copy.deepcopy(self.net)
+            self.cnn1 = copy.deepcopy(self.net) 
         del self.net
 
         self.exf = sqn(*self.exf)
@@ -119,11 +124,7 @@ class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
         self.cnn1.to(device)
         self.exf.to(device)
 
-        self.features_to_prob = torch.nn.Sequential(
-            torch.nn.Linear(channel[-1], 1),
-            #activation, leakyReLU if WGAN and sigmoid if GAN
-            activation[-1]
-        ).to(device)
+       
 
     def extraction(self, x):
         f = [self.exf[0](x)]
@@ -135,16 +136,16 @@ class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
         if X.is_cuda and self.ngpu >= 1:
             # pdb.set_trace()
             # z = pll(self.cnn1,X,self.gang)
-            z = T._forward(X, self.cnn1, self.gang)
-            z = torch.reshape(z,(z.shape[0],-1))
-            z = T._forward(z,self.features_to_prob, self.gang)
+            z = self.cnn1(X)
+            # z = torch.reshape(z,(z.shape[0],-1))
+            # z = self.features_to_prob(z)
             if self.wf:
                 #f = pll(self.extraction,X,self.gang)
                 f = self.extraction(X)
         else:
             z = self.cnn1(X)
-            z = torch.reshape(z,(-1,1))
-            z = self.features_to_prob(z)
+            # z = torch.reshape(z,(-1,1))
+            # z = self.features_to_prob(z)
             if self.wf:
                 f = self.extraction(X) 
 

@@ -20,8 +20,8 @@ class DCGAN_DzDataParallele(object):
         pass
 
     @staticmethod
-    def getDCGAN_DzDataParallele(name,ngpu, nc,nz, act, ncl, ndf, path, nly, channel, fpd=1,\
-                 ker=2,std=2,pad=0, dil=0,grp=0,bn=True,wf=False, dpc=0.0,
+    def getDCGAN_DzDataParallele(name,ngpu, nc,nz, act, ncl, ndf, path, nly, channel, bn, fpd=1,\
+                 ker=2,std=2,pad=0, dil=0,grp=0,wf=False, dpc=0.0,
                  n_extra_layers=0, limit = 256, bias = False):
         if name is not None:
             classname = 'DCGAN_Dz_' + name
@@ -58,8 +58,8 @@ class BasicDCGAN_DzDataParallele(Module):
 
 class DCGAN_Dz(BasicDCGAN_DzDataParallele):
     """docstring for DCGAN_DzDataParallele"""
-    def __init__(self,ngpu, nc, ndf, nz, nly, act, channel, fpd=0,ncl = 512,limit = 512,\
-                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.250, bias = False,
+    def __init__(self,ngpu, nc, ndf, nz, nly, act, channel, bn, fpd=0,ncl = 512,limit = 512,\
+                 ker=2,std=2,pad=0, dil=1,grp=1,wf=False, dpc=0.250, bias = False,
                  n_extra_layers=0, path=''):
 
         super(DCGAN_Dz, self).__init__()
@@ -85,27 +85,27 @@ class DCGAN_Dz(BasicDCGAN_DzDataParallele):
                 bn = False, act = activation[0], dpc = dpc))
 
         for i in range(2,nly+1):
-            
             act = activation[i-1]
             self.net.append(ConvBlock(ni = channel[i-1], no = channel[i],
-                ks = ker[i-1], stride = std[i-1], pad = pad[i-1], bias = bias, act = act, dpc = dpc, bn=bn))
+                ks = ker[i-1], stride = std[i-1], pad = pad[i-1],\
+                 bias = bias, act = activation[i-1], dpc = dpc, bn = bn))
             # self.cnn1 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,\
             #         bn=_bn,dpc=dpc,wn=False)
             layers.append(ConvBlock(ni = channel[i-1],no=channel[i],\
                     ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
-                    dpc = dpc, act = act))
+                    dpc = dpc, act = activation[i-1]))
 
         for k in range(0,n_extra_layers):
             self.net.append(ConvBlock(ni = channel[i-1],no=channel[i],\
                 ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
-                dpc = dpc, act = act))
+                dpc = dpc, act = activation[k]))
 
         # pdb.set_trace()
         self.exf = layers[:-1]
         self.exf =sqn(*self.exf).to(device)
 
         self.net.append(Dpout(dpc = dpc))
-        self.net.append(activation[-1])
+        # self.net.append(activation[-1])
         self.net = self.prc + self.net
         self.net =sqn(*self.net)
         

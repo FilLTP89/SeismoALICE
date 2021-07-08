@@ -153,9 +153,6 @@ class trainer(object):
             n = self.strategy['unique']
             # pdb.set_trace()
             self.F_  = net.Encoder(opt.config['F'], opt)
-
-            self.writer.add_graph(self.F_,torch.randn(10,6,4096).to(0))
-
             self.Gy  = net.Decoder(opt.config['Gy'], opt)
             self.Gx  = net.Decoder(opt.config['Gx'], opt)
             
@@ -176,20 +173,26 @@ class trainer(object):
                         lr=glr,betas=(b1,b2),
                         weight_decay=0.00001)
 
+                    # self.oGyx = RMSProp(ittc(self.F_.parameters(),
+                    #     self.Gy.parameters(),
+                    #     self.Gx.parameters()),
+                    #     lr=glr,alpha=b2,
+                    #     weight_decay=0.00001)
                 self.optz.append(self.oGyx)
 
                 ## Discriminators
                 # pdb.!()
-                self.Dy    =  net.DCGAN_Dx(opt.config['Dy'],opt)
-                self.Dx    =  net.DCGAN_Dx(opt.config['Dx'],opt)
-                self.Dzb   =  net.DCGAN_Dz(opt.config['Dzb'],opt)
-                self.Dzf   =  net.DCGAN_Dz(opt.config['Dzf'],opt)
-                self.Dyz   =  net.DCGAN_DXZ(opt.config['Dyz'],opt)
-                self.Dxz   =  net.DCGAN_DXZ(opt.config['Dxz'],opt)
-                self.Dzzb  =  net.DCGAN_Dz(opt.config['Dzzb'], opt)
-                self.Dzzf  =  net.DCGAN_Dz(opt.config['Dzzf'], opt)
-                self.Dxx   =  net.DCGAN_Dx(opt.config['Dxx'], opt)
-                self.Dyy   =  net.DCGAN_Dx(opt.config['Dyy'], opt)
+                # pdb.set_trace()
+                self.Dy   = net.DCGAN_Dx(opt.config['Dy'],opt)
+                self.Dx   = net.DCGAN_Dx(opt.config['Dx'],opt)
+                self.Dzb  = net.DCGAN_Dz(opt.config['Dzb'],opt)
+                self.Dzf  = net.DCGAN_Dz(opt.config['Dzf'],opt)
+                self.Dyz  = net.DCGAN_DXZ(opt.config['Dyz'],opt)
+                self.Dxz  = net.DCGAN_DXZ(opt.config['Dxz'],opt)
+                self.Dzzb = net.DCGAN_Dz(opt.config['Dzzb'],opt)
+                self.Dzzf = net.DCGAN_Dz(opt.config['Dzzf'],opt)
+                self.Dxx  = net.DCGAN_Dx(opt.config['Dxx'],opt)
+                self.Dyy  = net.DCGAN_Dx(opt.config['Dyy'],opt)
 
                 self.Dnets.append(self.Dx)
                 self.Dnets.append(self.Dy)
@@ -202,10 +205,13 @@ class trainer(object):
                 self.Dnets.append(self.Dxx)
                 self.Dnets.append(self.Dyy)
 
-                self.oDyxz = reset_net(self.Dnets,
-                    func=set_weights,lr=rlr,
-                    optim='Adam',b1=b1,b2=b2,
-                    weight_decay=0.00001)
+                # self.oDyxz = reset_net(self.Dnets,
+                #     func=set_weights,lr=rlr,
+                #     optim='Adam',b1=b1,b2=b2,
+                #     weight_decay=0.00001)
+
+                self.oDyxz = reset_net(self.Dnets,func=set_weights,lr=rlr,optim='Adam')
+
                 self.optz.append(self.oDyxz)
 
             else:
@@ -234,16 +240,19 @@ class trainer(object):
     def discriminate_xz(self,x,xr,z,zr):
         # Discriminate real
         # pdb.set_trace()
+        # torch.onnx.export(self.Dzf,zr,outf+"/Dzf.onnx")
+        # torch.onnx.export(self.Dx,x,outf+"/Dx.onnx")
         ftz = self.Dzf(zr)
         ftx = self.Dx(x)
 
         zrc = zcat(ftx[0],ftz[0])
         ftr = ftz[1]+ftx[1]
-        
+
+        # torch.save(self.Dxz,outf+"/Dxz.pth")
         ftxz = self.Dxz(zrc)
         Dxz  = ftxz[0]
         ftr += ftxz[1]
-        
+
         # Discriminate fake
         ftz = self.Dzf(z)
         ftx = self.Dx(xr)
@@ -260,13 +269,15 @@ class trainer(object):
     def discriminate_yz(self,x,xr,z,zr):
         # Discriminate real
         # pdb.set_trace()
+        # torch.onnx.export(self.Dzb,zr,outf+"/Dzb.onnx")
+        # torch.onnx.export(self.Dy,x,outf+"/Dy.onnx")
         ftz = self.Dzb(zr)
         ftx = self.Dy(x)
 
         # zrc = zcat(ftx[0],ftz[0]).reshape(-1,1)
         zrc = zcat(ftx[0],ftz[0])
         ftr = ftz[1]+ftx[1]
-        
+        # torch.onnx.export(self.Dyz,zrc,outf+"/Dyz.onnx")
         ftxz = self.Dyz(zrc)
         Dxz  = ftxz[0]
         ftr += ftxz[1]
@@ -289,6 +300,7 @@ class trainer(object):
     def discriminate_hybrid_xz(self,Xd,Xdr,zd,zdr):
         
         # Discriminate real
+
         ftz = self.Dzf(zdr)
         ftX = self.Dy(Xd)
         zrc = zcat(ftX[0],ftz[0])
@@ -311,12 +323,14 @@ class trainer(object):
     # @profile
     def discriminate_xx(self,x,xr):
         # pdb.set_trace()
-        Dreal = self.Dxx(zcat(x,x ))
+        # torch.onnx.export(self.Dxx,zcat(x,x),outf+"/Dxx.onnx")
+        Dreal = self.Dxx(zcat(x,x))
         Dfake = self.Dxx(zcat(x,xr))
         return Dreal,Dfake
 
     def discriminate_yy(self,x,xr):
         # pdb.set_trace()
+        # torch.onnx.export(self.Dyy,zcat(x,x),outf+"/Dyy.onnx")
         Dreal = self.Dyy(zcat(x,x ))
         Dfake = self.Dyy(zcat(x,xr))
         return Dreal,Dfake
@@ -391,26 +405,25 @@ class trainer(object):
         Dreal_zzy,Dfake_zzy = self.discriminate_zzb(zd,zd_ind)
         Dreal_zzx,Dfake_zzx = self.discriminate_zzf(zf,zf_ind)
 
-        Dloss_ind = self.bce_loss(Dreal_zzy,o1l(Dreal_zzy))+\
-            self.bce_loss(Dfake_zzy,o0l(Dfake_zzy))+\
-            self.bce_loss(Dreal_zzx,o1l(Dreal_zzx))+\
-            self.bce_loss(Dfake_zzx,o0l(Dfake_zzx))
-        
-        # zd_gen = self.F_(y_inp)
-        # zf_gen = self.F_(x_inp)
-
-        # z_gen = latent_resampling(self.Fef(X_inp),nzf,wn1)
-        # print("\t||X_gen : ", X_gen.shape,"\tz_gen : ",z_gen.shape)
+        # Dloss_ind_y = self.bce_loss(Dreal_zzy,o1l(Dreal_zzy))+\
+        #     self.bce_loss(Dfake_zzy,o0l(Dfake_zzy))+\
+        # Dloss_ind_x = self.bce_loss(Dreal_zzx,o1l(Dreal_zzx))+\
+        #     self.bce_loss(Dfake_zzx,o0l(Dfake_zzx))
+        Dloss_ind_y = -torch.mean(ln0c(Dreal_zzy)+ln0c(1.0-Dfake_zzy))
+        Dloss_ind_x = -torch.mean(ln0c(Dreal_zzx)+ln0c(1.0-Dfake_zzx))
+        # Dloss_ind_y = -(torch.mean(Dreal_zzy)-torch.mean(Dfake_zzy))
+        # Dloss_ind_x = -(torch.mean(Dreal_zzx)-torch.mean(Dfake_zzx))
+        Dloss_ind =  Dloss_ind_x + Dloss_ind_y
         # 3. Cross-Discriminate XZ
-        # pdb.set_trace()
         Dyz,Dzy,_,_ = self.discriminate_yz(y,y_gen,zd,zd_gen)
         Dxz,Dzx,_,_ = self.discriminate_xz(x,x_gen,zf,zf_gen)
-         
+
         # 4. Compute ALI discriminator loss
-        # Dloss_ali = -torch.mean(ln0c(Dzy)+ln0c(1.0-Dyz))-torch.mean(ln0c(Dzx)+ln0c(1.0-Dxz))
-        Dloss_ali_y = self.bce_loss(Dzy,o1l(Dzy)) + self.bce_loss(Dyz,o0l(Dyz))
-        Dloss_ali_x = self.bce_loss(Dzx,o1l(Dzx)) + self.bce_loss(Dxz,o0l(Dxz)) #-(torch.mean(DzX) - torch.mean(DXz))
-        Dloss_ali = Dloss_ali_x+Dloss_ali_y
+        # Dloss_ali_y = self.bce_loss(Dzy,o1l(Dzy)) + self.bce_loss(Dyz,o0l(Dyz))
+        # Dloss_ali_x = self.bce_loss(Dzx,o1l(Dzx)) + self.bce_loss(Dxz,o0l(Dxz))
+        Dloss_ali_y = -torch.mean(ln0c(Dzy)+ln0c(1.0-Dyz))
+        Dloss_ali_x = -torch.mean(ln0c(Dzx)+ln0c(1.0-Dxz))
+        Dloss_ali = Dloss_ali_x + Dloss_ali_y
 
         wnx,wnzf,wn1 = noise_generator(x.shape,zf.shape,device,rndm_args)
         wny,wnzd,wn1 = noise_generator(y.shape,zd.shape,device,rndm_args)
@@ -448,10 +461,13 @@ class trainer(object):
         Dreal_y,Dfake_y = self.discriminate_yy(y,y_rec)
         Dreal_x,Dfake_x = self.discriminate_xx(x,x_rec)
 
-        #FG : ici j'ai corrigé la deuxième partie de Dloss_rec car c'est un bce loss et il faut
-        # Dfake avec o0l!!  comme dans Dloss_rec_z
-        Dloss_rec_y = self.bce_loss(Dreal_y,o1l(Dreal_y))+self.bce_loss(Dfake_y,o0l(Dfake_y))
-        Dloss_rec_x = self.bce_loss(Dreal_x,o1l(Dreal_x))+self.bce_loss(Dfake_x,o0l(Dfake_x))
+        # Dloss_rec_y = self.bce_loss(Dreal_y,o1l(Dreal_y))+self.bce_loss(Dfake_y,o0l(Dfake_y))
+        # Dloss_rec_x = self.bce_loss(Dreal_x,o1l(Dreal_x))+self.bce_loss(Dfake_x,o0l(Dfake_x))
+        Dloss_rec_y = -torch.mean(ln0c(Dreal_y)+ln0c(1.0-Dfake_y))
+        Dloss_rec_x = -torch.mean(ln0c(Dreal_x)+ln0c(1.0-Dfake_x))
+        # Dloss_rec_y = -(torch.mean(Dreal_y)-torch.mean(Dfake_y))
+        # Dloss_rec_x = -(torch.mean(Dreal_x)-torch.mean(Dfake_x))
+
         #warning in the perpose of us ing the BCEloss the value should be greater than zero, 
         # so we apply a boolean indexing. BCEloss use log for calculation so the negative value
         # will lead to isses. Why do we have negative value? the LeakyReLU is not tranform negative value to zero
@@ -459,22 +475,22 @@ class trainer(object):
         # pdb.set_trace()
         # Dloss_ali_xy = self.bce_loss(Dreal_y,o1l(Dreal_y))+self.bce_loss(Dfake_y,o1l(Dfake_y))+\
         #     self.bce_loss(Dreal_x,o1l(Dreal_x))+self.bce_loss(Dfake_x,o1l(Dfake_x))
-            
-            
         # 4. Cross-Discriminate ZZ
         # pdb.set_trace()
         Dreal_zd,Dfake_zd = self.discriminate_zzb(zd,zd_rec)
         Dreal_zf,Dfake_zf = self.discriminate_zzf(zf,zf_rec)
         # Dreal_z, Dfake_z  = self.discriminate_zz(zf,zd)
         
-        Dloss_rec_z = self.bce_loss(Dreal_zd,o1l(Dreal_zd))+self.bce_loss(Dfake_zd,o0l(Dfake_zd))+\
-            self.bce_loss(Dreal_zf,o1l(Dreal_zf))+self.bce_loss(Dfake_zf,o0l(Dfake_zf))
+        # Dloss_rec_z = self.bce_loss(Dreal_zd,o1l(Dreal_zd))+self.bce_loss(Dfake_zd,o0l(Dfake_zd))+\
+        #     self.bce_loss(Dreal_zf,o1l(Dreal_zf))+self.bce_loss(Dfake_zf,o0l(Dfake_zf))
             # self.bce_loss(Dreal_z,o1l(Dreal_z))+self.bce_loss(Dfake_z,o0l(Dfake_z))
-       
+        Dloss_rec_zy = -torch.mean(ln0c(Dreal_zd)+ln0c(1.0-Dfake_zd))
+        Dloss_rec_zx = -torch.mean(ln0c(Dreal_zf)+ln0c(1.0-Dfake_zf))
+
         # Total loss
-        Dloss_rec = Dloss_rec_x+Dloss_rec_y+ Dloss_rec_z
+        Dloss_rec = Dloss_rec_x+Dloss_rec_y+Dloss_rec_zx+Dloss_rec_zy
         Dloss = Dloss_ali + Dloss_rec + Dloss_ind
-        Dloss.backward(),self.oDyxz.step() #,clipweights(self.Dnets),
+        Dloss.backward(),self.oDyxz.step()#,clipweights(self.Dnets),
         zerograd(self.optz)
         self.losses['Dloss'].append(Dloss.tolist())  
         self.losses['Dloss_ali'].append(Dloss_ali.tolist())  
@@ -525,11 +541,13 @@ class trainer(object):
         Dreal_zzy,Dfake_zzy = self.discriminate_zzb(zd,zd_ind)
         Dreal_zzx,Dfake_zzx = self.discriminate_zzf(zf,zf_ind)
 
-        Gloss_ind = self.bce_loss(Dfake_zzy,o1l(Dfake_zzy))+\
-            self.bce_loss(Dfake_zzx,o1l(Dfake_zzx))
+        Gloss_ind_y = self.bce_loss(Dfake_zzy,o1l(Dfake_zzy))
+        Gloss_ind_x = self.bce_loss(Dfake_zzx,o1l(Dfake_zzx))
 
         # Ici on force le F a générer des zxy égales pour F_(x) et F_(y)
         Gloss_ind_cycle = torch.mean(torch.abs(zdf_gen-zfd_gen))
+        
+        Gloss_ind = Gloss_ind_x+Gloss_ind_y+Gloss_ind_cycle
         # zf_gen = zcat(zf_gen,wnzf) # = dim zd_gen
         # zd_gen = self.F_(y_inp)
         # zf_gen = self.F_(x_inp)
@@ -571,11 +589,8 @@ class trainer(object):
  
         zd_ind = zcat(zfd_gen,zfd_ind) # zy generated by x
         zf_ind = zcat(zdf_gen,zdf_ind) # zx generated by y
-
-        # zd_rec = self.F_(y_gen) 
-        # zf_rec = self.F_(x_gen)
-        # z_rec = latent_resampling(self.Fef(X_gen),nzf,wn1)
- 
+    
+        # pdb.set_trace()
         # 3. Cross-Discriminate XX
         _,Dfake_y = self.discriminate_yy(y,y_rec)
         _,Dfake_x = self.discriminate_xx(x,x_rec)
@@ -596,11 +611,13 @@ class trainer(object):
 #         for rf,ff in zip(ftz_real,ftz_fake):
 #             Gloss_ftmz += torch.mean((rf-ff)**2)    
         # Total Loss
-        Gloss = Gloss_ftm+Gloss_ali_xy+Gloss_cycle_xy+Gloss_ali_z+Gloss_ind+Gloss_ind_cycle
+        Gloss = Gloss_ftm+Gloss_ali_xy+Gloss_cycle_xy+Gloss_ali_z+Gloss_ind
         # Gloss = (Gloss_ftm*0.7)*(1.-0.7)/2.0 + \
         #     (Gloss_cycle_xy*0.9+Gloss_ali_xy*0.1)*(1.-0.1)/1.0 +\
         #     (Gloss_ali_z*0.7)*(1.-0.7)/2.0
-        Gloss.backward(),self.oGyx.step(),zerograd(self.optz)
+        Gloss.backward()
+        self.oGyx.step()
+        zerograd(self.optz)
          
         self.losses['Gloss'].append(Gloss.tolist()) 
         self.losses['Gloss_cycle_xy'].append(Gloss_cycle_xy.tolist())
