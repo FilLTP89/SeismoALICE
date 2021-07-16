@@ -21,7 +21,7 @@ class DCGAN_DxDataParallele(object):
     @staticmethod
     def getDCGAN_DxDataParallele(name, ngpu, nc, ncl, ndf, nly,act,channel, path, fpd=0, limit = 256,\
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.0,
-                 n_extra_layers=0,isize=256):
+                 n_extra_layers=0,isize=256, prob = False):
         if name is not None:
             classname = 'DCGAN_Dx_'+ name
             #preparation for other DataParallele Class
@@ -31,14 +31,14 @@ class DCGAN_DxDataParallele(object):
                 class_ = getattr(module,classname)
                 return class_(ngpu=ngpu, isize=isize, nc=nc, ncl=ncl, ndf=ndf,  channel = channel, fpd=fpd, act=act, nly=nly,\
                  ker=ker,std=std,pad=pad, dil=dil,grp=grp,bn=bn,wf=wf, dpc=dpc, limit = limit,\
-                 n_extra_layers=n_extra_layers, path=path)
+                 n_extra_layers=n_extra_layers, path=path, prob=prob)
             except Exception as e:
                 raise e
                 print("The class ",classname, " does not exit")
         else:
             return DCGAN_Dx(ngpu = ngpu, isize = isize, nc = nc, ncl = ncl, ndf = ndf, fpd = fpd,channel = channel,\
                         nly = nly, ker=ker ,std=std, pad=pad, dil=dil, grp=grp, bn=bn, wf = wf, dpc=dpc,\
-                        n_extra_layers = n_extra_layers,limit = limit,path = path, act = act)
+                        n_extra_layers = n_extra_layers,limit = limit,path = path, act = act, prob = prob)
 
 class BasicDCGAN_DxDataParallele(Module):
     """docstring for BasicDCGAN_DxDataParallele"""
@@ -63,7 +63,7 @@ class BasicDCGAN_DxDataParallele(Module):
 class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
     """docstring for    DCGAN_Dx"""
     def __init__(self, ngpu, nc, ncl, ndf, nly,act, channel, fpd=1, isize=256, limit = 256,\
-                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.0, path = '',
+                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.0, path = '', prob = False,
                  n_extra_layers=0):
 
         super(DCGAN_Dx, self).__init__()
@@ -105,18 +105,26 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
             self.extra+=[Conv1d(in_channels = channel[i],out_channels=channel[i],\
                 kernel_size = 3, stride = 1, padding=1, bias=False)]
 
-        self.final+=[Conv1d(channel[i], channel[i], 3, padding=1, bias=False)]
-        self.final+=[BatchNorm1d(channel[i])]
-        self.final+=[Dpout(dpc=dpc)]
-        self.final+=[activation[-1]]
 
+        if prob:
+            self.final = [
+                Flatten(),
+                torch.nn.Linear(nc, 1),
+                torch.nn.Sigmoid()]
+        else:
+            self.final+=[Conv1d(channel[i], channel[i], 3, padding=1, bias=False)]
+            self.final+=[BatchNorm1d(channel[i])]
+            self.final+=[Dpout(dpc=dpc)]
+            self.final+=[activation[-1]]
+        
         #compute values 
         self.exf  = self.net
         self._net = self.prc + self.net + self.extra + self.final
         self._net = sqn(*self._net)
         self.net  = sqn(*self.net)
-        #creating sequentially the Network
 
+        #creating sequentially the Network
+        
         # pdb.set_trace()
         if path:
             self.cnn1.cnn1[-5] = self.net[:]
@@ -130,10 +138,7 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
         self.prc = sqn(*self.prc)
         self.prc.to(self.device)
 
-        self.features_to_prob = torch.nn.Sequential(
-            torch.nn.Linear(channel[i], 1),
-            torch.nn.Sigmoid()
-        ).to(self.device)
+        
 
     def extraction(self,X):
         X = self.prc(X)
@@ -146,11 +151,11 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
 
         if X.is_cuda and self.ngpu > 1:
             # pdb.set_trace()
-            # z = pll(self.cnn1,X,self.gang)
-            z = self.cnn1(X)
+            z = pll(self.cnn1,X,self.gang)
+            # z = self.cnn1(X)
             if self.wf:
-                # f = pll(self.extraction,X,self.gang)
-                f = self.extraction(X)
+                f = pll(self.extraction,X,self.gang)
+                # f = self.extraction(X)
         else:
             z = self.cnn1(X)
             if self.wf:

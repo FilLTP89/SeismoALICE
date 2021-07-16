@@ -21,7 +21,7 @@ class DCGAN_DzDataParallele(object):
 
     @staticmethod
     def getDCGAN_DzDataParallele(name,ngpu, nc,nz, act, ncl, ndf, path, nly, channel, bn, fpd=1,\
-                 ker=2,std=2,pad=0, dil=0,grp=0,wf=False, dpc=0.0,
+                 ker=2,std=2,pad=0, dil=0,grp=0,wf=False, dpc=0.0, prob = True, 
                  n_extra_layers=0, limit = 256, bias = False):
         if name is not None:
             classname = 'DCGAN_Dz_' + name
@@ -32,14 +32,14 @@ class DCGAN_DzDataParallele(object):
                 class_ = getattr(module,classname)
 
                 return class_(ngpu = ngpu, nc=nc, nz =nz, ncl=ncl, ndf=ndf, act=act,fpd=fpd, nly = nly,channel = channel,\
-                 ker=ker,std=std,pad=pad, path=path, dil=dil,grp=grp,bn=bn,wf=wf, dpc=dpc, limit = limit,bias = bias,
+                 ker=ker,std=std,pad=pad, path=path, prob=prob, dil=dil,grp=grp,bn=bn,wf=wf, dpc=dpc, limit = limit,bias = bias,
                  n_extra_layers=n_extra_layers)
             except Exception as e:
                 raise e
                 print("The class ", classname, " does not exit")
         else:
             return DCGAN_Dz(ngpu, nc=nc, ncl=ncl, nz=nz, ndf = ndf, act=act,fpd=fpd, nly = nly, channel = channel,\
-                 ker=ker,std=std,pad=pad, dil=dil, path=path, grp=grp, bn=bn,wf=wf, dpc=dpc, limit = limit,bias = bias,\
+                 ker=ker,std=std,pad=pad, dil=dil, prob=prob, path=path, grp=grp, bn=bn,wf=wf, dpc=dpc, limit = limit,bias = bias,\
                  n_extra_layers=n_extra_layers)
 
 
@@ -50,6 +50,7 @@ class BasicDCGAN_DzDataParallele(Module):
         self.training =  True
         self.prc = []
         self.exf = []
+        self.final = []
 
     def lout(self, nz, nly,ncl, increment, limit):
         #this is the logic of in_channels and out_channels
@@ -59,7 +60,7 @@ class BasicDCGAN_DzDataParallele(Module):
 class DCGAN_Dz(BasicDCGAN_DzDataParallele):
     """docstring for DCGAN_DzDataParallele"""
     def __init__(self,ngpu, nc, ndf, nz, nly, act, channel, bn, fpd=0,ncl = 512,limit = 512,\
-                 ker=2,std=2,pad=0, dil=1,grp=1,wf=False, dpc=0.250, bias = False,
+                 ker=2,std=2,pad=0, dil=1,grp=1,wf=False, dpc=0.250, bias = False, prob=False,
                  n_extra_layers=0, path=''):
 
         super(DCGAN_Dz, self).__init__()
@@ -100,13 +101,21 @@ class DCGAN_Dz(BasicDCGAN_DzDataParallele):
                 ks = 3, stride = 1, pad = 1, dil = 1, bias = False, bn = bn,\
                 dpc = dpc, act = activation[k]))
 
+
+        if prob:
+            self.final = [
+                Flatten(),
+                torch.nn.Linear(nc, 1),
+                torch.nn.Sigmoid()]
+        else: 
+            self.final = []
         # pdb.set_trace()
         self.exf = layers[:-1]
         self.exf =sqn(*self.exf).to(device)
 
         self.net.append(Dpout(dpc = dpc))
         # self.net.append(activation[-1])
-        self.net = self.prc + self.net
+        self.net = self.prc + self.net +  self.final
         self.net =sqn(*self.net)
         
         # pdb.set_trace()
@@ -131,11 +140,11 @@ class DCGAN_Dz(BasicDCGAN_DzDataParallele):
     
     def forward(self,X):
         if X.is_cuda and self.ngpu > 1:
-            # z = pll(self.cnn1,X,self.gang)
-            z = T._forward(X, self.cnn1, self.gang)
+            z = pll(self.cnn1,X,self.gang)
+            # z = T._forward(X, self.cnn1, self.gang)
             if self.wf:
-                # f = self.extraction,X,self.gang)
-                f = self.extraction(X)
+                f = pll(self.extraction,X,self.gang)
+                # f = self.extraction(X)
         else:
             z = self.cnn1(X)
             if self.wf:

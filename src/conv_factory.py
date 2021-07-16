@@ -217,6 +217,7 @@ class DataParalleleFactory(ConvNetFactory):
         dpc = config_dcgan_dx["dpc"] if "dpc" in config_dcgan_dx else 0.25
         path = config_dcgan_dx["path"] if "path" in config_dcgan_dx else ""
         bn = json.loads(config_dcgan_dx["bn"].lower()) if "bn" in config_dcgan_dx else False
+        prob = json.loads(config_dcgan_dx["prob"].lower()) if "prob" in config_dcgan_dx else False
         #DCGAN_Dx class is called here
         dcgan_dx    = DCGAN_DxDataParallele.getDCGAN_DxDataParallele(name=name, ngpu = opt.ngpu,\
                      isize= 256, nc = nc,\
@@ -230,6 +231,7 @@ class DataParalleleFactory(ConvNetFactory):
                      dil = config_dcgan_dx['dilation'],\
                      channel = config_dcgan_dx['channel'],\
                      path = path,\
+                     prob = prob,\
                      grp=0,bn=bn,wf=wf, dpc=dpc,\
                      n_extra_layers=0)
         return dcgan_dx
@@ -238,12 +240,14 @@ class DataParalleleFactory(ConvNetFactory):
         #DCGAN_DZ class is called here 
         name  = config_dcgan_dz["name"] if "name" in config_dcgan_dz else None
         nz    = config_dcgan_dz["nz"]   if "nz" in config_dcgan_dz else opt.nzd
+        nc    = config_dcgan_dz["nc"]   if "nc" in config_dcgan_dz else opt.nzd
         wf  = json.loads(config_dcgan_dz["wf"].lower()) if "wf" in config_dcgan_dz else False
         dpc = config_dcgan_dz["dpc"] if "dpc" in config_dcgan_dz else 0.25
         path = config_dcgan_dz["path"] if "path" in config_dcgan_dz else ""
         bn = json.loads(config_dcgan_dz["bn"].lower()) if "bn" in config_dcgan_dz else False
+        prob = json.loads(config_dcgan_dz["prob"].lower()) if "prob" in config_dcgan_dz else False
         dcgan_dz    = DCGAN_DzDataParallele.getDCGAN_DzDataParallele( name =  name, ngpu = opt.ngpu,\
-                     nc=opt.nch, nz = nz,\
+                     nc=nc, nz = nz,\
                      ncl=512, ndf=opt.ndf, fpd=0,\
                      nly = config_dcgan_dz['nlayers'],\
                      ker = config_dcgan_dz['kernel'],\
@@ -255,6 +259,7 @@ class DataParalleleFactory(ConvNetFactory):
                      channel = config_dcgan_dz['channel'],\
                      grp =0, bn=bn,wf=wf, dpc=dpc,
                      path = path,\
+                     prob = prob,\
                      n_extra_layers=0)
         return dcgan_dz
 
@@ -263,6 +268,8 @@ class DataParalleleFactory(ConvNetFactory):
         name  = config_dcgan_dxz["name"] if "name" in config_dcgan_dxz else None
         nc    = config_dcgan_dxz["nc"] if "nc" in config_dcgan_dxz else 1024
         wf  = json.loads(config_dcgan_dxz["wf"].lower()) if "wf" in config_dcgan_dxz else False
+        prob  = json.loads(config_dcgan_dxz["prob"].lower()) if "prob" in config_dcgan_dxz else False
+        bias  = json.loads(config_dcgan_dxz["bias"].lower()) if "bias" in config_dcgan_dxz else False
         dpc = config_dcgan_dxz["dpc"] if "dpc" in config_dcgan_dxz else 0.25
         path = config_dcgan_dxz["path"] if "path" in config_dcgan_dxz else ""
         dcgan_dxz = DCGAN_DXZDataParallele.getDCGAN_DXZDataParallele(name = name, ngpu=opt.ngpu, nc=nc, 
@@ -276,6 +283,8 @@ class DataParalleleFactory(ConvNetFactory):
                      channel = config_dcgan_dxz['channel'],\
                      grp=0, bn=False,wf=wf, dpc=dpc,\
                      path = path,\
+                     prob = prob,\
+                     bias = bias,\
                      n_extra_layers=0)
 
         return dcgan_dxz

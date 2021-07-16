@@ -120,7 +120,8 @@ class Flatten(Module):
     def __init__(self):
         super(Flatten,self).__init__()
     def forward(self,x):
-        return x.view(-1,1).squeeze(1)
+        # return x.view(-1,1).squeeze(1)
+        return torch.squeeze(x)
 
 class Squeeze(Module):
     def __init__(self):
@@ -465,7 +466,8 @@ class T(object):
     def activation(name, nly, typo = 'ALICE'):
         acts = {}
         acts['ALICE'] = {
-                 'F' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)],
+                 'F'   :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)],
+                 'F2'  :[nn.ReLU(inplace=True) for t in range(1, nly+1)],
                  'Fed' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.LeakyReLU(1.0,inplace=True)],
                  'Gdd' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.Tanh()],
                  'Gdd2':[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.LeakyReLU(1.0,inplace=True)],

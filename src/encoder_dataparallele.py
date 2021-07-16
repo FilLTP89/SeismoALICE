@@ -137,6 +137,7 @@ class Encoder(BasicEncoderDataParallele):
                 _dpc = 0.0 if i == nly else dpc 
                 self.cnn1 += cnn1d(channel[i-1], channel[i], acts[i-1], ker=ker[i-1],\
                     std=std[i-1],pad=pad[i-1], dil=dil[i-1], bn=_bn, dpc=_dpc, wn=False)
+
         # pdb.set_trace()
         for n in range(1,nly_bb+1):
             _bn = True if n<nly_bb else False
@@ -173,9 +174,11 @@ class Encoder(BasicEncoderDataParallele):
         self.zyx = sqn(*(self.branch_common))
         self.zx = sqn(*(self.branch_filtered))
         # pdb.set_trace()
+
         if path:
             self.model.cnn1[-1] = copy.deepcopy(self.cnn1)
             self.cnn1 = self.model
+
         self.cnn_common.to(self.device)
         self.zy.to(self.device)
         self.zyx.to(self.device)
@@ -183,15 +186,19 @@ class Encoder(BasicEncoderDataParallele):
 
     def forward(self,x):
         if x.is_cuda and self.ngpu >=1:
+            # z   = pll(self.cnn_common,x,self.gang)
+            # zy  = pll(self.zy,  z, self.gang)
+            # zyx = pll(self.zyx, z, self.gang)
+            # zx  = pll(self.zx, z, self.gang)
             z   = self.cnn_common(x)
-            zy  =  self.zy(z)
+            zy  = self.zy(z)
             zyx = self.zyx(z)
             zx  = self.zx(z)
         else:
             z   = self.cnn_common(x)
             zy  = self.zy(z)
-            zyx = self.zxy(z)
+            zyx = self.zyx(z)
             zx  = self.zx(z)
         if not self.training:
-            zy, zx = zy.detach(), zx.detach()
+            zy, zyx, zx = zy.detach(), zyx.detach(), zx.detach()
         return zy, zyx, zx
