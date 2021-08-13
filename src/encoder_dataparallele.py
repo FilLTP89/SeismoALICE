@@ -60,7 +60,9 @@ class BasicEncoderDataParallele(Module):
         n = increment - 1
         val = int(nz*2**n) if n <= (nly - 2) else nz
         return val if val <= limit else limit
-    
+
+#[TO DO] : make an unic encoder
+
 class Encoder(BasicEncoderDataParallele):
     """docstring for Encoder"""
     def __init__(self, ngpu,dev,nz,nch,ndf,act,channel,\

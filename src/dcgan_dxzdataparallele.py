@@ -94,9 +94,12 @@ class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
             """
             
             act = activation[i-1]
+            # according to Randford et al.,2016 in the discriminator 
+            # batchnormalization is appliyed on all layers with exception for the first layer
+            _bn = False if i == 1 else bn
             self.net.append(ConvBlock(ni = channel[i-1], no = channel[i],
                 ks = ker[i-1], stride = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = bias,\
-                bn = bn, dpc = dpc, act = act))
+                bn = _bn, dpc = dpc, act = act))
             # self.cnn1 += cnn1d(in_channels,nc, act, ker=ker,std=std,pad=pad,\
             #         bn=False,bias=True, dpc=dpc,wn=False)
 
@@ -114,7 +117,9 @@ class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
         if prob: 
             self.final = [
                 Flatten(),
-                torch.nn.Linear(nc, 1),
+                # according to Randford et al., 2016, no more Full connected layer is needed
+                # only a flattend is applied in the discriminator
+                # torch.nn.Linear(nc, 1),
                 torch.nn.Sigmoid()]
         else:
             self.final = []

@@ -463,8 +463,10 @@ def STEADdataset(src,batch_percent,Xwindow,zwindow,nzd,nzf,md,nsy,device):
     
     wnz_set   = tFT(nsy,nzd,zwindow)
     wnz_set.resize_(nsy,nzd,zwindow).normal_(**rndm_args)
-    wnf_set   = tFT(nsy,nzf,zwindow)
-    wnf_set.resize_(nsy,nzf,zwindow).normal_(**rndm_args)
+    #extracting a submatrix of wnz_set bot style a Normal distribution
+    wnf_set   = wnz_set[:,::nzd//nzf,:]
+    # wnf_set   = tFT(nsy,nzf,zwindow)
+    # wnf_set.resize_(nsy,nzf,zwindow).normal_(**rndm_args)
 
     #[TODO] change thf_set 
     # thf_set = trn_set #lowpass_biquad(trn_set,1./md['dtm'],md['cutoff'])

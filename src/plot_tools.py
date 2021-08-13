@@ -786,7 +786,7 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,opt,pfx='trial',outf='./im
             # pdb.set_trace()
             # ztr = Qec(X_inp)[0] if 'unique' in pfx else Qec(X_inp)
             if 'unique' in pfx:
-                zdd_gen,zdf_gen,zdf_ind =  Qec(X_inp)
+                zdd_gen,zdf_gen,_ =  Qec(X_inp)
                 ztr = zcat(zdf_gen,zdd_gen)
             else:
                 ztr = Qec(X_inp)
@@ -909,7 +909,7 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,opt,pfx='trial',outf='./im
             # pdb.set_trace()
             # ztr = Qec(X_inp)[1] if 'unique' in pfx else Qec(X_inp)
             if 'unique' in pfx:
-                zfd_ind,zfd_gen,zff_gen = Qec(X_inp)
+                _,zfd_gen,zff_gen = Qec(X_inp)
                 ztr = zcat(zfd_gen,zff_gen)
             else:
                 ztr = Qec(X_inp)

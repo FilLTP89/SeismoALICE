@@ -85,7 +85,7 @@ def setup():
     FloatTensor = tcuda.FloatTensor if opt.cuda else tFT
     LongTensor = tcuda.LongTensor if opt.cuda else tLT
     ngpu = int(opt.ngpu)
-
+    outf = opt.outf
     # import pdb
     # pdb.set_trace()
 

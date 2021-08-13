@@ -92,6 +92,8 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
 
         for i in range(2, nly+1):
             act = activation[i-1]
+            # according to Randford et al.,2016 in the discriminator 
+            # batchnormalization is appliyed on all layers with exception for the first layer
             _bn = False if i == 1 else bn
             _dpc = 0.0 if i == nly else dpc
             self.net.append(ConvBlock(ni = channel[i-1], no = channel[i],
@@ -109,7 +111,9 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
         if prob:
             self.final = [
                 Flatten(),
-                torch.nn.Linear(nc, 1),
+                # according to Randford et al., 2016, no more Full connected layer is needed
+                # only a flattend is applied in the discriminator
+                # torch.nn.Linear(nc, 1),
                 torch.nn.Sigmoid()]
         else:
             self.final+=[Conv1d(channel[i], channel[i], 3, padding=1, bias=False)]

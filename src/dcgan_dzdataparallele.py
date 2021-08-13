@@ -105,7 +105,7 @@ class DCGAN_Dz(BasicDCGAN_DzDataParallele):
         if prob:
             self.final = [
                 Flatten(),
-                torch.nn.Linear(nc, 1),
+                # torch.nn.Linear(nc, 1),
                 torch.nn.Sigmoid()]
         else: 
             self.final = []

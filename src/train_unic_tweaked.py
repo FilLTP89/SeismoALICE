@@ -17,8 +17,7 @@ from database_sae import thsTensorData
 import json
 # import pprint as pp
 import pdb
-# from pytorch_summary import summary
-from torch.utils.tensorboard import SummaryWriter
+from pytorch_summary import summary
 from conv_factory import *
 import GPUtil
 from torch.nn.parallel import DistributedDataParallel as DDP
@@ -78,7 +77,6 @@ nly = 5
 class trainer(object):
     '''Initialize neural network'''
     # @profile
-    
     def __init__(self,cv):
 
         """
@@ -95,8 +93,6 @@ class trainer(object):
         globals().update(cv)
         # define as global opt and passing it as a dictonnary here
         globals().update(opt.__dict__)
-        # pdb.set_trace()
-        # self.writer =  SummaryWriter()
         #import pdb
         # pdb.set_trace()
         #print(opt.config['decoder'])
@@ -122,7 +118,6 @@ class trainer(object):
         self.Dzz = Module() # Discriminator for latent space reconstrution
         self.Dxx = Module() # Discriminator for synthetic signal reconstrution
         self.Dyy = Module() # Discriminator for recorded signal reconstruction
-        self.Dzyx = Module() # Discriminator for recorded signal reconstruction
 
         self.Dnets = []
         self.optz  = []
@@ -138,7 +133,6 @@ class trainer(object):
         cpus  =  int(os.environ.get('SLURM_NPROCS'))
         if(cpus ==1 and opt.ngpu >=1):
             print('ModelParallele to be builded ...')
-            pzixnt('ModelParallele to be buildzdx ...')
             self.dp_mode = False
             factory = ModelParalleleFactory()
         elif(cpus >1 and opt.ngpu >=1):
@@ -175,27 +169,21 @@ class trainer(object):
                         lr=glr,betas=(b1,b2),
                         weight_decay=0.00001)
 
-                    # self.oGyx = RMSProp(ittc(self.F_.parameters(),
-                    #     self.Gy.parameters(),
-                    #     self.Gx.parameters()),
-                    #     lr=glr,alpha=b2,
-                    #     weight_decay=0.00001)
                 self.optz.append(self.oGyx)
 
                 ## Discriminators
-                # pdb.!()
-                # pdb.set_trace()
-                self.Dy   = net.DCGAN_Dx(opt.config['Dy'],opt)
-                self.Dx   = net.DCGAN_Dx(opt.config['Dx'],opt)
-                self.Dzb  = net.DCGAN_Dz(opt.config['Dzb'],opt)
-                self.Dzf  = net.DCGAN_Dz(opt.config['Dzf'],opt)
-                self.Dyz  = net.DCGAN_DXZ(opt.config['Dyz'],opt)
-                self.Dxz  = net.DCGAN_DXZ(opt.config['Dxz'],opt)
-                self.Dzzb = net.DCGAN_Dz(opt.config['Dzzb'],opt)
-                self.Dzzf = net.DCGAN_Dz(opt.config['Dzzf'],opt)
-                self.Dxx  = net.DCGAN_Dx(opt.config['Dxx'],opt)
-                self.Dyy  = net.DCGAN_Dx(opt.config['Dyy'],opt)
-                self.Dzyx  = net.DCGAN_Dz(opt.config['Dzyx'],opt)
+                #pdb.set_trace()
+
+                self.Dy    =  net.DCGAN_Dx(opt.config['Dy'],opt)
+                self.Dx    =  net.DCGAN_Dx(opt.config['Dx'],opt)
+                self.Dzb   =  net.DCGAN_Dz(opt.config['Dzb'],opt)
+                self.Dzf   =  net.DCGAN_Dz(opt.config['Dzf'],opt)
+                self.Dyz   =  net.DCGAN_DXZ(opt.config['Dyz'],opt)
+                self.Dxz   =  net.DCGAN_DXZ(opt.config['Dxz'],opt)
+                self.Dzzb  =  net.DCGAN_Dz(opt.config['Dzzb'], opt)
+                self.Dzzf  =  net.DCGAN_Dz(opt.config['Dzzf'], opt)
+                self.Dxx   =  net.DCGAN_Dx(opt.config['Dxx'], opt)
+                self.Dyy   =  net.DCGAN_Dx(opt.config['Dyy'], opt)
 
                 self.Dnets.append(self.Dx)
                 self.Dnets.append(self.Dy)
@@ -207,13 +195,11 @@ class trainer(object):
                 self.Dnets.append(self.Dzzb)
                 self.Dnets.append(self.Dxx)
                 self.Dnets.append(self.Dyy)
-                self.Dnets.append(self.Dzyx)
 
                 self.oDyxz = reset_net(self.Dnets,
                     func=set_weights,lr=rlr,
                     optim='Adam',b1=b1,b2=b2,
                     weight_decay=0.00001)
-
                 self.optz.append(self.oDyxz)
 
             else:
@@ -230,38 +216,28 @@ class trainer(object):
                        'Gloss_ali_z':[0],
                        'Gloss_cycle_xy':[0],
                        'Gloss_ali_xy':[0],
-                       'Gloss_ftm':[0],
                        # 'Gloss_cycle_z':[0],
                        'Dloss_ali':[0],
                        'Dloss_ali_x':[0],
                        'Dloss_ali_y':[0],
-                       'Dloss_ind':[0]
                        # 'Dloss_ali_xy':[0],
                        # 'Dloss_ali_z':[0]
                        }
         # pdb.set_trace()
-    # def save_gradient_g_tb(self, net,tag,epoch): 
-    #     for name, weight in net.named_parameters():
-    #         self.writer.add_histogram('PARAM/{0}/{1}'.format(tag,name), weight, global_step=epoch)
-    #         self.writer.add_histogram('PARAM/{0}/{1}.grad'.format(tag,name), weight.grad, global_step=epoch)
-       
-
+    # @profile
     def discriminate_xz(self,x,xr,z,zr):
         # Discriminate real
-        pdb.set_trace()
-        # torch.onnx.export(self.Dzf,zr,outf+"/Dzf.onnx")
-        # torch.onnx.export(self.Dx,x,outf+"/Dx.onnx")
-        ftz = self.Dzf(zr) #OK: no batchNorm
-        ftx = self.Dx(x) #with batchNorm
+        # pdb.set_trace()
+        ftz = self.Dzf(zr)
+        ftx = self.Dx(x)
 
         zrc = zcat(ftx[0],ftz[0])
         ftr = ftz[1]+ftx[1]
-
-        # torch.save(self.Dxz,outf+"/Dxz.pth")exi
-        ftxz = self.Dxz(zrc) #no batchNorm
+        
+        ftxz = self.Dxz(zrc)
         Dxz  = ftxz[0]
         ftr += ftxz[1]
-
+        
         # Discriminate fake
         ftz = self.Dzf(z)
         ftx = self.Dx(xr)
@@ -277,17 +253,15 @@ class trainer(object):
 
     def discriminate_yz(self,x,xr,z,zr):
         # Discriminate real
-        pdb.set_trace()
-        # torch.onnx.export(self.Dzb,zr,outf+"/Dzb.onnx")
-        # torch.onnx.export(self.Dy,x,outf+"/Dy.onnx")
-        ftz = self.Dzb(zr) #OK : no batchNorm
-        ftx = self.Dy(x) #OK : with batchNorm
+        # pdb.set_trace()
+        ftz = self.Dzb(zr)
+        ftx = self.Dy(x)
 
         # zrc = zcat(ftx[0],ftz[0]).reshape(-1,1)
         zrc = zcat(ftx[0],ftz[0])
         ftr = ftz[1]+ftx[1]
-        # torch.onnx.export(self.Dyz,zrc,outf+"/Dyz.onnx")
-        ftxz = self.Dyz(zrc) #OK : no batchNorm, don't forget the bias also
+        
+        ftxz = self.Dyz(zrc)
         Dxz  = ftxz[0]
         ftr += ftxz[1]
         
@@ -307,9 +281,8 @@ class trainer(object):
     
     ''' Methode that discriminate real and fake hybrid signal type'''
     def discriminate_hybrid_xz(self,Xd,Xdr,zd,zdr):
-        pdb.set_trace()
+        
         # Discriminate real
-
         ftz = self.Dzf(zdr)
         ftX = self.Dy(Xd)
         zrc = zcat(ftX[0],ftz[0])
@@ -331,37 +304,30 @@ class trainer(object):
 
     # @profile
     def discriminate_xx(self,x,xr):
-        pdb.set_trace()
-        # torch.onnx.export(self.Dxx,zcat(x,x),outf+"/Dxx.onnx")
-        Dreal = self.Dxx(zcat(x,x))#with batchNorm
+        # pdb.set_trace()
+        Dreal = self.Dxx(zcat(x,x ))
         Dfake = self.Dxx(zcat(x,xr))
         return Dreal,Dfake
 
     def discriminate_yy(self,x,xr):
-        pdb.set_trace()
-        # torch.onnx.export(self.Dyy,zcat(x,x),outf+"/Dyy.onnx")
-        Dreal = self.Dyy(zcat(x,x )) #with batchNorm
+        # pdb.set_trace()
+        Dreal = self.Dyy(zcat(x,x ))
         Dfake = self.Dyy(zcat(x,xr))
         return Dreal,Dfake
 
     # @profile
     def discriminate_zzb(self,z,zr):
-        pdb.set_trace()
-        Dreal = self.Dzzb(zcat(z,z )) #no batchNorm
+        # pdb.set_trace()
+        Dreal = self.Dzzb(zcat(z,z ))
         Dfake = self.Dzzb(zcat(z,zr))
         return Dreal,Dfake
 
     def discriminate_zzf(self,z,zr):
-        pdb.set_trace()
-        Dreal = self.Dzzf(zcat(z,z )) #no batchNorm
+        # pdb.set_trace()
+        Dreal = self.Dzzf(zcat(z,z ))
         Dfake = self.Dzzf(zcat(z,zr))
         return Dreal,Dfake
 
-    def discriminate_zxy(self,z_yx,z_xy):
-        pdb.set_trace()
-        D_zyx = self.Dzyx(z_yx)
-        D_zxy = self.Dzyx(z_xy)
-        return D_zyx, D_zxy
     # # @profile
     # def discriminate_hybrid_xx(self,Xf,Xfr):
     #     Dreal = self.DsrXd(zcat(Xf,Xf ))
@@ -403,56 +369,30 @@ class trainer(object):
         y_gen = self.Gy(zd_inp)
         x_gen = self.Gx(zf_inp)
 
-        # zd_gen,_  = self.F_(y_inp)
-        # _, zf_gen = self.F_(x_inp)
+        zd_gen,_  = self.F_(y_inp)
+        _, zf_gen = self.F_(x_inp)
 
-        # F(y)|y,F(y)|yx,F(y)|x
-        zdd_gen,zdf_gen,_ = self.F_(y_inp) # zdd_gen = zy, zdf_gen = zyx
-        # F(x)|y,F(x)|yx,F(x)|x
-        _,zfd_gen,zff_gen = self.F_(x_inp) # zff_gen = zx, zfd_gen = zxy
- 
-        # [F(y)|yx,F(y)|y]
-        zd_gen = zcat(zdf_gen,zdd_gen) # zy generated by y
-        # [F(x)|yx,F(x)|x]
-        zf_gen = zcat(zfd_gen,zff_gen) # zx generated by x
+        # zd_gen = self.F_(y_inp)
+        # zf_gen = self.F_(x_inp)
 
-        # self.writer.add_histogram('Latent/broadband',zd_gen)
-        # self.writer.add_histogram('Latent/filtered',zf_gen)
-        
-        D_zyx,D_zxy = self.discriminate_zxy(zdf_gen,zfd_gen)
-        #zd_ind = zcat(zfd_gen,zfd_ind) # zy generated by x
-        #zf_ind = zcat(zdf_gen,zdf_ind) # zx generated by y
-        ## concatenate : first common part zxy and then zy or zx
-        ## ici il faut les discriminateurs z
-        #Dreal_zzy,Dfake_zzy = self.discriminate_zzb(zd,zd_ind)
-        #Dreal_zzx,Dfake_zzx = self.discriminate_zzf(zf,zf_ind)
-
-        # Dloss_ind_y = self.bce_loss(Dreal_zzy,o1l(Dreal_zzy))+\
-        #     self.bce_loss(Dfake_zzy,o0l(Dfake_zzy))+\
-        # Dloss_ind_x = self.bce_loss(Dreal_zzx,o1l(Dreal_zzx))+\
-        #     self.bce_loss(Dfake_zzx,o0l(Dfake_zzx))
-        Dloss_ind = -torch.mean(ln0c(D_zyx)+ln0c(1.0-D_zxy)) 
-        #Dloss_ind_y = -torch.mean(ln0c(Dreal_zzy)+ln0c(1.0-Dfake_zzy))
-        #Dloss_ind_x = -torch.mean(ln0c(Dreal_zzx)+ln0c(1.0-Dfake_zzx))
-        # Dloss_ind_y = -(torch.mean(Dreal_zzy)-torch.mean(Dfake_zzy))
-        # Dloss_ind_x = -(torch.mean(Dreal_zzx)-torch.mean(Dfake_zzx))
-        #Dloss_ind =  Dloss_ind_x + Dloss_ind_y
+        # z_gen = latent_resampling(self.Fef(X_inp),nzf,wn1)
+        # print("\t||X_gen : ", X_gen.shape,"\tz_gen : ",z_gen.shape)
         # 3. Cross-Discriminate XZ
+        # pdb.set_trace()
         Dyz,Dzy,_,_ = self.discriminate_yz(y,y_gen,zd,zd_gen)
         Dxz,Dzx,_,_ = self.discriminate_xz(x,x_gen,zf,zf_gen)
-
+         
         # 4. Compute ALI discriminator loss
-        # Dloss_ali_y = self.bce_loss(Dzy,o1l(Dzy)) + self.bce_loss(Dyz,o0l(Dyz))
-        # Dloss_ali_x = self.bce_loss(Dzx,o1l(Dzx)) + self.bce_loss(Dxz,o0l(Dxz))
-        Dloss_ali_y = -torch.mean(ln0c(Dzy)+ln0c(1.0-Dyz))
-        Dloss_ali_x = -torch.mean(ln0c(Dzx)+ln0c(1.0-Dxz))
-        Dloss_ali = Dloss_ali_x + Dloss_ali_y
+        # Dloss_ali = -torch.mean(ln0c(Dzy)+ln0c(1.0-Dyz))-torch.mean(ln0c(Dzx)+ln0c(1.0-Dxz))
+        Dloss_ali_y = self.bce_loss(Dzy,o1l(Dzy)) + self.bce_loss(Dyz,o0l(Dyz))
+        Dloss_ali_x = self.bce_loss(Dzx,o1l(Dzx)) + self.bce_loss(Dxz,o0l(Dxz)) #-(torch.mean(DzX) - torch.mean(DXz))
+        Dloss_ali = Dloss_ali_x+Dloss_ali_y
 
         wnx,wnzf,wn1 = noise_generator(x.shape,zf.shape,device,rndm_args)
         wny,wnzd,wn1 = noise_generator(y.shape,zd.shape,device,rndm_args)
 
-        wny  = wny.to(y.device)
-        wnx  = wnx.to(x.device)
+        wny = wny.to(y.device)
+        wnx = wnx.to(x.device)
         wnzd = wnzd.to(zd.device)
         wnzf = wnzf.to(zf.device)
 
@@ -467,14 +407,8 @@ class trainer(object):
         y_rec  = self.Gy(zd_gen)
         x_rec  = self.Gx(zf_gen)
 
-        zdd_gen,zdf_gen,_ = self.F_(y_gen)
-        _,zfd_gen,zff_gen = self.F_(x_gen)
-
-        zd_rec = zcat(zdf_gen,zdd_gen) # zy generated by y
-        zf_rec = zcat(zfd_gen,zff_gen) # zx generated by x
- 
-        #zd_ind = zcat(zfd_gen,zfd_ind) # zy generated by x
-        #zf_ind = zcat(zdf_gen,zdf_ind) # zx generated by y
+        zd_rec, _ = self.F_(y_gen)
+        _, zf_rec = self.F_(x_gen)
 
         # zd_rec = self.F_(y_gen)
         # zf_rec = self.F_(x_gen)
@@ -484,13 +418,9 @@ class trainer(object):
         Dreal_y,Dfake_y = self.discriminate_yy(y,y_rec)
         Dreal_x,Dfake_x = self.discriminate_xx(x,x_rec)
 
-        # Dloss_rec_y = self.bce_loss(Dreal_y,o1l(Dreal_y))+self.bce_loss(Dfake_y,o0l(Dfake_y))
-        # Dloss_rec_x = self.bce_loss(Dreal_x,o1l(Dreal_x))+self.bce_loss(Dfake_x,o0l(Dfake_x))
-        Dloss_rec_y = -torch.mean(ln0c(Dreal_y)+ln0c(1.0-Dfake_y))
-        Dloss_rec_x = -torch.mean(ln0c(Dreal_x)+ln0c(1.0-Dfake_x))
-        # Dloss_rec_y = -(torch.mean(Dreal_y)-torch.mean(Dfake_y))
-        # Dloss_rec_x = -(torch.mean(Dreal_x)-torch.mean(Dfake_x))
-
+        Dloss_rec_y = self.bce_loss(Dreal_y,o1l(Dreal_y))+self.bce_loss(Dfake_y,o0l(Dfake_y))
+        Dloss_rec_x = self.bce_loss(Dreal_x,o1l(Dreal_x))+self.bce_loss(Dfake_x,o0l(Dfake_x))
+        Dloss_rec = Dloss_rec_x+Dloss_rec_y
         #warning in the perpose of us ing the BCEloss the value should be greater than zero, 
         # so we apply a boolean indexing. BCEloss use log for calculation so the negative value
         # will lead to isses. Why do we have negative value? the LeakyReLU is not tranform negative value to zero
@@ -498,30 +428,26 @@ class trainer(object):
         # pdb.set_trace()
         # Dloss_ali_xy = self.bce_loss(Dreal_y,o1l(Dreal_y))+self.bce_loss(Dfake_y,o1l(Dfake_y))+\
         #     self.bce_loss(Dreal_x,o1l(Dreal_x))+self.bce_loss(Dfake_x,o1l(Dfake_x))
-        #4. Cross-Discriminate ZZ
+            
+            
+        # 4. Cross-Discriminate ZZ
         # pdb.set_trace()
         Dreal_zd,Dfake_zd = self.discriminate_zzb(zd,zd_rec)
         Dreal_zf,Dfake_zf = self.discriminate_zzf(zf,zf_rec)
         # Dreal_z, Dfake_z  = self.discriminate_zz(zf,zd)
         
-        # Dloss_rec_z = self.bce_loss(Dreal_zd,o1l(Dreal_zd))+self.bce_loss(Dfake_zd,o0l(Dfake_zd))+\
-        #     self.bce_loss(Dreal_zf,o1l(Dreal_zf))+self.bce_loss(Dfake_zf,o0l(Dfake_zf))
+        Dloss_rec_z = self.bce_loss(Dreal_zd,o1l(Dreal_zd))+self.bce_loss(Dfake_zd,o0l(Dfake_zd))+\
+            self.bce_loss(Dreal_zf,o1l(Dreal_zf))+self.bce_loss(Dfake_zf,o0l(Dfake_zf))
             # self.bce_loss(Dreal_z,o1l(Dreal_z))+self.bce_loss(Dfake_z,o0l(Dfake_z))
-        Dloss_rec_zy = -torch.mean(ln0c(Dreal_zd)+ln0c(1.0-Dfake_zd))
-        Dloss_rec_zx = -torch.mean(ln0c(Dreal_zf)+ln0c(1.0-Dfake_zf))
-
+       
         # Total loss
-        Dloss_rec = Dloss_rec_x+Dloss_rec_y+Dloss_rec_zx+Dloss_rec_zy
-        Dloss = Dloss_ali + Dloss_rec + Dloss_ind
-        # breakpoint()
-        Dloss.backward()
-        self.oDyxz.step()#,clipweights(self.Dnets),
+        Dloss = Dloss_ali + Dloss_rec_x + Dloss_rec_z + Dloss_rec
+        Dloss.backward(),self.oDyxz.step() #,clipweights(self.Dnets),
         zerograd(self.optz)
         self.losses['Dloss'].append(Dloss.tolist())  
         self.losses['Dloss_ali'].append(Dloss_ali.tolist())  
         self.losses['Dloss_ali_x'].append(Dloss_ali_x.tolist())
         self.losses['Dloss_ali_y'].append(Dloss_ali_y.tolist())
-        self.losses['Dloss_ind'].append(Dloss_ind.tolist())
         # self.losses['Dloss_ali_xy'].append(Dloss_ali_xy.tolist())  
         # self.losses['Dloss_ali_z'].append(Dloss_ali_z.tolist())
 
@@ -552,29 +478,9 @@ class trainer(object):
         x_gen = self.Gx(zf_inp)
         # zd_gen = self.F_(y_inp)[:,:zd.shape[1]] #(100,64,64) -> (100,32,64)
        # pdb.set_trace()
-        # zd_gen, _ = self.F_(y_inp)
-        # _, zf_gen = self.F_(x_inp)
-        zdd_gen,zdf_gen,_ = self.F_(y_inp) # zdd_gen = zy, zdf_gen = zyx
-        _,zfd_gen,zff_gen = self.F_(x_inp) # zff_gen = zx, zfd_gen = zxy
- 
-        zd_gen = zcat(zdf_gen,zdd_gen) # zy generated by y
-        zf_gen = zcat(zfd_gen,zff_gen) # zx generated by x
- 
-        #zd_ind = zcat(zfd_gen,zfd_ind) # zy generated by x
-        #zf_ind = zcat(zdf_gen,zdf_ind) # zx generated by y
+        zd_gen, _ = self.F_(y_inp)
+        _, zf_gen = self.F_(x_inp)
 
-        # ici il faut les discriminateurs z
-        D_zyx,D_zxy = self.discriminate_zxy(zdf_gen,zfd_gen)
-        #Dreal_zzy,Dfake_zzy = self.discriminate_zzb(zd,zd_ind)
-        #Dreal_zzx,Dfake_zzx = self.discriminate_zzf(zf,zf_ind)
-        Gloss_ind = torch.mean(D_zxy-D_zyx)
-        #Gloss_ind_y = self.bce_loss(Dfake_zzy,o1l(Dfake_zzy))
-        #Gloss_ind_x = self.bce_loss(Dfake_zzx,o1l(Dfake_zzx))
-
-        # Ici on force le F a générer des zxy égales pour F_(x) et F_(y)
-        #Gloss_ind_cycle = torch.mean(torch.abs(zdf_gen-zfd_gen))
-        
-        #Gloss_ind = Gloss_ind_x+Gloss_ind_y+Gloss_ind_cycle
         # zf_gen = zcat(zf_gen,wnzf) # = dim zd_gen
         # zd_gen = self.F_(y_inp)
         # zf_gen = self.F_(x_inp)
@@ -608,25 +514,19 @@ class trainer(object):
         x_rec = self.Gx(zf_gen)
         # zd_rec = self.F_(y_gen)[:,:zd.shape[1]]
 
-        zdd_gen,zdf_gen,_ = self.F_(y_gen)
-        _,zfd_gen,zff_gen = self.F_(x_gen)
+        zd_rec, _ = self.F_(y_gen)
+        _, zf_rec = self.F_(x_gen)
 
-        zd_rec = zcat(zdf_gen,zdd_gen) # zy generated by y
-        zf_rec = zcat(zfd_gen,zff_gen) # zx generated by x
+        # zd_rec = self.F_(y_gen) 
+        # zf_rec = self.F_(x_gen)
+        # z_rec = latent_resampling(self.Fef(X_gen),nzf,wn1)
  
-        # zd_ind = zcat(zfd_gen,zfd_ind) # zy generated by x
-        # zf_ind = zcat(zdf_gen,zdf_ind) # zx generated by y
-    
-        # pdb.set_trace()
         # 3. Cross-Discriminate XX
         _,Dfake_y = self.discriminate_yy(y,y_rec)
         _,Dfake_x = self.discriminate_xx(x,x_rec)
-        # penality 
-        penalty = 1.0
-        # Gloss_ali_xy = self.bce_loss(Dfake_y,o1l(Dfake_y))+penalty*self.bce_loss(Dfake_x,o1l(Dfake_x))
-        Gloss_ali_xy = torch.mean(Dfake_y + Dfake_x)
+        Gloss_ali_xy = self.bce_loss(Dfake_y,o1l(Dfake_y))+self.bce_loss(Dfake_x,o1l(Dfake_x))
         Gloss_cycle_xy = torch.mean(torch.abs(y-y_rec))+torch.mean(torch.abs(x-x_rec))
-        # Gloss_cycle_xy = torch.mean((y-y_rec)**2)+torch.mean((x-x_rec)**2)
+        # Gloss_ftmX = 0.
 #         for rf,ff in zip(ftX_real,ftX_fake):
 #             Gloss_ftmX += torch.mean((rf-ff)**2)
         
@@ -635,23 +535,19 @@ class trainer(object):
         _,Dfake_zd = self.discriminate_zzb(zd,zd_rec)
         # pdb.set_trace()
         _,Dfake_zf = self.discriminate_zzf(zf,zf_rec)
-        # Gloss_ali_z = self.bce_loss(Dfake_zd,o1l(Dfake_zd))+self.bce_loss(Dfake_zf,o1l(Dfake_zf))
-        Gloss_ali_z = torch.mean(Dfake_zd + Dfake_zf)
+        Gloss_ali_z = self.bce_loss(Dfake_zd,o1l(Dfake_zd))+self.bce_loss(Dfake_zf,o1l(Dfake_zf))
         # Gloss_cycle_z = torch.mean(torch.abs(zd-zd_rec))+torch.mean(torch.abs(zf-zf_rec))
 #         Gloss_ftmz = 0.
 #         for rf,ff in zip(ftz_real,ftz_fake):
 #             Gloss_ftmz += torch.mean((rf-ff)**2)    
         # Total Loss
-        Gloss = Gloss_ftm+Gloss_ali_xy+Gloss_cycle_xy+Gloss_ali_z+Gloss_ind
+        Gloss = Gloss_ftm+Gloss_ali_xy+Gloss_cycle_xy+Gloss_ali_z
         # Gloss = (Gloss_ftm*0.7)*(1.-0.7)/2.0 + \
         #     (Gloss_cycle_xy*0.9+Gloss_ali_xy*0.1)*(1.-0.1)/1.0 +\
         #     (Gloss_ali_z*0.7)*(1.-0.7)/2.0
-        Gloss.backward()
-        self.oGyx.step()
-        zerograd(self.optz)
+        Gloss.backward(),self.oGyx.step(),zerograd(self.optz)
          
         self.losses['Gloss'].append(Gloss.tolist()) 
-        self.losses['Gloss_ftm'].append(Gloss_ftm.tolist())
         self.losses['Gloss_cycle_xy'].append(Gloss_cycle_xy.tolist())
         self.losses['Gloss_ali_z'].append(Gloss_ali_z.tolist())
         self.losses['Gloss_ali_xy'].append(Gloss_ali_xy.tolist())
@@ -667,107 +563,93 @@ class trainer(object):
         error = {}
         place = opt.dev if self.dp_mode else ngpu-1
         start_time = time.time()
-        stream =  torch.cuda.Stream()
-        # with torch.autograd.set_detect_anomaly(True):
-        for epoch in range(niter):
-            
-            # for np in range(opt.dataloaders):
-                # ths_trn = tload(opj(opt.dataroot,'ths_trn_ns{:>d}_nt{:>d}_ls{:>d}_nzf{:>d}_nzd{:>d}_{:>d}.pth'.format(nsy,
-                #     opt.signalSize,opt.latentSize,opt.nzf,opt.nzd,np)))
-                # # ths_tst = tload(opj(opt.dataroot,'ths_tst_{:>d}{:s}'.format(np,opt.dataset)))
-                # # ths_vld = tload(opj(opt.dataroot,'ths_vld_{:>d}{:s}'.format(np,opt.dataset)))
-                # trn_loader = AsynchronousLoader(trn_loader, device=device)
-                # Load batch
-            for b,batch in enumerate(trn_loader):
-                y,x,_,_,_,_,_ = batch
-                y   = y.to(place) # recorded signal
-                x   = x.to(place) # synthetic signal
-                #zd  = zd.to(place) # recorded signal latent space
-                #zf  = zf.to(place) # synthetic signal latent space
+        with torch.autograd.set_detect_anomaly(True):
+            for epoch in range(niter):
+                # for np in range(opt.dataloaders):
+                    # ths_trn = tload(opj(opt.dataroot,'ths_trn_ns{:>d}_nt{:>d}_ls{:>d}_nzf{:>d}_nzd{:>d}_{:>d}.pth'.format(nsy,
+                    #     opt.signalSize,opt.latentSize,opt.nzf,opt.nzd,np)))
+                    # # ths_tst = tload(opj(opt.dataroot,'ths_tst_{:>d}{:s}'.format(np,opt.dataset)))
+                    # # ths_vld = tload(opj(opt.dataroot,'ths_vld_{:>d}{:s}'.format(np,opt.dataset)))
+                    # trn_loader = AsynchronousLoader(trn_loader, device=device)
+                    # Load batch
+                for b,batch in enumerate(trn_loader):
+                    y,x,zd,zf,_,_,_ = batch
+                    y   = y.to(place) # recorded signal
+                    x   = x.to(place) # synthetic signal
+                    zd  = zd.to(place) # recorded signal latent space
+                    zf  = zf.to(place) # synthetic signal latent space
                 # Train G/D
-                wnzd = torch.empty(*(opt.batchSize,nzd,opt.latentSize)).normal_(**rndm_args).to(place)
-                wnzf = torch.empty(*(opt.batchSize,nzf,opt.latentSize)).normal_(**rndm_args).to(place)
-                with torch.cuda.stream(stream):
-                    # _,wnzd,_ = noise_generator(y.shape,(y.shape[0],nzd, opt.latentSize),device,rndm_args)
-                    # _,wnzf,_ = noise_generator(x.shape,(x.shape[0],nzf, opt.latentSize),device,rndm_args)
-                    for _ in range(5):
-                        self.alice_train_discriminator_adv(y,wnzd,x,wnzf)
-                        # torch.cuda.empty_cache()
-                    
-                    for _ in range(1):
-                        self.alice_train_generator_adv(y,wnzd,x,wnzf)
+               
+                for _ in range(5):
+                    self.alice_train_discriminator_adv(y,zd,x,zf)
                     # torch.cuda.empty_cache()
-            
-            # GPUtil.showUtilization(all=True)
-            
-            # for k,v in self.losses.items(): 
-            #     self.writer.add_scalar('Loss/{}'.format(k),np.mean(np.array(v[-b:-1])),epoch)
+                
+                for _ in range(1):
+                    self.alice_train_generator_adv(y,zd,x,zf)
+                    # torch.cuda.empty_cache()
+                
+                # GPUtil.showUtilization(all=True)
+                if epoch%10== 0:
+                    print("--- {} minutes ---".format((time.time() - start_time)/60))
 
-            # self.save_gradient_g_tb(self.F_,"encoder",epoch)
-            # self.save_gradient_g_tb(self.Gx,"Gx",epoch)
-            # self.save_gradient_g_tb(self.Gy,"Gy",epoch)
+                str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
+                str = 'epoch: {:>d} --- '.format(epoch)
+                str = str + ' | '.join(str1)
+                print(str)
 
-            if epoch%10== 0:
-                print("--- {} minutes ---".format((time.time() - start_time)/60))
+                
+                if save_checkpoint:
+                    if epoch%save_checkpoint==0:
+                        print("\t|saving model at this checkpoint : ", epoch)
+                        tsave({'epoch':epoch,'model_state_dict':self.F_.state_dict(),
+                               'optimizer_state_dict':self.oGyx.state_dict(),'loss':self.losses,},
+                               './network/{0}/Fyx_{1}.pth'.format(outf[7:],epoch))
+                        tsave({'epoch':epoch,'model_state_dict':self.Gy.state_dict(),
+                               'optimizer_state_dict':self.oGyx.state_dict(),'loss':self.losses,},
+                               './network/{0}/Gy_{1}.pth'.format(outf[7:],epoch))
+                        tsave({'epoch':epoch,'model_state_dict':self.Gx.state_dict(),
+                               'optimizer_state_dict':self.oGyx.state_dict(),'loss':self.losses,},
+                               './network/{0}/Gx_{1}.pth'.format(outf[7:],epoch))
+                        tsave({'epoch':epoch,'model_state_dict':self.Dy.state_dict(),
+                               'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
+                               './network/{0}/Dy_{1}.pth'.format(outf[7:],epoch))
+                        tsave({'epoch':epoch,'model_state_dict':self.Dx.state_dict(),
+                               'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
+                               './network/{0}/Dx_{1}.pth'.format(outf[7:],epoch))
+                        tsave({'epoch':epoch,'model_state_dict':self.Dz.state_dict(),
+                               'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
+                               './network/{0}/Dz_{1}.pth'.format(outf[7:],epoch))
+                        tsave({'epoch':epoch,'model_state_dict':self.Dxz.state_dict(),
+                               'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
+                               './network/{0}/Dxz_{1}.pth'.format(outf[7:],epoch))
+                        tsave({'epoch':epoch,'model_state_dict':self.Dzz.state_dict(),
+                               'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
+                               './network/{0}/Dzz_{1}.pth'.format(outf[7:],epoch))
+                        tsave({'epoch':epoch,'model_state_dict':self.Dxx.state_dict(),
+                               'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
+                               './network/{0}/Dxx_{1}.pth'.format(outf[7:],epoch))
+                        tsave({'epoch':epoch,'model_state_dict':self.Dyy.state_dict(),
+                               'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
+                               './network/{0}/Dyy_{1}.pth'.format(outf[7:],epoch))
 
-            str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
-            str = 'epoch: {:>d} --- '.format(epoch)
-            str = str + ' | '.join(str1)
-            print(str)
-
-            
-            if save_checkpoint:
-                if epoch%save_checkpoint==0:
-                    print("\t|saving model at this checkpoint : ", epoch)
-                    tsave({'epoch':epoch,'model_state_dict':self.F_.state_dict(),
-                           'optimizer_state_dict':self.oGyx.state_dict(),'loss':self.losses,},
-                           './network/{0}/Fyx_{1}.pth'.format(outf[7:],epoch))
-                    tsave({'epoch':epoch,'model_state_dict':self.Gy.state_dict(),
-                           'optimizer_state_dict':self.oGyx.state_dict(),'loss':self.losses,},
-                           './network/{0}/Gy_{1}.pth'.format(outf[7:],epoch))
-                    tsave({'epoch':epoch,'model_state_dict':self.Gx.state_dict(),
-                           'optimizer_state_dict':self.oGyx.state_dict(),'loss':self.losses,},
-                           './network/{0}/Gx_{1}.pth'.format(outf[7:],epoch))
-                    tsave({'epoch':epoch,'model_state_dict':self.Dy.state_dict(),
-                           'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
-                           './network/{0}/Dy_{1}.pth'.format(outf[7:],epoch))
-                    tsave({'epoch':epoch,'model_state_dict':self.Dx.state_dict(),
-                           'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
-                           './network/{0}/Dx_{1}.pth'.format(outf[7:],epoch))
-                    tsave({'epoch':epoch,'model_state_dict':self.Dz.state_dict(),
-                           'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
-                           './network/{0}/Dz_{1}.pth'.format(outf[7:],epoch))
-                    tsave({'epoch':epoch,'model_state_dict':self.Dxz.state_dict(),
-                           'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
-                           './network/{0}/Dxz_{1}.pth'.format(outf[7:],epoch))
-                    tsave({'epoch':epoch,'model_state_dict':self.Dzz.state_dict(),
-                           'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
-                           './network/{0}/Dzz_{1}.pth'.format(outf[7:],epoch))
-                    tsave({'epoch':epoch,'model_state_dict':self.Dxx.state_dict(),
-                           'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
-                           './network/{0}/Dxx_{1}.pth'.format(outf[7:],epoch))
-                    tsave({'epoch':epoch,'model_state_dict':self.Dyy.state_dict(),
-                           'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
-                           './network/{0}/Dyy_{1}.pth'.format(outf[7:],epoch))
-
-                    # tsave({'model_state_dict':self.Dzd.state_dict(),
-                    #        'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Dzd_bb_{}.pth'.format(epoch))
-                    # tsave({'model_state_dict':self.Dy.state_dict(),
-                    #        'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Dy_bb_{}.pth'.format(epoch))    
-                    # tsave({'model_state_dict':self.Ddxz.state_dict(),
-                    #        'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Ddxz_bb_{}.pth'.format(epoch))
-        # pdb.set_trace()
-        # plt.plot_loss_dict(nb=niter,losses=self.losses,title='loss_classic',outf=outf)
-        plt.plot_loss_explicit(losses=self.losses["Dloss_ali"],     key="Dloss_ali",     outf=outf,niter=niter)
-        plt.plot_loss_explicit(losses=self.losses["Dloss_ali_x"],   key="Dloss_ali_x",   outf=outf,niter=niter)
-        plt.plot_loss_explicit(losses=self.losses["Dloss_ali_y"],   key="Dloss_ali_y",   outf=outf,niter=niter)
-        # plt.plot_loss_explicit(losses=self.losses["Dloss_ali_xy"],  key="Dloss_ali_xy",  outf=outf,niter=niter)
-        plt.plot_loss_explicit(losses=self.losses["Gloss"],         key="Gloss",         outf=outf,niter=niter)
-        # plt.plot_loss_explicit(losses=self.losses["Gloss_cycle_z"], key="Gloss_cycle_z", outf=outf,niter=niter)
-        plt.plot_loss_explicit(losses=self.losses["Gloss_cycle_xy"],key="Gloss_cycle_xy",outf=outf,niter=niter)
-        plt.plot_loss_explicit(losses=self.losses["Gloss_ali_z"],   key="Gloss_ali_z",   outf=outf,niter=niter)
-        plt.plot_loss_explicit(losses=self.losses["Gloss_ali_xy"],  key="Gloss_ali_xy",  outf=outf,niter=niter)
-    # plt.plot_loss_explicit(losses=self.losses["norm_grad"], key="norm_grad", outf=outf,niter=niter)
+                        # tsave({'model_state_dict':self.Dzd.state_dict(),
+                        #        'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Dzd_bb_{}.pth'.format(epoch))
+                        # tsave({'model_state_dict':self.Dy.state_dict(),
+                        #        'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Dy_bb_{}.pth'.format(epoch))    
+                        # tsave({'model_state_dict':self.Ddxz.state_dict(),
+                        #        'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Ddxz_bb_{}.pth'.format(epoch))
+            # pdb.set_trace()
+            # plt.plot_loss_dict(nb=niter,losses=self.losses,title='loss_classic',outf=outf)
+            plt.plot_loss_explicit(losses=self.losses["Dloss_ali"],     key="Dloss_ali",     outf=outf,niter=niter)
+            plt.plot_loss_explicit(losses=self.losses["Dloss_ali_x"],   key="Dloss_ali_x",   outf=outf,niter=niter)
+            plt.plot_loss_explicit(losses=self.losses["Dloss_ali_y"],   key="Dloss_ali_y",   outf=outf,niter=niter)
+            # plt.plot_loss_explicit(losses=self.losses["Dloss_ali_xy"],  key="Dloss_ali_xy",  outf=outf,niter=niter)
+            plt.plot_loss_explicit(losses=self.losses["Gloss"],         key="Gloss",         outf=outf,niter=niter)
+            # plt.plot_loss_explicit(losses=self.losses["Gloss_cycle_z"], key="Gloss_cycle_z", outf=outf,niter=niter)
+            plt.plot_loss_explicit(losses=self.losses["Gloss_cycle_xy"],key="Gloss_cycle_xy",outf=outf,niter=niter)
+            plt.plot_loss_explicit(losses=self.losses["Gloss_ali_z"],   key="Gloss_ali_z",   outf=outf,niter=niter)
+            plt.plot_loss_explicit(losses=self.losses["Gloss_ali_xy"],  key="Gloss_ali_xy",  outf=outf,niter=niter)
+        # plt.plot_loss_explicit(losses=self.losses["norm_grad"], key="norm_grad", outf=outf,niter=niter)
         # pdb.set_trace()
         # plt.plot_error(error,outf=outf)
         # del self.losses
@@ -903,4 +785,3 @@ class trainer(object):
         loss = torch.nn.MSELoss(reduction="mean")
 
         return loss(Xt,Xr)
-
