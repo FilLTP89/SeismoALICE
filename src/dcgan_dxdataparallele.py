@@ -117,7 +117,7 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
                 torch.nn.Sigmoid()]
         else:
             self.final+=[Conv1d(channel[i], channel[i], 3, padding=1, bias=False)]
-            self.final+=[BatchNorm1d(channel[i])]
+            #self.final+=[BatchNorm1d(channel[i])]
             self.final+=[Dpout(dpc=dpc)]
             self.final+=[activation[-1]]
         
