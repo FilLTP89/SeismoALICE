@@ -40,7 +40,7 @@ __status__ = "Beta"
 
 mpl.style.use('seaborn')
 plt.rcParams["figure.figsize"] = (10, 7.5)
-rndm_args = {'mean': 0, 'std': 1}
+rndm_args = {'mean': 0, 'std': 0.2}
 
 def multivariateGrid(col_x, col_y, col_k, df, k_is_color=False, scatter_alpha=.7):
     k=0
@@ -771,7 +771,9 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,opt,pfx='trial',outf='./im
     EG = []
     PG = []
     sns.set(style="whitegrid")
-    clr = sns.color_palette('tab10',5)
+    # pdb.set_trace()
+    # clr = sns.color_palette('Paired',5)
+    clr = ['black', 'blue','red', 'red']
     if tag=='broadband':
         for _,batch in enumerate(trn_set):
             #_,xt_data,zt_data,_,_,_,_ = batch
@@ -781,13 +783,15 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,opt,pfx='trial',outf='./im
             Xf = Variable(xf_data).to(dev, dtype =torch.float64)
             zt = Variable(zt_data).to(dev, dtype =torch.float64)
             wnx,wnz,wn1 = noise_generator(Xt.shape,zt.shape,dev,rndm_args)
-            X_inp = zcat(Xt,wnx.to(dev))
+            X_inp = zcat(Xf,wnx.to(dev))
+
             # ztr = Qec(X_inp).to(dev)
             # pdb.set_trace()
             # ztr = Qec(X_inp)[0] if 'unique' in pfx else Qec(X_inp)
             if 'unique' in pfx:
-                zdd_gen,zdf_gen,_ =  Qec(X_inp)
-                ztr = zcat(zdf_gen,zdd_gen)
+                zy,zdf_gen,_ =  Qec(X_inp)
+                wn = torch.empty(*zy.shape).normal_(**rndm_args).to(dev)
+                ztr = zcat(zdf_gen,wn)
             else:
                 ztr = Qec(X_inp)
 
@@ -825,20 +829,20 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,opt,pfx='trial',outf='./im
                            format='eps',bbox_inches='tight',dpi = 300)
                 print("saving gof_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
                 plt.close()
-            
+                
                 _,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
+                hax0.plot(vtm,gt,color=clr[3],label=r'$G_t(cat(F_t(\mathbf{y},z_{y}))$',linewidth=1.2)
                 hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{y}$',linewidth=1.2)
-                hax0.plot(vtm,gt,color=clr[3],label=r'$G_t(F_t(\mathbf{y}))$',linewidth=1.2)
                 hax1.loglog(vfr,of,color=clr[0],label=r'$\mathbf{y}$',linewidth=2)
                 hax1.loglog(vfr,ff,color=clr[1],label=r'$\mathbf{x}$',linewidth=2)
-                hax1.loglog(vfr,gf,color=clr[3],label=r'$G_t(F_t(\mathbf{y}))$',linewidth=2)
+                hax1.loglog(vfr,gf,color=clr[3],label=r'$G_t(cat(F_t(\mathbf{y},z_{xy}))$',linewidth=2)
                 hax0.set_xlim(0.0,int(vtm[-1]))
                 hax0.set_xticks(np.arange(0.0,int(vtm[-1])*11./10.,int(vtm[-1])/10.))
                 hax0.set_ylim(-1.0,1.0)
                 hax0.set_yticks(np.arange(-1.0,1.25,0.25))
                 hax0.set_xlabel('t [s]',fontsize=15,fontweight='bold')
                 hax0.set_ylabel('a(t) [1]',fontsize=15,fontweight='bold')
-                hax0.set_title('DC-ALICE',fontsize=20,fontweight='bold')
+                hax0.set_title('ALICE',fontsize=20,fontweight='bold')
                 hax1.set_xlim(0.1,51.), hax1.set_xticks(np.array([0.1,1.0,10.,50.]))
                 hax1.set_ylim(10.**-6,10.**0), hax1.set_yticks(10.**np.arange(-6,1))
                 hax1.set_xlabel('f [Hz]',fontsize=15,fontweight='bold')
@@ -951,7 +955,7 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,opt,pfx='trial',outf='./im
                 hax0.set_yticks(np.arange(-1.0,1.25,0.25))
                 hax0.set_xlabel('t [s]',fontsize=15,fontweight='bold')
                 hax0.set_ylabel('a(t) [1]',fontsize=15,fontweight='bold')
-                hax0.set_title('DC-ALICE',fontsize=20,fontweight='bold')
+                hax0.set_title('ALICE',fontsize=20,fontweight='bold')
                 hax1.set_xlim(0.1,51.), hax1.set_xticks(np.array([0.1,1.0,10.,50.]))
                 hax1.set_ylim(10.**-6,10.**0), hax1.set_yticks(10.**np.arange(-6,1))
                 hax1.set_xlabel('f [Hz]',fontsize=15,fontweight='bold')

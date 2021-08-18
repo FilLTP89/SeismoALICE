@@ -230,6 +230,7 @@ class trainer(object):
                        'Gloss_ali_z':[0],
                        'Gloss_cycle_xy':[0],
                        'Gloss_ali_xy':[0],
+                       'Gloss_ind':[0],
                        'Gloss_ftm':[0],
                        # 'Gloss_cycle_z':[0],
                        'Dloss_ali':[0],
@@ -333,6 +334,7 @@ class trainer(object):
     def discriminate_xx(self,x,xr):
         # pdb.set_trace()
         # torch.onnx.export(self.Dxx,zcat(x,x),outf+"/Dxx.onnx")
+        # x et xr doivent avoir la même distribution !
         Dreal = self.Dxx(zcat(x,x))#with batchNorm
         Dfake = self.Dxx(zcat(x,xr))
         return Dreal,Dfake
@@ -547,7 +549,7 @@ class trainer(object):
         zd_inp = zcat(zd,wnzd)
         zf_inp = zcat(zf,wnzf)
 
-        # pdb.set_trace()
+        pdb.set_trace()
          
         # 2. Generate conditional samples
         y_gen = self.Gy(zd_inp) #(100,64,64)->(100,3,4096)
@@ -658,6 +660,7 @@ class trainer(object):
         self.losses['Gloss_cycle_xy'].append(Gloss_cycle_xy.tolist())
         self.losses['Gloss_ali_z'].append(Gloss_ali_z.tolist())
         self.losses['Gloss_ali_xy'].append(Gloss_ali_xy.tolist())
+        self.losses['Gloss_ind'].append(Gloss_ind.tolist())
         # self.losses['Gloss_cycle_X'].append(Gloss_cycle_X.tolist())
         # self.losses['Gloss_cycle_z'].append(Gloss_cycle_z.tolist())
 
@@ -694,6 +697,7 @@ class trainer(object):
                     # _,wnzd,_ = noise_generator(y.shape,(y.shape[0],nzd, opt.latentSize),device,rndm_args)
                     # _,wnzf,_ = noise_generator(x.shape,(x.shape[0],nzf, opt.latentSize),device,rndm_args)
                     for _ in range(5):
+
                         self.alice_train_discriminator_adv(y,wnzd,x,wnzf)
                         # torch.cuda.empty_cache()
                     

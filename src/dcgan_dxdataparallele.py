@@ -76,7 +76,7 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
         self.device = tdev("cuda" if torch.cuda.is_available() else "cpu")
         
         #extraction features 
-        self.wf = wf
+        self.wf  = wf
         self.net = []
         # pdb.set_trace()
         if path:
