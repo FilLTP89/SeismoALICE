@@ -141,6 +141,7 @@ def cnn1d(in_channels,out_channels,\
                     bias=bias)]
     #if wn:
     #    block.insert(0,AddNoise(dev=dev))
+    
     if bn:
         block.append(BatchNorm1d(out_channels))
     block.append(act)
@@ -160,6 +161,7 @@ def cnn1dt(in_channels,out_channels,\
                              output_padding=opd,padding=pad,\
                              dilation=dil,groups=grp,\
                              bias=False)]
+    
     if bn:
         block.append(BatchNorm1d(out_channels))
     block.append(act)
@@ -196,8 +198,9 @@ class DeconvBlock(Module):
         self.conv = ConvTranspose1d(ni, no, ks, stride, 
                                     padding=pad, output_padding=opd,
                                     bias=False)
-        self.bn = BatchNorm1d(no)
         self.relu = act
+        self.bn = BatchNorm1d(no)
+        
         self.dpout = Dpout(dpc=dpc)
     def forward(self, x):
         x = self.relu(self.conv(x))

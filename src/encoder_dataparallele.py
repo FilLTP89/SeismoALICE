@@ -13,6 +13,8 @@ import pdb
 from torch import device as tdev
 import copy
 from dconv import DConv_62
+import importlib
+from resnet import ResNetEncoder
 
 class EncoderDataParallele(object):
     """docstring for EncoderDataParallele"""
@@ -23,12 +25,15 @@ class EncoderDataParallele(object):
     @staticmethod
     def getEncoder(name, ngpu, dev, nz, nch, ndf, nly, ker, std, config,\
                 pad, dil, channel, act,limit,path, dconv, *args, **kwargs):
-        
+        # pdb.set_trace()
         if name is not None:
-            classname = 'Encoder_'+name
+            classname = 'Encoder_' + name
+            module_name = "encoder_dataparallele"
+            module = importlib.import_module(module_name)
+            class_ = getattr(module,classname)
             try:
-                return type(classname, (BasicEncoderDataParallele, ), dict(ngpu = ngpu,dev =dev, nz = nz, nch = nch, act=act,dconv = dconv,
-                        nly = nly, config = config, ker = ker, ndf=ndf,std =std, path=path, pad = pad, dil = dil, channel=channel, limit = limit))
+                return class_(ngpu = ngpu,dev =dev, ndf=ndf, nz = nz, nch = nch, act=act, dconv = dconv,
+                        nly = nly, config = config, ker = ker, std =std, pad = pad, path=path, dil = dil, channel=channel, limit = limit)
             except Exception as e:
                 raise e
                 print("The class ",classname, " does not exit")
@@ -47,6 +52,8 @@ class BasicEncoderDataParallele(Module):
         self.branch_broadband = []
         self.branch_filtered = []
         self.branch_common = []
+
+        self.device = tdev("cuda" if torch.cuda.is_available() else "cpu")
         
 
     def lout(self,nz,nch, nly, increment,limit):
@@ -62,6 +69,60 @@ class BasicEncoderDataParallele(Module):
         return val if val <= limit else limit
 
 #[TO DO] : make an unic encoder
+class Encoder_ResNet(BasicEncoderDataParallele):
+    """docstring for Encoder"""
+    def __init__(self, ngpu,dev,nz,nch,ndf,act,channel,\
+                 nly, config,ker=7,std=4,pad=0,dil=1,grp=1,bn=True,
+                 dpc=0.0,limit = 256, path='',dconv = "",\
+                 with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2):
+        super(Encoder_ResNet, self).__init__()
+        self.ngpu= ngpu
+        self.gang = range(ngpu)
+        
+        self.device = tdev("cuda" if torch.cuda.is_available() else "cpu")
+
+        acts = T.activation(act, nly)
+        # pdb.set_trace()
+
+        self.cnn_common  = ResNetEncoder(in_channels = channel[0], blocks_sizes= channel[1:],
+                                         deepths=limit, activation='leaky_relu')
+
+        self.zyx         = ResNetEncoder(in_channels = channel[-1], blocks_sizes=config["common"]["channel"], 
+                                        deepths=config["common"]["limit"], activation='leaky_relu')
+
+        self.zy          = ResNetEncoder(in_channels = channel[-1], blocks_sizes=config["broadband"]["channel"],
+                                         deepths=config["broadband"]["limit"], activation='leaky_relu')
+
+        self.zx          = ResNetEncoder(in_channels = channel[-1], blocks_sizes=config["filtered"]["channel"],
+                                         deepths=config["filtered"]["limit"], activation='leaky_relu')
+        # pdb.set_trace()
+        self.cnn_common.to(self.device)
+        self.zy.to(self.device)
+        self.zyx.to(self.device)
+        self.zx.to(self.device)
+
+    def forward(self,x):
+        # pdb.set_trace()
+        if x.is_cuda and self.ngpu >=1:
+
+            z   = pll(self.cnn_common,x,self.gang)
+            zy  = pll(self.zy,  z, self.gang)
+            zyx = pll(self.zyx, z, self.gang)
+            zx  = pll(self.zx, z, self.gang)
+            # z   = self.cnn_common(x)
+            # zy  = self.zy(z)
+            # zyx = self.zyx(z)
+            # zx  = self.zx(z)
+        else:
+            z   = self.cnn_common(x)
+            zy  = self.zy(z)
+            zyx = self.zyx(z)
+            zx  = self.zx(z)
+        if not self.training:
+            zy, zyx, zx = zy.detach(), zyx.detach(), zx.detach()
+        return zy, zyx, zx 
+
+
 
 class Encoder(BasicEncoderDataParallele):
     """docstring for Encoder"""

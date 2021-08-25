@@ -40,7 +40,7 @@ __status__ = "Beta"
 
 mpl.style.use('seaborn')
 plt.rcParams["figure.figsize"] = (10, 7.5)
-rndm_args = {'mean': 0, 'std': 0.2}
+rndm_args = {'mean': 0, 'std': 1}
 
 def multivariateGrid(col_x, col_y, col_k, df, k_is_color=False, scatter_alpha=.7):
     k=0
@@ -831,7 +831,7 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,opt,pfx='trial',outf='./im
                 plt.close()
                 
                 _,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
-                hax0.plot(vtm,gt,color=clr[3],label=r'$G_t(cat(F_t(\mathbf{y},z_{y}))$',linewidth=1.2)
+                hax0.plot(vtm,gt,color=clr[3],label=r'$G_t(zcat(F_x(\mathbf{x},N(0,I)))$',linewidth=1.2)
                 hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{y}$',linewidth=1.2)
                 hax1.loglog(vfr,of,color=clr[0],label=r'$\mathbf{y}$',linewidth=2)
                 hax1.loglog(vfr,ff,color=clr[1],label=r'$\mathbf{x}$',linewidth=2)

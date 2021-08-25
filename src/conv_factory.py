@@ -162,9 +162,9 @@ class DataParalleleFactory(ConvNetFactory):
         pass
 
     def createEncoder(self, config, opt, *args, **kwargs):
-        
-        name  = config["name"] if hasattr(config, "name") else None
-        path = config["path"] if "path" in config else ""
+        # pdb.set_trace()
+        name  = config["name"] if "name" in config else None
+        path  = config["path"] if "path" in config else ""
         dconv = config["dconv"] if "dconv" in config else ""
         return EncoderDataParallele.getEncoder(name = name, ngpu = opt.ngpu,\
                 dev = opt.dev,\

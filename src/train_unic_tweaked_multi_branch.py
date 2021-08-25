@@ -153,7 +153,7 @@ class trainer(object):
             self.style='ALICE'
             # act = acts[self.style]
             n = self.strategy['unique']
-            # pdb.set_trace()
+            pdb.set_trace()
             self.F_  = net.Encoder(opt.config['F'], opt)
             self.Gy  = net.Decoder(opt.config['Gy'], opt)
             self.Gx  = net.Decoder(opt.config['Gx'], opt)
@@ -549,7 +549,7 @@ class trainer(object):
         zd_inp = zcat(zd,wnzd)
         zf_inp = zcat(zf,wnzf)
 
-        pdb.set_trace()
+        # pdb.set_trace()
          
         # 2. Generate conditional samples
         y_gen = self.Gy(zd_inp) #(100,64,64)->(100,3,4096)
@@ -590,7 +590,7 @@ class trainer(object):
         Dyz,Dzy,ftyz,ftzy = self.discriminate_yz(y,y_gen,zd,zd_gen)
         Dxz,Dzx,ftxz,ftzx = self.discriminate_xz(x,x_gen,zf,zf_gen)
 
-        # 4. Compute ALI Generator loss
+        # 4. Compute ALI Generator loss 
         Gloss_ali = torch.mean(-Dyz+Dzy)+torch.mean(-Dxz+Dzx)
         Gloss_ftm = 0.0
         for rf,ff in zip(ftxz,ftzx):
@@ -735,27 +735,27 @@ class trainer(object):
                     tsave({'epoch':epoch,'model_state_dict':self.Gx.state_dict(),
                            'optimizer_state_dict':self.oGyx.state_dict(),'loss':self.losses,},
                            './network/{0}/Gx_{1}.pth'.format(outf[7:],epoch))
-                    tsave({'epoch':epoch,'model_state_dict':self.Dy.state_dict(),
-                           'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
-                           './network/{0}/Dy_{1}.pth'.format(outf[7:],epoch))
-                    tsave({'epoch':epoch,'model_state_dict':self.Dx.state_dict(),
-                           'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
-                           './network/{0}/Dx_{1}.pth'.format(outf[7:],epoch))
-                    tsave({'epoch':epoch,'model_state_dict':self.Dz.state_dict(),
-                           'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
-                           './network/{0}/Dz_{1}.pth'.format(outf[7:],epoch))
-                    tsave({'epoch':epoch,'model_state_dict':self.Dxz.state_dict(),
-                           'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
-                           './network/{0}/Dxz_{1}.pth'.format(outf[7:],epoch))
-                    tsave({'epoch':epoch,'model_state_dict':self.Dzz.state_dict(),
-                           'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
-                           './network/{0}/Dzz_{1}.pth'.format(outf[7:],epoch))
-                    tsave({'epoch':epoch,'model_state_dict':self.Dxx.state_dict(),
-                           'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
-                           './network/{0}/Dxx_{1}.pth'.format(outf[7:],epoch))
-                    tsave({'epoch':epoch,'model_state_dict':self.Dyy.state_dict(),
-                           'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
-                           './network/{0}/Dyy_{1}.pth'.format(outf[7:],epoch))
+                    # tsave({'epoch':epoch,'model_state_dict':self.Dy.state_dict(),
+                    #        'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
+                    #        './network/{0}/Dy_{1}.pth'.format(outf[7:],epoch))
+                    # tsave({'epoch':epoch,'model_state_dict':self.Dx.state_dict(),
+                    #        'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
+                    #        './network/{0}/Dx_{1}.pth'.format(outf[7:],epoch))
+                    # tsave({'epoch':epoch,'model_state_dict':self.Dz.state_dict(),
+                    #        'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
+                    #        './network/{0}/Dz_{1}.pth'.format(outf[7:],epoch))
+                    # tsave({'epoch':epoch,'model_state_dict':self.Dxz.state_dict(),
+                    #        'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
+                    #        './network/{0}/Dxz_{1}.pth'.format(outf[7:],epoch))
+                    # tsave({'epoch':epoch,'model_state_dict':self.Dzz.state_dict(),
+                    #        'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
+                    #        './network/{0}/Dzz_{1}.pth'.format(outf[7:],epoch))
+                    # tsave({'epoch':epoch,'model_state_dict':self.Dxx.state_dict(),
+                    #        'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
+                    #        './network/{0}/Dxx_{1}.pth'.format(outf[7:],epoch))
+                    # tsave({'epoch':epoch,'model_state_dict':self.Dyy.state_dict(),
+                    #        'optimizer_state_dict':self.oDyxz.state_dict(),'loss':self.losses,},
+                    #        './network/{0}/Dyy_{1}.pth'.format(outf[7:],epoch))
 
                     # tsave({'model_state_dict':self.Dzd.state_dict(),
                     #        'optimizer_state_dict':self.oDdxz.state_dict()},'./network/Dzd_bb_{}.pth'.format(epoch))
