@@ -142,52 +142,61 @@ class OctaveBatchNormActivation(nn.Module):
         self.bn_l = None if alpha_out == 0 else norm_layer(int(out_channels * alpha_out))
         self.act = activation_layer(inplace=True)
 
+
+    def apply(self,fn):
+        self._init_weight(fn)
+
+    def _init_weight(self,fn):
+        for octave_layer in self.children(): #octaveBA
+            for layer in octave_layer.children(): #octave
+                fn(layer)
+
     def forward(self, x):
         x_h, x_l = self.conv(x)
         x_h = self.act(self.bn_h(x_h))
         x_l = self.act(self.bn_l(x_l)) if x_l is not None else None
         return x_h, x_l
 
-class model(nn.Module): 
-    def __init__(self): 
-        super(model, self).__init__()
+# class model(nn.Module): 
+#     def __init__(self): 
+#         super(model, self).__init__()
+     
+#         self.layer1 = OctaveBatchNormActivation(conv=OctaveConv, in_channels = 12, out_channels   = 1024, stride=2, 
+#                                         kernel_size = 3, padding=1, dilation=1)
+#         self.layer2 = OctaveBatchNormActivation(conv=OctaveConv, in_channels = 1024, out_channels = 512, stride=2, 
+#                                         kernel_size = 3, padding=1, dilation=1)
+#         self.layer3 = OctaveBatchNormActivation(conv=OctaveConv, in_channels = 512, out_channels = 128, stride=2, 
+#                                         kernel_size = 3, padding=1, dilation=1)
+#         self.layer4 = OctaveBatchNormActivation(conv=OctaveConv, in_channels = 128, out_channels = 64, stride=2, 
+#                                         kernel_size = 3, padding=1, dilation=1)
+#         self.layer5 = OctaveBatchNormActivation(conv=OctaveConv, in_channels = 64, out_channels = 64, stride=2, 
+#                                         kernel_size = 3, padding=1, dilation=1)
 
-                
-        self.layer1 = OctaveBatchNormActivation(conv=OctaveConv, in_channels = 12, out_channels   = 1024, stride=2, 
-                                        kernel_size = 3, padding=1, dilation=1)
-        self.layer2 = OctaveBatchNormActivation(conv=OctaveConv, in_channels = 1024, out_channels = 512, stride=2, 
-                                        kernel_size = 3, padding=1, dilation=1)
-        self.layer3 = OctaveBatchNormActivation(conv=OctaveConv, in_channels = 512, out_channels = 128, stride=2, 
-                                        kernel_size = 3, padding=1, dilation=1)
-        self.layer4 = OctaveBatchNormActivation(conv=OctaveConv, in_channels = 128, out_channels = 64, stride=2, 
-                                        kernel_size = 3, padding=1, dilation=1)
-        self.layer5 = OctaveBatchNormActivation(conv=OctaveConv, in_channels = 64, out_channels = 64, stride=2, 
-                                        kernel_size = 3, padding=1, dilation=1)
-
-        self.conv_h  = nn.Conv1d(in_channels = 32, out_channels =32, stride=2, kernel_size=3, padding  = 1)
-        self.conv_l  = nn.Conv1d(in_channels = 32, out_channels = 16, stride=1, kernel_size=3, padding = 1)
+#         self.conv_h  = nn.Conv1d(in_channels = 32, out_channels =32, stride=2, kernel_size=3, padding  = 1)
+#         self.conv_l  = nn.Conv1d(in_channels = 32, out_channels = 16, stride=1, kernel_size=3, padding = 1)
 
 
-    def forward(self, x): 
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
-        x_h, x_l = self.layer5(x)
-        x_h, x_l = self.conv_h(x_h), self.conv_l(x_l)
-        return x_h, x_l  
+#     def forward(self, x): 
+#         x = self.layer1(x)
+#         x = self.layer2(x)
+#         x = self.layer3(x)
+#         x = self.layer4(x)
+#         x_h, x_l = self.layer5(x)
+#         x_h, x_l = self.conv_h(x_h), self.conv_l(x_l)
+#         return x_h, x_l  
 
 
 def main():
     
-    # octave = OctaveBatchNormActivation(conv=OctaveTransposedConv, in_channels = 128, out_channels   = 512, stride=2,
-    #                                     kernel_size = 3, padding=1, dilation=1)
+    octave = OctaveBatchNormActivation(conv=OctaveTransposedConv, in_channels = 128, out_channels   = 512, stride=2,
+                                        kernel_size = 3, padding=1, dilation=1)
     pdb.set_trace()
-    dummy = torch.randn(10, 6, 4096)
-    octave = model()
-    x_h, x_l = octave(dummy)
-    print(x_h.shape) # [10,256,128]
-    print(x_l.shape) # [10,256,256]
+    dummy = torch.randn(10, 64, 64)
+
+    # octave = model()
+    # x_h, x_l = octave(dummy)
+    # print(x_h.shape) # [10,256,128]
+    # print(x_l.shape) # [10,256,256]
 
 if __name__ == '__main__':
     main()
