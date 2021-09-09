@@ -1,2 +1,0 @@
-tract,trplt,trcmp,trdis
-broadband,False,True,False,False

@@ -1,2 +1,0 @@
-tract,trplt,trcmp,trdis
-filtered,True,True,False,False

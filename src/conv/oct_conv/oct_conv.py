@@ -132,7 +132,7 @@ class Octave_BatchNorm(nn.Module):
 
 class OctaveBatchNormActivation(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, conv= OctaveConv, alpha_in=0.5, alpha_out=0.5, stride=1, padding=0, dilation=1,
-                 groups=1, bias=False, norm_layer=nn.BatchNorm1d, activation_layer=nn.ReLU):
+                 groups=1, bias=False, norm_layer=nn.BatchNorm1d, activation_layer=nn.ReLU,*args,**kwargs):
         super(OctaveBatchNormActivation, self).__init__()
 
         # pdb.set_trace()
@@ -140,10 +140,12 @@ class OctaveBatchNormActivation(nn.Module):
                                groups, bias)
         self.bn_h = None if alpha_out == 1 else norm_layer(int(out_channels * (1 - alpha_out)))
         self.bn_l = None if alpha_out == 0 else norm_layer(int(out_channels * alpha_out))
-        self.act = activation_layer(inplace=True)
+        self.act = activation_layer(inplace=True, *args, **kwargs)
 
 
     def apply(self,fn):
+        # adapted the apply method form module to the OctaveBatchNormActiviation
+        # This way we could initialize the nn.Conv1d/nn.ConvTranspose1d
         self._init_weight(fn)
 
     def _init_weight(self,fn):
@@ -187,11 +189,43 @@ class OctaveBatchNormActivation(nn.Module):
 
 
 def main():
+
+    # channel :[128, 512, 1024, 64, 64, 64]
+    # stride  :[2, 2,2,]
+
+    layers = nn.Sequential(*[
     
-    octave = OctaveBatchNormActivation(conv=OctaveTransposedConv, in_channels = 128, out_channels   = 512, stride=2,
-                                        kernel_size = 3, padding=1, dilation=1)
+        OctaveBatchNormActivation(conv=OctaveTransposedConv, in_channels = 128, out_channels   = 512, stride=2,
+                                        kernel_size = 3, padding=1, dilation=1, 
+                                        activation_layer = nn.LeakyReLU, negative_slope = 1.0),
+        OctaveBatchNormActivation(conv=OctaveTransposedConv, in_channels = 512, out_channels   = 1024, stride=2,
+                                        kernel_size = 3, padding=1, dilation=1,
+                                        activation_layer = nn.LeakyReLU, negative_slope = 1.0),
+        OctaveBatchNormActivation(conv=OctaveTransposedConv, in_channels = 1024, out_channels  = 64, stride=2,
+                                        kernel_size = 3, padding=1, dilation=1,
+                                        activation_layer = nn.LeakyReLU, negative_slope = 1.0),
+        OctaveBatchNormActivation(conv=OctaveTransposedConv, in_channels = 64, out_channels    = 64, stride=2,
+                                        kernel_size = 3, padding=1, dilation=1,
+                                        activation_layer = nn.LeakyReLU, negative_slope = 1.0),
+        OctaveBatchNormActivation(conv=OctaveTransposedConv, in_channels = 64, out_channels    = 64, stride=2,
+                                        kernel_size = 3, padding=1, dilation=1,
+                                        activation_layer = nn.LeakyReLU, negative_slope = 1.0),
+        OctaveBatchNormActivation(conv=OctaveTransposedConv, in_channels = 64, out_channels    = 64, stride=2,
+                                        kernel_size = 3, padding=1, dilation=1,
+                                        activation_layer = nn.LeakyReLU, negative_slope = 1.0)
+    ])
+    
+    layer7 = nn.Conv1d(in_channels = 32, out_channels = 16, stride=2, kernel_size = 3, padding=1, dilation=1)
+
     pdb.set_trace()
     dummy = torch.randn(10, 64, 64)
+    x = layers(dummy)
+    # x = layer2(x)
+    # x = layer3(x)
+    # x = layer4(x)
+    # x = layer5(x)
+    # x_h, x_l = layer6(x)
+    x_l = layer7(x_l)
 
     # octave = model()
     # x_h, x_l = octave(dummy)

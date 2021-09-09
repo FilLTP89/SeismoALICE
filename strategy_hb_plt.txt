@@ -1,4 +1,0 @@
-encoder,decoder,hybrid,Dxz,Dx,Dz,Dh
-broadband,models/Fed_is4096_ls128_nzd32_ns100.pth,models/Gdd_is4096_ls128_nzd32_ns100.pth,-,-,-,-,-
-filtered,models/Fef_is4096_ls128_nzf8_ns100.pth,models/Gdf_is4096_ls128_nzf8_ns100.pth,-,-,-,-,-
-hybrid,models/Fhz_is4096_ls128_nzd32_nzf8_ns100_new.pth,models/Ghz_is4096_ls128_nzd32_nzf8_ns100_new.pth,-,-,-,-,-
