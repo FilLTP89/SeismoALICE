@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import math
 import pdb
+from common.common_nn import T
 
 """
 class based on the code from  :  https://github.com/d-li14/octconv.pytorch/blob/master/octconv.py
@@ -11,7 +12,7 @@ class based on the code from  :  https://github.com/d-li14/octconv.pytorch/blob/
 class OctaveConv(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, alpha_in=0.5, 
                         alpha_out=0.5, stride=1, padding=0, dilation=1,
-                        groups=1, bias=False):
+                        groups=1, bias=False, *args, **kwargs):
         super(OctaveConv, self).__init__()
         self.downsample = nn.AvgPool1d(kernel_size=2, stride=2)
         self.upsample = nn.Upsample(scale_factor=2, mode='nearest')
@@ -26,7 +27,7 @@ class OctaveConv(nn.Module):
                                   kernel_size = kernel_size, stride= 1, 
                                   padding=padding, 
                                   dilation= dilation, groups=math.ceil(alpha_in * groups), 
-                                  bias = bias)
+                                  bias = bias,*args, **kwargs)
         self.conv_l2h = None if alpha_in == 0 or alpha_out == 1 or self.is_dw else \
                         nn.Conv1d(int(alpha_in * in_channels), out_channels - int(alpha_out * out_channels),
                                   kernel_size, 1, padding, dilation, groups, bias)
@@ -61,7 +62,7 @@ class OctaveConv(nn.Module):
 class OctaveTransposedConv(nn.Module): 
     def __init__(self, in_channels, out_channels, kernel_size, alpha_in=0.5, alpha_out=0.5,
                         stride=1, padding=0, dilation=1,
-                        groups=1, bias=False):
+                        groups=1, bias=False,*args, **kwargs):
         super(OctaveTransposedConv, self).__init__()
         self.upsample = nn.Upsample(scale_factor=2, mode='nearest')
         self.downsample = nn.AvgPool1d(kernel_size=2, stride = 2)
@@ -79,7 +80,7 @@ class OctaveTransposedConv(nn.Module):
                                   output_padding = 0, 
                                   groups=math.ceil(alpha_in * groups), 
                                   bias = bias,
-                                  dilation= dilation)
+                                  dilation= dilation,*args, **kwargs)
 
         self.dconv_l2h = None if alpha_in == 0 or alpha_out == 1 or self.is_dw else \
                         nn.ConvTranspose1d(int(alpha_in * in_channels), out_channels - int(alpha_out * out_channels),
@@ -131,16 +132,17 @@ class Octave_BatchNorm(nn.Module):
 
 
 class OctaveBatchNormActivation(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, conv= OctaveConv, alpha_in=0.5, alpha_out=0.5, stride=1, padding=0, dilation=1,
-                 groups=1, bias=False, norm_layer=nn.BatchNorm1d, activation_layer=nn.ReLU,*args,**kwargs):
+    def __init__(self, in_channels, out_channels, kernel_size, conv= OctaveConv, alpha_in=0.5, 
+                    alpha_out=0.5, stride=1, padding=0, dilation=1,
+                    groups=1, bias=False, norm_layer=nn.BatchNorm1d, activation_layer="relu",*args,**kwargs):
         super(OctaveBatchNormActivation, self).__init__()
-
         # pdb.set_trace()
-        self.conv = conv(in_channels, out_channels, kernel_size, alpha_in, alpha_out, stride, padding, dilation,
-                               groups, bias)
+        self.conv = conv(in_channels, out_channels, kernel_size, alpha_in, 
+                        alpha_out, stride, padding, dilation,groups, bias, *args, **kwargs)
+
         self.bn_h = None if alpha_out == 1 else norm_layer(int(out_channels * (1 - alpha_out)))
         self.bn_l = None if alpha_out == 0 else norm_layer(int(out_channels * alpha_out))
-        self.act = activation_layer(inplace=True, *args, **kwargs)
+        self.act = T.activation_func("leaky_relu")
 
 
     def apply(self,fn):
@@ -159,78 +161,19 @@ class OctaveBatchNormActivation(nn.Module):
         x_l = self.act(self.bn_l(x_l)) if x_l is not None else None
         return x_h, x_l
 
-# class model(nn.Module): 
-#     def __init__(self): 
-#         super(model, self).__init__()
-     
-#         self.layer1 = OctaveBatchNormActivation(conv=OctaveConv, in_channels = 12, out_channels   = 1024, stride=2, 
-#                                         kernel_size = 3, padding=1, dilation=1)
-#         self.layer2 = OctaveBatchNormActivation(conv=OctaveConv, in_channels = 1024, out_channels = 512, stride=2, 
-#                                         kernel_size = 3, padding=1, dilation=1)
-#         self.layer3 = OctaveBatchNormActivation(conv=OctaveConv, in_channels = 512, out_channels = 128, stride=2, 
-#                                         kernel_size = 3, padding=1, dilation=1)
-#         self.layer4 = OctaveBatchNormActivation(conv=OctaveConv, in_channels = 128, out_channels = 64, stride=2, 
-#                                         kernel_size = 3, padding=1, dilation=1)
-#         self.layer5 = OctaveBatchNormActivation(conv=OctaveConv, in_channels = 64, out_channels = 64, stride=2, 
-#                                         kernel_size = 3, padding=1, dilation=1)
-
-#         self.conv_h  = nn.Conv1d(in_channels = 32, out_channels =32, stride=2, kernel_size=3, padding  = 1)
-#         self.conv_l  = nn.Conv1d(in_channels = 32, out_channels = 16, stride=1, kernel_size=3, padding = 1)
-
-
-#     def forward(self, x): 
-#         x = self.layer1(x)
-#         x = self.layer2(x)
-#         x = self.layer3(x)
-#         x = self.layer4(x)
-#         x_h, x_l = self.layer5(x)
-#         x_h, x_l = self.conv_h(x_h), self.conv_l(x_l)
-#         return x_h, x_l  
-
-
 def main():
-
-    # channel :[128, 512, 1024, 64, 64, 64]
-    # stride  :[2, 2,2,]
-
+    channel = [12,32,64,128,512,256]
     layers = nn.Sequential(*[
-    
-        OctaveBatchNormActivation(conv=OctaveTransposedConv, in_channels = 128, out_channels   = 512, stride=2,
+            OctaveBatchNormActivation(conv=OctaveConv, in_channels = channel[0], out_channels   = channel[1], stride=2,
                                         kernel_size = 3, padding=1, dilation=1, 
-                                        activation_layer = nn.LeakyReLU, negative_slope = 1.0),
-        OctaveBatchNormActivation(conv=OctaveTransposedConv, in_channels = 512, out_channels   = 1024, stride=2,
-                                        kernel_size = 3, padding=1, dilation=1,
-                                        activation_layer = nn.LeakyReLU, negative_slope = 1.0),
-        OctaveBatchNormActivation(conv=OctaveTransposedConv, in_channels = 1024, out_channels  = 64, stride=2,
-                                        kernel_size = 3, padding=1, dilation=1,
-                                        activation_layer = nn.LeakyReLU, negative_slope = 1.0),
-        OctaveBatchNormActivation(conv=OctaveTransposedConv, in_channels = 64, out_channels    = 64, stride=2,
-                                        kernel_size = 3, padding=1, dilation=1,
-                                        activation_layer = nn.LeakyReLU, negative_slope = 1.0),
-        OctaveBatchNormActivation(conv=OctaveTransposedConv, in_channels = 64, out_channels    = 64, stride=2,
-                                        kernel_size = 3, padding=1, dilation=1,
-                                        activation_layer = nn.LeakyReLU, negative_slope = 1.0),
-        OctaveBatchNormActivation(conv=OctaveTransposedConv, in_channels = 64, out_channels    = 64, stride=2,
-                                        kernel_size = 3, padding=1, dilation=1,
-                                        activation_layer = nn.LeakyReLU, negative_slope = 1.0)
-    ])
-    
-    layer7 = nn.Conv1d(in_channels = 32, out_channels = 16, stride=2, kernel_size = 3, padding=1, dilation=1)
-
+                                        activation_layer = "leaky_relu"),
+            OctaveBatchNormActivation(conv=OctaveConv, in_channels = channel[1], out_channels   = channel[2], stride=2,
+                                        kernel_size = 3, padding=1, dilation=1, 
+                                        activation_layer = "leaky_relu")])
     pdb.set_trace()
-    dummy = torch.randn(10, 64, 64)
-    x = layers(dummy)
-    # x = layer2(x)
-    # x = layer3(x)
-    # x = layer4(x)
-    # x = layer5(x)
-    # x_h, x_l = layer6(x)
+    dummy = torch.randn(10, 6, 4096)
+    x_h, x_l = layers(dummy)
     x_l = layer7(x_l)
-
-    # octave = model()
-    # x_h, x_l = octave(dummy)
-    # print(x_h.shape) # [10,256,128]
-    # print(x_l.shape) # [10,256,256]
 
 if __name__ == '__main__':
     main()
