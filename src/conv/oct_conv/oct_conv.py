@@ -16,6 +16,7 @@ class OctaveConv(nn.Module):
         super(OctaveConv, self).__init__()
         self.downsample = nn.AvgPool1d(kernel_size=2, stride=2)
         self.upsample = nn.Upsample(scale_factor=2, mode='nearest')
+        self.identity = nn.Identity()
         assert stride == 1 or stride == 2, "Stride should be 1 or 2."
         self.stride = stride
         self.is_dw = groups == in_channels
@@ -39,19 +40,20 @@ class OctaveConv(nn.Module):
                                   kernel_size, 1, padding, dilation, math.ceil(groups - alpha_in * groups), bias)
 
     def forward(self, x):
+        # pdb.set_trace()
         x_h, x_l = x if type(x) is tuple else (x, None)
 
-        x_h = self.downsample(x_h) if self.stride == 2 else x_h
-        x_h2h = self.conv_h2h(x_h)
-        x_h2l = self.conv_h2l(self.downsample(x_h)) if self.alpha_out > 0 and not self.is_dw else None
+        x_h = self.downsample(x_h) if self.stride == 2 else x_h #[_,6,2048]
+        x_h2h = self.conv_h2h(x_h) #[_,c,2048]
+        x_h2l = self.conv_h2l(self.downsample(x_h)) if self.alpha_out > 0 and not self.is_dw else None #[_,c,1024]
         if x_l is not None:
-            x_l2l = self.downsample(x_l) if self.stride == 2 else x_l
-            x_l2l = self.conv_l2l(x_l2l) if self.alpha_out > 0 else None
+            x_l2l = self.downsample(x_l) if self.stride == 2 else x_l #[_,6,2048]
+            x_l2l = self.conv_l2l(x_l2l) if self.alpha_out > 0 else None #[_,c,2048]
             if self.is_dw:
                 return x_h2h, x_l2l
             else:
-                x_l2h = self.conv_l2h(x_l)
-                x_l2h = self.upsample(x_l2h) if self.stride == 1 else x_l2h
+                x_l2h = self.conv_l2h(x_l) #[_,c,4096]
+                x_l2h = self.upsample(x_l2h) if self.stride == 1 else x_l2h #[_,c,4096]
                 x_h = x_l2h + x_h2h
                 x_l = x_h2l + x_l2l if x_h2l is not None and x_l2l is not None else None
                 return x_h, x_l
@@ -142,7 +144,7 @@ class OctaveBatchNormActivation(nn.Module):
 
         self.bn_h = None if alpha_out == 1 else norm_layer(int(out_channels * (1 - alpha_out)))
         self.bn_l = None if alpha_out == 0 else norm_layer(int(out_channels * alpha_out))
-        self.act = T.activation_func("leaky_relu")
+        self.act = T.activation_func(activation_layer)
 
 
     def apply(self,fn):
@@ -170,10 +172,17 @@ def main():
             OctaveBatchNormActivation(conv=OctaveConv, in_channels = channel[1], out_channels   = channel[2], stride=2,
                                         kernel_size = 3, padding=1, dilation=1, 
                                         activation_layer = "leaky_relu")])
+
+    model = OctaveBatchNormActivation(conv=OctaveConv, in_channels = 12, out_channels = 32, stride=2,
+                                        kernel_size = 3, padding=1, dilation=1, activation_layer = "leaky_relu")
     pdb.set_trace()
-    dummy = torch.randn(10, 6, 4096)
-    x_h, x_l = layers(dummy)
-    x_l = layer7(x_l)
+    x = torch.randn(10,6,4096)
+    y = torch.randn(10,6,4096)
+
+    z_h, z_l = model((x,y))
+    # dummy = torch.randn(10, 6, 4096)
+    # x_h, x_l = layers(dummy)
+    # x_l = layer7(x_l)
 
 if __name__ == '__main__':
     main()
