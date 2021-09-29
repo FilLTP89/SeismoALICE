@@ -167,6 +167,7 @@ class DataParalleleFactory(ConvNetFactory):
         name  = config["name"] if "name" in config else None
         path  = config["path"] if "path" in config else ""
         dconv = config["dconv"] if "dconv" in config else ""
+        wf    = json.loads(config["wf"].lower()) if "wf" in config else False
         return EncoderDataParallele.getEncoder(name = name, ngpu = opt.ngpu,\
                 dev = opt.dev,\
                 nz = opt.nzd, nch = opt.nch,\
@@ -183,6 +184,7 @@ class DataParalleleFactory(ConvNetFactory):
                 path = path,
                 config = config,
                 dpc = 0.0,\
+                wf = wf,\
                 *args, **kwargs)
 
     def createDecoder(self, config, opt, *args, **kwargs):
@@ -190,6 +192,7 @@ class DataParalleleFactory(ConvNetFactory):
         path = config["path"] if "path" in config else ""
         dconv = config["dconv"] if "dconv" in config else ""
         n_extra_layers = config["extra_layers"] if "extra_layers" in config else 0
+        wf    = json.loads(config["wf"].lower()) if "wf" in config else False
         return DecoderDataParallele.getDecoder(name = name, ngpu = opt.ngpu,\
                 nz = opt.nzd, nch = opt.nch,\
                 ndf = opt.ndf,\
@@ -207,6 +210,7 @@ class DataParalleleFactory(ConvNetFactory):
                 path = path,\
                 dconv = dconv,\
                 dpc = 0.0,\
+                wf = wf,\
                 *args, **kwargs)
 
     def createDCGAN_Dx(self, config_dcgan_dx, opt, *args, **kwargs):

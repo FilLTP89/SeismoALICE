@@ -24,10 +24,11 @@ import pdb
 # from torch.utils.tensorboard import SummaryWriter
 from factory.conv_factory import *
 import GPUtil
-from torch.nn.parallel import DistributedDataParallel as DDP
+import nn.parallel.DistributedDataParallel as DDP
 import time
 from database.toyset import Toyset
-from plot.investigation import plot_signal_and_reconstruction
+import torch.distributed as dist
+# from plot.investigation import plot_signal_and_reconstruction
 
 
 rndm_args = {'mean': 0, 'std': 1}
@@ -56,31 +57,64 @@ nly = 5
 class trainer(object):
     '''Initialize neural network'''
     # @profile
-    def __init__(self,cv):
+    def __init__(self,cv,gpu):
 
         """
         Args
         cv  [object] :  content all parsing paramaters from the flag when lauch the python instructions
         """
-        super(trainer, self).__init__()
+        # And therefore this latter is become accessible to the methods in this class
+        globals().update(cv)
+        # define as global opt and passing it as a dictonnary here
+        globals().update(opt.__dict__)
 
+        super(trainer, self).__init__()
+        self.gpu = gpu
+
+        rank = opt.nr * opt.ngpu + gpu
+        dist.init_process_group(
+            backend       ='nccl',
+            init_method   ='env://',
+            world_size    = opt.world_size,
+            rank          =  rank
+        )
+
+        torch.cuda.set_device(self.gpu)
+        torch.manual_seed(0)
 
         #toy test :
         dataset = Toyset()
         batch_size = 10
         train_set, vld_set = torch.utils.data.random_split(dataset, [80,20])
+        
+        train_sampler = torch.utils.data.distributed.DistributedSampler(
+                train_set,
+                num_replicas=opt.world_size,
+                rank=rank)
+
+        vld_sampler = torch.utils.data.distributed.DistributedSampler(
+                vld_set,
+                num_replicas=opt.world_size,
+                rank=rank)
+
         self.trn_loader = torch.utils.data.DataLoader(dataset=train_set, 
-                    batch_size=batch_size, shuffle=True)
+                    batch_size =batch_size, 
+                    shuffle    =False,
+                    num_workers=0,
+                    pin_memory =True,
+                    sampler    = train_sampler)
+
         self.vld_loader = torch.utils.data.DataLoader(dataset=vld_set, 
-                    batch_size=batch_size, shuffle=True)
+                    batch_size =batch_size, 
+                    shuffle    =False,
+                    num_workers=0,
+                    pin_memory =True,
+                    sampler    = vld_sampler)
     
         self.cv = cv
         self.gr_norm = []
         # define as global variable the cv object. 
-        # And therefore this latter is become accessible to the methods in this class
-        globals().update(cv)
-        # define as global opt and passing it as a dictonnary here
-        globals().update(opt.__dict__)
+        
 
         # passing the content of file ./strategy_bb_*.txt
         self.strategy=strategy
@@ -200,8 +234,8 @@ class trainer(object):
             flagF = True
             n = self.strategy['broadband']
             print("Loading broadband generators")
-            self.Fef = net.Encoder(opt.config['encoder'], opt)
-            self.Gdf = net.Decoder(opt.config['decoder'], opt)
+            self.Fef = DDP(net.Encoder(opt.config['encoder'], opt), device_ids = [self.gpu])
+            self.Gdf = DDP(net.Decoder(opt.config['decoder'], opt), device_ids = [self.gpu])
             # pdb.set_trace()
             if self.strategy['tract']['broadband']:
                 if None in n:        
@@ -210,28 +244,28 @@ class trainer(object):
                             weight_decay=0.00001)
                 else:
                     print("broadband generators: {0} - {1}".format(*n))
-                    self.Fef.load_state_dict(tload(n[0])['model_state_dict'])
-                    self.Gdf.load_state_dict(tload(n[1])['model_state_dict'])    
+                    self.Fef.load_state_dict(tload(n[0])['model_state_dict']).cuda(self.gpu)
+                    self.Gdf.load_state_dict(tload(n[1])['model_state_dict']).cuda(self.gpu) 
                     self.oGfxz = Adam(ittc(self.Fef.parameters(),self.Gdf.parameters()),
-                                      lr=glr,betas=(b1,b2),weight_decay=0.00001)
+                                      lr=glr,betas=(b1,b2),weight_decay=0.00001).cuda(self.gpu)
                 self.optzf.append(self.oGfxz)
 
-                self.Dszf = net.DCGAN_Dz(opt.config['Dszf']  , opt)
-                self.DsXf = net.DCGAN_Dx(opt.config['DsXf']  , opt)
-                self.Dfxz = net.DCGAN_DXZ(opt.config['Dfxz'] , opt)
+                self.Dszf = DDP(net.DCGAN_Dz(opt.config['Dszf']  , opt), device_ids = [self.gpu])
+                self.DsXf = DDP(net.DCGAN_Dx(opt.config['DsXf']  , opt), device_ids = [self.gpu])
+                self.Dfxz = DDP(net.DCGAN_DXZ(opt.config['Dfxz'] , opt), device_ids = [self.gpu])
 
                 self.Dfnets.append(self.DsXf)
                 self.Dfnets.append(self.Dszf)
                 self.Dfnets.append(self.Dfxz)
 
-                self.Dsrzf =  net.DCGAN_Dz(opt.config['Dsrzf'], opt)
-                self.DsrXf =  net.DCGAN_Dx(opt.config['DsrXf'], opt)
+                self.Dsrzf =  DDP(net.DCGAN_Dz(opt.config['Dsrzf'], opt), device_ids = [self.gpu])
+                self.DsrXf =  DDP(net.DCGAN_Dx(opt.config['DsrXf'], opt), device_ids = [self.gpu])
                 
 
                 self.Dfnets.append(self.DsrXf)
                 self.Dfnets.append(self.Dsrzf)
 
-                self.oDfxz = reset_net(self.Dfnets,func=set_weights,lr=rlr,optim='rmsprop')
+                self.oDfxz = reset_net(self.Dfnets,func=set_weights,lr=rlr,optim='rmsprop').cuda(self.gpu)
                 self.optzf.append(self.oDfxz)
 
                 # pdb.set_trace()
@@ -239,8 +273,8 @@ class trainer(object):
             else:
                 if None not in n:
                     print("broadband generators - no train: {0} - {1}".format(*n))
-                    self.Fef.load_state_dict(tload(n[0])['model_state_dict'])
-                    self.Gdf.load_state_dict(tload(n[1])['model_state_dict'])    
+                    self.Fef.load_state_dict(tload(n[0])['model_state_dict']).cuda(self.gpu)
+                    self.Gdf.load_state_dict(tload(n[1])['model_state_dict']).cuda(self.gpu)
                 else:
                     flagF=False
 
@@ -1019,11 +1053,11 @@ class trainer(object):
 
             # pdb.set_trace()
 
-            plot_signal_and_reconstruction(vld_set = self.vld_loader, 
-                    encoder = Fef, 
-                    decoder = Gdf, 
-                    device  = device, 
-                    outf    = outf)
+            # plot_signal_and_reconstruction(vld_set = self.vld_loader, 
+            #         encoder = Fef, 
+            #         decoder = Gdf, 
+            #         device  = device, 
+            #         outf    = outf)
 
             if None not in n:
                 print("Loading models {} {}".format(n[0],n[1]))
