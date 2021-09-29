@@ -787,7 +787,7 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,opt=None,pfx='trial',outf=
             Xf = Variable(xf_data).to(dev, dtype =torch.float64)
             zt = Variable(zt_data).to(dev, dtype =torch.float64)
             wnx,wnz,wn1 = noise_generator(Xt.shape,zt.shape,dev,app.RNDM_ARGS)
-            X_inp = zcat(Xf,wnx.to(dev))
+            X_inp = zcat(Xt,wnx.to(dev))
 
             # ztr = Qec(X_inp).to(dev)
 
@@ -929,8 +929,8 @@ def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,opt=None,pfx='trial',outf=
             else:
                 ztr = Qec(X_inp)
             # ztr = latent_resampling(Qec(X_inp),zf.shape[1],wn1)
-            # z_inp = zcat(ztr,wnz)
-            z_inp = zcat(ztr,torch.zeros_like(wnz).to(dev))
+            z_inp = zcat(ztr,wnz)
+            # z_inp = zcat(ztr,torch.zeros_like(wnz).to(dev))
             Xr = Pdc(z_inp)
             Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             Xr_fsa = tfft(Xr,vtm[1]-vtm[0]).cpu().data.numpy().copy()

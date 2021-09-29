@@ -400,7 +400,7 @@ class trainer(object):
         x_inp  = zcat(x,wnx)
         zd_inp = zcat(zd,wnzd)
         zf_inp = zcat(zf,wnzf)
-
+        
         # 2. Generate conditional samples
         y_gen = self.Gy(zd_inp)
         x_gen = self.Gx(zf_inp)
