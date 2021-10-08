@@ -149,7 +149,6 @@ class trainer(object):
         cpus  =  int(os.environ.get('SLURM_NPROCS'))
         if(cpus ==1 and opt.ngpu >=1):
             print('ModelParallele to be builded ...')
-            pzixnt('ModelParallele to be buildzdx ...')
             self.dp_mode = False
             factory = ModelParalleleFactory()
         elif(cpus >1 and opt.ngpu >=1):
@@ -160,14 +159,16 @@ class trainer(object):
             print('environ not found')
         net = Network(factory)
 
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+
         if 'unique' in t:
             self.style='ALICE'
             # act = acts[self.style]
             n = self.strategy['unique']
             # pdb.set_trace()
-            self.F_  = net.Encoder(opt.config['F'], opt)
-            self.Gy  = net.Decoder(opt.config['Gy'], opt)
-            self.Gx  = net.Decoder(opt.config['Gx'], opt)
+            self.F_  = net.Encoder(opt.config['F'], opt).to(self.device)
+            self.Gy  = net.Decoder(opt.config['Gy'], opt).to(self.device)
+            self.Gx  = net.Decoder(opt.config['Gx'], opt).to(self.device)
             
             if  self.strategy['tract']['unique']:
                 if None in n:        
@@ -196,17 +197,17 @@ class trainer(object):
                 ## Discriminators
                 # pdb.!()
                 # pdb.set_trace()
-                self.Dy   = net.DCGAN_Dx(opt.config['Dy'],opt)
-                self.Dx   = net.DCGAN_Dx(opt.config['Dx'],opt)
-                self.Dzb  = net.DCGAN_Dz(opt.config['Dzb'],opt)
-                self.Dzf  = net.DCGAN_Dz(opt.config['Dzf'],opt)
-                self.Dyz  = net.DCGAN_DXZ(opt.config['Dyz'],opt)
-                self.Dxz  = net.DCGAN_DXZ(opt.config['Dxz'],opt)
-                self.Dzzb = net.DCGAN_Dz(opt.config['Dzzb'],opt)
-                self.Dzzf = net.DCGAN_Dz(opt.config['Dzzf'],opt)
-                self.Dxx  = net.DCGAN_Dx(opt.config['Dxx'],opt)
-                self.Dyy  = net.DCGAN_Dx(opt.config['Dyy'],opt)
-                self.Dzyx  = net.DCGAN_Dz(opt.config['Dzyx'],opt)
+                self.Dy   = net.DCGAN_Dx(opt.config['Dy'],opt).to(self.device)
+                self.Dx   = net.DCGAN_Dx(opt.config['Dx'],opt).to(self.device)
+                self.Dzb  = net.DCGAN_Dz(opt.config['Dzb'],opt).to(self.device)
+                self.Dzf  = net.DCGAN_Dz(opt.config['Dzf'],opt).to(self.device)
+                self.Dyz  = net.DCGAN_DXZ(opt.config['Dyz'],opt).to(self.device)
+                self.Dxz  = net.DCGAN_DXZ(opt.config['Dxz'],opt).to(self.device)
+                self.Dzzb = net.DCGAN_Dz(opt.config['Dzzb'],opt).to(self.device)
+                self.Dzzf = net.DCGAN_Dz(opt.config['Dzzf'],opt).to(self.device)
+                self.Dxx  = net.DCGAN_Dx(opt.config['Dxx'],opt).to(self.device)
+                self.Dyy  = net.DCGAN_Dx(opt.config['Dyy'],opt).to(self.device)
+                self.Dzyx  = net.DCGAN_Dz(opt.config['Dzyx'],opt).to(self.device)
 
                 self.Dnets.append(self.Dx)
                 self.Dnets.append(self.Dy)
@@ -669,26 +670,33 @@ class trainer(object):
         place = opt.dev if self.dp_mode else ngpu-1
 
         start_time = time.time()
-
+        verbose = False
+        total_step = len(trn_loader)
         for epoch in range(niter):
             for b,batch in enumerate(trn_loader):
             # for b,batch in enumerate(self.trn_loader):
                 # pdb.set_trace()
                 # y,x,_ = batch
                 y, x, zd, zf, *other = batch
-                y   = y.to(place) # recorded signal
-                x   = x.to(place) # synthetic signal
-                zd  = zd.to(place)
-                zf  = zf.to(place)
+                y   = y.to(place, non_blocking=True) # recorded signal
+                x   = x.to(place, non_blocking=True) # synthetic signal
+                zd  = zd.to(place, non_blocking=True)
+                zf  = zf.to(place, non_blocking=True)
                 # Train G/D
                 wnzd = torch.empty(*(opt.batchSize,nzd,opt.latentSize)).normal_(**app.RNDM_ARGS).to(place)
                 wnzf = torch.empty(*(opt.batchSize,nzf,opt.latentSize)).normal_(**app.RNDM_ARGS).to(place)
                 
+                wnzd.to(place, non_blocking=True)
+                wnzf.to(place, non_blocking=True)
+
                 for _ in range(5):
                     self.alice_train_discriminator_adv(y,wnzd,x,wnzf)                 
                 for _ in range(1):
                     self.alice_train_generator_adv(y,wnzd,x,wnzf,zd,zf)
 
+                if verbose == True:
+                    str0 = 'Epoch [{}/{}]\tStep [{}/{}]'.format(epoch,opt.niter,b,total_step)
+                    print(str0)
 
             if epoch%10== 0:
                 print("--- {} minutes ---".format((time.time() - start_time)/60))

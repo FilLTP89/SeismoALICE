@@ -24,10 +24,11 @@ import pdb
 # from torch.utils.tensorboard import SummaryWriter
 from factory.conv_factory import *
 import GPUtil
-import nn.parallel.DistributedDataParallel as DDP
+from torch.nn.parallel import DistributedDataParallel as DDP
 import time
 from database.toyset import Toyset
 import torch.distributed as dist
+import numpy as np
 # from plot.investigation import plot_signal_and_reconstruction
 
 
@@ -49,7 +50,6 @@ __status__ = "Beta"
 
 b1 = 0.5
 b2 = 0.9999
-
 nch_tot = 3
 penalty_wgangp = 10.
 nly = 5
@@ -57,61 +57,84 @@ nly = 5
 class trainer(object):
     '''Initialize neural network'''
     # @profile
-    def __init__(self,cv,gpu):
+    def __init__(self, gpu, opt):
 
         """
         Args
         cv  [object] :  content all parsing paramaters from the flag when lauch the python instructions
         """
         # And therefore this latter is become accessible to the methods in this class
-        globals().update(cv)
+        # globals().update(cv)
         # define as global opt and passing it as a dictonnary here
-        globals().update(opt.__dict__)
+        self.opt = opt
+        globals().update(self.opt.__dict__)
 
         super(trainer, self).__init__()
         self.gpu = gpu
+        # pdb.set_trace()
+        print(f'prepare to train on {self.gpu}')
 
-        rank = opt.nr * opt.ngpu + gpu
+        rank = self.opt.nr * self.opt.ngpu + self.gpu
+        # rank = args.nr * args.gpus + gpu
+
         dist.init_process_group(
-            backend       ='nccl',
-            init_method   ='env://',
-            world_size    = opt.world_size,
-            rank          =  rank
+            backend='nccl',
+            init_method='env://',
+            world_size=opt.world_size,
+            rank=rank
         )
-
+        # dist.init_process_group(
+        #     backend       ='gloo',
+        #     # init_method   ='env://',
+        #     world_size    = opt.world_size,
+        #     rank          = rank
+        # )
+        seed = 0
         torch.cuda.set_device(self.gpu)
-        torch.manual_seed(0)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
 
-        #toy test :
-        dataset = Toyset()
-        batch_size = 10
-        train_set, vld_set = torch.utils.data.random_split(dataset, [80,20])
-        
-        train_sampler = torch.utils.data.distributed.DistributedSampler(
-                train_set,
-                num_replicas=opt.world_size,
-                rank=rank)
+        np.random.seed(0)
 
-        vld_sampler = torch.utils.data.distributed.DistributedSampler(
-                vld_set,
-                num_replicas=opt.world_size,
-                rank=rank)
+        # if rank == 0:
+            #toy test :
+        dataset = Toyset(nsy = 1280)
+        self.batch_size = opt.batchSize
+        if rank == 0:
+            get_dataset(dataset, rank = rank, batch_size = self.batch_size, 
+                nsy = 1280, world_size = opt.world_size)
 
-        self.trn_loader = torch.utils.data.DataLoader(dataset=train_set, 
-                    batch_size =batch_size, 
-                    shuffle    =False,
-                    num_workers=0,
-                    pin_memory =True,
-                    sampler    = train_sampler)
+        self.trn_loader, self.vld_loader = get_dataset(dataset, rank = rank, 
+                batch_size = self.batch_size, nsy = 1280, world_size = opt.world_size)
+        # train_set, vld_set = torch.utils.data.random_split(dataset, [80,20])
 
-        self.vld_loader = torch.utils.data.DataLoader(dataset=vld_set, 
-                    batch_size =batch_size, 
-                    shuffle    =False,
-                    num_workers=0,
-                    pin_memory =True,
-                    sampler    = vld_sampler)
-    
-        self.cv = cv
+        # train_sampler = torch.utils.data.distributed.DistributedSampler(
+        #         train_set,
+        #         num_replicas=self.opt.world_size,
+        #         rank=rank)
+
+        # vld_sampler = torch.utils.data.distributed.DistributedSampler(
+        #         vld_set,
+        #         num_replicas=self.opt.world_size,
+        #         rank=rank)
+
+        # self.trn_loader = torch.utils.data.DataLoader(dataset=train_set, 
+        #             batch_size =self.batch_size, 
+        #             shuffle    =False,
+        #             num_workers=0,
+        #             pin_memory =True,
+        #             sampler    = train_sampler)
+
+        # self.vld_loader = torch.utils.data.DataLoader(dataset=vld_set, 
+        #             batch_size =self.batch_size, 
+        #             shuffle    =False,
+        #             num_workers=0,
+        #             pin_memory =True,
+        #             sampler    = vld_sampler)
+        # dist.barrier()
+        # self.cv = cv
         self.gr_norm = []
         # define as global variable the cv object. 
         
@@ -120,14 +143,14 @@ class trainer(object):
         self.strategy=strategy
         self.ngpu = ngpu
 
-        nzd =  opt.nzd
-        ndf = opt.ndf
+        nzd = self.opt.nzd
+        ndf = self.opt.ndf
         
         # the follwings variable are the instance for the object Module from 
         # the package pytorch: torch.nn.modulese. 
         # the names of variable are maped to the description aforementioned
-        self.Fed = Module()
-        self.Gdd = Module()
+        self.Fed  = Module()
+        self.Gdd  = Module()
         self.DsXd = Module()
         self.Dszd = Module()
         self.DsXf = Module()
@@ -139,10 +162,10 @@ class trainer(object):
         self.optzd  = []
         self.optzf  = []
         self.optzh  = []
-        self.oGdxz=None
-        self.oGfxz=None
-        self.oGhxz=None
-        self.dp_mode = True
+        self.oGdxz  = None
+        self.oGfxz  = None
+        self.oGhxz  = None
+        self.dp_mode= True
         
         flagT=False
         flagF=False
@@ -157,11 +180,11 @@ class trainer(object):
         # breakpoint()
         cpus  =  int(os.environ.get('SLURM_NPROCS'))
         #we determine in which kind of environnement we are 
-        if(cpus ==1 and opt.ngpu >=1):
+        if(cpus ==1 and self.opt.ngpu >=1):
             print('ModelParallele to be builded ...')
             self.dp_mode = False
             factory = ModelParalleleFactory()
-        elif(cpus >1 and opt.ngpu >=1):
+        elif(cpus >1 and self.opt.ngpu >=1):
             print('DataParallele to be builded ...')
             factory = DataParalleleFactory()
             self.dp_mode = True
@@ -231,17 +254,34 @@ class trainer(object):
         if 'broadband' in t:
             self.style='ALICE'
             # act = acts[self.style]
+
             flagF = True
             n = self.strategy['broadband']
             print("Loading broadband generators")
-            self.Fef = DDP(net.Encoder(opt.config['encoder'], opt), device_ids = [self.gpu])
-            self.Gdf = DDP(net.Decoder(opt.config['decoder'], opt), device_ids = [self.gpu])
-            # pdb.set_trace()
+
+            # if rank == 0:
+            self.Fef = net.Encoder(self.opt.config['encoder'],  
+                                        self.opt).cuda(self.gpu)
+
+            self.Gdf = net.Decoder(self.opt.config['decoder'], 
+                                        self.opt).cuda(self.gpu)
+            # dist.barrier()
+
+            self.Fef = DDP(self.Fef, device_ids=[self.gpu])
+
+            self.Gdf = DDP(self.Gdf, device_ids=[self.gpu])
+
+            # if rank == 0:
+            #     print(self.Fef)
+            # t = torch.randn(10, 6, 4096).to(self.gpu)
+            # print("shape of t", t.shape)
+            # print("shape of F(t)",self.Fef(t).shape)
             if self.strategy['tract']['broadband']:
                 if None in n:        
                     self.FGf = [self.Fef,self.Gdf]
-                    self.oGfxz = reset_net(self.FGf,func=set_weights,lr=glr,b1=b1,b2=b2,
-                            weight_decay=0.00001)
+                    self.oGfxz = reset_net(self.FGf,func=set_weights,
+                        lr=glr*self.opt.world_size,b1=b1,b2=b2,
+                        weight_decay=0.00001)
                 else:
                     print("broadband generators: {0} - {1}".format(*n))
                     self.Fef.load_state_dict(tload(n[0])['model_state_dict']).cuda(self.gpu)
@@ -249,23 +289,40 @@ class trainer(object):
                     self.oGfxz = Adam(ittc(self.Fef.parameters(),self.Gdf.parameters()),
                                       lr=glr,betas=(b1,b2),weight_decay=0.00001).cuda(self.gpu)
                 self.optzf.append(self.oGfxz)
+                # if rank == 0:
+                self.Dszf = net.DCGAN_Dz(self.opt.config['Dszf']  , self.opt).cuda(self.gpu)
+                self.DsXf = net.DCGAN_Dx(self.opt.config['DsXf']  , self.opt).cuda(self.gpu)
+                self.Dfxz = net.DCGAN_DXZ(self.opt.config['Dfxz'] , self.opt).cuda(self.gpu)
+                # dist.barrier()
 
-                self.Dszf = DDP(net.DCGAN_Dz(opt.config['Dszf']  , opt), device_ids = [self.gpu])
-                self.DsXf = DDP(net.DCGAN_Dx(opt.config['DsXf']  , opt), device_ids = [self.gpu])
-                self.Dfxz = DDP(net.DCGAN_DXZ(opt.config['Dfxz'] , opt), device_ids = [self.gpu])
+                self.Dszf = DDP(self.Dszf, device_ids=[self.gpu],
+                    find_unused_parameters=True)
 
+                self.DsXf = DDP(self.DsXf,device_ids=[self.gpu],
+                    find_unused_parameters=True)
+
+                self.Dfxz = DDP(self.Dfxz, device_ids=[self.gpu],
+                    find_unused_parameters=True)
                 self.Dfnets.append(self.DsXf)
                 self.Dfnets.append(self.Dszf)
                 self.Dfnets.append(self.Dfxz)
 
-                self.Dsrzf =  DDP(net.DCGAN_Dz(opt.config['Dsrzf'], opt), device_ids = [self.gpu])
-                self.DsrXf =  DDP(net.DCGAN_Dx(opt.config['DsrXf'], opt), device_ids = [self.gpu])
-                
 
+                # if rank ==0:
+                self.Dsrzf = net.DCGAN_Dz(self.opt.config['Dsrzf'], self.opt).cuda(self.gpu)
+                self.DsrXf = net.DCGAN_Dx(self.opt.config['DsrXf'], self.opt).cuda(self.gpu)
+                # dist.barrier()
+
+                self.Dsrzf = DDP(self.Dsrzf, device_ids=[self.gpu],
+                    find_unused_parameters=True)
+                self.DsrXf = DDP(self.DsrXf, device_ids=[self.gpu],
+                    find_unused_parameters=True)
+                
                 self.Dfnets.append(self.DsrXf)
                 self.Dfnets.append(self.Dsrzf)
 
-                self.oDfxz = reset_net(self.Dfnets,func=set_weights,lr=rlr,optim='rmsprop').cuda(self.gpu)
+                self.oDfxz = reset_net(self.Dfnets,func=set_weights,
+                                lr=rlr * opt.world_size,optim='rmsprop')
                 self.optzf.append(self.oDfxz)
 
                 # pdb.set_trace()
@@ -392,6 +449,7 @@ class trainer(object):
     def discriminate_filtered_xz(self,Xf,Xfr,zf,zfr):
         # pdb.set_trace()
         # Discriminate real
+        # print("zfr :",zfr.shape)
         ftz = self.Dszf(zfr)
         ftX = self.DsXf(Xf)
         zrc = zcat(ftX[0],ftz[0])
@@ -408,10 +466,10 @@ class trainer(object):
         ftzX = self.Dfxz(zrc)
         DzX  = ftzX[0]
         ftf += ftzX[1]
-        
         return DXz,DzX,ftr,ftf
-        
-        return DXz,DzX,ftr,ftf
+
+
+
     
     ''' Methode that discriminate real and fake hybrid signal type'''
     # def discriminate_hybrid_xz(self,Xd,Xdr,zd,zdr):
@@ -446,7 +504,8 @@ class trainer(object):
     # @profile
     def discriminate_filtered_zz(self,zf,zfr):
         # pdb.set_trace()
-        Dreal = self.Dsrzf(zcat(zf,zf ))
+        # print(zf.shape)
+        Dreal = self.Dsrzf(zcat(zf,zf))
         Dfake = self.Dsrzf(zcat(zf,zfr))
         return Dreal,Dfake
 
@@ -526,6 +585,7 @@ class trainer(object):
     #     # 1. Concatenate inputs
     #     X_inp = zcat(Xd,wnx)
     #     z_inp = zcat(zd,wnz)
+
     #     # 2. Generate conditional samples
         
     #     X_gen = self.Gdd(z_inp)
@@ -575,17 +635,21 @@ class trainer(object):
     def alice_train_broadband_discriminator_adv_xz(self,Xf,zf):
 #OK
         # Set-up training
-        
         zerograd(self.optzf)
+        
         self.Fef.eval(),self.Gdf.eval()
         self.DsXf.train(),self.Dszf.train(),self.Dfxz.train()
         self.DsrXf.train(),self.Dsrzf.train()
         
         # 0. Generate noise
-        wnx,wnz,wn1 = noise_generator(Xf.shape,zf.shape,device,rndm_args)
+        wnx,wnz,wn1 = noise_generator(Xf.shape,zf.shape,self.gpu,rndm_args)
         #make sure that noises are at the same device as data
-        wnx = wnx.to(Xf.device)
-        wnz = wnz.to(zf.device)
+        # wnx = wnx.to(self.gpu)
+        # wnz = wnz.to(self.gpu)
+
+        # t = torch.randn(10, 6, 4096).to(self.gpu)
+        # print("shape of t", t.shape)
+        # print("shape of F(t) :",self.Fef)
 
         # 1. Concatenate inputs
         X_inp = zcat(Xf,wnx)
@@ -593,15 +657,24 @@ class trainer(object):
         
         
         # 2. Generate conditional samples
+        # print(" device Fef : ", self.Fef)
         X_gen = self.Gdf(z_inp)
         z_gen = self.Fef(X_inp)
 
+        # print("X_inp : ",X_inp.shape)
+        # print("z_gen : ",z_gen.shape)
+        # print("X_gen : ",X_gen.shape)
+
         # 3. Cross-Discriminate XZ
-        DXz,DzX,_,_ = self.discriminate_filtered_xz(Xf,X_gen,zf,z_gen)
+        DXz,DzX,ftXz,ftzX = self.discriminate_filtered_xz(Xf,X_gen,zf,z_gen)
+
+        Dloss_ftm = 0.
+        for rf,ff in zip(ftXz,ftzX):
+            Dloss_ftm += torch.mean((rf-ff)**2)
          
         # 4. Compute ALI discriminator loss
         Dloss_ali = -torch.mean(ln0c(DzX)+ln0c(1.0-DXz))
-        wnx,wnz,wn1 = noise_generator(Xf.shape,zf.shape,device,rndm_args)
+        wnx,wnz,wn1 = noise_generator(Xf.shape,zf.shape,self.gpu,rndm_args)
         
         # 1. Concatenate inputs
         X_gen = zcat(X_gen,wnx)
@@ -632,9 +705,10 @@ class trainer(object):
                       self.bce_loss(Dfake_z,o0l(Dfake_z))
 
         # Total loss
-        Dloss = Dloss_ali + 10*Dloss_ali_X + 100*Dloss_ali_z
+        Dloss = Dloss_ali + 10.*Dloss_ali_X + 100.*Dloss_ali_z + Dloss_ftm
         # Dloss = Dloss_ali + Dloss_ali_X + Dloss_ali_z
-        Dloss.backward(),self.oDfxz.step(),clipweights(self.Dfnets),zerograd(self.optzf)
+        Dloss.backward()
+        self.oDfxz.step(),clipweights(self.Dfnets),zerograd(self.optzf)
         self.losses['Dloss'].append(Dloss.tolist())  
         self.losses['Dloss_ali'].append(Dloss_ali.tolist())  
         self.losses['Dloss_ali_X'].append(Dloss_ali_X.tolist())  
@@ -649,15 +723,19 @@ class trainer(object):
         self.DsrXf.train(),self.Dsrzf.train()
          
         # 0. Generate noise
-        wnx,wnz,wn1 = noise_generator(Xf.shape,zf.shape,device,rndm_args)
+        wnx,wnz,wn1 = noise_generator(Xf.shape,zf.shape,self.gpu,rndm_args)
          
         # 1. Concatenate inputsnex
         X_inp = zcat(Xf,wnx)
         z_inp = zcat(zf,wnz)
+
          
         # 2. Generate conditional samples
         X_gen = self.Gdf(z_inp)
-        z_gen = self.Fef(X_inp) 
+        z_gen = self.Fef(X_inp)
+
+        if self.gpu == 0:
+            print(z_gen.shape)
         # z_gen = latent_resampling(self.Fef(X_inp),nzf,wn1)
          
         # 3. Cross-Discriminate XZ
@@ -667,10 +745,10 @@ class trainer(object):
         Gloss_ali = torch.mean(-DXz+DzX)
         Gloss_ftm = 0.
         for rf,ff in zip(ftXz,ftzX):
-            Gloss_ftm += torch.mean((rf-ff)**2)
+            Gloss_ftm = Gloss_ftm + torch.mean((rf-ff)**2)
          
         # 0. Generate noise
-        wnx,wnz,wn1 = noise_generator(Xf.shape,zf.shape,device,rndm_args)
+        wnx,wnz,wn1 = noise_generator(Xf.shape,zf.shape,self.gpu,rndm_args)
         
         # 1. Concatenate inputs
         X_gen = zcat(X_gen,wnx)
@@ -683,18 +761,20 @@ class trainer(object):
  
         # 3. Cross-Discriminate XX
         _,Dfake_X = self.discriminate_filtered_xx(Xf,X_rec)
-        Gloss_ali_X = self.bce_loss(Dfake_X[0],o1l(Dfake_X[0]))
+        Gloss_ali_X = self.bce_loss(Dfake_X,o1l(Dfake_X))
         Gloss_cycle_X = torch.mean(torch.abs(Xf-X_rec))
         
         # 4. Cross-Discriminate ZZ
-        _,Dfake_z = self.discriminate_filtered_zz(zf,z_rec)
-        Gloss_ali_z = self.bce_loss(Dfake_z[0],o1l(Dfake_z[0]))
+        Dreal_z,Dfake_z = self.discriminate_filtered_zz(zf,z_rec)
+
+        Gloss_ali_z = self.bce_loss(Dfake_z,o1l(Dfake_z)) +\
+                      self.bce_loss(Dreal_z,o1l(Dreal_z))
+
         Gloss_cycle_z = torch.mean(torch.abs(zf-z_rec)**2)
 
         # Total Loss
-        Gloss = (Gloss_ftm*0.7+Gloss_ali  *0.3)*(1.-0.7)/2.0 + \
-            (Gloss_cycle_X*0.9+Gloss_ali_X*0.1)*(1.-0.1)/1.0 +\
-            (Gloss_cycle_z*0.7+Gloss_ali_z*0.3)*(1.-0.7)/2.0
+
+        Gloss = Gloss_ftm + Gloss_ali +Gloss_cycle_X+Gloss_ali_X + Gloss_cycle_z+Gloss_ali_z
         Gloss.backward(),self.oGfxz.step(),zerograd(self.optzf)
          
         self.losses['Gloss'].append(Gloss.tolist()) 
@@ -714,8 +794,8 @@ class trainer(object):
     #     self.DsrXd.train(),self.Dsrzd.train()
         
     #     # 0. Generate noise
-    #     wnxf,wnzf,_ = noise_generator(Xf.shape,zf.shape,device,rndm_args)
-    #     _,wnzd,_ = noise_generator(Xd.shape,zd.shape,device,rndm_args)
+    #     wnxf,wnzf,_ = noise_generator(Xf.shape,zf.shape,self.gpu,rndm_args)
+    #     _,wnzd,_ = noise_generator(Xd.shape,zd.shape,self.gpu,rndm_args)
          
     #     # 1. Concatenate inputs
     #     zf_inp = zcat(self.Fef(zcat(Xf,wnxf)),wnzf) # zf_inp = zcat(zf,wnzf)
@@ -732,7 +812,7 @@ class trainer(object):
     #             self.bce_loss(Dfake_z,o0l(Dfake_z))
             
     #     # 1. Concatenate inputs
-    #     _,wnzd,_ = noise_generator(Xd.shape,zd.shape,device,rndm_args)
+    #     _,wnzd,_ = noise_generator(Xd.shape,zd.shape,self.gpu,rndm_args)
     #     zd_gen = zcat(zd_gen,wnzd)
         
     #     # 2. Generate reconstructions
@@ -761,8 +841,8 @@ class trainer(object):
     #     self.DsrXd.train(),self.Dsrzd.train()
          
     #     # 0. Generate noise
-    #     wnxf,wnzf,_ = noise_generator(Xf.shape,zf.shape,device,rndm_args)
-    #     _,wnzd,_    = noise_generator(Xd.shape,zd.shape,device,rndm_args)
+    #     wnxf,wnzf,_ = noise_generator(Xf.shape,zf.shape,self.gpu,rndm_args)
+    #     _,wnzd,_    = noise_generator(Xd.shape,zd.shape,self.gpu,rndm_args)
          
     #     # 1. Concatenate inputs
     #     zf_inp = zcat(self.Fef(zcat(Xf,wnxf)),wnzf) # zf_inp = zcat(zf,wnzf)
@@ -790,7 +870,7 @@ class trainer(object):
     #     else:
     #         Gloss_ali_X = self.bce_loss(Dfake_X,o1l(Dfake_X))
     #     Xd_rec.retain_grad()
-    #     Xf_rec = Xd_rec #lowpass_biquad(Xd_rec,1./md['dtm'],md['cutoff']).to(device)
+    #     Xf_rec = Xd_rec #lowpass_biquad(Xd_rec,1./md['dtm'],md['cutoff']).to(self.gpu)
     #     #Gloss_cycle_Xd = torch.mean(torch.abs(Xd-Xd_rec))
     #     Gloss_cycle_Xf = torch.mean(torch.abs(Xf-Xf_rec))
         
@@ -870,8 +950,8 @@ class trainer(object):
 #             for b,batch in enumerate(trn_loader):
 #                 # Load batch
 #                 xd_data,_,zd_data,_,_,_,_ = batch
-#                 Xf = Variable(xd_data).to(device,non_blocking=True) # LF-signal
-#                 zf = Variable(zd_data).to(device,non_blocking=True)
+#                 Xf = Variable(xd_data).to(self.gpu,non_blocking=True) # LF-signal
+#                 zf = Variable(zd_data).to(self.gpu,non_blocking=True)
 # #               # Train G/D
 #                 for _ in range(5):
 #                     self.alice_train_broadband_discriminator_explicit_xz(Xf,zf)
@@ -882,7 +962,7 @@ class trainer(object):
 #                     torch.cuda.empty_cache()
 
 #             # pdb.set_trace()
-#                 err = self._error(self.Fef, self.Gdf,Xf,zf,device)
+#                 err = self._error(self.Fef, self.Gdf,Xf,zf,self.gpu)
 #                 a =  err.cpu().data.numpy().tolist()
 #                 #error in percentage (%)
 #                 if b in error:
@@ -921,77 +1001,86 @@ class trainer(object):
     def train_broadband(self):
 #OK
         print("[!] In function train broadband ... ")
-        globals().update(self.cv)
-        globals().update(opt.__dict__)
+        # globals().update(self.cv)
+        globals().update(self.opt.__dict__)
         error = {}
         start_time = time.time()
-
         # breakpoint()
-        
-        
-        for epoch in range(niter):
-            for b,batch in enumerate(self.trn_loader):
-                # pdb.set_trace()
-                # Load batch
-                place = opt.dev if self.dp_mode else ngpu-1
-                xd_data,_,zd_data = batch
-                # xd_data,_,zd_data,_,_,_,_ = batch
-                Xf = Variable(xd_data).to(place) # LF-signal
-                zf = Variable(zd_data).to(place)
-                # print("Xf and zf", Xf.shape, zf.shape)
-#               # Train G/D
-                for _ in range(5):
-                    self.alice_train_broadband_discriminator_adv_xz(Xf,zf)
-                    # torch.cuda.empty_cache()
-                for _ in range(1):
-                    self.alice_train_broadband_generator_adv_xz(Xf,zf)
-                    # torch.cuda.empty_cache()
+        total_step = len(self.trn_loader)
+        with torch.autograd.set_detect_anomaly(True):
+            for epoch in range(niter):
+                for b,batch in enumerate(self.trn_loader):
+                    # pdb.set_trace()
+                    # Load batch
+                    # place = self.opt.dev if self.dp_mode else ngpu-1
+                    xd_data,_,zd_data,*other = batch
+                    # print(zd_data.shape)
+                    # xd_data,_,zd_data,_,_,_,_ = batch
+                    Xf = Variable(xd_data).to(self.gpu, non_blocking = True) # LF-signal
+                    zf = Variable(zd_data).to(self.gpu, non_blocking = True)
+                    # t = torch.randn(10,6,4096).to(self.gpu)
+                    # print("F(x) ",  self.Fef(t).shape)
+                    # print("Xf and zf", Xf.shape, zf.shape)
+    #               # Train G/D
+                    for _ in range(5):
+                        self.alice_train_broadband_discriminator_adv_xz(Xf,zf)
+                        # torch.cuda.empty_cache()
+                    for _ in range(1):
+                        self.alice_train_broadband_generator_adv_xz(Xf,zf)
+                        # torch.cuda.empty_cache()
 
-                err = self._error(self.Fef, self.Gdf, Xf,zf,device)
-                a =  err.cpu().data.numpy().tolist()
-                #error in percentage (%)
-                if b in error:
-                    error[b] = np.append(error[b], a)
-                else:
-                    error[b] = a
-            if epoch%10== 0:
-                print("--- {} minutes ---".format((time.time() - start_time)/60))
-            # GPUtil.showUtilization(all=True)
+                    # err = self._error(self.Fef, self.Gdf, Xf,zf,self.gpu)
+                    # a =  err.cpu().data.numpy().tolist()
+                    # #error in percentage (%)
+                    # if b in error:
+                    #     error[b] = np.append(error[b], a)
+                    # else:
+                    #     error[b] = a
+                    if self.gpu == 0:
+                        str0 = 'Epoch [{}/{}]\tStep [{}/{}]'.format(epoch,self.opt.niter,b,total_step)
+                        print(str0)
 
-            str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
-            str = 'epoch: {:>d} --- '.format(epoch)
-            str = str + ' | '.join(str1)
-            print(str)
-            if save_checkpoint:
-                if epoch%save_checkpoint==0:
-                    print("saving model at this checkpoint, less than 2 minutes ...")
-                    tsave({'epoch':epoch,'model_state_dict':self.Fef.state_dict(),
-                           'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
-                           './network/{0}/Fef_{1}.pth'.format(outf[7:],epoch))
-                    tsave({'epoch':epoch,'model_state_dict':self.Gdf.state_dict(),
-                           'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
-                           './network/{0}/Gdf_{1}.pth'.format(outf[7:],epoch))    
-                    tsave({'model_state_dict':self.Dszf.state_dict(),
-                           'optimizer_state_dict':self.oDfxz.state_dict()},'./network/{0}/Dszd_fl_{1}.pth'.format(outf[7:],epoch))
-                    tsave({'model_state_dict':self.DsXf.state_dict(),
-                           'optimizer_state_dict':self.oDfxz.state_dict()},'./network/{0}/DsXd_fl_{1}.pth'.format(outf[7:],epoch))    
-                    tsave({'model_state_dict':self.Dfxz.state_dict(),
-                           'optimizer_state_dict':self.oDfxz.state_dict()},'./network/{0}/Ddxz_fl_{1}.pth'.format(outf[7:],epoch))
-        
-        plt.plot_loss_explicit(losses=self.losses["Gloss"], key="Gloss", outf=outf,niter=niter)
-        plt.plot_loss_explicit(losses=self.losses["Dloss"], key="Dloss", outf=outf,niter=niter)
-        plt.plot_loss_explicit(losses=self.losses["Gloss_ftm"], key="Gloss_ftm", outf=outf,niter=niter)
-        plt.plot_loss_explicit(losses=self.losses["Gloss_ali_X"], key="Gloss_ali_X", outf=outf,niter=niter)
-        plt.plot_loss_explicit(losses=self.losses["Gloss_ali_z"], key="Gloss_ali_z", outf=outf,niter=niter)
-        plt.plot_loss_explicit(losses=self.losses["Gloss_cycle_X"], key="Gloss_cycle_X", outf=outf,niter=niter)
-        plt.plot_loss_explicit(losses=self.losses["Gloss_cycle_z"], key="Gloss_cycle_z", outf=outf,niter=niter)
+                if epoch%10== 0 and self.gpu == 0:
+                    print("--- {} minutes ---".format((time.time() - start_time)/60))
+                # GPUtil.showUtilization(all=True)
+                    
+                    str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
+                    str  = 'epoch: {:>d} --- '.format(epoch)
+                    str  = str + ' | '.join(str1)
 
-        tsave({'epoch':niter,'model_state_dict':self.Fef.state_dict(),
-            'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses},'./network/Fef.pth')
-        tsave({'epoch':niter,'model_state_dict':self.Gdf.state_dict(),
-            'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses},'./network/Gdf.pth')    
-        tsave({'epoch':niter,'model_state_dict':[Dn.state_dict() for Dn in self.Dfnets],
-            'optimizer_state_dict':self.oDfxz.state_dict(),'loss':self.losses},'./network/DsXz.pth')
+                if self.gpu == 0:
+                    print(str)
+
+                if save_checkpoint:
+                    if epoch%save_checkpoint==0:
+                        print("saving model at this checkpoint, less than 2 minutes ...")
+                        tsave({'epoch':epoch,'model_state_dict':self.Fef.state_dict(),
+                               'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
+                               './network/{0}/Fef_{1}.pth'.format(outf[7:],epoch))
+                        tsave({'epoch':epoch,'model_state_dict':self.Gdf.state_dict(),
+                               'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},
+                               './network/{0}/Gdf_{1}.pth'.format(outf[7:],epoch))    
+                        tsave({'model_state_dict':self.Dszf.state_dict(),
+                               'optimizer_state_dict':self.oDfxz.state_dict()},'./network/{0}/Dszd_fl_{1}.pth'.format(outf[7:],epoch))
+                        tsave({'model_state_dict':self.DsXf.state_dict(),
+                               'optimizer_state_dict':self.oDfxz.state_dict()},'./network/{0}/DsXd_fl_{1}.pth'.format(outf[7:],epoch))    
+                        tsave({'model_state_dict':self.Dfxz.state_dict(),
+                               'optimizer_state_dict':self.oDfxz.state_dict()},'./network/{0}/Ddxz_fl_{1}.pth'.format(outf[7:],epoch))
+            
+            plt.plot_loss_explicit(losses=self.losses["Gloss"], key="Gloss", outf=outf,niter=niter)
+            plt.plot_loss_explicit(losses=self.losses["Dloss"], key="Dloss", outf=outf,niter=niter)
+            plt.plot_loss_explicit(losses=self.losses["Gloss_ftm"], key="Gloss_ftm", outf=outf,niter=niter)
+            plt.plot_loss_explicit(losses=self.losses["Gloss_ali_X"], key="Gloss_ali_X", outf=outf,niter=niter)
+            plt.plot_loss_explicit(losses=self.losses["Gloss_ali_z"], key="Gloss_ali_z", outf=outf,niter=niter)
+            plt.plot_loss_explicit(losses=self.losses["Gloss_cycle_X"], key="Gloss_cycle_X", outf=outf,niter=niter)
+            plt.plot_loss_explicit(losses=self.losses["Gloss_cycle_z"], key="Gloss_cycle_z", outf=outf,niter=niter)
+
+            tsave({'epoch':niter,'model_state_dict':self.Fef.state_dict(),
+                'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses},'./network/Fef.pth')
+            tsave({'epoch':niter,'model_state_dict':self.Gdf.state_dict(),
+                'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses},'./network/Gdf.pth')    
+            tsave({'epoch':niter,'model_state_dict':[Dn.state_dict() for Dn in self.Dfnets],
+                'optimizer_state_dict':self.oDfxz.state_dict(),'loss':self.losses},'./network/DsXz.pth')
     
 #     def train_hybrid(self):
 #         print('Training on filtered signals ...') 
@@ -1002,10 +1091,10 @@ class trainer(object):
 #             for b,batch in enumerate(trn_loader):
 #                 # Load batch
 #                 xd_data,xf_data,zd_data,zf_data,_,_,_,*other = batch
-#                 Xd = Variable(xd_data).to(device) # BB-signal
-#                 Xf = Variable(xf_data).to(device) # LF-signal
-#                 zd = Variable(zd_data).to(device)
-#                 zf = Variable(zf_data).to(device)
+#                 Xd = Variable(xd_data).to(self.gpu) # BB-signal
+#                 Xf = Variable(xf_data).to(self.gpu) # LF-signal
+#                 zd = Variable(zd_data).to(self.gpu)
+#                 zf = Variable(zf_data).to(self.gpu)
 # #               # Train G/D
 #                 for _ in range(5):
 #                     self.alice_train_hybrid_discriminator_adv_xz(Xd,zd,Xf,zf)
@@ -1034,17 +1123,17 @@ class trainer(object):
 
     # @profile            
     def generate(self):
-        globals().update(self.cv)
-        globals().update(opt.__dict__)
+        # globals().update(self.cv)
+        globals().update(self.opt.__dict__)
         
         t = [y.lower() for y in list(self.strategy.keys())]
         # if 'broadband' in t and self.strategy['trplt']['broadband']:
         #     n = self.strategy['broadband']
             
-        #     plt.plot_generate_classic('broadband',self.Fed,self.Gdd,device,vtm,\
+        #     plt.plot_generate_classic('broadband',self.Fed,self.Gdd,self.gpu,vtm,\
         #                               vld_loader,pfx="vld_set_bb",outf=outf)
             
-        #     plt.plot_features('broadband',self.Fed,self.Gdd,nzd,device,vtm,vld_loader,pfx='set_bb',outf=outf)
+        #     plt.plot_features('broadband',self.Fed,self.Gdd,nzd,self.gpu,vtm,vld_loader,pfx='set_bb',outf=outf)
 
         if 'broadband' in t and self.strategy['trplt']['broadband']:
             n = self.strategy['broadband']
@@ -1056,7 +1145,7 @@ class trainer(object):
             # plot_signal_and_reconstruction(vld_set = self.vld_loader, 
             #         encoder = Fef, 
             #         decoder = Gdf, 
-            #         device  = device, 
+            #         self.gpu  = self.gpu, 
             #         outf    = outf)
 
             if None not in n:
@@ -1087,8 +1176,8 @@ class trainer(object):
         #                               vld_loader,pfx="vld_set_hb",outf=outf)
 
     def compare(self):
-        globals().update(self.cv)
-        globals().update(opt.__dict__)
+        # globals().update(self.cv)
+        globals().update(self.opt.__dict__)
         
         t = [y.lower() for y in list(self.strategy.keys())]
         if 'hybrid' in t and self.strategy['trcmp']['hybrid']:
@@ -1098,11 +1187,11 @@ class trainer(object):
                 self.Fef.load_state_dict(tload(n[0])['model_state_dict'])
                 self.Gdd.load_state_dict(tload(n[1])['model_state_dict'])
                 self.Ghz.load_state_dict(tload(n[2])['model_state_dict'])
-            plt.plot_compare_ann2bb(self.Fef,self.Gdd,self.Ghz,device,vtm,\
+            plt.plot_compare_ann2bb(self.Fef,self.Gdd,self.Ghz,self.gpu,vtm,\
                                     trn_loader,pfx="trn_set_ann2bb",outf=outf)
     def discriminate(self):
-        globals().update(self.cv)
-        globals().update(opt.__dict__)
+        # globals().update(self.cv)
+        globals().update(self.opt.__dict__)
         
         t = [y.lower() for y in list(self.strategy.keys())]
         if 'hybrid' in t and self.strategy['trdis']['hybrid']:
@@ -1126,10 +1215,10 @@ class trainer(object):
                 for b,batch in enumerate(trn_loader):
                     # Load batch
                     xd_data,xf_data,zd_data,zf_data,_,_,_,*other = batch
-                    Xd = Variable(xd_data).to(device) # BB-signal
-                    Xf = Variable(xf_data).to(device) # LF-signal
-                    zd = Variable(zd_data).to(device)
-                    zf = Variable(zf_data).to(device)
+                    Xd = Variable(xd_data).to(self.gpu) # BB-signal
+                    Xf = Variable(xf_data).to(self.gpu) # LF-signal
+                    zd = Variable(zd_data).to(self.gpu)
+                    zf = Variable(zf_data).to(self.gpu)
 
     # @profile
     def _error(self,encoder, decoder, Xt, zt, dev):
@@ -1202,3 +1291,34 @@ class trainer(object):
         return gradients_norm
 
 
+def get_dataset(dataset, nsy = 64, batch_size = 64, rank = 0, world_size = 1):
+    dataset = Toyset(nsy = nsy)
+    batch_size = batch_size
+    train_part = int(0.80*len(dataset))
+    vld_part   = len(dataset) - train_part
+    train_set, vld_set = torch.utils.data.random_split(dataset, [train_part,vld_part])
+
+    train_sampler = torch.utils.data.distributed.DistributedSampler(
+            train_set,
+            num_replicas=world_size,
+            rank=rank)
+
+    vld_sampler = torch.utils.data.distributed.DistributedSampler(
+            vld_set,
+            num_replicas=world_size,
+            rank=rank)
+
+    trn_loader = torch.utils.data.DataLoader(dataset=train_set, 
+                batch_size =batch_size, 
+                shuffle    =False,
+                num_workers=0,
+                pin_memory =True,
+                sampler    = train_sampler)
+
+    vld_loader = torch.utils.data.DataLoader(dataset=vld_set, 
+                batch_size =batch_size, 
+                shuffle    =False,
+                num_workers=0,
+                pin_memory =True,
+                sampler    = vld_sampler)
+    return trn_loader, vld_loader
