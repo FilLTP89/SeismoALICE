@@ -4,10 +4,10 @@ u'''Train and Test AAE'''
 u'''Required modules'''
 
 from copy import deepcopy
-# from profile_support import profile
 from common.common_nn import *
 from common.common_torch import * 
 import plot.plot_tools as plt
+import profiling.profile_support as profile
 from tools.generate_noise import latent_resampling, noise_generator
 from tools.generate_noise import lowpass_biquad
 from database.database_sae import random_split 
@@ -23,7 +23,6 @@ from factory.conv_factory import *
 import GPUtil
 from torch.nn.parallel import DistributedDataParallel as DDP
 import time
-from database.toyset import Toyset
 # app.RNDM_ARGS = {'mean': 0, 'std': 1.0}
 from configuration import app
 
@@ -78,8 +77,8 @@ nly = 5
 """
 class trainer(object):
     '''Initialize neural network'''
+    #file: 
     # @profile
-    
     def __init__(self,cv):
 
         """
@@ -88,9 +87,6 @@ class trainer(object):
         """
         super(trainer, self).__init__()
         
-
-
-    
         self.cv = cv
         self.gr_norm = []
         # define as global variable the cv object. 
@@ -258,7 +254,7 @@ class trainer(object):
     #         self.writer.add_histogram('PARAM/{0}/{1}'.format(tag,name), weight, global_step=epoch)
     #         self.writer.add_histogram('PARAM/{0}/{1}.grad'.format(tag,name), weight.grad, global_step=epoch)
        
-
+    # @profile
     def discriminate_xz(self,x,xr,z,zr):
         # Discriminate real
         # pdb.set_trace()
@@ -342,7 +338,7 @@ class trainer(object):
         
         return DXz,DzX,ftr,ftf
 
-    # @profile
+    @profile
     def discriminate_xx(self,x,xr):
         # pdb.set_trace()
         # torch.onnx.export(self.Dxx,zcat(x,x),outf+"/Dxx.onnx")
@@ -377,6 +373,7 @@ class trainer(object):
         D_zxy = self.Dzyx(z_xy)
         return D_zyx, D_zxy
     
+    # @profile
     def alice_train_discriminator_adv(self,y,zd,x,zf):
         # Set-up training        
         zerograd(self.optz)
@@ -530,6 +527,7 @@ class trainer(object):
         # self.losses['Dloss_ali_xy'].append(Dloss_ali_xy.tolist())  
         # self.losses['Dloss_ali_z'].append(Dloss_ali_z.tolist())
 
+    # @profile
     def alice_train_generator_adv(self,y,zd,x,zf,zd_fix, zf_fix):
         # Set-up training
         zerograd(self.optz)
@@ -672,6 +670,7 @@ class trainer(object):
         start_time = time.time()
         verbose = False
         total_step = len(trn_loader)
+        
         for epoch in range(niter):
             for b,batch in enumerate(trn_loader):
             # for b,batch in enumerate(self.trn_loader):
@@ -683,11 +682,9 @@ class trainer(object):
                 zd  = zd.to(place, non_blocking=True)
                 zf  = zf.to(place, non_blocking=True)
                 # Train G/D
-                wnzd = torch.empty(*(opt.batchSize,nzd,opt.latentSize)).normal_(**app.RNDM_ARGS).to(place)
-                wnzf = torch.empty(*(opt.batchSize,nzf,opt.latentSize)).normal_(**app.RNDM_ARGS).to(place)
+                wnzd = torch.empty(*(opt.batchSize,nzd,opt.latentSize)).normal_(**app.RNDM_ARGS).to(place, non_blocking=True)
+                wnzf = torch.empty(*(opt.batchSize,nzf,opt.latentSize)).normal_(**app.RNDM_ARGS).to(place, non_blocking=True)
                 
-                wnzd.to(place, non_blocking=True)
-                wnzf.to(place, non_blocking=True)
 
                 for _ in range(5):
                     self.alice_train_discriminator_adv(y,wnzd,x,wnzf)                 
@@ -698,13 +695,14 @@ class trainer(object):
                     str0 = 'Epoch [{}/{}]\tStep [{}/{}]'.format(epoch,opt.niter,b,total_step)
                     print(str0)
 
-            if epoch%10== 0:
+            if epoch%10== 0 and verbose:
                 print("--- {} minutes ---".format((time.time() - start_time)/60))
 
-            str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
-            str = 'epoch: {:>d} --- '.format(epoch)
-            str = str + ' | '.join(str1)
-            print(str)
+            if verbose:
+                str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
+                str = 'epoch: {:>d} --- '.format(epoch)
+                str = str + ' | '.join(str1)
+                print(str)
 
             
             if save_checkpoint:

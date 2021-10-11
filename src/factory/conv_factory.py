@@ -8,8 +8,7 @@ from net.dcgan.dcgan_dxmodelparallele import *
 from net.dcgan.dcgan_dxdataparallele import *
 from net.dcgan.dcgan_dzdataparallele import *
 from net.dcgan.dcgan_dxzdataparallele import *
-
-from profile.profile_support import profile
+from profiling.profile_support import profile
 import json
 import pdb
 
@@ -68,7 +67,7 @@ class ModelParalleleFactory(ConvNetFactory):
                 dpc = 0.0,\
                 path = path,\
                 *args, **kwargs)
-    @profile
+    # @profile
     def createDecoder(self, config, opt, *args, **kwargs):
         path = config["path"] if "path" in config else ""
         dconv = config["dconv"] if "dconv" in config else ""
