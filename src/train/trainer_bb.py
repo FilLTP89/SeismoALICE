@@ -467,9 +467,6 @@ class trainer(object):
         DzX  = ftzX[0]
         ftf += ftzX[1]
         return DXz,DzX,ftr,ftf
-
-
-
     
     ''' Methode that discriminate real and fake hybrid signal type'''
     # def discriminate_hybrid_xz(self,Xd,Xdr,zd,zdr):
