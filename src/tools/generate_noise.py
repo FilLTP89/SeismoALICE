@@ -247,8 +247,16 @@ def noise_generator(Xshape,zshape,device,rndm_args):
         wnz.resize_(*zshape).normal_(**rndm_args)
         wnx.resize_(*Xshape).normal_(**rndm_args)
         wn1.resize_(Xshape[0],1,1).normal_(**rndm_args)
-    return wnx,wnz,wn1 
+    return wnx,wnz,wn1
 
+def noise(X,z):
+
+    with torch.no_grad():
+       wnx = torch.randn(*X.shape)
+       wnx = wnx.type_as(X)
+       wnz = torch.randn(*z.shape)
+       wnz = wnz.type_as(z)
+    return wnx,wnz
 def lfilter(waveform, a_coeffs, b_coeffs):
     # type: (Tensor, Tensor, Tensor) -> Tensor
     r"""Perform an IIR filter by evaluating difference equation.
