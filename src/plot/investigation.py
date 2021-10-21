@@ -8,7 +8,9 @@ from common.common_torch import tfft
 
 
 
-def plot_signal_and_reconstruction(vld_set,encoder,decoder,device, outf):
+
+
+def plot_signal_and_reconstruction(vld_set,encoder,decoder, outf,device='cuda'):
     # extract data : 
     # breakpoint()
     t = np.linspace(0,40.96,4096)   

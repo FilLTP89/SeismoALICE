@@ -763,12 +763,12 @@ def plot_error(error, outf):
     plt.close()
 
      
-def plot_generate_classic(tag,Qec,Pdc,dev,vtm,trn_set,opt=None,pfx='trial',outf='./imgs'):
+def plot_generate_classic(tag,Qec,Pdc,vtm,trn_set,opt=None,pfx='trial',outf='./imgs'):
     #Qec.to(dev),Pdc.to(dev)
     Qec.eval(),Pdc.eval()
     Qec.to(dtype =torch.float64)
     Pdc.to(dtype =torch.float64)
-    
+    dev = app.DEVICE
     cnt=0
     EG = []
     PG = []
