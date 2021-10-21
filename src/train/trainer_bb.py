@@ -57,7 +57,7 @@ nly = 5
 class trainer(object):
     '''Initialize neural network'''
     # @profile
-    def __init__(self, gpu, opt):
+    def __init__(self, cv):
 
         """
         Args
@@ -66,45 +66,43 @@ class trainer(object):
         # And therefore this latter is become accessible to the methods in this class
         # globals().update(cv)
         # define as global opt and passing it as a dictonnary here
+        globals().update(cv)
+        globals().update(opt.__dict__)
         self.opt = opt
-        globals().update(self.opt.__dict__)
 
         super(trainer, self).__init__()
-        self.gpu = gpu
+        self.gpu = ngpu - 1
         # pdb.set_trace()
         print(f'prepare to train on {self.gpu}')
-
-        if self.gpu == 0:
-            print(torch.version.cuda, 'cuda compiled version')
-
-        rank = self.opt.nr * self.opt.ngpu + self.gpu
+        print(torch._C._cuda_getCompiledVersion(), 'cuda compiled version')
+        # rank = self.opt.nr * self.opt.ngpu + self.gpu
         # rank = args.nr * args.gpus + gpu
 
-        dist.init_process_group(
-            backend='nccl',
-            init_method='env://',
-            world_size=opt.world_size,
-            rank=rank)
-        process_group = torch.distributed.new_group()
-        seed = 0
-        torch.cuda.set_device(self.gpu)
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed(seed)
+        # dist.init_process_group(
+        #     backend='nccl',
+        #     init_method='env://',
+        #     world_size=opt.world_size,
+        #     rank=rank)
+        # process_group = torch.distributed.new_group()
+        # seed = 0
+        # torch.cuda.set_device(self.gpu)
+        # torch.manual_seed(seed)
+        # torch.cuda.manual_seed(seed)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
 
-        np.random.seed(0)
+        # np.random.seed(0)
 
         # if rank == 0:
             #toy test :
         dataset = Toyset(nsy = 1280)
         self.batch_size = opt.batchSize
-        if rank == 0:
-            get_dataset(dataset, rank = rank, batch_size = self.batch_size, 
-                nsy = 1280, world_size = opt.world_size)
+        # if rank == 0:
+        #     get_dataset(dataset, rank = 0, batch_size = self.batch_size, 
+        #         nsy = 1280, world_size = 1)
 
-        self.trn_loader, self.vld_loader = get_dataset(dataset, rank = rank, 
-                batch_size = self.batch_size, nsy = 1280, world_size = opt.world_size)
+        self.trn_loader, self.vld_loader = get_dataset(dataset, rank = 0, batch_size = self.batch_size, 
+                nsy = 1280, world_size = 1)
         # train_set, vld_set = torch.utils.data.random_split(dataset, [80,20])
 
         # train_sampler = torch.utils.data.distributed.DistributedSampler(
@@ -198,13 +196,13 @@ class trainer(object):
             print("Loading broadband generators")
 
             # if rank == 0:
-            self.Fef = net.Encoder(self.opt.config['encoder'],self.opt).cuda(self.gpu)
-            self.Gdf = net.Decoder(self.opt.config['decoder'], self.opt).cuda(self.gpu)
+            self.Fef = net.Encoder(self.opt.config['encoder'],self.opt).cuda()
+            self.Gdf = net.Decoder(self.opt.config['decoder'], self.opt).cuda()
             # dist.barrier(), find_unused_parameters=True
 
-            self.Fef = DDP(self.Fef, device_ids=[self.gpu], find_unused_parameters=True)
+            # self.Fef = DDP(self.Fef, device_ids=[self.gpu], find_unused_parameters=True)
 
-            self.Gdf = DDP(self.Gdf, device_ids=[self.gpu], find_unused_parameters=True)
+            # self.Gdf = DDP(self.Gdf, device_ids=[self.gpu], find_unused_parameters=True)
 
             # if rank == 0:
             #     print(self.Fef)
@@ -219,39 +217,39 @@ class trainer(object):
                         weight_decay=0.00001)
                 else:
                     print("broadband generators: {0} - {1}".format(*n))
-                    self.Fef.load_state_dict(tload(n[0])['model_state_dict']).cuda(self.gpu)
-                    self.Gdf.load_state_dict(tload(n[1])['model_state_dict']).cuda(self.gpu) 
+                    self.Fef.load_state_dict(tload(n[0])['model_state_dict']).cuda()
+                    self.Gdf.load_state_dict(tload(n[1])['model_state_dict']).cuda() 
                     self.oGfxz = Adam(ittc(self.Fef.parameters(),self.Gdf.parameters()),
-                                      lr=glr,betas=(b1,b2),weight_decay=0.00001).cuda(self.gpu)
+                                      lr=glr,betas=(b1,b2),weight_decay=0.00001).cuda()
                 self.optzf.append(self.oGfxz)
                 # if rank == 0:
-                self.Dszf = net.DCGAN_Dz(self.opt.config['Dszf']  , self.opt).cuda(self.gpu)
-                self.DsXf = net.DCGAN_Dx(self.opt.config['DsXf']  , self.opt).cuda(self.gpu)
-                self.Dfxz = net.DCGAN_DXZ(self.opt.config['Dfxz'] , self.opt).cuda(self.gpu)
+                self.Dszf = net.DCGAN_Dz(self.opt.config['Dszf']  , self.opt).cuda()
+                self.DsXf = net.DCGAN_Dx(self.opt.config['DsXf']  , self.opt).cuda()
+                self.Dfxz = net.DCGAN_DXZ(self.opt.config['Dfxz'] , self.opt).cuda()
                 # dist.barrier()
 
-                self.Dszf = DDP(self.Dszf, device_ids=[self.gpu],
-                    find_unused_parameters=True)
+                # self.Dszf = DDP(self.Dszf, device_ids=[self.gpu],
+                #     find_unused_parameters=True)
 
-                self.DsXf = DDP(self.DsXf,device_ids=[self.gpu],
-                    find_unused_parameters=True)
+                # self.DsXf = DDP(self.DsXf,device_ids=[self.gpu],
+                #     find_unused_parameters=True)
 
-                self.Dfxz = DDP(self.Dfxz, device_ids=[self.gpu],
-                    find_unused_parameters=True)
+                # self.Dfxz = DDP(self.Dfxz, device_ids=[self.gpu],
+                #     find_unused_parameters=True)
                 self.Dfnets.append(self.DsXf)
                 self.Dfnets.append(self.Dszf)
                 self.Dfnets.append(self.Dfxz)
 
 
                 # if rank ==0:
-                self.Dsrzf = net.DCGAN_Dz(self.opt.config['Dsrzf'], self.opt).cuda(self.gpu)
-                self.DsrXf = net.DCGAN_Dx(self.opt.config['DsrXf'], self.opt).cuda(self.gpu)
+                self.Dsrzf = net.DCGAN_Dz(self.opt.config['Dsrzf'], self.opt).cuda()
+                self.DsrXf = net.DCGAN_Dx(self.opt.config['DsrXf'], self.opt).cuda()
                 # dist.barrier()
 
-                self.Dsrzf = DDP(self.Dsrzf, device_ids=[self.gpu],
-                    find_unused_parameters=True)
-                self.DsrXf = DDP(self.DsrXf, device_ids=[self.gpu],
-                    find_unused_parameters=True)
+                # self.Dsrzf = DDP(self.Dsrzf, device_ids=[self.gpu],
+                #     find_unused_parameters=True)
+                # self.DsrXf = DDP(self.DsrXf, device_ids=[self.gpu],
+                #     find_unused_parameters=True)
                 
                 self.Dfnets.append(self.DsrXf)
                 self.Dfnets.append(self.Dsrzf)
@@ -265,8 +263,8 @@ class trainer(object):
             else:
                 if None not in n:
                     print("broadband generators - no train: {0} - {1}".format(*n))
-                    self.Fef.load_state_dict(tload(n[0])['model_state_dict']).cuda(self.gpu)
-                    self.Gdf.load_state_dict(tload(n[1])['model_state_dict']).cuda(self.gpu)
+                    self.Fef.load_state_dict(tload(n[0])['model_state_dict']).cuda()
+                    self.Gdf.load_state_dict(tload(n[1])['model_state_dict']).cuda()
                 else:
                     flagF=False
 
@@ -315,14 +313,14 @@ class trainer(object):
         # print("shape of F(t) :",self.Fef)
 
         # 1. Concatenate inputs
-        # X_inp = zcat(Xf,wnx)
-        # z_inp = zcat(zf,wnz)
+        X_inp = zcat(Xf,wnx)
+        z_inp = zcat(zf,wnz)
         
         
         # 2. Generate conditional samples
         # print(" device Fef : ", self.Fef)
-        X_gen = self.Gdf(zcat(zf,wnz))
-        z_gen = self.Fef(zcat(Xf,wnx))        # print("X_gen : ",X_gen.shape)
+        X_gen = self.Gdf(z_inp)
+        z_gen = self.Fef(X_inp)        # print("X_gen : ",X_gen.shape)
 
 
         # print("X_inp : ",X_inp.shape)
@@ -398,7 +396,7 @@ class trainer(object):
         X_gen = self.Gdf(z_inp)
         z_gen = self.Fef(X_inp)
 
-        # pdb.set_trace()
+        
 
         # print(self.Fef)
         # z_gen = latent_resampling(self.Fef(X_inp),nzf,wn1)
@@ -437,8 +435,10 @@ class trainer(object):
         Gloss_cycle_z = l2(zf,z_rec)
 
         # Total Loss
+        # pdb.set_trace()
+
         Gloss = Gloss_ali +Gloss_cycle_X+Gloss_ali_X + Gloss_cycle_z+Gloss_ali_z
-        # Gloss.backward(),self.oGfxz.step(),zerograd(self.optzf)
+        Gloss.backward(),self.oGfxz.step(),zerograd(self.optzf)
          
         self.losses['Gloss'].append(Gloss.tolist()) 
         self.losses['Gloss_ftm'].append(Gloss_ali_X.tolist())
@@ -485,20 +485,19 @@ class trainer(object):
                     #     error[b] = np.append(error[b], a)
                     # else:
                     #     error[b] = a
-                    if self.gpu == 0:
-                        str0 = 'Epoch [{}/{}]\tStep [{}/{}]'.format(epoch,self.opt.niter,b,total_step)
-                        print(str0)
+                    # if self.gpu == 0:
+                    str0 = 'Epoch [{}/{}]\tStep [{}/{}]'.format(epoch,self.opt.niter,b,total_step)
+                    print(str0)
 
-                if epoch%10== 0 and self.gpu == 0:
-                    print("--- {} minutes ---".format((time.time() - start_time)/60))
+                print("--- {} minutes ---".format((time.time() - start_time)/60))
                 # GPUtil.showUtilization(all=True)
                     
-                    str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
-                    str  = 'epoch: {:>d} --- '.format(epoch)
-                    str  = str + ' | '.join(str1)
+                str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
+                str  = 'epoch: {:>d} --- '.format(epoch)
+                str  = str + ' | '.join(str1)
 
-                if self.gpu == 0:
-                    print(str)
+                # if self.gpu == 0:
+                print(str)
 
                 if save_checkpoint:
                     if epoch%save_checkpoint==0:
@@ -516,20 +515,20 @@ class trainer(object):
                         tsave({'model_state_dict':self.Dfxz.state_dict(),
                                'optimizer_state_dict':self.oDfxz.state_dict()},'./network/{0}/Ddxz_fl_{1}.pth'.format(outf[7:],epoch))
             
-            plt.plot_loss_explicit(losses=self.losses["Gloss"], key="Gloss", outf=outf,niter=niter)
-            plt.plot_loss_explicit(losses=self.losses["Dloss"], key="Dloss", outf=outf,niter=niter)
-            plt.plot_loss_explicit(losses=self.losses["Gloss_ftm"], key="Gloss_ftm", outf=outf,niter=niter)
-            plt.plot_loss_explicit(losses=self.losses["Gloss_ali_X"], key="Gloss_ali_X", outf=outf,niter=niter)
-            plt.plot_loss_explicit(losses=self.losses["Gloss_ali_z"], key="Gloss_ali_z", outf=outf,niter=niter)
-            plt.plot_loss_explicit(losses=self.losses["Gloss_cycle_X"], key="Gloss_cycle_X", outf=outf,niter=niter)
-            plt.plot_loss_explicit(losses=self.losses["Gloss_cycle_z"], key="Gloss_cycle_z", outf=outf,niter=niter)
+            # plt.plot_loss_explicit(losses=self.losses["Gloss"], key="Gloss", outf=outf,niter=niter)
+            # plt.plot_loss_explicit(losses=self.losses["Dloss"], key="Dloss", outf=outf,niter=niter)
+            # plt.plot_loss_explicit(losses=self.losses["Gloss_ftm"], key="Gloss_ftm", outf=outf,niter=niter)
+            # plt.plot_loss_explicit(losses=self.losses["Gloss_ali_X"], key="Gloss_ali_X", outf=outf,niter=niter)
+            # plt.plot_loss_explicit(losses=self.losses["Gloss_ali_z"], key="Gloss_ali_z", outf=outf,niter=niter)
+            # plt.plot_loss_explicit(losses=self.losses["Gloss_cycle_X"], key="Gloss_cycle_X", outf=outf,niter=niter)
+            # plt.plot_loss_explicit(losses=self.losses["Gloss_cycle_z"], key="Gloss_cycle_z", outf=outf,niter=niter)
 
-            tsave({'epoch':niter,'model_state_dict':self.Fef.state_dict(),
-                'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses},'./network/Fef.pth')
-            tsave({'epoch':niter,'model_state_dict':self.Gdf.state_dict(),
-                'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses},'./network/Gdf.pth')    
-            tsave({'epoch':niter,'model_state_dict':[Dn.state_dict() for Dn in self.Dfnets],
-                'optimizer_state_dict':self.oDfxz.state_dict(),'loss':self.losses},'./network/DsXz.pth')
+            # tsave({'epoch':niter,'model_state_dict':self.Fef.state_dict(),
+            #     'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses},'./network/Fef.pth')
+            # tsave({'epoch':niter,'model_state_dict':self.Gdf.state_dict(),
+            #     'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses},'./network/Gdf.pth')    
+            # tsave({'epoch':niter,'model_state_dict':[Dn.state_dict() for Dn in self.Dfnets],
+            #     'optimizer_state_dict':self.oDfxz.state_dict(),'loss':self.losses},'./network/DsXz.pth')
     
 #     def train_hybrid(self):
 #         print('Training on filtered signals ...') 
@@ -747,27 +746,25 @@ def get_dataset(dataset, nsy = 64, batch_size = 64, rank = 0, world_size = 1):
     vld_part   = len(dataset) - train_part
     train_set, vld_set = torch.utils.data.random_split(dataset, [train_part,vld_part])
 
-    train_sampler = torch.utils.data.distributed.DistributedSampler(
-            train_set,
-            num_replicas=world_size,
-            rank=rank)
+    # train_sampler = torch.utils.data.distributed.DistributedSampler(
+    #         train_set,
+    #         num_replicas=world_size,
+    #         rank=rank)
 
-    vld_sampler = torch.utils.data.distributed.DistributedSampler(
-            vld_set,
-            num_replicas=world_size,
-            rank=rank)
+    # vld_sampler = torch.utils.data.distributed.DistributedSampler(
+    #         vld_set,
+    #         num_replicas=world_size,
+    #         rank=rank)
 
     trn_loader = torch.utils.data.DataLoader(dataset=train_set, 
                 batch_size =batch_size, 
                 shuffle    =False,
                 num_workers=0,
-                pin_memory =True,
-                sampler    = train_sampler)
+                pin_memory =True)
 
     vld_loader = torch.utils.data.DataLoader(dataset=vld_set, 
                 batch_size =batch_size, 
                 shuffle    =False,
                 num_workers=0,
-                pin_memory =True,
-                sampler    = vld_sampler)
+                pin_memory =True)
     return trn_loader, vld_loader

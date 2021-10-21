@@ -149,7 +149,7 @@ class trainer(object):
             n = self.strategy['broadband']
             print("Loading broadband generators")
 
-            pdb.set_trace()
+            # pdb.set_trace()
             # # Encoder broadband Fed
             self.Fed = net.Encoder(opt.config["encoder"],opt)
             # # Decoder broadband Gdd
