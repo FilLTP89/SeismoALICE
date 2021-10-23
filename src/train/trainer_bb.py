@@ -437,11 +437,17 @@ class trainer(object):
         # Total Loss
         # pdb.set_trace()
 
-        Gloss = Gloss_ali +Gloss_cycle_X+Gloss_ali_X + Gloss_cycle_z+Gloss_ali_z
+        #Gloss = Gloss_ali +Gloss_cycle_X+Gloss_ali_X + Gloss_cycle_z+Gloss_ali_z
+        Gloss = Gloss_ali #+Gloss_cycle_X+Gloss_ali_X + Gloss_cycle_z+Gloss_ali_z
+        # Gloss = Gloss_cycle_X
+        # Gloss = Gloss_ali_X
+        # Gloss = Gloss_cycle_z
+        # Gloss = Gloss_ali_z
+
         Gloss.backward(),self.oGfxz.step(),zerograd(self.optzf)
          
         self.losses['Gloss'].append(Gloss.tolist()) 
-        self.losses['Gloss_ftm'].append(Gloss_ali_X.tolist())
+        # self.losses['Gloss_ftm'].append(Gloss_ali_X.tolist())
         self.losses['Gloss_ali_X'].append(Gloss_ali_X.tolist())
         self.losses['Gloss_ali_z'].append(Gloss_ali_z.tolist())
         self.losses['Gloss_cycle_X'].append(Gloss_cycle_X.tolist())
@@ -455,7 +461,7 @@ class trainer(object):
         error = {}
         start_time = time.time()
         # breakpoint()
-        total_step = len(self.trn_loader)
+        total_step = len(trn_loader)
         with torch.autograd.set_detect_anomaly(True):
             for epoch in range(niter):
                 for b,batch in enumerate(self.trn_loader):
@@ -744,7 +750,8 @@ def get_dataset(dataset, nsy = 64, batch_size = 64, rank = 0, world_size = 1):
     batch_size = batch_size
     train_part = int(0.80*len(dataset))
     vld_part   = len(dataset) - train_part
-    train_set, vld_set = torch.utils.data.random_split(dataset, [train_part,vld_part])
+    train_set, vld_set = torch.load(os.path.join(opt.dataroot,'ths_trn_'+opt.dataset)),
+        torch.load(os.path.join(opt.dataroot,'ths_vld_'+opt.dataset))
 
     # train_sampler = torch.utils.data.distributed.DistributedSampler(
     #         train_set,
