@@ -100,13 +100,13 @@ class trainer(object):
 
         # if rank == 0:
             #toy test :
-        dataset = Toyset(nsy = 1280)
+        # dataset = Toyset(nsy = 1280)
         self.batch_size = opt.batchSize
         if rank == 0:
-            get_dataset(dataset, rank = rank, batch_size = self.batch_size, 
+            get_data_stead(dataset=opt.dataset, dataroot=opt.dataroot, rank = rank, batch_size = self.batch_size, 
                 nsy = 1280, world_size = opt.world_size)
         dist.barrier()
-        self.trn_loader, self.vld_loader = get_dataset(dataset, rank = rank, 
+        self.trn_loader, self.vld_loader = get_data_stead(dataset=opt.dataset, dataroot=opt.dataroot,rank = rank, 
                 batch_size = self.batch_size, nsy = 1280, world_size = opt.world_size)
         # train_set, vld_set = torch.utils.data.random_split(dataset, [80,20])
 
@@ -140,11 +140,7 @@ class trainer(object):
         
 
         # passing the content of file ./strategy_bb_*.txt
-        self.strategy=strategy
-        self.ngpu = ngpu
-
-        nzd = self.opt.nzd
-        ndf = self.opt.ndf
+       
         
         # the follwings variable are the instance for the object Module from 
         # the package pytorch: torch.nn.modulese. 
@@ -454,7 +450,7 @@ class trainer(object):
 
     def train_broadband(self):
 #OK
-        print("[!] In function train broadband ... ")
+        # print("[!] In function train broadband ... ")
         # globals().update(self.cv)
         globals().update(self.opt.__dict__)
         error = {}
@@ -474,9 +470,7 @@ class trainer(object):
                 # xd_data,_,zd_data,_,_,_,_ = batch
                 Xf = Variable(xd_data).to(self.gpu, non_blocking = True) # LF-signal
                 zf = Variable(zd_data).to(self.gpu, non_blocking = True)
-                # t = torch.randn(10,6,4096).to(self.gpu)
-                # print("F(x) ",  self.Fef(t).shape)
-                # print("Xf and zf", Xf.shape, zf.shape)
+                
 #               # Train G/D
                 for _ in range(5):
                     Dloss = self.alice_train_broadband_discriminator_adv_xz(Xf,zf)
@@ -484,20 +478,16 @@ class trainer(object):
                 for _ in range(1):
                     Gloss = self.alice_train_broadband_generator_adv_xz(Xf,zf)
 
+                # if self.gpu == 0:
+                #     str0 = 'Epoch [{}/{}]\tStep [{}/{}]'.format(epoch,self.opt.niter,b,total_step)
+                #     print(str0)
 
-        # dist.destroy_process_group()
-                    # torch.cuda.empty_cache()
-                # loop.set_postfix(Dloss = Dloss.item(), Gloss=Gloss.item())
-                # err = self._error(self.Fef, self.Gdf, Xf,zf,self.gpu)
-                # a =  err.cpu().data.numpy().tolist()
-                # #error in percentage (%)
-                # if b in error:
-                #     error[b] = np.append(error[b], a)
-                # else:
-                #     error[b] = a
-                if self.gpu == 0:
-                    str0 = 'Epoch [{}/{}]\tStep [{}/{}]'.format(epoch,self.opt.niter,b,total_step)
-                    print(str0)
+            str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
+            str  = 'epoch: {:>d} --- '.format(epoch)
+            str  = str + ' | '.join(str1)
+
+            if self.gpu == 0:
+                print(str)
             
             if epoch%10== 0 and self.gpu == 0:
                 print("--- {} minutes ---".format((time.time() - start_time)/60))
@@ -755,6 +745,7 @@ def get_dataset(dataset, nsy = 64, batch_size = 64, rank = 0, world_size = 1):
     batch_size = batch_size
     train_part = int(0.80*len(dataset))
     vld_part   = len(dataset) - train_part
+    
     train_set, vld_set = torch.utils.data.random_split(dataset, [train_part,vld_part])
 
     train_sampler = torch.utils.data.distributed.DistributedSampler(
@@ -780,4 +771,37 @@ def get_dataset(dataset, nsy = 64, batch_size = 64, rank = 0, world_size = 1):
                 num_workers=0,
                 pin_memory =True,
                 sampler    = vld_sampler)
+    return trn_loader, vld_loader
+
+def get_data_stead(dataset, dataroot, nsy = 64, batch_size = 64, rank = 0, world_size = 1):
+
+    ths_trn = torch.load(os.path.join(dataroot,'ths_trn_'+dataset))
+    # ths_tst = torch.load(os.path.join(dataroot,'ths_tst_'+dataset))
+    ths_vld = torch.load(os.path.join(dataroot,'ths_vld_'+dataset))
+    # vtm     = torch.load(os.path.joinopt.dataroot,'vtm.pth'))
+
+    train_sampler = torch.utils.data.distributed.DistributedSampler(
+            ths_trn,
+            num_replicas=world_size,
+            rank=rank)
+
+    vld_sampler = torch.utils.data.distributed.DistributedSampler(
+            ths_vld,
+            num_replicas=world_size,
+            rank=rank)
+
+    trn_loader = torch.utils.data.DataLoader(dataset=ths_trn, 
+                batch_size =batch_size, 
+                shuffle    =False,
+                num_workers=0,
+                pin_memory =True,
+                sampler    = train_sampler)
+
+    vld_loader = torch.utils.data.DataLoader(dataset=ths_vld, 
+                batch_size =batch_size, 
+                shuffle    =False,
+                num_workers=0,
+                pin_memory =True,
+                sampler    = vld_sampler)
+
     return trn_loader, vld_loader
