@@ -763,7 +763,7 @@ def plot_error(error, outf):
     plt.close()
 
      
-def plot_generate_classic(tag,Qec,Pdc,vtm,trn_set,opt=None,pfx='trial',outf='./imgs'):
+def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./imgs'):
     #Qec.to(dev),Pdc.to(dev)
     Qec.eval(),Pdc.eval()
     Qec.to(dtype =torch.float64)
@@ -776,11 +776,13 @@ def plot_generate_classic(tag,Qec,Pdc,vtm,trn_set,opt=None,pfx='trial',outf='./i
     # pdb.set_trace()
     # clr = sns.color_palette('Paired',5)
     clr = ['black', 'blue','red', 'red']
+    if opt is not None:
+        vtm = torch.load(os.path.join(opt.dataroot,'vtm.pth'))
     if tag=='broadband':
         # pass
         for _,batch in enumerate(trn_set):
             #_,xt_data,zt_data,_,_,_,_ = batch
-            print("Plotting signals ...")
+            app.logger.info("Plotting signals ...")
             xt_data,xf_data,zt_data,*other = batch
             # xt_data,zt_data,*other = batch
             Xt = Variable(xt_data).to(dev, dtype =torch.float64)
@@ -833,9 +835,9 @@ def plot_generate_classic(tag,Qec,Pdc,vtm,trn_set,opt=None,pfx='trial',outf='./i
                     st2_isref=True,a=10.,k=1))
                 plt.savefig(os.path.join(outf,"gof_bb_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
                             bbox_inches='tight',dpi = 300)
-                plt.savefig(os.path.join(outf,"gof_bb_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
-                           format='eps',bbox_inches='tight',dpi = 300)
-                print("saving gof_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
+                # plt.savefig(os.path.join(outf,"gof_bb_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
+                #            format='eps',bbox_inches='tight',dpi = 300)
+                app.logger.info("saving gof_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
                 plt.close()
                 
                 _,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
@@ -860,9 +862,9 @@ def plot_generate_classic(tag,Qec,Pdc,vtm,trn_set,opt=None,pfx='trial',outf='./i
                 hax1.legend(loc = "lower right",frameon=False)
                 plt.savefig(os.path.join(outf,"res_bb_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
                             bbox_inches='tight',dpi = 500)
-                plt.savefig(os.path.join(outf,"res_bb_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
-                            format='eps',bbox_inches='tight',dpi = 500)
-                print("saving res_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
+                # plt.savefig(os.path.join(outf,"res_bb_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
+                #             format='eps',bbox_inches='tight',dpi = 500)
+                app.logger.info("saving res_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
                 plt.close()
                 
                 cnt += 1
@@ -906,7 +908,7 @@ def plot_generate_classic(tag,Qec,Pdc,vtm,trn_set,opt=None,pfx='trial',outf='./i
             #                format='eps',bbox_inches='tight',dpi = 500)
             #    plt.close()
             #    cnt += 1
-        print("savefig eg_pg ...")
+        app.logger.info("savefig eg_pg ...")
         plot_eg_pg(EG,PG, outf,pfx)
             
     elif 'filtered' in tag:
@@ -952,9 +954,9 @@ def plot_generate_classic(tag,Qec,Pdc,vtm,trn_set,opt=None,pfx='trial',outf='./i
                     st2_isref=True,a=10.,k=1))
                 plt.savefig(os.path.join(outf,"gof_fl_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
                             bbox_inches='tight',dpi = 300)
-                print("saving gof_aae_%s_%u_%u ... "%(pfx,cnt,io))
-                plt.savefig(os.path.join(outf,"gof_fl_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
-                           format='eps',bbox_inches='tight',dpi = 500)
+                app.logger.info("saving gof_aae_%s_%u_%u ... "%(pfx,cnt,io))
+                # plt.savefig(os.path.join(outf,"gof_fl_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
+                #            format='eps',bbox_inches='tight',dpi = 500)
                 plt.close()
                 hfg,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
                 hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{x}$',linewidth=1.2)
@@ -976,13 +978,13 @@ def plot_generate_classic(tag,Qec,Pdc,vtm,trn_set,opt=None,pfx='trial',outf='./i
                 hax1.legend(loc = "lower right",frameon=False)
                 plt.savefig(os.path.join(outf,"res_fl_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
                             bbox_inches='tight',dpi = 500)
-                plt.savefig(os.path.join(outf,"res_fl_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
-                            format='eps',bbox_inches='tight',dpi = 500)
+                # plt.savefig(os.path.join(outf,"res_fl_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
+                #             format='eps',bbox_inches='tight',dpi = 500)
                 plt.close()
-                print("saving res_fl_aae_%s_%u_%u ... "%(pfx,cnt,io))
+                app.logger.info("saving res_fl_aae_%s_%u_%u ... "%(pfx,cnt,io))
                 
                 cnt += 1
-            print("savefig eg_pg ...")
+            app.logger.info("savefig eg_pg ...")
             plot_eg_pg(EG,PG, outf,pfx)
         # plt.scatter(EG,PG,c = 'red')
         # plt.xlabel("EG")
@@ -1068,9 +1070,9 @@ def plot_gofs(tag,Fef,Gdf,Fed,Gdd,Fhz,Ghz,dev,vtm,trn_set,
         multivariateGrid('EG','PG','kind',df=egpg_df)
         plt.savefig(os.path.join(outf,"egpg_%s.png"%(pfx['broadband'])),\
                     bbox_inches='tight',dpi = 500)
-        plt.savefig(os.path.join(outf,"egpg_%s.eps"%(pfx['broadband'])),\
-                    format='eps',bbox_inches='tight',dpi = 500)
-        print("plot Gy(Fy(y)) gofs")
+        # plt.savefig(os.path.join(outf,"egpg_%s.eps"%(pfx['broadband'])),\
+        #             format='eps',bbox_inches='tight',dpi = 500)
+        app.logger.info("plot Gy(Fy(y)) gofs")
 
     if 'filtered' in tag:
         bst=trn_set.dataset.dataset.inpW[idx,:,:].data.numpy()
@@ -1104,9 +1106,9 @@ def plot_gofs(tag,Fef,Gdf,Fed,Gdd,Fhz,Ghz,dev,vtm,trn_set,
         multivariateGrid('EG','PG','kind',df=egpg_df)
         plt.savefig(os.path.join(outf,"egpg_%s.png"%(pfx['filtered'])),\
                     bbox_inches='tight',dpi = 500)
-        plt.savefig(os.path.join(outf,"egpg_%s.eps"%(pfx['filtered'])),\
-                    format='eps',bbox_inches='tight',dpi = 500)
-        print("plot Gx(Fx(x)) gofs")
+        # plt.savefig(os.path.join(outf,"egpg_%s.eps"%(pfx['filtered'])),\
+        #             format='eps',bbox_inches='tight',dpi = 500)
+        app.logger.info("plot Gx(Fx(x)) gofs")
     if 'hybrid' in tag:
         bst=trn_set.dataset.dataset.inpZ[idx,:,:].data.numpy()
         egpg=np.empty((len(idx),6))
@@ -1175,9 +1177,9 @@ def plot_gofs(tag,Fef,Gdf,Fed,Gdd,Fhz,Ghz,dev,vtm,trn_set,
         multivariateGrid('EG','PG','kind',df=egpg_df)
         plt.savefig(os.path.join(outf,"egpg_%s.png"%(pfx['hybrid'])),\
                     bbox_inches='tight',dpi = 500)
-        plt.savefig(os.path.join(outf,"egpg_%s.eps"%(pfx['hybrid'])),\
-                    format='eps',bbox_inches='tight',dpi = 500)
-        print("plot Gy(Gz(Fx(x))) gofs")
+        # plt.savefig(os.path.join(outf,"egpg_%s.eps"%(pfx['hybrid'])),\
+        #             format='eps',bbox_inches='tight',dpi = 500)
+        app.logger.info("plot Gy(Gz(Fx(x))) gofs")
 
     if 'ann2bb' in tag:
         bst=trn_set.dataset.dataset.inpZ[idx,:,:].data.numpy()

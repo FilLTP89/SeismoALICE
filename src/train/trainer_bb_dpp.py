@@ -73,6 +73,7 @@ class trainer(object):
 
         super(trainer, self).__init__()
         self.gpu = gpu
+        self.strategy = strategy
         # pdb.set_trace()
         rank = self.opt.nr * self.opt.ngpu + self.gpu
 
@@ -103,11 +104,13 @@ class trainer(object):
         # dataset = Toyset(nsy = 1280)
         self.batch_size = opt.batchSize
         if rank == 0:
-            get_data_stead(dataset=opt.dataset, dataroot=opt.dataroot, rank = rank, batch_size = self.batch_size, 
+            get_data_stead(dataset=opt.dataset, dataroot=opt.dataroot, 
+                rank = rank, batch_size = self.batch_size, 
                 nsy = 1280, world_size = opt.world_size)
         dist.barrier()
-        self.trn_loader, self.vld_loader = get_data_stead(dataset=opt.dataset, dataroot=opt.dataroot,rank = rank, 
-                batch_size = self.batch_size, nsy = 1280, world_size = opt.world_size)
+        self.trn_loader, self.vld_loader = get_data_stead(dataset=opt.dataset, dataroot=opt.dataroot,
+            rank = rank, batch_size = self.batch_size, 
+            nsy = 1280, world_size = opt.world_size)
         # train_set, vld_set = torch.utils.data.random_split(dataset, [80,20])
 
         # train_sampler = torch.utils.data.distributed.DistributedSampler(
@@ -216,14 +219,14 @@ class trainer(object):
                 if None in n:        
                     self.FGf = [self.Fef,self.Gdf]
                     self.oGfxz = reset_net(self.FGf,func=set_weights,
-                        lr=glr*self.opt.world_size,b1=b1,b2=b2,
+                        lr=glr,b1=b1,b2=b2,
                         weight_decay=0.00001)
                 else:
                     print("broadband generators: {0} - {1}".format(*n))
                     self.Fef.load_state_dict(tload(n[0])['model_state_dict'])
                     self.Gdf.load_state_dict(tload(n[1])['model_state_dict']) 
                     self.oGfxz = Adam(ittc(self.Fef.parameters(),self.Gdf.parameters()),
-                                      lr=glr,betas=(b1,b2),weight_decay=0.00001)
+                                      lr=glr*self.opt.world_size,betas=(b1,b2),weight_decay=0.00001)
                 self.optzf.append(self.oGfxz)
                 # if rank == 0:
                 self.Dszf = net.DCGAN_Dz(self.opt.config['Dszf']  , self.opt).to(rank)
@@ -252,7 +255,7 @@ class trainer(object):
                 self.Dfnets.append(self.Dsrzf)
 
                 self.oDfxz = reset_net(self.Dfnets,func=set_weights,
-                                lr=rlr * opt.world_size,optim='rmsprop')
+                                lr=rlr,optim='rmsprop')
                 self.optzf.append(self.oDfxz)
 
                 # pdb.set_trace()

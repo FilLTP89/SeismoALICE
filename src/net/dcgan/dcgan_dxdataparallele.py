@@ -1,5 +1,5 @@
 from torch.nn.modules import activation
-
+from core.net.basic_model import BasicModel
 u'''AE design'''
 from torch.nn.modules import activation
 u'''AE design'''
@@ -40,7 +40,7 @@ class DCGAN_DxDataParallele(object):
                         nly = nly, ker=ker ,std=std, pad=pad, dil=dil, grp=grp, bn=bn, wf = wf, dpc=dpc,\
                         n_extra_layers = n_extra_layers,limit = limit,path = path, act = act, prob = prob)
 
-class BasicDCGAN_DxDataParallele(torch.nn.Module):
+class BasicDCGAN_DxDataParallele(BasicModel):
     """docstring for BasicDCGAN_DxDataParallele"""
     def __init__(self):
         super(BasicDCGAN_DxDataParallele, self).__init__()

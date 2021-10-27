@@ -120,7 +120,7 @@ class trainer(object):
             self.style='ALICE'
             # act = acts[self.style]
             n = self.strategy['unique']
-            # pdb.set_trace()
+            pdb.set_trace()
 
             self.F_  = net.Encoder(opt.config['F'],  opt).cuda()
             self.Gy  = net.Decoder(opt.config['Gy'], opt).cuda()
@@ -196,7 +196,11 @@ class trainer(object):
                     self.Gx.load_state_dict(tload(n[2])['model_state_dict'])  
                 else:
                     flagF=False
-
+        pdb.set_trace()
+        print("Parameters of  Decoders/Decoders ")
+        count_parameters(self.FGf)
+        print("Parameters of Discriminators ")
+        count_parameters(self.Dnets)
         self.bce_loss = BCE(reduction='mean')
         self.losses = {
             'Gloss':[0],'Dloss':[0],
@@ -313,7 +317,7 @@ class trainer(object):
 
     # @profile
     def discriminate_xx(self,x,xr):
-        pdb.set_trace()
+        # pdb.set_trace()
         # torch.onnx.export(self.Dxx,zcat(x,x),outf+"/Dxx.onnx")
         # x et xr doivent avoir la même distribution !
         Dreal = self.Dxx(zcat(x,x))#with batchNorm
@@ -321,7 +325,7 @@ class trainer(object):
         return Dreal,Dfake
 
     def discriminate_yy(self,x,xr):
-        pdb.set_trace()
+        # pdb.set_trace()
         # torch.onnx.export(self.Dyy,zcat(x,x),outf+"/Dyy.onnx")
         Dreal = self.Dyy(zcat(x,x )) #with batchNorm
         Dfake = self.Dyy(zcat(x,xr))
@@ -329,19 +333,19 @@ class trainer(object):
 
     @profile
     def discriminate_zzb(self,z,zr):
-        pdb.set_trace()
+        # pdb.set_trace()
         Dreal = self.Dzzb(zcat(z,z )) #no batchNorm
         Dfake = self.Dzzb(zcat(z,zr))
         return Dreal,Dfake
 
     def discriminate_zzf(self,z,zr):
-        pdb.set_trace()
+        # pdb.set_trace()
         Dreal = self.Dzzf(zcat(z,z )) #no batchNorm
         Dfake = self.Dzzf(zcat(z,zr))
         return Dreal,Dfake
 
     def discriminate_zxy(self,z_yx,z_xy):
-        pdb.set_trace()
+        # pdb.set_trace()
         D_zyx = self.Dzyx(z_yx)
         D_zxy = self.Dzyx(z_xy)
         return D_zyx, D_zxy
@@ -365,7 +369,7 @@ class trainer(object):
         # wnzd = wnzd.to(zd.device)
         # wnzf = wnzf.to(zf.device)
 
-        pdb.set_trace()
+        # pdb.set_trace()
 
         # 1. Concatenate inputs
         # y_inp  = zcat(y,wny)
