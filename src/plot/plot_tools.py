@@ -782,7 +782,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
         # pass
         for _,batch in enumerate(trn_set):
             #_,xt_data,zt_data,_,_,_,_ = batch
-            app.logger.info("Plotting signals ...")
+            print("Plotting signals ...")
             xt_data,xf_data,zt_data,*other = batch
             # xt_data,zt_data,*other = batch
             Xt = Variable(xt_data).to(dev, dtype =torch.float64)
@@ -796,7 +796,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             # breakpoint()
             # ztr = Qec(X_inp)[0] if 'unique' in pfx else Qec(X_inp)
             if 'unique' in pfx:
-                zy,zdf_gen,_ =  Qec(X_inp)
+                zy,zdf_gen,*other=  Qec(X_inp)
                 wn = torch.empty(*zy.shape).normal_(**app.RNDM_ARGS).to(dev)
                 ztr = zcat(zdf_gen,wn)
             else:
@@ -837,7 +837,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                             bbox_inches='tight',dpi = 300)
                 # plt.savefig(os.path.join(outf,"gof_bb_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
                 #            format='eps',bbox_inches='tight',dpi = 300)
-                app.logger.info("saving gof_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
+                print("saving gof_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
                 plt.close()
                 
                 _,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
@@ -864,7 +864,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                             bbox_inches='tight',dpi = 500)
                 # plt.savefig(os.path.join(outf,"res_bb_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
                 #             format='eps',bbox_inches='tight',dpi = 500)
-                app.logger.info("saving res_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
+                print("saving res_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
                 plt.close()
                 
                 cnt += 1
@@ -908,7 +908,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             #                format='eps',bbox_inches='tight',dpi = 500)
             #    plt.close()
             #    cnt += 1
-        app.logger.info("savefig eg_pg ...")
+        print("savefig eg_pg ...")
         plot_eg_pg(EG,PG, outf,pfx)
             
     elif 'filtered' in tag:
