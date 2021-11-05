@@ -42,7 +42,7 @@ __status__ = "Beta"
 
 mpl.style.use('seaborn')
 plt.rcParams["figure.figsize"] = (10, 7.5)
-# app.RNDM_ARGS = {'mean': 0, 'std': 1.0}
+
 
 def multivariateGrid(col_x, col_y, col_k, df, k_is_color=False, scatter_alpha=.7):
     k=0
@@ -926,7 +926,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             # pdb.set_trace()
             # ztr = Qec(X_inp)[1] if 'unique' in pfx else Qec(X_inp)
             if 'unique' in pfx:
-                _,zfd_gen,zff_gen = Qec(X_inp)
+                _,zfd_gen,*other = Qec(X_inp)
                 ztr = zfd_gen
             else:
                 ztr = Qec(X_inp)
