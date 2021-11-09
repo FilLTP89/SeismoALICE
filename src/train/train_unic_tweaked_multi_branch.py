@@ -127,7 +127,7 @@ class trainer(object):
             self.style='ALICE'
             # act = acts[self.style]
             n = self.strategy['unique']
-            # pdb.set_trace()
+            pdb.set_trace()
 
             self.F_  = net.Encoder(opt.config['F'],  opt).cuda()
             self.Gy  = net.Decoder(opt.config['Gy'], opt).cuda()

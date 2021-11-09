@@ -782,14 +782,14 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
         # pass
         for _,batch in enumerate(trn_set):
             #_,xt_data,zt_data,_,_,_,_ = batch
-            print("Plotting signals ...")
+            app.logger.info("Plotting signals ...")
             xt_data,xf_data,zt_data,*other = batch
             # xt_data,zt_data,*other = batch
             Xt = Variable(xt_data).to(dev, dtype =torch.float64)
             Xf = Variable(xf_data).to(dev, dtype =torch.float64)
             zt = Variable(zt_data).to(dev, dtype =torch.float64)
             wnx,wnz,wn1 = noise_generator(Xt.shape,zt.shape,dev,app.RNDM_ARGS)
-            X_inp = zcat(Xt,wnx.to(dev))
+            X_inp = zcat(Xf,wnx.to(dev))
 
             # ztr = Qec(X_inp).to(dev)
 
@@ -797,7 +797,8 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             # ztr = Qec(X_inp)[0] if 'unique' in pfx else Qec(X_inp)
             if 'unique' in pfx:
                 zy,zdf_gen,*other=  Qec(X_inp)
-                wn = torch.empty(*zy.shape).normal_(**app.RNDM_ARGS).to(dev)
+                # wn = torch.empty(*zy.shape).normal_(**app.RNDM_ARGS).to(dev)
+                wn = torch.zeros_like(zy)
                 ztr = zcat(zdf_gen,wn)
             else:
                 ztr = Qec(X_inp)
@@ -837,12 +838,12 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                             bbox_inches='tight',dpi = 300)
                 # plt.savefig(os.path.join(outf,"gof_bb_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
                 #            format='eps',bbox_inches='tight',dpi = 300)
-                print("saving gof_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
+                app.logger.info("saving gof_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
                 plt.close()
                 
                 _,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
-                hax0.plot(vtm,gt,color=clr[3],label=r'$G_t(zcat(F_x(\mathbf{x},N(\mathbf{0},\mathbf{I})))$',linewidth=1.2)
-                # hax0.plot(vtm,gt,color=clr[3],label=r'$G_t(zcat(F_x(\mathbf{x},\mathbf{0}))$',linewidth=1.2)
+                # hax0.plot(vtm,gt,color=clr[3],label=r'$G_t(zcat(F_x(\mathbf{y},N(\mathbf{0},\mathbf{I})))$',linewidth=1.2)
+                hax0.plot(vtm,gt,color=clr[3],label=r'$G_t(zcat(F_x(\mathbf{y},\mathbf{0}))$',linewidth=1.2)
                 hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{y}$',linewidth=1.2)
                 hax1.loglog(vfr,of,color=clr[0],label=r'$\mathbf{y}$',linewidth=2)
                 hax1.loglog(vfr,ff,color=clr[1],label=r'$\mathbf{x}$',linewidth=2)
@@ -864,7 +865,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                             bbox_inches='tight',dpi = 500)
                 # plt.savefig(os.path.join(outf,"res_bb_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
                 #             format='eps',bbox_inches='tight',dpi = 500)
-                print("saving res_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
+                app.logger.info("saving res_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
                 plt.close()
                 
                 cnt += 1
@@ -915,13 +916,14 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
         for _,batch in enumerate(trn_set):
             # _,xf_data,_,zf_data,_,_,_,*other = batch
             # xt_data,xf_data,zt_data,zf_data,_,_,_,*other = batch
-            _,xf_data,_,zf_data,*other = batch
+            xt_data,xf_data,_,zf_data,*other = batch
             # _,xf_data,zf_data,*other = batch
             # tweaked value
+            Xt = Variable(xt_data).to(dev, dtype =torch.float64)
             Xf = Variable(xf_data).to(dev, dtype =torch.float64)
             zf = Variable(zf_data).to(dev, dtype =torch.float64)
-            wnx,wnz,wn1 = noise_generator(Xf.shape,zf.shape,dev,app.RNDM_ARGS)
-            X_inp = zcat(Xf,wnx)
+            wnx,wnz,wn1 = noise_generator(Xt.shape,zf.shape,dev,app.RNDM_ARGS)
+            X_inp = zcat(Xt,wnx)
             # ztr = Qec(X_inp)
             # pdb.set_trace()
             # ztr = Qec(X_inp)[1] if 'unique' in pfx else Qec(X_inp)
@@ -960,7 +962,8 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 plt.close()
                 hfg,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
                 hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{x}$',linewidth=1.2)
-                hax0.plot(vtm,gt,color=clr[3],label=r'$G_m(F_m(\mathbf{x}))$',linewidth=1.2)
+                # hax0.plot(vtm,gt,color=clr[3],label=r'$G_m(F_m(\mathbf{x}))$',linewidth=1.2)
+                hax0.plot(vtm,gt,color=clr[3],label=r'$G_x(F_yx(\mathbf{y}))$',linewidth=1.2)
                 hax1.loglog(vfr,of,color=clr[0],label=r'$\mathbf{x}$',linewidth=2)
                 hax1.loglog(vfr,gf,color=clr[3],label=r'$G_m(F_m(\mathbf{x}))$',linewidth=2)
                 hax0.set_xlim(0.0,int(vtm[-1]))
