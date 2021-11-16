@@ -72,6 +72,7 @@ class ModelParalleleFactory(ConvNetFactory):
         path = config["path"] if "path" in config else ""
         dconv = config["dconv"] if "dconv" in config else ""
         n_extra_layers = config["extra_layers"] if "extra_layers" in config else 0
+
         return DecoderModelParallele.getDecoderByGPU(ngpu=opt.ngpu,nz=opt.nzd,\
                 nch=opt.nch, ndf=opt.ndf,\
                 nly=config['nlayers'],\
@@ -166,6 +167,7 @@ class DataParalleleFactory(ConvNetFactory):
         name  = config["name"] if "name" in config else None
         path  = config["path"] if "path" in config else ""
         dconv = config["dconv"] if "dconv" in config else ""
+        dpc  = config["dpc"] if "dpc" in config else 0.0
         wf    = json.loads(config["wf"].lower()) if "wf" in config else False
         return EncoderDataParallele.getEncoder(name = name, ngpu = opt.ngpu,\
                 dev = opt.dev,\
@@ -182,7 +184,7 @@ class DataParalleleFactory(ConvNetFactory):
                 channel = config['channel'],\
                 path = path,
                 config = config,
-                dpc = 0.0,\
+                dpc = dpc,\
                 wf = wf,\
                 *args, **kwargs)
 
@@ -191,6 +193,8 @@ class DataParalleleFactory(ConvNetFactory):
         path = config["path"] if "path" in config else ""
         dconv = config["dconv"] if "dconv" in config else ""
         n_extra_layers = config["extra_layers"] if "extra_layers" in config else 0
+        extra = config["extra"] if "extra" in config else 0
+        dpc  = config["dpc"] if "dpc" in config else 0.0
         # wf    = json.loads(config["wf"].lower()) if "wf" in config else False
         return DecoderDataParallele.getDecoder(name = name, ngpu = opt.ngpu,\
                 nz = opt.nzd, nch = opt.nch,\
@@ -208,7 +212,8 @@ class DataParalleleFactory(ConvNetFactory):
                 bn= True,
                 path = path,\
                 dconv = dconv,\
-                dpc = 0.0,\
+                dpc = dpc,\
+                extra = extra,\
                 # wf = wf,\
                 *args, **kwargs)
 

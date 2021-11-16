@@ -10,6 +10,7 @@ warnings.filterwarnings("ignore")
 from common.common_nn import *
 import torch
 import pdb
+import importlib
 from torch import device as tdev
 
 
@@ -26,7 +27,7 @@ class DCGAN_DxDataParallele(object):
             classname = 'DCGAN_Dx_'+ name
             #preparation for other DataParallele Class
             try:
-                module_name = "dcgan_dxdataparallele"
+                module_name = "net.dcgan.dcgan_dxdataparallele"
                 module = importlib.import_module(module_name)
                 class_ = getattr(module,classname)
                 return class_(ngpu=ngpu, isize=isize, nc=nc, ncl=ncl, ndf=ndf,  channel = channel, fpd=fpd, act=act, nly=nly,\
@@ -52,15 +53,43 @@ class BasicDCGAN_DxDataParallele(BasicModel):
         self.final    = []
         self.cnn1     = []
 
-    def lout(self,nz, nly, increment, limit):
-        #Here we specify the logic of the  in_channels/out_channels
-        n = nz*2**(increment)
-        #we force the last of the out_channels to not be greater than 512
-        val = n if (n<limit or increment<nly) else limit
-        return val if val<=limit else limit
+    def lout(self,nch,padding, dilation, kernel, stride):
+        """
+        This code is for conv1d made according to the rule of Pytorch.
+        One multiply nz by 2 ^(increment - 1). 
+        If, by example, nly 8. we strat from nz^(0) to nz^(6). we stop witnz
+        
+        """
+        lin = nch
+        for pad, dil, ker, std in zip(padding, dilation, kernel, stride):
+            lin = int((lin + 2* pad - dil*(ker-1)-1)/std + 1)
+
+        return lin
     
     def discriminate_circle(self,x,x_rec): 
         return self(zcat(x,x)), self(zcat(x,x_rec))
+
+    def block_linear(self, channel, activation):
+        cnn = []
+        for in_channels, out_channels, acts in zip(channel[:-1], channel[1:], activation):
+            cnn += [nn.Linear(in_channels, out_channels)]
+            cnn += [acts]
+            cnn += [Dpout(dpc=dpc)]
+        return cnn
+
+    def block_conv(self, channel, kernel, strides, dilation, 
+                    padding, activation, *args, **kwargs):
+        cnn = []
+        for in_channels, out_channels, kernel_size,\
+            stride, dilation, padding, acts in zip(channel[:-1],\
+            channel[1:], kernel, strides, dilation, padding, activation):
+            cnn += cnn1d(in_channels=in_channels, 
+                        out_channels=out_channels,
+                        ker =kernel_size,
+                        std = stride,
+                        pad = padding,
+                        dil = dilation,*args, **kwargs)
+        return cnn
 
 class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
     """docstring for    DCGAN_Dx"""
@@ -162,3 +191,52 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
             return z,f
         else:
             return z
+
+
+class DCGAN_Dx_Lite(BasicDCGAN_DxDataParallele):
+    """docstring for DCGAN_Dx_Lite"""
+    def __init__(self, ngpu, nc, ncl, ndf, nly,act, channel, fpd=1, isize=256, limit = 256,\
+                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.0, path = '', prob = False,
+                 n_extra_layers=0):
+        super(DCGAN_Dx_Lite, self).__init__()
+        activation = T.activation(act, nly)
+
+        self.cnn = self.block_conv( channel = channel,kernel = ker,\
+                    strides = std, dilation= dil,  activation = activation,\
+                    padding = pad, bn = bn, dpc = dpc)
+
+        lout = self.lout(nch = 4096,padding = pad, dilation = dil,\
+                        kernel = ker, stride = std)
+
+        self.cnn += [Shallow(shape = lout*channel[-1])]
+        self.cnn += [nn.Linear(lout*channel[-1],lout)]
+        self.cnn += [nn.Linear(lout,channel[-1])]
+
+        self.cnn = nn.Sequential(*self.cnn)
+
+    def forward(self, x):
+        return self.cnn(x)
+        
+
+class DCGAN_Dx_Flatten(BasicDCGAN_DxDataParallele):
+    """docstring for    DCGAN_Dx"""
+    def __init__(self, ngpu, nc, ncl, ndf, nly,act, channel, fpd=1, isize=256, limit = 256,\
+                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.0, path = '', prob = False,
+                 n_extra_layers=0):
+        super(DCGAN_Dx_Flatten,self).__init__()
+
+        activation = T.activation(act, nly)
+        self.cnn  = []
+
+        for in_channels, out_channels, acts in zip(channel[:-1], channel[1:], activation):
+            self.cnn += [nn.Linear(in_channels, out_channels)]
+            self.cnn += [acts]
+            self.cnn += [Dpout(dpc=dpc)]
+
+        self.cnn = nn.Sequential(*self.cnn)
+
+    def forward(self,x): 
+        return self.cnn(x)
+
+
+

@@ -19,7 +19,7 @@ import json
 # import pprint as pp
 import pdb
 # from pytorch_summary import summary
-# from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 from factory.conv_factory import *
 # import GPUtil
 # from torch.nn.parallel import DistributedDataParallel as Dnn.DataParallel
@@ -28,6 +28,10 @@ import GPUtil
 from database.toyset import Toyset, get_dataset
 # app.RNDM_ARGS = {'mean': 0, 'std': 1.0}
 from configuration import app
+from tqdm import  tqdm,trange
+# from investigation import visualize_gradients
+# from plot.investigation import visualize_gradients
+
 
 u'''General informations'''
 __author__ = "Filippo Gatti & Didier Clouteau"
@@ -96,43 +100,49 @@ class trainer(object):
         self.oGyx  = None
         self.dp_mode = True
 
+        self.writer_train = SummaryWriter('runs_both/training')
+        self.writer_val   = SummaryWriter('runs_both/validation')
+
         # glr = 0.0001
         # rlr = 0.0001
         flagT=False
         flagF=False
         t = [y.lower() for y in list(self.strategy.keys())] 
 
-        cpus  =  int(os.environ.get('SLURM_NPROCS'))
-        if(cpus ==1 and opt.ngpu >=1):
-            print('ModelParallele to be builded ...')
-            self.dp_mode = False
-            factory = DataParalleleFactory()
-        elif(cpus >1 and opt.ngpu >=1):
-            print('DataParallele to be builded ...')
-            factory = DataParalleleFactory()
-            self.dp_mode = True
-        else:
-            print('environ not found')
-        net = Network(factory)
+        # cpus  =  int(os.environ.get('SLURM_NPROCS'))
+        # if(cpus ==1 and opt.ngpu >=1):
+        #     print('ModelParallele to be builded ...')
+        #     self.dp_mode = False
+        #     factory = DataParalleleFactory()
+        # elif(cpus >1 and opt.ngpu >=1):
+        #     print('DataParallele to be builded ...')
+        #     factory = DataParalleleFactory()
+        #     self.dp_mode = True
+        # else:
+        #     print('environ not found')
+        net = Network(DataParalleleFactory())
 
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        torch.manual_seed(100)
 
-        self.trn_loader, self.vld_loader = self.get_data_stead(
-            dataset=self.opt.dataset, dataroot=self.opt.dataroot, 
-            rank = 0, batch_size = self.opt.batchSize, 
-            nsy = 100, world_size = opt.world_size
-        )
+        self.trn_loader, self.vld_loader = trn_loader, vld_loader
+        # self.trn_loader, self.vld_loader = self.get_data_stead(
+        #     dataset= self.opt.dataset, dataroot= self.opt.dataroot, 
+        #     rank = 0, batch_size = self.opt.batchSize, 
+        #     nsy = 1280, world_size = opt.world_size)
 
         if 'unique' in t:
             self.style='ALICE'
             # act = acts[self.style]
             n = self.strategy['unique']
-            pdb.set_trace()
+            # pdb.set_trace()
 
             self.F_  = net.Encoder(opt.config['F'],  opt).cuda()
             self.Gy  = net.Decoder(opt.config['Gy'], opt).cuda()
             self.Gx  = net.Decoder(opt.config['Gx'], opt).cuda()
 
+            # t = torch.randn(10,6,4096).cuda()
+            # zy, *other = self.F_(t)
             
             if  self.strategy['tract']['unique']:
                 if None in n:        
@@ -150,6 +160,8 @@ class trainer(object):
                         self.Gx.parameters()),
                         lr=glr,betas=(b1,b2),
                         weight_decay=0.00001)
+
+                    self.FGf  = [self.F_,self.Gy,self.Gx]
 
                     # self.oGyx = RMSProp(ittc(self.F_.parameters(),
                     #     self.Gy.parameters(),
@@ -185,8 +197,8 @@ class trainer(object):
                 self.Dnets.append(self.Dyy)
                 self.Dnets.append(self.Dzyx)
 
-                self.model =  nn.Sequential(*self.FGf,*self.Dnets)
-                self.model =  nn.DataParallel(self.model).cuda()
+                # self.model =  nn.Sequential(*self.FGf,*self.Dnets)
+                # self.model =  nn.DataParallel(self.model).cuda()
                 # print(self.model.F_)
 
                 self.oDyxz = reset_net(self.Dnets,
@@ -209,13 +221,19 @@ class trainer(object):
         print("Parameters of Discriminators ")
         count_parameters(self.Dnets)
         self.bce_loss = BCE(reduction='mean')
+
+
+        # x, *other = next(iter(self.trn_loader))
+        # self.fxy = SummaryWriter('runs_both/fxy')
+        #summary writer print graph value 
+        # self.fxy.add_graph(self.F_, zcat(x,o1l(x)).cuda())
         self.losses = {
             'Gloss':[0],'Dloss':[0],
                        'Gloss_ali_z':[0],
                        'Gloss_cycle_xy':[0],
                        'Gloss_ali_xy':[0],
                        'Gloss_ind':[0],
-                       'Gloss_ftm':[0],
+                       # 'Gloss_ftm':[0],
                        # 'Gloss_cycle_z':[0],
                        'Dloss_ali':[0],
                        'Dloss_ali_x':[0],
@@ -358,54 +376,42 @@ class trainer(object):
         return D_zyx, D_zxy
     
     # @profile
-    def alice_train_discriminator_adv(self,y,zd,x,zf):
+    def alice_train_discriminator_adv(self,y,zyy,x,zxy):
         # Set-up training        
         zerograd(self.optz)
         modalite(self.FGf, mode = 'eval')
         modalite(self.Dnets, mode ='train')
-        # self.F_.eval()  , self.Gx.eval()  , self.Gy.eval()
-        # self.Dy.train() , self.Dx.train() , self.Dz.train()
-        # self.Dyz.train(), self.Dxz.train(), self.Dzzb.train()
-        # self.Dyy.train(), self.Dxx.train(), self.Dzzf.train()
+        
         # 0. Generate noise
-        wnx,wnzf,_ = noise_generator(x.shape,zf.shape,app.DEVICE,app.RNDM_ARGS)
-        wny,wnzd,_ = noise_generator(y.shape,zd.shape,app.DEVICE,app.RNDM_ARGS)
-
-        # wny = wny.to(y.device)
-        # wnx = wnx.to(x.device)
-        # wnzd = wnzd.to(zd.device)
-        # wnzf = wnzf.to(zf.device)
-
-        # pdb.set_trace()
-
-        # 1. Concatenate inputs
-        # y_inp  = zcat(y,wny)
-        # x_inp  = zcat(x,wnx)
-        # zd_inp = zcat(zd,wnzd)
-        # zf_inp = zcat(zf,wnzf)
+        wnx,wnzf,_ = noise_generator(x.shape,zxy.shape,app.DEVICE,app.RNDM_ARGS)
+        wny,wnzd,_ = noise_generator(y.shape,zyy.shape,app.DEVICE,app.RNDM_ARGS)
         
         # 2. Generate conditional samples
-        y_gen = self.Gy(zcat(zd,wnzd))
-        x_gen = self.Gx(zcat(zf,wnzf))
+        # pdb.set_trace()
+        y_gen = self.Gy(zcat(zxy,zyy))
+        x_gen = self.Gx(zxy)
 
         # zd_gen,_  = self.F_(y_inp)
         # _, zf_gen = self.F_(x_inp)
 
         # F(y)|y,F(y)|yx,F(y)|x
-        zdd_gen,zdf_gen,*other = self.F_(zcat(y,wny)) # zdd_gen = zy, zdf_gen = zyx
+        zyy_F,zyx_F,*other = self.F_(zcat(y,wny)) # zdd_gen = zy, zdf_gen = zyx
         # F(x)|y,F(x)|yx,F(x)|x
-        _,zfd_gen, *other = self.F_(zcat(x,wnx)) # zff_gen = zx, zfd_gen = zxy
+        _,zxy_F, *other = self.F_(zcat(x,wnx)) # zff_gen = zx, zfd_gen = zxy
+
  
         # [F(y)|yx,F(y)|y]
-        zd_gen = zcat(zdf_gen,zdd_gen) # zy generated by y
+        zyy_gen = zcat(zyx_F,zyy_F) # zy generated by y
         # [F(x)|yx,F(x)|x]
-        zf_gen = zcat(zfd_gen) # zx generated by x
+        zxy_gen = zcat(zxy_F) # zx generated by x
         # zf_gen = zfd_gen # zx generated by x
+
+        
 
         # self.writer.add_histogram('Latent/broadband',zd_gen)
         # self.writer.add_histogram('Latent/filtered',zf_gen)
         
-        D_zyx,D_zxy = self.discriminate_zxy(zdf_gen,zfd_gen)
+        D_zyx,D_zxy = self.discriminate_zxy(zyx_F,zxy_F)
         #zd_ind = zcat(zfd_gen,zfd_ind) # zy generated by x
         #zf_ind = zcat(zdf_gen,zdf_ind) # zx generated by y
         ## concatenate : first common part zxy and then zy or zx
@@ -424,8 +430,8 @@ class trainer(object):
         # Dloss_ind_x = -(torch.mean(Dreal_zzx)-torch.mean(Dfake_zzx))
         #Dloss_ind =  Dloss_ind_x + Dloss_ind_y
         # 3. Cross-Discriminate XZ
-        Dyz,Dzy = self.discriminate_yz(y,y_gen,zd,zd_gen)
-        Dxz,Dzx = self.discriminate_xz(x,x_gen,zf,zf_gen)
+        Dyz,Dzy = self.discriminate_yz(y,y_gen,zcat(zxy,zyy),zyy_gen)
+        Dxz,Dzx = self.discriminate_xz(x,x_gen,zxy,zxy_gen)
         # pdb.set_trace()
         # 4. Compute ALI discriminator loss
         # Dloss_ali_y = self.bce_loss(Dzy,o1l(Dzy)) + self.bce_loss(Dyz,o0l(Dyz))
@@ -434,8 +440,8 @@ class trainer(object):
         Dloss_ali_x = -torch.mean(ln0c(Dzx)+ln0c(1.0-Dxz))
         Dloss_ali = Dloss_ali_x + Dloss_ali_y
 
-        wnx,wnzf,_ = noise_generator(x.shape,zf.shape,app.DEVICE,app.RNDM_ARGS)
-        wny,wnzd,_ = noise_generator(y.shape,zd.shape,app.DEVICE,app.RNDM_ARGS)
+        wnx,wnzf,_ = noise_generator(x.shape,zxy.shape,app.DEVICE,app.RNDM_ARGS)
+        wny,wnzd,_ = noise_generator(y.shape,zyy.shape,app.DEVICE,app.RNDM_ARGS)
 
         # wny  = wny.to(y.device)
         # wnx  = wnx.to(x.device)
@@ -450,14 +456,14 @@ class trainer(object):
         
         # pdb.set_trace()
         # 2. Generate reconstructions
-        y_rec  = self.Gy(zcat(zd_gen,wnzd))
-        x_rec  = self.Gx(zcat(zf_gen,wnzf))
+        y_rec  = self.Gy(zyy_gen)
+        x_rec  = self.Gx(zxy_gen)
 
-        zdd_rec,zdf_rec,*other = self.F_(zcat(y_gen,wny))
-        _,zfd_rec,*other = self.F_(zcat(x_gen,wnx))
+        zyy_F,zyx_F,*other = self.F_(zcat(y_gen,wny))
+        _,zxy_F,*other = self.F_(zcat(x_gen,wnx))
 
-        zd_rec = zcat(zdf_gen,zdd_gen) # zy generated by y
-        zf_rec = zcat(zfd_gen) # zx generated by x
+        zyy_rec = zcat(zyx_F,zyy_F) # zy generated by y
+        zxy_rec = zcat(zxy_F) # zx generated by x
         # zf_rec = zfd_gen # zx generated by x
  
         #zd_ind = zcat(zfd_gen,zfd_ind) # zy generated by x
@@ -487,8 +493,8 @@ class trainer(object):
         #     self.bce_loss(Dreal_x,o1l(Dreal_x))+self.bce_loss(Dfake_x,o1l(Dfake_x))
         #4. Cross-Discriminate ZZ
         # pdb.set_trace()
-        Dreal_zd,Dfake_zd = self.discriminate_zzb(zd,zd_gen)
-        Dreal_zf,Dfake_zf = self.discriminate_zzf(zf,zf_gen)
+        Dreal_zd,Dfake_zd = self.discriminate_zzb(zcat(zxy,zyy),zyy_gen)
+        Dreal_zf,Dfake_zf = self.discriminate_zzf(zxy,zxy_gen)
         # Dreal_z, Dfake_z  = self.discriminate_zz(zf,zd)
         
         # Dloss_rec_z = self.bce_loss(Dreal_zd,o1l(Dreal_zd))+self.bce_loss(Dfake_zd,o0l(Dfake_zd))+\
@@ -503,6 +509,7 @@ class trainer(object):
         Dloss = Dloss_ali + Dloss_ind + Dloss_rec
 
         Dloss.backward()
+
         self.oDyxz.step()#,clipweights(self.Dnets),
         zerograd(self.optz)
         self.losses['Dloss'].append(Dloss.tolist())  
@@ -510,14 +517,15 @@ class trainer(object):
         self.losses['Dloss_ali_x'].append(Dloss_ali_x.tolist())
         self.losses['Dloss_ali_y'].append(Dloss_ali_y.tolist())
         self.losses['Dloss_ind'].append(Dloss_ind.tolist())
+
         # self.losses['Dloss_ali_xy'].append(Dloss_ali_xy.tolist())  
         # self.losses['Dloss_ali_z'].append(Dloss_ali_z.tolist())
 
     # @profile
-    def alice_train_generator_adv(self,y,zd,x,zf,zd_fix, zf_fix):
+    def alice_train_generator_adv(self,y,zyy,x,zxy,zyy_fix, zxy_fix,epoch):
         # Set-up training
         zerograd(self.optz)
-        modalite(self.FGf, mode = 'train')
+        modalite(self.FGf,   mode = 'train')
         modalite(self.Dnets, mode ='train')
         # self.F_.train() , self.Gx.train() , self.Gy.train()
         # self.Dy.train() , self.Dx.train() , self.Dz.train()
@@ -525,8 +533,8 @@ class trainer(object):
         # self.Dyy.train(), self.Dxx.train(), self.Dzzf.train()
         # l1 = torch.nn.L1Loss()
         # 0. Generate noise
-        wny,wnzd,_ = noise_generator(y.shape,zd.shape,app.DEVICE,app.RNDM_ARGS)
-        wnx,wnzf,_ = noise_generator(x.shape,zf.shape,app.DEVICE,app.RNDM_ARGS)
+        wny,wnzd,_ = noise_generator(y.shape,zyy.shape,app.DEVICE,app.RNDM_ARGS)
+        wnx,wnzf,_ = noise_generator(x.shape,zxy.shape,app.DEVICE,app.RNDM_ARGS)
          
         # 1. Concatenate inputs
         # y_inp  = zcat(y,wny)
@@ -537,29 +545,36 @@ class trainer(object):
         # pdb.set_trace()
          
         # 2. Generate conditional samples
-        y_gen = self.Gy(zcat(zd,wnzd)) #(100,64,64)->(100,3,4096)
-        x_gen = self.Gx(zcat(zf,wnzf))
+        y_gen = self.Gy(zcat(zxy,zyy)) #(100,64,64)->(100,3,4096)
+        x_gen = self.Gx(zxy)
         # zd_gen = self.F_(y_inp)[:,:zd.shape[1]] #(100,64,64) -> (100,32,64)
        # pdb.set_trace()
         # zd_gen, _ = self.F_(y_inp)
         # _, zf_gen = self.F_(x_inp)
-        zdd_gen,zdf_gen,*other = self.F_(zcat(y,wny)) # zdd_gen = zy, zdf_gen = zyx
-        _,zfd_gen, *other = self.F_(zcat(x,wnx)) # zff_gen = zx, zfd_gen = zxy
+        zyy_F,zyx_F,*other = self.F_(zcat(y,wny)) # zdd_gen = zy, zdf_gen = zyx
+        _,zxy_F, *other = self.F_(zcat(x,wnx)) # zff_gen = zx, zfd_gen = zxy
  
-        zd_gen = zcat(zdf_gen,zdd_gen) # zy generated by y
-        zf_gen = zcat(zfd_gen) # zx generated by x
+        zyy_gen = zcat(zyx_F,zyy_F) # zy generated by y
+        zxy_gen = zcat(zxy_F) # zx generated by x
         # zf_gen = zfd_gen # zx generated by x
+        # print(zyy_gen.shape)
+        if epoch % 10:
+            for i in range(zyy_gen.shape[-1]):
+                self.writer_train.add_histogram('CODINGS/zyy_gen/{}'.format(i),zyy_gen[:,i].flatten(),global_step=epoch)
+            for i in range(zxy_gen.shape[-1]):
+                self.writer_train.add_histogram('CODINGS/zxy_gen/{}'.format(i),zxy_gen[:,i].flatten(),global_step=epoch)
  
         #zd_ind = zcat(zfd_gen,zfd_ind) # zy generated by x
         #zf_ind = zcat(zdf_gen,zdf_ind) # zx generated by y
 
         # ici il faut les discriminateurs z
-        D_zyx,D_zxy = self.discriminate_zxy(zdf_gen,zfd_gen)
+        D_zyx,D_zxy = self.discriminate_zxy(zyx_F,zxy_F)
         #Dreal_zzy,Dfake_zzy = self.discriminate_zzb(zd,zd_ind)
         #Dreal_zzx,Dfake_zzx = self.discriminate_zzf(zf,zf_ind)
         Gloss_ind = torch.mean(-D_zxy+D_zyx)
         #Gloss_ind_y = self.bce_loss(Dfake_zzy,o1l(Dfake_zzy))
         #Gloss_ind_x = self.bce_loss(Dfake_zzx,o1l(Dfake_zzx))
+
 
         # Ici on force le F a générer des zxy égales pour F_(x) et F_(y)
         #Gloss_ind_cycle = torch.mean(torch.abs(zdf_gen-zfd_gen))
@@ -572,8 +587,8 @@ class trainer(object):
          
         # 3. Cross-Discriminate XZ
         # pdb.set_trace()
-        Dyz,Dzy = self.discriminate_yz(y,y_gen,zd,zd_gen)
-        Dxz,Dzx = self.discriminate_xz(x,x_gen,zf,zf_gen)
+        Dyz,Dzy = self.discriminate_yz(y,y_gen,zcat(zxy,zyy),zyy_gen)
+        Dxz,Dzx = self.discriminate_xz(x,x_gen,zxy,zxy_gen)
 
         # 4. Compute ALI Generator loss 
         Gloss_ali = torch.mean(-Dyz+Dzy)+torch.mean(-Dxz+Dzx)
@@ -584,60 +599,61 @@ class trainer(object):
         #     Gloss_ftm += torch.mean((rf-ff)**2)
 
         # 0. Generate noise
-        wny,wnzd,_ = noise_generator(y.shape,zd.shape,app.DEVICE,app.RNDM_ARGS)
-        wnx,wnzf,_ = noise_generator(x.shape,zf.shape,app.DEVICE,app.RNDM_ARGS)
+        wny,wnzd,_ = noise_generator(y.shape,zyy.shape,app.DEVICE,app.RNDM_ARGS)
+        wnx,wnzf,_ = noise_generator(x.shape,zxy.shape,app.DEVICE,app.RNDM_ARGS)
         
         # 1. Concatenate inputs
-        y_gen  = zcat(y_gen,wny)
-        x_gen  = zcat(x_gen,wnx) 
-        zd_gen = zcat(zd_gen,wnzd) #(100,64,64)
-        zf_gen = zcat(zf_gen,wnzf) #(100,32,64)
+        # y_gen  = 
+        # x_gen  = zcat(x_gen,wnx) 
+        # zd_gen = zcat(zd_gen,wnzd) #(100,64,64)
+        # zf_gen = zcat(zf_gen,wnzf) #(100,32,64)
 
         # 2. Generate reconstructions
-        y_rec = self.Gy(zd_gen)
-        x_rec = self.Gx(zf_gen)
+        y_rec = self.Gy(zyy_gen)
+        x_rec = self.Gx(zxy_gen)
         # zd_rec = self.F_(y_gen)[:,:zd.shape[1]]
 
-        zdd_rec,zdf_rec,*other = self.F_(y_gen)
-        _,zfd_rec,*other = self.F_(x_gen)
+        zyy_F,zyx_F,*other = self.F_(zcat(y_gen,wny))
+        _,zxy_F,*other = self.F_(zcat(x_gen,wnx))
 
-        zd_rec = zcat(zdf_rec,zdd_rec) # zy generated by y
-        zf_rec = zcat(zfd_rec) # zx generated by x
+        zyy_rec = zcat(zyx_F,zyy_F) # zy generated by y
+        zxy_rec = zcat(zxy_F) # zx generated by x
  
         # zd_ind = zcat(zfd_gen,zfd_ind) # zy generated by x
         # zf_ind = zcat(zdf_gen,zdf_ind) # zx generated by y
     
         # pdb.set_trace()
         # 3. Cross-Discriminate XX
-        _,Dfake_y = self.discriminate_yy(y,y_gen[:,:3,:])
-        _,Dfake_x = self.discriminate_xx(x,x_gen[:,:3,:])
+        _,Dfake_y = self.discriminate_yy(y,y_gen)
+        _,Dfake_x = self.discriminate_xx(x,x_gen)
         # penality 
         penalty = 1.0
         # Gloss_ali_xy = self.bce_loss(Dfake_y,o1l(Dfake_y))+penalty*self.bce_loss(Dfake_x,o1l(Dfake_x))
         Gloss_ali_xy = torch.mean(Dfake_y + Dfake_x)
         Gloss_cycle_xy = torch.mean(torch.abs(y-y_rec))+torch.mean(torch.abs(x-x_rec))+\
-            torch.mean(torch.abs(zd-zd_rec))+torch.mean(torch.abs(zf-zf_rec))
+            torch.mean(torch.abs(zcat(zxy,zyy)-zyy_rec))+torch.mean(torch.abs(zxy-zxy_rec))
         # Gloss_cycle_xy = torch.mean((y-y_rec)**2)+torch.mean((x-x_rec)**2)
 #         for rf,ff in zip(ftX_real,ftX_fake):
 #             Gloss_ftmX += torch.mean((rf-ff)**2)
         
         # 4. Cross-Discriminate ZZ
         # pdb.set_trace()
-        _,Dfake_zd = self.discriminate_zzb(zd,zd_gen[:,:zd.shape[1],:])
+        _,Dfake_zd = self.discriminate_zzb(zcat(zxy,zyy),zyy_gen)
         # pdb.set_trace()
-        _,Dfake_zf = self.discriminate_zzf(zf,zf_gen[:,:zf.shape[1],:])
+        _,Dfake_zf = self.discriminate_zzf(zxy,zxy_gen)
         # Gloss_ali_z = self.bce_loss(Dfake_zd,o1l(Dfake_zd))+self.bce_loss(Dfake_zf,o1l(Dfake_zf))
         Gloss_ali_z   = torch.mean(Dfake_zd + Dfake_zf)
-        Gloss_cycle_z = torch.mean(torch.abs(zd_fix-zd_rec))+torch.mean(torch.abs(zf_fix-zf_rec))
+        # Gloss_cycle_z = torch.mean(torch.abs(zd_fix-zd_rec))+torch.mean(torch.abs(zf_fix-zf_rec))
 #         Gloss_ftmz = 0.
 #         for rf,ff in zip(ftz_real,ftz_fake):
 #             Gloss_ftmz += torch.mean((rf-ff)**2)    
         # Total Loss
         # pdb.set_trace()
-        Gloss = Gloss_ali_xy+Gloss_cycle_xy+Gloss_ali_z+Gloss_ind + Gloss_cycle_z #+Gloss_ftm
+        Gloss = Gloss_ali_xy+Gloss_cycle_xy+Gloss_ali_z+Gloss_ind*100 #+ Gloss_cycle_z #+Gloss_ftm
         # Gloss = (Gloss_ftm*0.7)*(1.-0.7)/2.0 + \
         #     (Gloss_cycle_xy*0.9+Gloss_ali_xy*0.1)*(1.-0.1)/1.0 +\
         #     (Gloss_ali_z*0.7)*(1.-0.7)/2.0
+        # pdb.set_trace()
         Gloss.backward()
         self.oGyx.step()
         zerograd(self.optz)
@@ -648,7 +664,16 @@ class trainer(object):
         self.losses['Gloss_ali_z'].append(Gloss_ali_z.tolist())
         self.losses['Gloss_ali_xy'].append(Gloss_ali_xy.tolist())
         self.losses['Gloss_ind'].append(Gloss_ind.tolist())
-        
+ 
+
+    # def investigate(self):
+    #     data = next(iter(self.vld_loader))
+    #     y, z, *others = data
+
+    #     # wnx, wny, _ = noise_generator(y.shape,zyy.shape,app.DEVICE,app.RNDM_ARGS)
+    #     # visualize_gradients(y, self.F_)
+
+
     # @profile
     def train_unique(self):
         print('Training on both recorded and synthetic signals ...') 
@@ -656,7 +681,7 @@ class trainer(object):
         globals().update(opt.__dict__)
         error = {}
 
-        start_time = time.time()
+        # start_time = time.time()
         verbose = False
 
         # dataset = Toyset(nsy = 1280)
@@ -666,25 +691,32 @@ class trainer(object):
         # total_step = len(trn_loader)
         print("Let's use", torch.cuda.device_count(), "GPUs!")
 
-        
-        for epoch in range(niter):
+        bar = trange(niter) 
+        for epoch in bar:
             for b,batch in enumerate(self.trn_loader):
             # for b,batch in enumerate(self.trn_loader):
                 # pdb.set_trace()
+                # print(b)
                 # y,x,_ = batch
-                y, x, zd, zf, *other = batch
-                y   = y.to(app.DEVICE) # recorded signal
-                x   = x.to(app.DEVICE) # synthetic signal
-                zd  = zd.to(app.DEVICE)
-                zf  = zf.to(app.DEVICE)
-                # Train G/D
-                wnzd = torch.randn(*zd.shape).to(app.DEVICE)
-                wnzf = torch.randn(*zf.shape).to(app.DEVICE)
+                y, x, zd, zf,*others = batch
+                y   = y.to(app.DEVICE,  non_blocking = True) # recorded signal
+                x   = x.to(app.DEVICE,  non_blocking = True) # synthetic signal
+                zd  = zd.to(app.DEVICE, non_blocking = True) 
+                zf  = zf.to(app.DEVICE, non_blocking = True) 
+    
+                # # Train G/D
+                zd_shape = [y.shape[0], 16]
+                zf_shape = [x.shape[0], 16]
+                
+                zd   = torch.randn(*zd_shape).to(app.DEVICE, non_blocking = True)
+                zf   = torch.randn(*zf_shape).to(app.DEVICE, non_blocking = True)
+                wnzd = torch.randn(zd_shape).to( app.DEVICE, non_blocking = True)
+                wnzf = torch.randn(zf_shape).to( app.DEVICE, non_blocking = True)
                 
                 for _ in range(5):
                     self.alice_train_discriminator_adv(y,wnzd,x,wnzf)                 
                 for _ in range(1):
-                    self.alice_train_generator_adv(y,wnzd,x,wnzf,zd,zf)
+                    self.alice_train_generator_adv(y,wnzd,x,wnzf,zd,zf,epoch)
 
                 if verbose:
                     t = (time.time() - start_time)/60
@@ -694,43 +726,57 @@ class trainer(object):
                 #     wny,wnz,_ = noise_generator(y.shape,zd.shape,app.DEVICE,app.RNDM_ARGS)
                 #     print("Outside: output_size", self.F_(zcat(y,wny))[0].size())
 
+            if epoch%5== 0:
+                torch.manual_seed(100)
+                for k,v in self.losses.items():
+                    self.writer_train.add_scalar(
+                        'Loss/{}'.format(k),
+                        np.mean(np.array(v[-b:-1])),
+                        epoch)
+                figure_bb = plt.plot_generate_classic(tag = 'broadband',
+                Qec     = deepcopy(self.F_),
+                Pdc     = deepcopy(self.Gy),
+                trn_set = self.vld_loader,
+                pfx="vld_set_bb_unique",
+                opt=opt,
+                outf=outf, save=False)
 
-            if epoch%10== 0:
-                print("--- {} minutes ---".format((time.time() - start_time)/60))
-
-            
-            str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
-            str = 'epoch: {:>d} --- '.format(epoch)
-            str = str + ' | '.join(str1)
-            print(str)
+                figure_fl = plt.plot_generate_classic(tag = 'filtered',
+                Qec     = deepcopy(self.F_), 
+                Pdc     = deepcopy(self.Gx),
+                trn_set = self.vld_loader,
+                pfx     ="vld_set_fl_unique",
+                opt     =opt, 
+                outf    =outf, 
+                save=False)
+                self.writer_val.add_figure('Broadband',figure_bb,epoch)
+                self.writer_val.add_figure('Filtered', figure_fl,epoch)
+            # app.logger.info(str) 
+            Gloss = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss'][-b:-1])))
+            Dloss = '{:>5.3f}'.format(np.mean(np.array(self.losses['Dloss'][-b:-1])))
+            # str = ','.join(str1)
+            bar.set_postfix(Gloss=Gloss, Dloss = Dloss)
 
             if verbose:
                 GPUtil.showUtilization(all=True)
-
-            
-            if save_checkpoint and verbose:
-                if epoch%save_checkpoint==0:
-                    print("\t|saving model at this checkpoint : ", epoch)
-                    tsave({'epoch':epoch,'model_state_dict':self.F_.state_dict(),
-                           'optimizer_state_dict':self.oGyx.state_dict(),'loss':self.losses,},
-                           './network/{0}/Fyx_{1}.pth'.format(outf[7:],epoch))
-                    tsave({'epoch':epoch,'model_state_dict':self.Gy.state_dict(),
-                           'optimizer_state_dict':self.oGyx.state_dict(),'loss':self.losses,},
-                           './network/{0}/Gy_{1}.pth'.format(outf[7:],epoch))
-                    tsave({'epoch':epoch,'model_state_dict':self.Gx.state_dict(),
-                           'optimizer_state_dict':self.oGyx.state_dict(),'loss':self.losses,},
-                           './network/{0}/Gx_{1}.pth'.format(outf[7:],epoch))
-                   
+           
+            if epoch%100==0:
+                # # pdb.set_trace()
+                
+                print("\t|saving model at this checkpoint : ", epoch)
+                tsave({'epoch':epoch,'model_state_dict':self.F_.state_dict(),
+                       'optimizer_state_dict':self.oGyx.state_dict(),'loss':self.losses,},
+                       './network/{0}/Fyx_{1}.pth'.format(outf[7:],epoch))
+                tsave({'epoch':epoch,'model_state_dict':self.Gy.state_dict(),
+                       'optimizer_state_dict':self.oGyx.state_dict(),'loss':self.losses,},
+                       './network/{0}/Gy_{1}.pth'.format(outf[7:],epoch))
+                tsave({'epoch':epoch,'model_state_dict':self.Gx.state_dict(),
+                       'optimizer_state_dict':self.oGyx.state_dict(),'loss':self.losses,},
+                       './network/{0}/Gx_{1}.pth'.format(outf[7:],epoch))
         
-        # plt.plot_loss_explicit(losses=self.losses["Dloss_ali"],     key="Dloss_ali",     outf=outf,niter=niter)
-        # plt.plot_loss_explicit(losses=self.losses["Dloss_ali_x"],   key="Dloss_ali_x",   outf=outf,niter=niter)
-        # plt.plot_loss_explicit(losses=self.losses["Dloss_ali_y"],   key="Dloss_ali_y",   outf=outf,niter=niter)
-        # # plt.plot_loss_explicit(losses=self.losses["Dloss_ali_xy"],  key="Dloss_ali_xy",  outf=outf,niter=niter)
-        # plt.plot_loss_explicit(losses=self.losses["Gloss"],         key="Gloss",         outf=outf,niter=niter)
-        # # plt.plot_loss_explicit(losses=self.losses["Gloss_cycle_z"], key="Gloss_cycle_z", outf=outf,niter=niter)
-        # plt.plot_loss_explicit(losses=self.losses["Gloss_cycle_xy"],key="Gloss_cycle_xy",outf=outf,niter=niter)
-        # plt.plot_loss_explicit(losses=self.losses["Gloss_ali_z"],   key="Gloss_ali_z",   outf=outf,niter=niter)
-        # plt.plot_loss_explicit(losses=self.losses["Gloss_ali_xy"],  key="Gloss_ali_xy",  outf=outf,niter=niter)
+        for key, value in self.losses.items():
+            plt.plot_loss_explicit(losses=value, key=key, outf=outf,niter=niter)
+                           
     
 
     # @profile
@@ -828,9 +874,29 @@ class trainer(object):
                     zf = Variable(zf_data).to(app.DEVICE)
 
     def get_data_stead(self, dataset, dataroot, nsy = 64, batch_size = 64, rank = 0, world_size = 1):
-        ths_trn = torch.load(os.path.join(dataroot,'ths_trn_'+dataset))
-        # ths_tst = torch.load(os.path.join(dataroot,'ths_tst_'+dataset))
-        ths_vld = torch.load(os.path.join(dataroot,'ths_vld_'+dataset))
+
+        # ths_trn =  Toyset(
+        #     time       = 40.96, 
+        #     delta_t       = 0.01, 
+        #     nsy           = 1280,
+        #     num_channels  = 3,
+        #     latent_space  = [64,64],
+        #     latent_channel= [16,16]
+        # )
+
+        # ths_vld =  Toyset(
+        #     time       = 40.96, 
+        #     delta_t       = 0.01, 
+        #     nsy           = 64,
+        #     num_channels  = 3,
+        #     latent_space  = [64,64],
+        #     latent_channel= [16,16]
+        # )
+
+
+        ths_trn = torch.load(os.path.join(dataroot,'ths_trn_'+ dataset))
+        # # ths_tst = torch.load(os.path.join(dataroot,'ths_tst_'+dataset))
+        ths_vld = torch.load(os.path.join(dataroot,'ths_vld_'+ dataset))
         # vtm     = torch.load(os.path.joinopt.dataroot,'vtm.pth'))
 
         # train_sampler = torch.utils.data.distributed.DistributedSampler(
@@ -840,20 +906,20 @@ class trainer(object):
 
         # vld_sampler = torch.utils.data.distributed.DistributedSampler(
         #         ths_vld,
-        #         num_replicas=world_size,
+                # num_replicas=world_size,
         #         rank=rank)
 
         trn_loader = torch.utils.data.DataLoader(dataset=ths_trn, 
                     batch_size =batch_size, 
                     shuffle    =False,
-                    num_workers= 8,
+                    num_workers= 1,
                     pin_memory =True,
                     sampler    = None)
 
         vld_loader = torch.utils.data.DataLoader(dataset=ths_vld, 
                     batch_size =batch_size, 
                     shuffle    =False,
-                    num_workers= 9,
+                    num_workers= 1,
                     pin_memory =True,
                     sampler    = None)
 

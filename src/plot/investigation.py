@@ -63,14 +63,15 @@ def plot_signal_and_reconstruction(vld_set,encoder,decoder, outf,device='cuda'):
             plt.savefig(file)
 
 
-def model_visualization(train_set, model, fn):
+def model_visualization(train_set, model):
+    model.eval()
     hfig, (p0, p1) = plt.subplots(2,1, figsize=(6,8))
-    for model_child in model.children(): #octaveBA
+    for model_child in model.children(): 
         x = model_child(train_set)
-        fn(model_child, x, p0, p1)
-            for layer in model_child.children(): #octave
-                x = layer(train_set)
-                fn(layer,x, p0, p1) 
+        plot(model_child, x, p0, p1)
+        for layer in model_child.children(): 
+            x = layer(train_set)
+            plot(layer,x, p0, p1) 
 
 
 
@@ -88,4 +89,43 @@ def plot(layer, x, p0, p1):
         freq = fftshift(fftfreq(t.shape[-1])) 
         sf = tfft(Xt,0.01).cpu().data.numpy().copy()
         p1.plot(freq,sf, label = 'layer')
+
+def visualize_gradients(net,loss, color="C0"):
+    """
+    Args:
+        net: Object of class BaseNetwork
+        color: Color in which we want to visualize the histogram (for easier separation of activation functions)
+    """
+    net.eval()
+    act_fn_by_name = {"sigmoid": Sigmoid, "tanh": Tanh, "relu": ReLU, "leakyrelu": LeakyReLU, "elu": ELU, "swish": Swish}
+ 
+    loss.backward()
+    # We limit our visualization to the weight parameters and exclude the bias to reduce the number of plots
+    grads = {
+        name: params.grad.data.view(-1).cpu().clone().numpy()
+        for name, params in net.named_parameters()
+        if "weight" in name
+    }
+    net.zero_grad()
+
+    # Plotting
+    columns = len(grads)
+    fig, ax = plt.subplots(1, columns, figsize=(columns * 3.5, 2.5))
+    fig_index = 0
+    for key in grads:
+        key_ax = ax[fig_index % columns]
+        sns.histplot(data=grads[key], bins=30, ax=key_ax, color=color, kde=True)
+        key_ax.set_title(str(key))
+        key_ax.set_xlabel("Grad magnitude")
+        fig_index += 1
+    fig.suptitle(
+        f"Gradient magnitude distribution for activation function {net.config['act_fn']['name']}", fontsize=14, y=1.05
+    )
+    fig.subplots_adjust(wspace=0.45)
+    plt.show()
+    plt.savefig("./imgs/gradient.png")
+    plt.close()
+
+
+
 

@@ -763,7 +763,7 @@ def plot_error(error, outf):
     plt.close()
 
      
-def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./imgs'):
+def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./imgs',save = True):
     #Qec.to(dev),Pdc.to(dev)
     Qec.eval(),Pdc.eval()
     Qec.to(dtype =torch.float64)
@@ -772,6 +772,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
     cnt=0
     EG = []
     PG = []
+    figure = []
     sns.set(style="whitegrid")
     # pdb.set_trace()
     # clr = sns.color_palette('Paired',5)
@@ -788,25 +789,33 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             Xt = Variable(xt_data).to(dev, dtype =torch.float64)
             Xf = Variable(xf_data).to(dev, dtype =torch.float64)
             zt = Variable(zt_data).to(dev, dtype =torch.float64)
+
+            if cnt == 3 and save == False:
+                break
+            # zt_shape = [zt.shape[0], 16]
+            # zt = torch.randn(*zt_shape).to(dev, non_blocking = True)
+
             wnx,wnz,wn1 = noise_generator(Xt.shape,zt.shape,dev,app.RNDM_ARGS)
-            X_inp = zcat(Xf,wnx.to(dev))
+            X_inp = zcat(Xt,wnx.to(dev))
 
             # ztr = Qec(X_inp).to(dev)
 
             # breakpoint()
+            # pdb.set_trace()
             # ztr = Qec(X_inp)[0] if 'unique' in pfx else Qec(X_inp)
             if 'unique' in pfx:
-                zy,zdf_gen,*other=  Qec(X_inp)
-                # wn = torch.empty(*zy.shape).normal_(**app.RNDM_ARGS).to(dev)
-                wn = torch.zeros_like(zy)
-                ztr = zcat(zdf_gen,wn)
+                # pdb.set_trace()
+                zy,zdf_gen,*other =  Qec(X_inp)
+                # wn = torch.empty(zt_shape).normal_(**app.RNDM_ARGS).to(dev)
+                # wn = torch.zeros_like(zt)
+                ztr = zcat(zdf_gen,zy)
             else:
                 ztr = Qec(X_inp)
 
             ztr = ztr.to(dev)
             # pdb.set_trace()
              # ztr = latent_resampling(Qec(X_inp),zt.shape[1],wn1)
-            z_inp = zcat(ztr,wnz.to(dev))
+            z_inp = zcat(ztr)
             # breakpoint()
             # z_inp = zcat(ztr,torch.zeros_like(wnz).to(dev))
             # z_pre = zcat(zt,wnz.to(dev))
@@ -824,24 +833,29 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             for (io, ig) in zip(range(Xt.shape[0]),range(Xr.shape[0])):
                 ot,gt = Xt[io, 1, :]  ,Xr[ig, 1, :]
                 of,gf,ff = Xt_fsa[io,1,:],Xr_fsa[ig,1,:],Xf_fsa[io,1,:]
+
+                if io==1 and save == False:
+                    break
                 
-                plot_tf_gofs(ot,gt,dt=vtm[1]-vtm[0],t0=0.0,fmin=0.1,fmax=30.0,
-                    nf=100,w0=6,norm='global',st2_isref=True,a=10.,k=1.,left=0.1,
-                    bottom=0.125, h_1=0.2,h_2=0.125,h_3=0.2, w_1=0.2,w_2=0.6,
-                    w_cb=0.01, d_cb=0.0,show=False,plot_args=['k', 'r', 'b'],
-                    ylim=0., clim=0.)
-                EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
-                    st2_isref=True,a=10.,k=1))
-                PG.append(pg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
-                    st2_isref=True,a=10.,k=1))
-                plt.savefig(os.path.join(outf,"gof_bb_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
-                            bbox_inches='tight',dpi = 300)
-                # plt.savefig(os.path.join(outf,"gof_bb_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
-                #            format='eps',bbox_inches='tight',dpi = 300)
-                app.logger.info("saving gof_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
-                plt.close()
+                # plot_tf_gofs(ot,gt,dt=vtm[1]-vtm[0],t0=0.0,fmin=0.1,fmax=30.0,
+                #     nf=100,w0=6,norm='global',st2_isref=True,a=10.,k=1.,left=0.1,
+                #     bottom=0.125, h_1=0.2,h_2=0.125,h_3=0.2, w_1=0.2,w_2=0.6,
+                #     w_cb=0.01, d_cb=0.0,show=False,plot_args=['k', 'r', 'b'],
+                #     ylim=0., clim=0.)
+                # EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
+                #     st2_isref=True,a=10.,k=1))
+                # PG.append(pg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
+                #     st2_isref=True,a=10.,k=1))
+
+                # if save:
+                #     plt.savefig(os.path.join(outf,"gof_bb_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
+                #             bbox_inches='tight',dpi = 300)
+                # # plt.savefig(os.path.join(outf,"gof_bb_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
+                # #            format='eps',bbox_inches='tight',dpi = 300)
+                # app.logger.info("saving gof_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
+                # plt.close()
                 
-                _,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
+                fig,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
                 # hax0.plot(vtm,gt,color=clr[3],label=r'$G_t(zcat(F_x(\mathbf{y},N(\mathbf{0},\mathbf{I})))$',linewidth=1.2)
                 hax0.plot(vtm,gt,color=clr[3],label=r'$G_t(zcat(F_x(\mathbf{y},\mathbf{0}))$',linewidth=1.2)
                 hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{y}$',linewidth=1.2)
@@ -861,14 +875,18 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 hax1.set_ylabel('A(f) [1]',fontsize=15,fontweight='bold')
                 hax0.legend(loc = "lower right",frameon=False)
                 hax1.legend(loc = "lower right",frameon=False)
-                plt.savefig(os.path.join(outf,"res_bb_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
+
+                if save:
+                    plt.savefig(os.path.join(outf,"res_bb_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
                             bbox_inches='tight',dpi = 500)
                 # plt.savefig(os.path.join(outf,"res_bb_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
                 #             format='eps',bbox_inches='tight',dpi = 500)
                 app.logger.info("saving res_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
                 plt.close()
                 
-                cnt += 1
+                
+                figure.append(fig)
+            cnt += 1
 
             # for (io, ig) in zip(range(Xt.shape[0]),range(Xp.shape[0])):
             #    ot,gt = Xt[io, 1, :]  ,Xp[ig, 1, :]
@@ -909,8 +927,9 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             #                format='eps',bbox_inches='tight',dpi = 500)
             #    plt.close()
             #    cnt += 1
-        print("savefig eg_pg ...")
-        plot_eg_pg(EG,PG, outf,pfx)
+            if save:
+                print("savefig eg_pg ...")
+                plot_eg_pg(EG,PG, outf,pfx)
             
     elif 'filtered' in tag:
         for _,batch in enumerate(trn_set):
@@ -922,8 +941,12 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             Xt = Variable(xt_data).to(dev, dtype =torch.float64)
             Xf = Variable(xf_data).to(dev, dtype =torch.float64)
             zf = Variable(zf_data).to(dev, dtype =torch.float64)
-            wnx,wnz,wn1 = noise_generator(Xt.shape,zf.shape,dev,app.RNDM_ARGS)
-            X_inp = zcat(Xt,wnx)
+
+            if cnt == 3 and not save == False:
+                break
+
+            wnx,wnz,wn1 = noise_generator(Xf.shape,zf.shape,dev,app.RNDM_ARGS)
+            X_inp = zcat(Xf,wnx)
             # ztr = Qec(X_inp)
             # pdb.set_trace()
             # ztr = Qec(X_inp)[1] if 'unique' in pfx else Qec(X_inp)
@@ -933,7 +956,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             else:
                 ztr = Qec(X_inp)
             # ztr = latent_resampling(Qec(X_inp),zf.shape[1],wn1)
-            z_inp = zcat(ztr,wnz)
+            z_inp = zcat(ztr)
             # z_inp = zcat(ztr,torch.zeros_like(wnz).to(dev))
             Xr = Pdc(z_inp)
             Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
@@ -945,21 +968,25 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             for (io, ig) in zip(range(Xf.shape[0]),range(Xr.shape[0])):
                 ot,gt = Xf[io, 1, :]  ,Xr[ig, 1, :]
                 of,gf = Xf_fsa[io,1,:],Xr_fsa[ig,1,:]
-                plot_tf_gofs(ot,gt,dt=vtm[1]-vtm[0],t0=0.0,fmin=0.1,fmax=20.0,
-                        nf=100,w0=6,norm='global',st2_isref=True,a=10.,k=1.,left=0.1,
-                        bottom=0.125, h_1=0.2,h_2=0.125,h_3=0.2, w_1=0.2,w_2=0.6,
-                        w_cb=0.01, d_cb=0.0,show=False,plot_args=['k', 'r', 'b'],
-                        ylim=0., clim=0.)
-                EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=20.0,nf=100,w0=6,norm='global',
-                    st2_isref=True,a=10.,k=1))
-                PG.append(pg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=20.0,nf=100,w0=6,norm='global',
-                    st2_isref=True,a=10.,k=1))
-                plt.savefig(os.path.join(outf,"gof_fl_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
-                            bbox_inches='tight',dpi = 300)
-                app.logger.info("saving gof_aae_%s_%u_%u ... "%(pfx,cnt,io))
-                # plt.savefig(os.path.join(outf,"gof_fl_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
-                #            format='eps',bbox_inches='tight',dpi = 500)
-                plt.close()
+
+                if io == 1 and save == False:
+                    break
+                # plot_tf_gofs(ot,gt,dt=vtm[1]-vtm[0],t0=0.0,fmin=0.1,fmax=20.0,
+                #         nf=100,w0=6,norm='global',st2_isref=True,a=10.,k=1.,left=0.1,
+                #         bottom=0.125, h_1=0.2,h_2=0.125,h_3=0.2, w_1=0.2,w_2=0.6,
+                #         w_cb=0.01, d_cb=0.0,show=False,plot_args=['k', 'r', 'b'],
+                #         ylim=0., clim=0.)
+                # EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=20.0,nf=100,w0=6,norm='global',
+                #     st2_isref=True,a=10.,k=1))
+                # PG.append(pg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=20.0,nf=100,w0=6,norm='global',
+                #     st2_isref=True,a=10.,k=1))
+                # if save:
+                #     plt.savefig(os.path.join(outf,"gof_fl_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
+                #             bbox_inches='tight',dpi = 300)
+                # app.logger.info("saving gof_aae_%s_%u_%u ... "%(pfx,cnt,io))
+                # # plt.savefig(os.path.join(outf,"gof_fl_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
+                # #            format='eps',bbox_inches='tight',dpi = 500)
+                # plt.close()
                 hfg,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
                 hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{x}$',linewidth=1.2)
                 # hax0.plot(vtm,gt,color=clr[3],label=r'$G_m(F_m(\mathbf{x}))$',linewidth=1.2)
@@ -979,16 +1006,23 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 hax1.set_ylabel('A(f) [1]',fontsize=15,fontweight='bold')
                 hax0.legend(loc = "lower right",frameon=False)
                 hax1.legend(loc = "lower right",frameon=False)
-                plt.savefig(os.path.join(outf,"res_fl_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
+                if save:
+                    plt.savefig(os.path.join(outf,"res_fl_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
                             bbox_inches='tight',dpi = 500)
                 # plt.savefig(os.path.join(outf,"res_fl_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
                 #             format='eps',bbox_inches='tight',dpi = 500)
                 plt.close()
                 app.logger.info("saving res_fl_aae_%s_%u_%u ... "%(pfx,cnt,io))
                 
-                cnt += 1
-            app.logger.info("savefig eg_pg ...")
-            plot_eg_pg(EG,PG, outf,pfx)
+               
+                figure.append(hfg)
+            cnt += 1
+
+            if save:
+                app.logger.info("savefig eg_pg ...")
+                plot_eg_pg(EG,PG, outf,pfx)
+
+    return figure
         # plt.scatter(EG,PG,c = 'red')
         # plt.xlabel("EG")
         # plt.ylabel("PG")
