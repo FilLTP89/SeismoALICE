@@ -123,7 +123,7 @@ class trainer(object):
         net = Network(DataParalleleFactory())
 
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
-        torch.manual_seed(100)
+        # torch.manual_seed(100)
 
         self.trn_loader, self.vld_loader = trn_loader, vld_loader
         # self.trn_loader, self.vld_loader = self.get_data_stead(
@@ -137,9 +137,15 @@ class trainer(object):
             n = self.strategy['unique']
             # pdb.set_trace()
 
-            self.F_  = net.Encoder(opt.config['F'],  opt).cuda()
-            self.Gy  = net.Decoder(opt.config['Gy'], opt).cuda()
-            self.Gx  = net.Decoder(opt.config['Gx'], opt).cuda()
+            self.F_  = net.Encoder(opt.config['F'],  opt)
+            self.Gy  = net.Decoder(opt.config['Gy'], opt)
+            self.Gx  = net.Decoder(opt.config['Gx'], opt)
+
+            self.F_  = nn.DataParallel(self.F_).cuda()
+            self.Gy  = nn.DataParallel(self.Gy).cuda()
+            self.Gx  = nn.DataParallel(self.Gx).cuda()
+
+
 
             # t = torch.randn(10,6,4096).cuda()
             # zy, *other = self.F_(t)
@@ -173,17 +179,32 @@ class trainer(object):
                 ## Discriminators
                 # pdb.!()
                 # pdb.set_trace()
-                self.Dy   = net.DCGAN_Dx(opt.config['Dy'],  opt).cuda()
-                self.Dx   = net.DCGAN_Dx(opt.config['Dx'],  opt).cuda()
-                self.Dzb  = net.DCGAN_Dz(opt.config['Dzb'], opt).cuda()
-                self.Dzf  = net.DCGAN_Dz(opt.config['Dzf'], opt).cuda()
-                self.Dyz  = net.DCGAN_DXZ(opt.config['Dyz'],opt).cuda()
-                self.Dxz  = net.DCGAN_DXZ(opt.config['Dxz'],opt).cuda()
-                self.Dzzb = net.DCGAN_Dz(opt.config['Dzzb'],opt).cuda()
-                self.Dzzf = net.DCGAN_Dz(opt.config['Dzzf'],opt).cuda()
-                self.Dxx  = net.DCGAN_Dx(opt.config['Dxx'], opt).cuda()
-                self.Dyy  = net.DCGAN_Dx(opt.config['Dyy'], opt).cuda()
-                self.Dzyx = net.DCGAN_Dz(opt.config['Dzyx'],opt).cuda()
+                self.Dy   = net.DCGAN_Dx(opt.config['Dy'],  opt)
+                self.Dx   = net.DCGAN_Dx(opt.config['Dx'],  opt)
+                self.Dzb  = net.DCGAN_Dz(opt.config['Dzb'], opt)
+                self.Dzf  = net.DCGAN_Dz(opt.config['Dzf'], opt)
+                self.Dyz  = net.DCGAN_DXZ(opt.config['Dyz'],opt)
+                self.Dxz  = net.DCGAN_DXZ(opt.config['Dxz'],opt)
+                self.Dzzb = net.DCGAN_Dz(opt.config['Dzzb'],opt)
+                self.Dzzf = net.DCGAN_Dz(opt.config['Dzzf'],opt)
+                self.Dxx  = net.DCGAN_Dx(opt.config['Dxx'], opt)
+                self.Dyy  = net.DCGAN_Dx(opt.config['Dyy'], opt)
+                self.Dzyx = net.DCGAN_Dz(opt.config['Dzyx'],opt)
+
+                self.Dy   = nn.DataParallel(self.Dy).cuda()
+                self.Dx   = nn.DataParallel(self.Dx).cuda()
+                self.Dzb  = nn.DataParallel(self.Dzb).cuda()
+                self.Dzf  = nn.DataParallel(self.Dzf).cuda()
+                self.Dyz  = nn.DataParallel(self.Dxz).cuda()
+                self.Dxz  = nn.DataParallel(self.Dxz).cuda()
+                self.Dzzb = nn.DataParallel(self.Dzzb).cuda()
+                self.Dzzf = nn.DataParallel(self.Dzzf).cuda()
+                self.Dxx  = nn.DataParallel(self.Dxx).cuda()
+                self.Dyy  = nn.DataParallel(self.Dyy).cuda()
+                self.Dzyx = nn.DataParallel(self.Dzyx).cuda()
+
+
+
                 
                 self.Dnets.append(self.Dx)
                 self.Dnets.append(self.Dy)
@@ -220,7 +241,7 @@ class trainer(object):
         count_parameters(self.FGf)
         print("Parameters of Discriminators ")
         count_parameters(self.Dnets)
-        self.bce_loss = BCE(reduction='mean')
+        # self.bce_loss = BCE(reduction='mean')
 
 
         # x, *other = next(iter(self.trn_loader))
@@ -232,16 +253,16 @@ class trainer(object):
                        'Gloss_ali_z':[0],
                        'Gloss_cycle_xy':[0],
                        'Gloss_ali_xy':[0],
-                       'Gloss_ind':[0],
+                       # 'Gloss_ind':[0],
                        # 'Gloss_ftm':[0],
                        # 'Gloss_cycle_z':[0],
                        'Dloss_ali':[0],
                        'Dloss_ali_x':[0],
                        'Dloss_ali_y':[0],
-                       'Dloss_ind':[0]
+                       # 'Dloss_ind':[0]
                        # 'Dloss_ali_xy':[0],
                        # 'Dloss_ali_z':[0]
-                       }
+        }
         # pdb.set_trace()
     # def save_gradient_g_tb(self, net,tag,epoch): 
     #     for name, weight in net.named_parameters():
@@ -285,7 +306,7 @@ class trainer(object):
     def discriminate_yz(self,x,xr,z,zr):
         # Discriminate real
         # pdb.set_trace()
-        # torch.onnx.export(self.Dzb,zr,outf+"/Dzb.onnx")
+        # torch.onnnx.export(self.Dzb,zr,outf+"/Dzb.onnx")
         # torch.onnx.export(self.Dy,x,outf+"/Dy.onnx")
         ftz = self.Dzb(zr) #OK : no batchNorm
         ftx = self.Dy(x) #OK : with batchNorm
@@ -338,8 +359,7 @@ class trainer(object):
     #     DzX  = ftzX[0]
     #     ftf += ftzX[1]
         
-    #     return DXz,DzX,ftr,ftf
-
+    #     return DXz,DzX,ftr,ft
     # @profile
     def discriminate_xx(self,x,xr):
         # pdb.set_trace()
@@ -381,6 +401,8 @@ class trainer(object):
         zerograd(self.optz)
         modalite(self.FGf, mode = 'eval')
         modalite(self.Dnets, mode ='train')
+
+        # zero =  torch.zeros(1, requires_grad=True).cuda()
         
         # 0. Generate noise
         wnx,wnzf,_ = noise_generator(x.shape,zxy.shape,app.DEVICE,app.RNDM_ARGS)
@@ -410,8 +432,11 @@ class trainer(object):
 
         # self.writer.add_histogram('Latent/broadband',zd_gen)
         # self.writer.add_histogram('Latent/filtered',zf_gen)
-        
-        D_zyx,D_zxy = self.discriminate_zxy(zyx_F,zxy_F)
+        ##############
+        # D_zyx,D_zxy = self.discriminate_zxy(zyx_F,zxy_F)
+        # Dloss_ind = -torch.mean(ln0c(D_zyx)+ln0c(1.0-D_zxy))
+        #############
+
         #zd_ind = zcat(zfd_gen,zfd_ind) # zy generated by x
         #zf_ind = zcat(zdf_gen,zdf_ind) # zx generated by y
         ## concatenate : first common part zxy and then zy or zx
@@ -423,22 +448,28 @@ class trainer(object):
         #     self.bce_loss(Dfake_zzy,o0l(Dfake_zzy))+\
         # Dloss_ind_x = self.bce_loss(Dreal_zzx,o1l(Dreal_zzx))+\
         #     self.bce_loss(Dfake_zzx,o0l(Dfake_zzx))
-        Dloss_ind = -torch.mean(ln0c(D_zyx)+ln0c(1.0-D_zxy))
+        
         #Dloss_ind_y = -torch.mean(ln0c(Dreal_zzy)+ln0c(1.0-Dfake_zzy))
         #Dloss_ind_x = -torch.mean(ln0c(Dreal_zzx)+ln0c(1.0-Dfake_zzx))
         # Dloss_ind_y = -(torch.mean(Dreal_zzy)-torch.mean(Dfake_zzy))
         # Dloss_ind_x = -(torch.mean(Dreal_zzx)-torch.mean(Dfake_zzx))
         #Dloss_ind =  Dloss_ind_x + Dloss_ind_y
         # 3. Cross-Discriminate XZ
-        Dyz,Dzy = self.discriminate_yz(y,y_gen,zcat(zxy,zyy),zyy_gen)
+        ####################################
+        # Dyz,Dzy = self.discriminate_yz(y,y_gen,zcat(zxy,zyy),zyy_gen)
+        # Dloss_ali_y = -torch.mean(ln0c(Dzy)+ln0c(1.0-Dyz))
+        ####################################
+
+
         Dxz,Dzx = self.discriminate_xz(x,x_gen,zxy,zxy_gen)
+        Dloss_ali_x = -torch.mean(ln0c(Dzx)+ln0c(1.0-Dxz))
         # pdb.set_trace()
         # 4. Compute ALI discriminator loss
         # Dloss_ali_y = self.bce_loss(Dzy,o1l(Dzy)) + self.bce_loss(Dyz,o0l(Dyz))
         # Dloss_ali_x = self.bce_loss(Dzx,o1l(Dzx)) + self.bce_loss(Dxz,o0l(Dxz))
-        Dloss_ali_y = -torch.mean(ln0c(Dzy)+ln0c(1.0-Dyz))
-        Dloss_ali_x = -torch.mean(ln0c(Dzx)+ln0c(1.0-Dxz))
-        Dloss_ali = Dloss_ali_x + Dloss_ali_y
+        
+        
+        Dloss_ali = Dloss_ali_x #+ Dloss_ali_y
 
         wnx,wnzf,_ = noise_generator(x.shape,zxy.shape,app.DEVICE,app.RNDM_ARGS)
         wny,wnzd,_ = noise_generator(y.shape,zyy.shape,app.DEVICE,app.RNDM_ARGS)
@@ -474,13 +505,19 @@ class trainer(object):
         # z_rec = latent_resampling(self.Fef(X_gen),nzf,wn1)
 
         # 3. Cross-Discriminate XX
-        Dreal_y,Dfake_y = self.discriminate_yy(y,y_gen)
+        ######################################
+        # Dreal_y,Dfake_y = self.discriminate_yy(y,y_gen)
+        # Dloss_rec_y = -torch.mean(ln0c(Dreal_y)+ln0c(1.0-Dfake_y))
+        ######################################
+        
         Dreal_x,Dfake_x = self.discriminate_xx(x,x_gen)
+        Dloss_rec_x = -torch.mean(ln0c(Dreal_x)+ln0c(1.0-Dfake_x))
+
 
         # Dloss_rec_y = self.bce_loss(Dreal_y,o1l(Dreal_y))+self.bce_loss(Dfake_y,o0l(Dfake_y))
         # Dloss_rec_x = self.bce_loss(Dreal_x,o1l(Dreal_x))+self.bce_loss(Dfake_x,o0l(Dfake_x))
-        Dloss_rec_y = -torch.mean(ln0c(Dreal_y)+ln0c(1.0-Dfake_y))
-        Dloss_rec_x = -torch.mean(ln0c(Dreal_x)+ln0c(1.0-Dfake_x))
+        
+        
         # Dloss_rec_y = -(torch.mean(Dreal_y)-torch.mean(Dfake_y))
         # Dloss_rec_x = -(torch.mean(Dreal_x)-torch.mean(Dfake_x))
 
@@ -493,20 +530,28 @@ class trainer(object):
         #     self.bce_loss(Dreal_x,o1l(Dreal_x))+self.bce_loss(Dfake_x,o1l(Dfake_x))
         #4. Cross-Discriminate ZZ
         # pdb.set_trace()
-        Dreal_zd,Dfake_zd = self.discriminate_zzb(zcat(zxy,zyy),zyy_gen)
+
+        #####################################
+        # Dreal_zd,Dfake_zd = self.discriminate_zzb(zcat(zxy,zyy),zyy_gen)
+        # Dloss_rec_zy = -torch.mean(ln0c(Dreal_zd)+ln0c(1.0-Dfake_zd))
+        #####################################
+        
         Dreal_zf,Dfake_zf = self.discriminate_zzf(zxy,zxy_gen)
+        Dloss_rec_zx = -torch.mean(ln0c(Dreal_zf)+ln0c(1.0-Dfake_zf))
         # Dreal_z, Dfake_z  = self.discriminate_zz(zf,zd)
         
         # Dloss_rec_z = self.bce_loss(Dreal_zd,o1l(Dreal_zd))+self.bce_loss(Dfake_zd,o0l(Dfake_zd))+\
         #     self.bce_loss(Dreal_zf,o1l(Dreal_zf))+self.bce_loss(Dfake_zf,o0l(Dfake_zf))
             # self.bce_loss(Dreal_z,o1l(Dreal_z))+self.bce_loss(Dfake_z,o0l(Dfake_z))
-        Dloss_rec_zy = -torch.mean(ln0c(Dreal_zd)+ln0c(1.0-Dfake_zd))
-        Dloss_rec_zx = -torch.mean(ln0c(Dreal_zf)+ln0c(1.0-Dfake_zf))
+        
+        
 
         # Total loss
-        Dloss_rec = Dloss_rec_x+Dloss_rec_y+Dloss_rec_zx+Dloss_rec_zy
+        # Dloss_rec = Dloss_rec_x + Dloss_rec_y + Dloss_rec_zx + Dloss_rec_zy
+        Dloss_rec = Dloss_rec_x + Dloss_rec_zx
 
-        Dloss = Dloss_ali + Dloss_ind + Dloss_rec
+        # Dloss = Dloss_ali + Dloss_ind + Dloss_rec
+        Dloss = Dloss_ali + Dloss_rec
 
         Dloss.backward()
 
@@ -515,8 +560,8 @@ class trainer(object):
         self.losses['Dloss'].append(Dloss.tolist())  
         self.losses['Dloss_ali'].append(Dloss_ali.tolist())  
         self.losses['Dloss_ali_x'].append(Dloss_ali_x.tolist())
-        self.losses['Dloss_ali_y'].append(Dloss_ali_y.tolist())
-        self.losses['Dloss_ind'].append(Dloss_ind.tolist())
+        # self.losses['Dloss_ali_y'].append(Dloss_ali_y.tolist())
+        # self.losses['Dloss_ind'].append(Dloss_ind.tolist())
 
         # self.losses['Dloss_ali_xy'].append(Dloss_ali_xy.tolist())  
         # self.losses['Dloss_ali_z'].append(Dloss_ali_z.tolist())
@@ -527,12 +572,15 @@ class trainer(object):
         zerograd(self.optz)
         modalite(self.FGf,   mode = 'train')
         modalite(self.Dnets, mode ='train')
+
+        # zero = torch.zeros(1, requires_grad=True).cuda()
         # self.F_.train() , self.Gx.train() , self.Gy.train()
         # self.Dy.train() , self.Dx.train() , self.Dz.train()
         # self.Dyz.train(), self.Dxz.train() ,self.Dzzb.train()
         # self.Dyy.train(), self.Dxx.train(), self.Dzzf.train()
         # l1 = torch.nn.L1Loss()
         # 0. Generate noise
+        # pdb.set_trace()
         wny,wnzd,_ = noise_generator(y.shape,zyy.shape,app.DEVICE,app.RNDM_ARGS)
         wnx,wnzf,_ = noise_generator(x.shape,zxy.shape,app.DEVICE,app.RNDM_ARGS)
          
@@ -552,26 +600,29 @@ class trainer(object):
         # zd_gen, _ = self.F_(y_inp)
         # _, zf_gen = self.F_(x_inp)
         zyy_F,zyx_F,*other = self.F_(zcat(y,wny)) # zdd_gen = zy, zdf_gen = zyx
-        _,zxy_F, *other = self.F_(zcat(x,wnx)) # zff_gen = zx, zfd_gen = zxy
+        _,zxy_F, *other    = self.F_(zcat(x,wnx)) # zff_gen = zx, zfd_gen = zxy
  
         zyy_gen = zcat(zyx_F,zyy_F) # zy generated by y
         zxy_gen = zcat(zxy_F) # zx generated by x
         # zf_gen = zfd_gen # zx generated by x
         # print(zyy_gen.shape)
-        if epoch % 10:
-            for i in range(zyy_gen.shape[-1]):
-                self.writer_train.add_histogram('CODINGS/zyy_gen/{}'.format(i),zyy_gen[:,i].flatten(),global_step=epoch)
-            for i in range(zxy_gen.shape[-1]):
-                self.writer_train.add_histogram('CODINGS/zxy_gen/{}'.format(i),zxy_gen[:,i].flatten(),global_step=epoch)
+        # if epoch % 10:
+        #     for i in range(zyy_gen.shape[-1]):
+        #         self.writer_train.add_histogram('CODINGS/zyy_gen/{}'.format(i),zyy_gen[:,i].flatten(),global_step=epoch)
+        #     for i in range(zxy_gen.shape[-1]):
+        #         self.writer_train.add_histogram('CODINGS/zxy_gen/{}'.format(i),zxy_gen[:,i].flatten(),global_step=epoch)
  
         #zd_ind = zcat(zfd_gen,zfd_ind) # zy generated by x
         #zf_ind = zcat(zdf_gen,zdf_ind) # zx generated by y
 
         # ici il faut les discriminateurs z
-        D_zyx,D_zxy = self.discriminate_zxy(zyx_F,zxy_F)
+        ###########################
+        # D_zyx,D_zxy = self.discriminate_zxy(zyx_F,zxy_F)
+        # Gloss_ind = torch.mean(-D_zxy+D_zyx)
+        ############################
         #Dreal_zzy,Dfake_zzy = self.discriminate_zzb(zd,zd_ind)
         #Dreal_zzx,Dfake_zzx = self.discriminate_zzf(zf,zf_ind)
-        Gloss_ind = torch.mean(-D_zxy+D_zyx)
+        
         #Gloss_ind_y = self.bce_loss(Dfake_zzy,o1l(Dfake_zzy))
         #Gloss_ind_x = self.bce_loss(Dfake_zzx,o1l(Dfake_zzx))
 
@@ -587,12 +638,17 @@ class trainer(object):
          
         # 3. Cross-Discriminate XZ
         # pdb.set_trace()
-        Dyz,Dzy = self.discriminate_yz(y,y_gen,zcat(zxy,zyy),zyy_gen)
+        ##################################
+        # Dyz,Dzy = self.discriminate_yz(y,y_gen,zcat(zxy,zyy),zyy_gen)
+        #################################
         Dxz,Dzx = self.discriminate_xz(x,x_gen,zxy,zxy_gen)
 
         # 4. Compute ALI Generator loss 
-        Gloss_ali = torch.mean(-Dyz+Dzy)+torch.mean(-Dxz+Dzx)
-        Gloss_ftm = 0.0
+        # Gloss_ali_x = -torch.mean(ln0c(Dxz)+ln0c(Dzx))
+        # Gloss_ali_y = -torch.mean(ln0c(Dyz)+ln0c(Dzy))
+        Gloss_ali = torch.mean(-Dxz+Dzx) #+torch.mean(-Dyz+Dzy)
+        # Gloss_ali = Gloss_ali_x #+ Gloss_ali_y
+        # Gloss_ftm = zero
         # for rf,ff in zip(ftxz,ftzx):
         #     Gloss_ftm += torch.mean((rf-ff)**2)
         # for rf,ff in zip(ftyz,ftzy):
@@ -624,37 +680,45 @@ class trainer(object):
     
         # pdb.set_trace()
         # 3. Cross-Discriminate XX
-        _,Dfake_y = self.discriminate_yy(y,y_gen)
+        # _,Dfake_y = self.discriminate_yy(y,y_gen)
         _,Dfake_x = self.discriminate_xx(x,x_gen)
         # penality 
-        penalty = 1.0
+        # penalty = 1.0
         # Gloss_ali_xy = self.bce_loss(Dfake_y,o1l(Dfake_y))+penalty*self.bce_loss(Dfake_x,o1l(Dfake_x))
-        Gloss_ali_xy = torch.mean(Dfake_y + Dfake_x)
-        Gloss_cycle_xy = torch.mean(torch.abs(y-y_rec))+torch.mean(torch.abs(x-x_rec))+\
-            torch.mean(torch.abs(zcat(zxy,zyy)-zyy_rec))+torch.mean(torch.abs(zxy-zxy_rec))
+        # Gloss_ali_xy   = torch.mean(Dfake_y + Dfake_x)
+        Gloss_ali_xy   = torch.mean(Dfake_x)
+        Gloss_cycle_xy = torch.mean(torch.abs(x-x_rec)) #+ torch.mean(torch.abs(y-y_rec))
+                        
+            # torch.mean(torch.abs(zcat(zxy,zyy)-zyy_rec))+torch.mean(torch.abs(zxy-zxy_rec))
         # Gloss_cycle_xy = torch.mean((y-y_rec)**2)+torch.mean((x-x_rec)**2)
 #         for rf,ff in zip(ftX_real,ftX_fake):
 #             Gloss_ftmX += torch.mean((rf-ff)**2)
         
         # 4. Cross-Discriminate ZZ
         # pdb.set_trace()
-        _,Dfake_zd = self.discriminate_zzb(zcat(zxy,zyy),zyy_gen)
+        # _,Dfake_zd = self.discriminate_zzb(zcat(zxy,zyy),zyy_gen)
         # pdb.set_trace()
         _,Dfake_zf = self.discriminate_zzf(zxy,zxy_gen)
         # Gloss_ali_z = self.bce_loss(Dfake_zd,o1l(Dfake_zd))+self.bce_loss(Dfake_zf,o1l(Dfake_zf))
-        Gloss_ali_z   = torch.mean(Dfake_zd + Dfake_zf)
+        # Gloss_ali_z   = torch.mean(Dfake_zd + Dfake_zf)
+        Gloss_ali_z   = torch.mean(Dfake_zf)
         # Gloss_cycle_z = torch.mean(torch.abs(zd_fix-zd_rec))+torch.mean(torch.abs(zf_fix-zf_rec))
 #         Gloss_ftmz = 0.
 #         for rf,ff in zip(ftz_real,ftz_fake):
 #             Gloss_ftmz += torch.mean((rf-ff)**2)    
         # Total Loss
-        # pdb.set_trace()
-        Gloss = Gloss_ali_xy+Gloss_cycle_xy+Gloss_ali_z+Gloss_ind*100 #+ Gloss_cycle_z #+Gloss_ftm
+        
+        
+        Gloss = Gloss_ali_xy+Gloss_cycle_xy+Gloss_ali_z #+Gloss_ind #+ Gloss_cycle_z #+Gloss_ftm
+        
         # Gloss = (Gloss_ftm*0.7)*(1.-0.7)/2.0 + \
         #     (Gloss_cycle_xy*0.9+Gloss_ali_xy*0.1)*(1.-0.1)/1.0 +\
         #     (Gloss_ali_z*0.7)*(1.-0.7)/2.0
         # pdb.set_trace()
+        # start_time = time.time()
         Gloss.backward()
+        # print(f"Time : {time.time() - start_time}")
+        # pdb.set_trace()
         self.oGyx.step()
         zerograd(self.optz)
          
@@ -663,7 +727,7 @@ class trainer(object):
         self.losses['Gloss_cycle_xy'].append(Gloss_cycle_xy.tolist())
         self.losses['Gloss_ali_z'].append(Gloss_ali_z.tolist())
         self.losses['Gloss_ali_xy'].append(Gloss_ali_xy.tolist())
-        self.losses['Gloss_ind'].append(Gloss_ind.tolist())
+        # self.losses['Gloss_ind'].append(Gloss_ind.tolist())
  
 
     # def investigate(self):
@@ -681,14 +745,14 @@ class trainer(object):
         globals().update(opt.__dict__)
         error = {}
 
-        # start_time = time.time()
+        start_time = time.time()
         verbose = False
 
         # dataset = Toyset(nsy = 1280)
         # trn_loader, vld_loader =  get_dataset(dataset, rank = 0, 
         #     batch_size = 256, nsy = 1280, world_size = 1)
 
-        # total_step = len(trn_loader)
+        total_step = len(self.trn_loader)
         print("Let's use", torch.cuda.device_count(), "GPUs!")
 
         bar = trange(niter) 
@@ -698,21 +762,23 @@ class trainer(object):
                 # pdb.set_trace()
                 # print(b)
                 # y,x,_ = batch
+
                 y, x, zd, zf,*others = batch
-                y   = y.to(app.DEVICE,  non_blocking = True) # recorded signal
-                x   = x.to(app.DEVICE,  non_blocking = True) # synthetic signal
+                y   = y.to( app.DEVICE, non_blocking = True) # recorded signal
+                x   = x.to( app.DEVICE, non_blocking = True) # synthetic signal
                 zd  = zd.to(app.DEVICE, non_blocking = True) 
                 zf  = zf.to(app.DEVICE, non_blocking = True) 
     
-                # # Train G/D
-                zd_shape = [y.shape[0], 16]
-                zf_shape = [x.shape[0], 16]
+                # getting noise shape
+                zd_shape = [y.shape[0], 64]
+                zf_shape = [x.shape[0], 64]
                 
-                zd   = torch.randn(*zd_shape).to(app.DEVICE, non_blocking = True)
-                zf   = torch.randn(*zf_shape).to(app.DEVICE, non_blocking = True)
-                wnzd = torch.randn(zd_shape).to( app.DEVICE, non_blocking = True)
-                wnzf = torch.randn(zf_shape).to( app.DEVICE, non_blocking = True)
+                zd   = torch.randn(*zd_shape).to( app.DEVICE, non_blocking = True)
+                zf   = torch.randn(*zf_shape).to( app.DEVICE, non_blocking = True)
+                wnzd = torch.randn(*zd_shape).to( app.DEVICE, non_blocking = True)
+                wnzf = torch.randn(*zf_shape).to( app.DEVICE, non_blocking = True)
                 
+                start_time = time.time()
                 for _ in range(5):
                     self.alice_train_discriminator_adv(y,wnzd,x,wnzf)                 
                 for _ in range(1):
@@ -726,13 +792,14 @@ class trainer(object):
                 #     wny,wnz,_ = noise_generator(y.shape,zd.shape,app.DEVICE,app.RNDM_ARGS)
                 #     print("Outside: output_size", self.F_(zcat(y,wny))[0].size())
 
-            if epoch%5== 0:
+            if epoch%10== 0:
                 torch.manual_seed(100)
                 for k,v in self.losses.items():
                     self.writer_train.add_scalar(
                         'Loss/{}'.format(k),
                         np.mean(np.array(v[-b:-1])),
                         epoch)
+
                 figure_bb = plt.plot_generate_classic(tag = 'broadband',
                 Qec     = deepcopy(self.F_),
                 Pdc     = deepcopy(self.Gy),
@@ -760,9 +827,9 @@ class trainer(object):
             if verbose:
                 GPUtil.showUtilization(all=True)
            
-            if epoch%100==0:
-                # # pdb.set_trace()
+            if epoch%1000 == 0:
                 
+                # # pdb.set_trace()
                 print("\t|saving model at this checkpoint : ", epoch)
                 tsave({'epoch':epoch,'model_state_dict':self.F_.state_dict(),
                        'optimizer_state_dict':self.oGyx.state_dict(),'loss':self.losses,},

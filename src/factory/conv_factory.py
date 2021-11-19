@@ -8,7 +8,7 @@ from net.dcgan.dcgan_dxmodelparallele import *
 from net.dcgan.dcgan_dxdataparallele import *
 from net.dcgan.dcgan_dzdataparallele import *
 from net.dcgan.dcgan_dxzdataparallele import *
-from profiling.profile_support import profile
+# from profiling.profile_support import profile
 import json
 import pdb
 
@@ -247,12 +247,13 @@ class DataParalleleFactory(ConvNetFactory):
 
     def createDCGAN_Dz(self, config_dcgan_dz, opt, *args, **kwargs):
         #DCGAN_DZ class is called here 
-        name  = config_dcgan_dz["name"] if "name" in config_dcgan_dz else None
-        nz    = config_dcgan_dz["nz"]   if "nz" in config_dcgan_dz else opt.nzd
-        nc    = config_dcgan_dz["nc"]   if "nc" in config_dcgan_dz else opt.nzd
-        wf  = json.loads(config_dcgan_dz["wf"].lower()) if "wf" in config_dcgan_dz else False
-        dpc = config_dcgan_dz["dpc"] if "dpc" in config_dcgan_dz else 0.25
-        path = config_dcgan_dz["path"] if "path" in config_dcgan_dz else ""
+        name    = config_dcgan_dz["name"] if "name" in config_dcgan_dz else None
+        nz      = config_dcgan_dz["nz"]   if "nz" in config_dcgan_dz else opt.nzd
+        nc      = config_dcgan_dz["nc"]   if "nc" in config_dcgan_dz else opt.nzd
+        wf      = json.loads(config_dcgan_dz["wf"].lower()) if "wf" in config_dcgan_dz else False
+        dpc     = config_dcgan_dz["dpc"] if "dpc" in config_dcgan_dz else 0.25
+        path    = config_dcgan_dz["path"] if "path" in config_dcgan_dz else ""
+        extra   = config_dcgan_dz["extra"] if "extra" in config_dcgan_dz else 128
         bn = json.loads(config_dcgan_dz["bn"].lower()) if "bn" in config_dcgan_dz else False
         prob = json.loads(config_dcgan_dz["prob"].lower()) if "prob" in config_dcgan_dz else False
         dcgan_dz    = DCGAN_DzDataParallele.getDCGAN_DzDataParallele( name =  name, ngpu = opt.ngpu,\
@@ -269,6 +270,7 @@ class DataParalleleFactory(ConvNetFactory):
                      grp =0, bn=bn,wf=wf, dpc=dpc,
                      path = path,\
                      prob = prob,\
+                     extra = extra,\
                      n_extra_layers=0)
         return dcgan_dz
 

@@ -53,7 +53,7 @@ class BasicDCGAN_DxDataParallele(BasicModel):
         self.final    = []
         self.cnn1     = []
 
-    def lout(self,nch,padding, dilation, kernel, stride):
+    def lout(self,nch,padding, dilation, kernel_size, stride):
         """
         This code is for conv1d made according to the rule of Pytorch.
         One multiply nz by 2 ^(increment - 1). 
@@ -61,7 +61,7 @@ class BasicDCGAN_DxDataParallele(BasicModel):
         
         """
         lin = nch
-        for pad, dil, ker, std in zip(padding, dilation, kernel, stride):
+        for pad, dil, ker, std in zip(padding, dilation, kernel_size, stride):
             lin = int((lin + 2* pad - dil*(ker-1)-1)/std + 1)
 
         return lin
@@ -116,6 +116,12 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
             for param in self.cnn1.parameters():
                 param.requires_grad = False
 
+        lout = self.lout(nch=4096,\
+            padding    =pad,\
+            dilation   =dil,\
+            stride     =std,\
+            kernel_size=ker)
+
         #building network
         self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
                 ker = ker[0], std = std[0], pad = pad[0], dil = dil[0],\
@@ -141,7 +147,9 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
 
         if prob:
             self.final = [
-                Flatten(),
+                Squeeze(),
+                # Shallow(shape = lout*channel[-1]),
+                # nn.Linear(lout*channel[-1], channel[-1]),
                 # according to Randford et al., 2016, no more Full connected layer is needed
                 # only a flattend is applied in the discriminator
                 # torch.nn.Linear(nc, 1),
@@ -215,8 +223,11 @@ class DCGAN_Dx_Lite(BasicDCGAN_DxDataParallele):
         self.cnn = nn.Sequential(*self.cnn)
 
     def forward(self, x):
-        return self.cnn(x)
-        
+        z =  self.cnn(x)
+        if not self.training:
+            z =  z.detach()
+        return z
+
 
 class DCGAN_Dx_Flatten(BasicDCGAN_DxDataParallele):
     """docstring for    DCGAN_Dx"""

@@ -783,7 +783,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
         # pass
         for _,batch in enumerate(trn_set):
             #_,xt_data,zt_data,_,_,_,_ = batch
-            app.logger.info("Plotting signals ...")
+            app.logger.debug("Plotting signals ...")
             xt_data,xf_data,zt_data,*other = batch
             # xt_data,zt_data,*other = batch
             Xt = Variable(xt_data).to(dev, dtype =torch.float64)
@@ -834,7 +834,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 ot,gt = Xt[io, 1, :]  ,Xr[ig, 1, :]
                 of,gf,ff = Xt_fsa[io,1,:],Xr_fsa[ig,1,:],Xf_fsa[io,1,:]
 
-                if io==1 and save == False:
+                if io==3 and save == False:
                     break
                 
                 # plot_tf_gofs(ot,gt,dt=vtm[1]-vtm[0],t0=0.0,fmin=0.1,fmax=30.0,
@@ -881,7 +881,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                             bbox_inches='tight',dpi = 500)
                 # plt.savefig(os.path.join(outf,"res_bb_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
                 #             format='eps',bbox_inches='tight',dpi = 500)
-                app.logger.info("saving res_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
+                app.logger.debug("saving res_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
                 plt.close()
                 
                 
@@ -928,7 +928,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             #    plt.close()
             #    cnt += 1
             if save:
-                print("savefig eg_pg ...")
+                app.logger.debug("savefig eg_pg ...")
                 plot_eg_pg(EG,PG, outf,pfx)
             
     elif 'filtered' in tag:
@@ -969,7 +969,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 ot,gt = Xf[io, 1, :]  ,Xr[ig, 1, :]
                 of,gf = Xf_fsa[io,1,:],Xr_fsa[ig,1,:]
 
-                if io == 1 and save == False:
+                if io == 3 and save == False:
                     break
                 # plot_tf_gofs(ot,gt,dt=vtm[1]-vtm[0],t0=0.0,fmin=0.1,fmax=20.0,
                 #         nf=100,w0=6,norm='global',st2_isref=True,a=10.,k=1.,left=0.1,
@@ -1012,14 +1012,14 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 # plt.savefig(os.path.join(outf,"res_fl_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
                 #             format='eps',bbox_inches='tight',dpi = 500)
                 plt.close()
-                app.logger.info("saving res_fl_aae_%s_%u_%u ... "%(pfx,cnt,io))
+                app.logger.debug("saving res_fl_aae_%s_%u_%u ... "%(pfx,cnt,io))
                 
                
                 figure.append(hfg)
             cnt += 1
 
             if save:
-                app.logger.info("savefig eg_pg ...")
+                app.logger.debug("savefig eg_pg ...")
                 plot_eg_pg(EG,PG, outf,pfx)
 
     return figure
