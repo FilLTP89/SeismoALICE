@@ -131,7 +131,7 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
             act = activation[i-1]
             # according to Randford et al.,2016 in the discriminator 
             # batchnormalization is appliyed on all layers with exception for the first layer
-            _bn = False if i == 1 else bn
+            _bn = False if i == 1 or i == nly else bn
             _dpc = 0.0 if i == nly else dpc
             self.net.append(ConvBlock(ni = channel[i-1], no = channel[i],
                 ker = ker[i-1], std = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = False,\
@@ -189,6 +189,7 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
         return f
 
     def forward(self,z):
+        # pdb.set_trace()
         z = self.cnn1(z)
         if self.wf:
             f = self.extraction(z)
