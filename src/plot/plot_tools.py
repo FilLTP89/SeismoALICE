@@ -764,11 +764,11 @@ def plot_error(error, outf):
 
      
 def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./imgs',save = True):
-    #Qec.to(dev),Pdc.to(dev)
-    Qec.eval(),Pdc.eval()
-    Qec.to(dtype =torch.float64)
-    Pdc.to(dtype =torch.float64)
+    
     dev = app.DEVICE
+    Qec.eval(),Pdc.eval()
+    Qec.to(dev),Pdc.to(dev)
+    
     cnt=0
     EG = []
     PG = []
@@ -777,8 +777,10 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
     # pdb.set_trace()
     # clr = sns.color_palette('Paired',5)
     clr = ['black', 'blue','red', 'red']
+    
     if opt is not None:
         vtm = torch.load(os.path.join(opt.dataroot,'vtm.pth'))
+
     if tag=='broadband':
         # pass
         for _,batch in enumerate(trn_set):
@@ -786,17 +788,17 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             app.logger.debug("Plotting signals ...")
             xt_data,xf_data,zt_data,*other = batch
             # xt_data,zt_data,*other = batch
-            Xt = Variable(xt_data).to(dev, dtype =torch.float64)
-            Xf = Variable(xf_data).to(dev, dtype =torch.float64)
-            zt = Variable(zt_data).to(dev, dtype =torch.float64)
+            Xt = Variable(xt_data).to(dev, non_blocking=True)
+            Xf = Variable(xf_data).to(dev, non_blocking=True)
+            zt = Variable(zt_data).to(dev, non_blocking=True)
 
             if cnt == 3 and save == False:
                 break
             # zt_shape = [zt.shape[0], 16]
             # zt = torch.randn(*zt_shape).to(dev, non_blocking = True)
 
-            wnx,wnz,wn1 = noise_generator(Xt.shape,zt.shape,dev,app.RNDM_ARGS)
-            X_inp = zcat(Xt,wnx.to(dev))
+            wnx,*others = noise_generator(Xt.shape,zt.shape,dev,app.RNDM_ARGS)
+            X_inp = zcat(Xt,wnx)
 
             # ztr = Qec(X_inp).to(dev)
 
@@ -834,7 +836,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 ot,gt = Xt[io, 1, :]  ,Xr[ig, 1, :]
                 of,gf,ff = Xt_fsa[io,1,:],Xr_fsa[ig,1,:],Xf_fsa[io,1,:]
 
-                if io==3 and save == False:
+                if io==6 and save == False:
                     break
                 
                 # plot_tf_gofs(ot,gt,dt=vtm[1]-vtm[0],t0=0.0,fmin=0.1,fmax=30.0,
@@ -938,9 +940,9 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             xt_data,xf_data,_,zf_data,*other = batch
             # _,xf_data,zf_data,*other = batch
             # tweaked value
-            Xt = Variable(xt_data).to(dev, dtype =torch.float64)
-            Xf = Variable(xf_data).to(dev, dtype =torch.float64)
-            zf = Variable(zf_data).to(dev, dtype =torch.float64)
+            Xt = Variable(xt_data).to(dev, non_blocking=True)
+            Xf = Variable(xf_data).to(dev, non_blocking=True)
+            zf = Variable(zf_data).to(dev, non_blocking=True)
 
             if cnt == 3 and not save == False:
                 break

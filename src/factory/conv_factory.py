@@ -1,16 +1,17 @@
-from net.encoder.encoder_modelparallele import *
-from net.encoder.encoder_dataparallele import *
-from net.decoder.decoder_modelparallele import *
-from net.decoder.decoder_dataparallele import *
-from net.dcgan.dcgan_dzmodelparallele import *
-from net.dcgan.dcgan_dxzmodelparallele import *
-from net.dcgan.dcgan_dxmodelparallele import *
-from net.dcgan.dcgan_dxdataparallele import *
-from net.dcgan.dcgan_dzdataparallele import *
-from net.dcgan.dcgan_dxzdataparallele import *
-# from profiling.profile_support import profile
 import json
-import pdb
+from net.encoder.encoder_modelparallele import EncoderModelParallele
+from net.encoder.encoder_dataparallele  import EncoderDataParallele
+from net.decoder.decoder_modelparallele import DecoderModelParallele
+from net.decoder.decoder_dataparallele  import DecoderDataParallele
+from net.dcgan.dcgan_dzmodelparallele   import DCGAN_DzModelParallele
+from net.dcgan.dcgan_dxzmodelparallele  import DCGAN_DXZModelParallele
+from net.dcgan.dcgan_dxmodelparallele   import DCGAN_DxModelParallele
+from net.dcgan.dcgan_dxdataparallele    import DCGAN_DxDataParallele
+from net.dcgan.dcgan_dzdataparallele    import DCGAN_DzDataParallele
+from net.dcgan.dcgan_dxzdataparallele   import DCGAN_DXZDataParallele
+# from profiling.profile_support import profile
+
+
 
 
 class ConvNetFactory(object):
@@ -25,19 +26,19 @@ class ConvNetFactory(object):
         pass
 
     def createEncoder():
-        pass
+        raise NotImplementedError
 
     def createDecoder():
-        pass
+        raise NotImplementedError
 
     def createDCGAN_Dx():
-        pass
+        raise NotImplementedError
 
     def createDCGAN_Dz():
-        pass
+        raise NotImplementedError
 
     def createDCGAN_DXZ():
-        pass
+        raise NotImplementedError
 
 
 class ModelParalleleFactory(ConvNetFactory):
@@ -164,86 +165,90 @@ class DataParalleleFactory(ConvNetFactory):
 
     def createEncoder(self, config, opt, *args, **kwargs):
         # pdb.set_trace()
-        name  = config["name"] if "name" in config else None
-        path  = config["path"] if "path" in config else ""
-        dconv = config["dconv"] if "dconv" in config else ""
-        dpc  = config["dpc"] if "dpc" in config else 0.0
-        wf    = json.loads(config["wf"].lower()) if "wf" in config else False
+        name    = config["name"] if "name" in config else None
+        path    = config["path"] if "path" in config else ""
+        dconv   = config["dconv"] if "dconv" in config else ""
+        dpc     = config["dpc"] if "dpc" in config else 0.0
+        wf      = json.loads(config["wf"].lower()) if "wf" in config else False
         return EncoderDataParallele.getEncoder(name = name, ngpu = opt.ngpu,\
-                dev = opt.dev,\
-                nz = opt.nzd, nch = opt.nch,\
-                ndf = opt.ndf,\
-                nly = config['nlayers'],\
-                ker = config['kernel'],\
-                dil = config['dilation'],\
-                std = config['strides'],\
-                pad = config['padding'],\
-                act = config['act'],\
-                limit = config['limit'],\
-                dconv = dconv,\
-                channel = config['channel'],\
-                path = path,
-                config = config,
-                dpc = dpc,\
-                wf = wf,\
-                *args, **kwargs)
+            dev     = opt.dev,\
+            nz      = opt.nzd, nch = opt.nch,\
+            ndf     = opt.ndf,\
+            nly     = config['nlayers'],\
+            ker     = config['kernel'],\
+            dil     = config['dilation'],\
+            std     = config['strides'],\
+            pad     = config['padding'],\
+            act     = config['act'],\
+            limit   = config['limit'],\
+            dconv   = dconv,\
+            channel = config['channel'],\
+            path    = path,
+            config  = config,
+            dpc     = dpc,\
+            wf      = wf,\
+            *args, **kwargs)
 
     def createDecoder(self, config, opt, *args, **kwargs):
-        name  = config["name"] if "name" in config else None
-        path = config["path"] if "path" in config else ""
-        dconv = config["dconv"] if "dconv" in config else ""
-        n_extra_layers = config["extra_layers"] if "extra_layers" in config else 0
-        extra = config["extra"] if "extra" in config else 0
-        dpc  = config["dpc"] if "dpc" in config else 0.0
+        name        = config["name"] if "name" in config else None
+        path        = config["path"] if "path" in config else ""
+        dconv       = config["dconv"] if "dconv" in config else ""
+        n_extra_layers= config["extra_layers"] if "extra_layers" in config else 0
+        extra       = config["extra"] if "extra" in config else 0
+        dpc         = config["dpc"] if "dpc" in config else 0.0
         # wf    = json.loads(config["wf"].lower()) if "wf" in config else False
         return DecoderDataParallele.getDecoder(name = name, ngpu = opt.ngpu,\
-                nz = opt.nzd, nch = opt.nch,\
-                ndf = opt.ndf,\
-                nly = config['nlayers'],\
-                ker = config['kernel'],\
-                std = config['strides'],\
-                dil = config['dilation'],\
-                pad = config['padding'],\
-                opd = config['outpads'],\
-                act = config['act'],\
-                limit = config['limit'],\
-                channel = config['channel'],\
-                n_extra_layers=n_extra_layers,\
-                bn= True,
-                path = path,\
-                dconv = dconv,\
-                dpc = dpc,\
-                extra = extra,\
-                # wf = wf,\
-                *args, **kwargs)
+            nz      = opt.nzd, nch = opt.nch,\
+            ndf     = opt.ndf,\
+            nly     = config['nlayers'],\
+            ker     = config['kernel'],\
+            std     = config['strides'],\
+            dil     = config['dilation'],\
+            pad     = config['padding'],\
+            opd     = config['outpads'],\
+            act     = config['act'],\
+            limit = config['limit'],\
+            channel = config['channel'],\
+            n_extra_layers=n_extra_layers,\
+            bn      = True,
+            path    = path,\
+            dconv   = dconv,\
+            dpc     = dpc,\
+            extra   = extra,\
+            *args, **kwargs)
 
     def createDCGAN_Dx(self, config_dcgan_dx, opt, *args, **kwargs):
 
         #another class could be called here if is not the generic class
-        name  = config_dcgan_dx["name"] if "name" in config_dcgan_dx else None
-        nc    = config_dcgan_dx["nc"] if "nc" in config_dcgan_dx else opt.nch
-        wf  = json.loads(config_dcgan_dx["wf"].lower()) if "wf" in config_dcgan_dx else False
-        dpc = config_dcgan_dx["dpc"] if "dpc" in config_dcgan_dx else 0.25
-        path = config_dcgan_dx["path"] if "path" in config_dcgan_dx else ""
-        bn = json.loads(config_dcgan_dx["bn"].lower()) if "bn" in config_dcgan_dx else False
-        prob = json.loads(config_dcgan_dx["prob"].lower()) if "prob" in config_dcgan_dx else False
+        name    = config_dcgan_dx["name"] if "name" in config_dcgan_dx else None
+        nc      = config_dcgan_dx["nc"] if "nc" in config_dcgan_dx else opt.nch
+        wf      = json.loads(config_dcgan_dx["wf"].lower()) if "wf" in config_dcgan_dx else False
+        dpc     = config_dcgan_dx["dpc"] if "dpc" in config_dcgan_dx else 0.25
+        path    = config_dcgan_dx["path"] if "path" in config_dcgan_dx else ""
+        extra   = config_dcgan_dx["extra"] if "extra" in config_dcgan_dx else 128
+        bn      = json.loads(config_dcgan_dx["bn"].lower()) if "bn" in config_dcgan_dx else False
+        prob    = json.loads(config_dcgan_dx["prob"].lower()) if "prob" in config_dcgan_dx else False
         #DCGAN_Dx class is called here
-        dcgan_dx    = DCGAN_DxDataParallele.getDCGAN_DxDataParallele(name=name, ngpu = opt.ngpu,\
-                     isize= 256, nc = nc,\
-                     ncl = 512, ndf = opt.ndf, fpd=1,\
-                     nly = config_dcgan_dx['nlayers'],\
-                     ker = config_dcgan_dx['kernel'],\
-                     std = config_dcgan_dx['strides'],\
-                     pad = config_dcgan_dx['padding'],\
-                     act = config_dcgan_dx['act'],\
-                     limit = config_dcgan_dx['limit'],\
-                     dil = config_dcgan_dx['dilation'],\
-                     channel = config_dcgan_dx['channel'],\
-                     path = path,\
-                     prob = prob,\
-                     grp=0,bn=bn,wf=wf, dpc=dpc,\
-                     n_extra_layers=0)
-        return dcgan_dx
+        return DCGAN_DxDataParallele.getDCGAN_DxDataParallele(name=name, ngpu = opt.ngpu,\
+            isize   = 256, nc = nc,\
+            ncl     = 512, ndf = opt.ndf, fpd=1,\
+            nly     = config_dcgan_dx['nlayers'],\
+            ker     = config_dcgan_dx['kernel'],\
+            std     = config_dcgan_dx['strides'],\
+            pad     = config_dcgan_dx['padding'],\
+            act     = config_dcgan_dx['act'],\
+            limit   = config_dcgan_dx['limit'],\
+            dil     = config_dcgan_dx['dilation'],\
+            channel = config_dcgan_dx['channel'],\
+            path    = path,\
+            prob    = prob,\
+            extra   = extra,\
+            grp     = 0,\
+            bn      = bn,\
+            wf      = wf,\
+            dpc     = dpc,\
+            n_extra_layers=0)
+         
 
     def createDCGAN_Dz(self, config_dcgan_dz, opt, *args, **kwargs):
         #DCGAN_DZ class is called here 
@@ -254,25 +259,24 @@ class DataParalleleFactory(ConvNetFactory):
         dpc     = config_dcgan_dz["dpc"] if "dpc" in config_dcgan_dz else 0.25
         path    = config_dcgan_dz["path"] if "path" in config_dcgan_dz else ""
         extra   = config_dcgan_dz["extra"] if "extra" in config_dcgan_dz else 128
-        bn = json.loads(config_dcgan_dz["bn"].lower()) if "bn" in config_dcgan_dz else False
-        prob = json.loads(config_dcgan_dz["prob"].lower()) if "prob" in config_dcgan_dz else False
-        dcgan_dz    = DCGAN_DzDataParallele.getDCGAN_DzDataParallele( name =  name, ngpu = opt.ngpu,\
-                     nc=nc, nz = nz,\
-                     ncl=512, ndf=opt.ndf, fpd=0,\
-                     nly = config_dcgan_dz['nlayers'],\
-                     ker = config_dcgan_dz['kernel'],\
-                     std = config_dcgan_dz['strides'],\
-                     pad = config_dcgan_dz['padding'],\
-                     act = config_dcgan_dz['act'],\
-                     limit = config_dcgan_dz['limit'],\
-                     dil = config_dcgan_dz['dilation'],\
-                     channel = config_dcgan_dz['channel'],\
-                     grp =0, bn=bn,wf=wf, dpc=dpc,
-                     path = path,\
-                     prob = prob,\
-                     extra = extra,\
-                     n_extra_layers=0)
-        return dcgan_dz
+        bn      = json.loads(config_dcgan_dz["bn"].lower()) if "bn" in config_dcgan_dz else False
+        prob    = json.loads(config_dcgan_dz["prob"].lower()) if "prob" in config_dcgan_dz else False
+        return DCGAN_DzDataParallele.getDCGAN_DzDataParallele( name =  name, ngpu = opt.ngpu,\
+            nc      = nc, nz = nz,\
+            ncl     = 512, ndf=opt.ndf, fpd=0,\
+            nly     = config_dcgan_dz['nlayers'],\
+            ker     = config_dcgan_dz['kernel'],\
+            std     = config_dcgan_dz['strides'],\
+            pad     = config_dcgan_dz['padding'],\
+            act     = config_dcgan_dz['act'],\
+            limit = config_dcgan_dz['limit'],\
+            dil     = config_dcgan_dz['dilation'],\
+            channel = config_dcgan_dz['channel'],\
+            grp     =0, bn=bn,wf=wf, dpc=dpc,
+            path    = path,\
+            prob    = prob,\
+            extra   = extra,\
+            n_extra_layers=0)
 
     def createDCGAN_DXZ(self, config_dcgan_dxz,opt, *args, **kwargs):
         #DCGAN_DXZ class is called here
@@ -283,24 +287,23 @@ class DataParalleleFactory(ConvNetFactory):
         bias  = json.loads(config_dcgan_dxz["bias"].lower()) if "bias" in config_dcgan_dxz else False
         dpc   = config_dcgan_dxz["dpc"] if "dpc" in config_dcgan_dxz else 0.25
         path  = config_dcgan_dxz["path"] if "path" in config_dcgan_dxz else ""
+        extra = config_dcgan_dxz["extra"] if "extra" in config_dcgan_dxz else 128
         bn    = json.loads(config_dcgan_dxz["bn"].lower()) if "bn" in config_dcgan_dxz else False
-        dcgan_dxz = DCGAN_DXZDataParallele.getDCGAN_DXZDataParallele(name = name, ngpu=opt.ngpu, nc=nc, 
-                     nly=config_dcgan_dxz['nlayers'],\
-                     ker=config_dcgan_dxz['kernel'],\
-                     std=config_dcgan_dxz['strides'],\
-                     pad=config_dcgan_dxz['padding'],\
-                     act=config_dcgan_dxz['act'],\
-                     limit = config_dcgan_dxz['limit'],\
-                     dil=config_dcgan_dxz['dilation'],\
-                     channel = config_dcgan_dxz['channel'],\
-                     grp=0, bn=bn,wf=wf, dpc=dpc,\
-                     path = path,\
-                     prob = prob,\
-                     bias = bias,\
-                     n_extra_layers=0)
-
-        return dcgan_dxz
-
+        return DCGAN_DXZDataParallele.getDCGAN_DXZDataParallele(name = name, ngpu=opt.ngpu, nc=nc, 
+            nly     = config_dcgan_dxz['nlayers'],\
+            ker     = config_dcgan_dxz['kernel'],\
+            std     = config_dcgan_dxz['strides'],\
+            pad     = config_dcgan_dxz['padding'],\
+            act     = config_dcgan_dxz['act'],\
+            limit   = config_dcgan_dxz['limit'],\
+            dil     = config_dcgan_dxz['dilation'],\
+            channel = config_dcgan_dxz['channel'],\
+            grp     = 0, bn=bn,wf=wf, dpc=dpc,\
+            path    = path,\
+            prob    = prob,\
+            bias    = bias,\
+            extra   = extra,\
+            n_extra_layers=0)
 
     
 class Network(object):

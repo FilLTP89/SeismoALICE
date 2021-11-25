@@ -21,7 +21,7 @@ class DCGAN_DxDataParallele(object):
         pass
     @staticmethod
     def getDCGAN_DxDataParallele(name, ngpu, nc, ncl, ndf, nly,act,channel, path, fpd=0, limit = 256,\
-                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.0,
+                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.0,extra = 128,
                  n_extra_layers=0,isize=256, prob = False):
         if name is not None:
             classname = 'DCGAN_Dx_'+ name
@@ -31,20 +31,20 @@ class DCGAN_DxDataParallele(object):
                 module = importlib.import_module(module_name)
                 class_ = getattr(module,classname)
                 return class_(ngpu=ngpu, isize=isize, nc=nc, ncl=ncl, ndf=ndf,  channel = channel, fpd=fpd, act=act, nly=nly,\
-                 ker=ker,std=std,pad=pad, dil=dil,grp=grp,bn=bn,wf=wf, dpc=dpc, limit = limit,\
+                 ker=ker,std=std,pad=pad, dil=dil,grp=grp,bn=bn,wf=wf, dpc=dpc, limit = limit,extra=extra,\
                  n_extra_layers=n_extra_layers, path=path, prob=prob)
             except Exception as e:
                 raise e
                 print("The class ",classname, " does not exit")
         else:
-            return DCGAN_Dx(ngpu = ngpu, isize = isize, nc = nc, ncl = ncl, ndf = ndf, fpd = fpd,channel = channel,\
+            return DCGAN_Dx(ngpu = ngpu, isize = isize, extra=extra, nc = nc, ncl = ncl, ndf = ndf, fpd = fpd,channel = channel,\
                         nly = nly, ker=ker ,std=std, pad=pad, dil=dil, grp=grp, bn=bn, wf = wf, dpc=dpc,\
                         n_extra_layers = n_extra_layers,limit = limit,path = path, act = act, prob = prob)
 
-class BasicDCGAN_DxDataParallele(BasicModel):
-    """docstring for BasicDCGAN_DxDataParallele"""
+class BasicDCGAN_DxDataParallel(BasicModel):
+    """docstring for BasicDCGAN_DxDataParallel"""
     def __init__(self):
-        super(BasicDCGAN_DxDataParallele, self).__init__()
+        super(BasicDCGAN_DxDataParallel, self).__init__()
         self.training = True
         self.wf       = True
         self.prc      = []
@@ -91,11 +91,11 @@ class BasicDCGAN_DxDataParallele(BasicModel):
                         dil = dilation,*args, **kwargs)
         return cnn
 
-class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
+class DCGAN_Dx(BasicDCGAN_DxDataParallel):
     """docstring for    DCGAN_Dx"""
     def __init__(self, ngpu, nc, ncl, ndf, nly,act, channel, fpd=1, isize=256, limit = 256,\
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.0, path = '', prob = False,
-                 n_extra_layers=0):
+                 n_extra_layers=0, extra = 128):
 
         super(DCGAN_Dx, self).__init__()
         self.ngpu = ngpu
@@ -147,19 +147,21 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
 
         if prob:
             self.final = [
-                Squeeze(),
-                # Shallow(shape = lout*channel[-1]),
-                # nn.Linear(lout*channel[-1], channel[-1]),
+                # Squeeze(),
+                Shallow(shape = lout*channel[-1]),
+                nn.Linear(lout*channel[-1], 1024),
+                nn.ReLU(inplace=True),
+                nn.BatchNorm1d(),
                 # according to Randford et al., 2016, no more Full connected layer is needed
                 # only a flattend is applied in the discriminator
-                # torch.nn.Linear(nc, 1),
+                torch.nn.Linear(1024, 1),
                 torch.nn.Sigmoid()]
         else:
             self.final+=[Conv1d(channel[i], channel[i], 3, padding=1, bias=False)]
-            #self.final+=[BatchNorm1d(channel[i])]
-            self.final+=[Dpout(dpc=dpc)]
             self.final+=[activation[-1]]
-        
+            self.final+=[BatchNorm1d(channel[i])]
+            self.final+=[Dpout(dpc=dpc)]
+
         #compute values 
         self.exf  = self.net
         self._net = self.prc + self.net + self.extra + self.final
@@ -202,11 +204,11 @@ class   DCGAN_Dx(BasicDCGAN_DxDataParallele):
             return z
 
 
-class DCGAN_Dx_Lite(BasicDCGAN_DxDataParallele):
+class DCGAN_Dx_Lite(BasicDCGAN_DxDataParallel):
     """docstring for DCGAN_Dx_Lite"""
     def __init__(self, ngpu, nc, ncl, ndf, nly,act, channel, fpd=1, isize=256, limit = 256,\
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.0, path = '', prob = False,
-                 n_extra_layers=0):
+                 n_extra_layers=0, extra = 128):
         super(DCGAN_Dx_Lite, self).__init__()
         activation = T.activation(act, nly)
 
@@ -214,12 +216,17 @@ class DCGAN_Dx_Lite(BasicDCGAN_DxDataParallele):
                     strides = std, dilation= dil,  activation = activation,\
                     padding = pad, bn = bn, dpc = dpc)
 
-        lout = self.lout(nch = 4096,padding = pad, dilation = dil,\
-                        kernel = ker, stride = std)
+        lout = self.lout(nch = 4096,
+                        padding = pad, dilation = dil,\
+                        kernel_size = ker, stride = std)
 
         self.cnn += [Shallow(shape = lout*channel[-1])]
-        self.cnn += [nn.Linear(lout*channel[-1],lout)]
-        self.cnn += [nn.Linear(lout,channel[-1])]
+        self.cnn += [nn.Linear(lout*channel[-1],extra, bias=False)]
+        self.cnn += [nn.BatchNorm1d(extra)]
+        self.cnn += [nn.LeakyReLU(1.0, inplace=True)]
+
+        if prob:
+            self.cnn[-2:] = [nn.Sigmoid()]
 
         self.cnn = nn.Sequential(*self.cnn)
 
@@ -230,7 +237,7 @@ class DCGAN_Dx_Lite(BasicDCGAN_DxDataParallele):
         return z
 
 
-class DCGAN_Dx_Flatten(BasicDCGAN_DxDataParallele):
+class DCGAN_Dx_Flatten(BasicDCGAN_DxDataParallel):
     """docstring for    DCGAN_Dx"""
     def __init__(self, ngpu, nc, ncl, ndf, nly,act, channel, fpd=1, isize=256, limit = 256,\
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.0, path = '', prob = False,
