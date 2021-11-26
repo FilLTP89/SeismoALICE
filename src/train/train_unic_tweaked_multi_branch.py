@@ -214,7 +214,7 @@ class trainer(object):
 
     def discriminate_yz(self,y,yr,z,zr):
         # Discriminate real
-        # pdb.set_trace()
+        
         ftz = self.Dzb(zr) #OK : no batchNorm
         ftx = self.Dy(y) #OK : with batchNorm
         zrc = zcat(ftx,ftz)
@@ -237,12 +237,13 @@ class trainer(object):
         return Dreal,Dfake
 
     def discriminate_yy(self,y,yr):
-        # pdb.set_trace()
+        
         Dreal = self.Dyy(zcat(y,y )) #with batchNorm
         Dfake = self.Dyy(zcat(y,yr))
         return Dreal,Dfake
 
     def discriminate_zzb(self,z,zr):
+        
         Dreal = self.Dzzb(zcat(z,z )) #no batchNorm
         Dfake = self.Dzzb(zcat(z,zr))
         return Dreal,Dfake
@@ -268,14 +269,14 @@ class trainer(object):
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,app.RNDM_ARGS)
         
         # 1. Concatenate inputs
-        z_inp = zcat(zxy,zyy)
-        y_inp = zcat(y,wny)
+        z_inp = zxy+zyy
+        y_inp = y  + wny
         
         # 2.1 Generate conditional samples
         y_gen = self.Gy(z_inp)
         zyy_F,zyx_F,*other = self.F_(y_inp)
         #2.2 Concatanete outputs
-        zyy_gen = zcat(zyx_F,zyy_F)
+        zyy_gen = zyx_F +zyy_F
 
         # 3. Cross-Discriminate YZ
         Dyz,Dzy = self.discriminate_yz(y,y_gen,z_inp,zyy_gen)
@@ -287,8 +288,9 @@ class trainer(object):
 
         # 5. Generate reconstructions
         y_rec  = self.Gy(zyy_gen)
-        zyy_F,zyx_F,*other = self.F_(zcat(y_gen,wny))
-        zyy_rec = zcat(zyx_F,zyy_F)
+        y_gen  = y_gen +  wny
+        zyy_F,zyx_F,*other = self.F_(y_gen)
+        zyy_rec = zyx_F + zyy_F
 
         # 6. Disciminate Cross Entropy  
         Dreal_y,Dfake_y     = self.discriminate_yy(y,y_rec)
@@ -322,18 +324,18 @@ class trainer(object):
         modalite(self.FGf,   mode ='train')
         modalite(self.Dnets, mode ='train')
 
-        wny,*others= noise_generator(y.shape,zyy.shape,app.DEVICE,app.RNDM_ARGS)
+        wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,app.RNDM_ARGS)
          
         # 1. Concatenate inputs
-        y_inp  = zcat(y,wny)
-        z_inp  = zcat(zxy,zyy)
+        y_inp  = y   + wny
+        z_inp  = zxy + zyy
          
         # 2. Generate conditional samples
         y_gen = self.Gy(z_inp)
         zyy_F,zyx_F,*other = self.F_(y_inp) 
  
-        zyy_gen = zcat(zyx_F,zyy_F) 
-        Dyz,Dzy = self.discriminate_yz(y,y_gen,zcat(zxy,zyy),zyy_gen)
+        zyy_gen = zyx_F + zyy_F 
+        Dyz,Dzy = self.discriminate_yz(y,y_gen,z_inp,zyy_gen)
         
         Gloss_ali =  torch.mean(-Dyz+Dzy) 
         
@@ -342,8 +344,9 @@ class trainer(object):
 
         # 4. Generate reconstructions
         y_rec = self.Gy(zyy_gen)
-        zyy_F,zyx_F,*other = self.F_(zcat(y_gen,wny))
-        zyy_rec = zcat(zyx_F,zyy_F)
+        y_gen = y_gen + wny
+        zyy_F,zyx_F,*other = self.F_(y_gen)
+        zyy_rec = zyx_F + zyy_F
     
         # 5. Cross-Discriminate XX
         _,Dfake_y = self.discriminate_yy(y,y_rec)
@@ -351,9 +354,9 @@ class trainer(object):
         Gloss_identity_y            = torch.mean(torch.abs(y-y_rec)**2) 
         
         # 6. Cross-Discriminate ZZ
-        _,Dfake_zd = self.discriminate_zzb(zcat(zxy,zyy),zyy_rec)
+        _,Dfake_zd = self.discriminate_zzb(z_inp,zyy_rec)
         Gloss_cycle_consistency_zd  = torch.mean(Dfake_zd)
-        Gloss_identity_zd           = torch.mean(torch.abs(zcat(zxy,zyy)-zyy_rec)**2)
+        Gloss_identity_zd           = torch.mean(torch.abs(z_inp-zyy_rec)**2)
 
         # 7. Total Loss
         Gloss_cycle_consistency     = Gloss_cycle_consistency_y +  Gloss_cycle_consistency_zd
@@ -396,7 +399,7 @@ class trainer(object):
         print("Let's use", torch.cuda.device_count(), "GPUs!")
 
         bar = trange(self.start_epoch, niter+1)
-        nzd = 256
+        nzd = 32
         
         for epoch in bar:
             for b,batch in enumerate(self.trn_loader):
