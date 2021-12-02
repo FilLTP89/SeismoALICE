@@ -52,18 +52,18 @@ class trainer(object):
         b2              = 0.9999
         self.strategy   = strategy
         self.opt        = opt
-        self.start_epoch= 1  
+        self.start_epoch= 0  
 
         nzd = opt.nzd
         ndf = opt.ndf
 
-        torch.backends.cudnn.deterministic  = True
-        torch.backends.cudnn.benchmark      = False
+        # torch.backends.cudnn.deterministic  = True
+        # torch.backends.cudnn.benchmark      = False
 
         self.Dnets      = []
         self.optz       = []
         self.oGyx       = None
-        self.dp_mode    = True
+        # self.dp_mode    = True
         self.losses     = {
             'Dloss':[0],
             'Dloss_ali':[0],
@@ -82,6 +82,10 @@ class trainer(object):
 
         self.writer_train = SummaryWriter('runs_both/training')
         self.writer_val   = SummaryWriter('runs_both/validation')
+        self.writer_debug = SummaryWriter('runs_both/debug')
+        self.writer_debug_encoder = SummaryWriter('runs_both/debug/encoder')
+        self.writer_debug_decoder = SummaryWriter('runs_both/debug/decoder')
+
 
         flagT=False
         flagF=False
@@ -99,7 +103,6 @@ class trainer(object):
             self.F_  = net.Encoder(opt.config['F'],  opt)
             self.Gy  = net.Decoder(opt.config['Gy'], opt)
             # self.Gx  = net.Decoder(opt.config['Gx'], opt)
-
             self.F_  = nn.DataParallel(self.F_).cuda()
             self.Gy  = nn.DataParallel(self.Gy).cuda()
             # self.Gx  = nn.DataParallel(self.Gx).cuda()
@@ -187,11 +190,16 @@ class trainer(object):
                     self.Gx.load_state_dict(tload(n[2])['model_state_dict'])  
                 else:
                     flagF=False
+
         
+        self.writer_debug_encoder.add_graph(next(iter(self.F_.children())),torch.randn(128,6,4096).cuda())
+        self.writer_debug_decoder.add_graph(next(iter(self.Gy.children())), torch.randn(128,512,256).cuda())
+        self.bce_loss = BCE(reduction='mean')
         print("Parameters of  Decoders/Decoders ")
         count_parameters(self.FGf)
         print("Parameters of Discriminators ")
         count_parameters(self.Dnets)
+        
         
        
     def discriminate_xz(self,x,xr,z,zr):
@@ -206,7 +214,6 @@ class trainer(object):
         ftz = self.Dzf(z)
         ftx = self.Dx(xr)
         zrc = zcat(ftx,ftz)
-
         ftzx = self.Dxz(zrc)
         Dzx  = ftzx
 
@@ -214,7 +221,6 @@ class trainer(object):
 
     def discriminate_yz(self,y,yr,z,zr):
         # Discriminate real
-        
         ftz = self.Dzb(zr) #OK : no batchNorm
         ftx = self.Dy(y) #OK : with batchNorm
         zrc = zcat(ftx,ftz)
@@ -237,13 +243,11 @@ class trainer(object):
         return Dreal,Dfake
 
     def discriminate_yy(self,y,yr):
-        
         Dreal = self.Dyy(zcat(y,y )) #with batchNorm
         Dfake = self.Dyy(zcat(y,yr))
         return Dreal,Dfake
 
     def discriminate_zzb(self,z,zr):
-        
         Dreal = self.Dzzb(zcat(z,z )) #no batchNorm
         Dfake = self.Dzzb(zcat(z,zr))
         return Dreal,Dfake
@@ -256,7 +260,7 @@ class trainer(object):
     def discriminate_zxy(self,z_yx,z_xy):
         D_zyx = self.Dzyx(z_yx)
         D_zxy = self.Dzyx(z_xy)
-        return D_zyx, D_zxy
+        return D_zyx,D_zxy
     
     # @profile
     def alice_train_discriminator_adv(self,y,zyy,zxy, x =  None):
@@ -267,16 +271,15 @@ class trainer(object):
         
         # 0. Generate noise
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,app.RNDM_ARGS)
-        
         # 1. Concatenate inputs
-        z_inp = zxy+zyy
-        y_inp = y  + wny
+        z_inp = zcat(zxy,zyy)
+        y_inp = zcat(y,wny)
         
         # 2.1 Generate conditional samples
         y_gen = self.Gy(z_inp)
         zyy_F,zyx_F,*other = self.F_(y_inp)
         #2.2 Concatanete outputs
-        zyy_gen = zyx_F +zyy_F
+        zyy_gen = zcat(zyx_F,zyy_F)
 
         # 3. Cross-Discriminate YZ
         Dyz,Dzy = self.discriminate_yz(y,y_gen,z_inp,zyy_gen)
@@ -288,9 +291,9 @@ class trainer(object):
 
         # 5. Generate reconstructions
         y_rec  = self.Gy(zyy_gen)
-        y_gen  = y_gen +  wny
+        y_gen  = zcat(y_gen,wny)
         zyy_F,zyx_F,*other = self.F_(y_gen)
-        zyy_rec = zyx_F + zyy_F
+        zyy_rec = zcat(zyx_F,zyy_F)
 
         # 6. Disciminate Cross Entropy  
         Dreal_y,Dfake_y     = self.discriminate_yy(y,y_rec)
@@ -325,16 +328,16 @@ class trainer(object):
         modalite(self.Dnets, mode ='train')
 
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,app.RNDM_ARGS)
-         
+        breakpoint()
         # 1. Concatenate inputs
-        y_inp  = y   + wny
-        z_inp  = zxy + zyy
+        y_inp  = zcat(y,wny)
+        z_inp  = zcat(zxy,zyy)
          
         # 2. Generate conditional samples
         y_gen = self.Gy(z_inp)
         zyy_F,zyx_F,*other = self.F_(y_inp) 
  
-        zyy_gen = zyx_F + zyy_F 
+        zyy_gen = zcat(zyx_F,zyy_F) 
         Dyz,Dzy = self.discriminate_yz(y,y_gen,z_inp,zyy_gen)
         
         Gloss_ali =  torch.mean(-Dyz+Dzy) 
@@ -344,27 +347,31 @@ class trainer(object):
 
         # 4. Generate reconstructions
         y_rec = self.Gy(zyy_gen)
-        y_gen = y_gen + wny
+        y_gen = zcat(y_gen,wny)
         zyy_F,zyx_F,*other = self.F_(y_gen)
-        zyy_rec = zyx_F + zyy_F
+        zyy_rec = zcat(zyx_F,zyy_F)
     
         # 5. Cross-Discriminate XX
         _,Dfake_y = self.discriminate_yy(y,y_rec)
-        Gloss_cycle_consistency_y   = torch.mean(Dfake_y)
+        Gloss_cycle_consistency_y   = self.bce_loss(Dfake_y,o1l(Dfake_y))
         Gloss_identity_y            = torch.mean(torch.abs(y-y_rec)**2) 
         
         # 6. Cross-Discriminate ZZ
         _,Dfake_zd = self.discriminate_zzb(z_inp,zyy_rec)
-        Gloss_cycle_consistency_zd  = torch.mean(Dfake_zd)
+        Gloss_cycle_consistency_zd  = self.bce_loss(Dfake_zd,o1l(Dfake_zd))
         Gloss_identity_zd           = torch.mean(torch.abs(z_inp-zyy_rec)**2)
 
         # 7. Total Loss
         Gloss_cycle_consistency     = Gloss_cycle_consistency_y +  Gloss_cycle_consistency_zd
         Gloss_identity              = Gloss_identity_y + Gloss_identity_zd
         Gloss                       = Gloss_ali + Gloss_cycle_consistency + Gloss_identity
-        
+                
+        if epoch == 10:
+            for batch in range(opt.batchSize):
+                self.writer_debug.add_histogram("zyy_rec",zyy_rec[batch,:], epoch)
+                self.writer_debug.add_histogram("zyy",zxy[batch,:],epoch)
+
         Gloss.backward()
-        
         self.oGyx.step()
         zerograd(self.optz)
          
@@ -381,13 +388,37 @@ class trainer(object):
 
         
 
-    def generate_latent_variable(self, zd_shape, zf_shape = [128, 64]):
-        zyy  = torch.randn(*zd_shape).to(app.DEVICE, non_blocking = True)
-        zxx  = torch.randn(*zf_shape).to(app.DEVICE, non_blocking = True)
+    def generate_latent_variable(self, batch, nch_zd,nzd, nch_zf = 128,nzf = 128):
+        zyy  = torch.randn(*[batch,nch_zd,nzd]).to(app.DEVICE, non_blocking = True)
+        zxx  = torch.randn(*[batch,nch_zd,nzd]).to(app.DEVICE, non_blocking = True)
 
-        zyx  = torch.randn(*zd_shape).to(app.DEVICE, non_blocking = True)
-        zxy  = torch.randn(*zf_shape).to(app.DEVICE, non_blocking = True)
+        zyx  = torch.randn(*[batch,nch_zf,nzf]).to(app.DEVICE, non_blocking = True)
+        zxy  = torch.randn(*[batch,nch_zf,nzf]).to(app.DEVICE, non_blocking = True)
         return zyy, zyx, zxx, zxy
+
+    def get_encoder_parameter(self,model):
+        breakpoint()
+        cnt = 0
+        for module_group in model.children():
+            for module in module_group.children():
+                for name, params in module.named_parameters():
+
+                    if name in ['Conv1d','ConvTranspose1d']:
+                        cnt+=1
+                    writer.add_histogram("layer"+cnt+"/"+name, params)
+        # cnt = 0
+        # for seq in model.children():
+        #     for layer in seq.children():
+        #         x = layer(x)
+        #         classname = layer.__class__.__name__
+        #         if classname in ['Conv1d','ConvTranspose1d']:
+        #             cnt +=1
+        #             writer.add_histogram(tag+"/layer"+cnt+"/"+classname+"/weight",layer.weight)
+        #         elif classname in ['LeakyReLU','ReLU','Tanh']:
+        #             writer.add_histogram(tag+"/layer"+cnt+"/"+classname+"/activation",x)
+        #         elif classname == 'Dpout':
+        #             writer.add_histogram(tag+"/layer"+cnt+"/"+"layer"+"/activation",x)
+
 
     # @profile
     def train_unique(self):
@@ -399,7 +430,8 @@ class trainer(object):
         print("Let's use", torch.cuda.device_count(), "GPUs!")
 
         bar = trange(self.start_epoch, niter+1)
-        nzd = 32
+        nch_zd, nzd = 256,128
+        nch_zf, nzf = 256,128
         
         for epoch in bar:
             for b,batch in enumerate(self.trn_loader):
@@ -408,11 +440,16 @@ class trainer(object):
                 x   = x.to(app.DEVICE, non_blocking = True)
     
                 # getting noise shape
-                zyy, zyx, *other = self.generate_latent_variable(zd_shape = [y.shape[0],nzd])
+                zyy, _,zyx, *other = self.generate_latent_variable(
+                            batch   = opt.batchSize,
+                            nzd     = nzd,
+                            nch_zd  = nch_zd,
+                            nzf     = nzf,
+                            nch_zf  = nch_zf)
                 for _ in range(5):
                     self.alice_train_discriminator_adv(y,zyy,zyx)                 
                 for _ in range(1):
-                    self.alice_train_generator_adv(y,zyy,zyx)
+                    self.alice_train_generator_adv(y,zyy,zyx, epoch=epoch)
                 app.logger.debug(f'Epoch [{epoch}/{opt.niter}]\tStep [{b}/{total_step-1}]')
 
             if epoch%10== 0:
@@ -439,24 +476,46 @@ class trainer(object):
             bar.set_postfix(Gloss=Gloss, Dloss = Dloss)
            
             if epoch%save_checkpoint == 0:
-                app.logger.info("saving model at this checkpoint : ", epoch)
+                app.logger.info(f"saving model at this checkpoint :{epoch}")
+                
                 tsave({ 'epoch'                 : epoch,
                         'model_state_dict'      : self.F_.state_dict(),
                         'optimizer_state_dict'  : self.oGyx.state_dict(),
                         'loss'                  : self.losses,},
-                        root_checkpoint)
+                        root_checkpoint+'/Fyx.pth')
 
                 tsave({ 'epoch'                 : epoch,
                         'model_state_dict'      : self.Gy.state_dict(),
                         'optimizer_state_dict'  : self.oGyx.state_dict(),
                         'loss'                  : self.losses,},
-                        root_checkpoint)
+                        root_checkpoint +'/Gy.pth')
 
-                # tsave({ 'epoch'                 : epoch,
-                #         'model_state_dict'      : self.Gx.state_dict(),
-                #         'optimizer_state_dict'  : self.oGyx.state_dict(),
-                #         'loss'                  :self.losses,},
-                #         root_checkpoint)
+                tsave({ 'epoch'                 : epoch,
+                        'model_state_dict'      : self.Dy.state_dict(),
+                        'optimizer_state_dict'  : self.oDyxz.state_dict(),
+                        'loss'                  :self.losses,},
+                        root_checkpoint +'/Dy.pth')
+                tsave({ 'epoch'                 : epoch,
+                        'model_state_dict'      : self.Dyy.state_dict(),
+                        'optimizer_state_dict'  : self.oDyxz.state_dict(),
+                        'loss'                  :self.losses,},
+                        root_checkpoint +'/Dyy.pth')
+                tsave({ 'epoch'                 : epoch,
+                        'model_state_dict'      : self.Dzzb.state_dict(),
+                        'optimizer_state_dict'  : self.oDyxz.state_dict(),
+                        'loss'                  :self.losses,},
+                        root_checkpoint +'/Dzzb.pth')
+                tsave({ 'epoch'                 : epoch,
+                        'model_state_dict'      : self.Dzb.state_dict(),
+                        'optimizer_state_dict'  : self.oDyxz.state_dict(),
+                        'loss'                  :self.losses,},
+                        root_checkpoint +'/Dzb.pth')
+                tsave({ 'epoch'                 : epoch,
+                        'model_state_dict'      : self.Dyz.state_dict(),
+                        'optimizer_state_dict'  : self.oDyxz.state_dict(),
+                        'loss'                  :self.losses,},
+                        root_checkpoint +'/Dyz.pth')
+
         
         for key, value in self.losses.items():
             plt.plot_loss_explicit(losses=value, key=key, outf=outf,niter=niter)
@@ -485,12 +544,12 @@ class trainer(object):
                 opt=opt,
                 outf=outf)
             
-            plt.plot_generate_classic(tag = 'filtered',
-                Qec     = self.F_, 
-                Pdc     =self.Gx,
-                trn_set = self.vld_loader,
-                pfx="vld_set_fl_unique",
-                opt=opt, outf=outf)
+            # plt.plot_generate_classic(tag = 'filtered',
+            #     Qec     = self.F_, 
+            #     Pdc     =self.Gx,
+            #     trn_set = self.vld_loader,
+            #     pfx="vld_set_fl_unique",
+            #     opt=opt, outf=outf)
 
         if 'hybrid' in t and self.strategy['trplt']['hybrid']:
             n = self.strategy['hybrid']

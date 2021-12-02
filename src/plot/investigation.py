@@ -1,5 +1,7 @@
-import numpy as np
+import os
+import pdb
 import torch
+import numpy as np
 import matplotlib.pyplot as plt
 from scipy.fft import fft, fftfreq, fftshift
 from tools.generate_noise import noise_generator
@@ -10,10 +12,11 @@ from common.common_torch import tfft
 
 
 
-def plot_signal_and_reconstruction(vld_set,encoder,decoder, outf,device='cuda'):
+def plot_signal_and_reconstruction(vld_set,encoder,decoder, outf, opt, device='cuda'):
     # extract data : 
     # breakpoint()
-    t = np.linspace(0,40.96,4096)   
+    t = np.linspace(0,40.96,4096) 
+    vtm = torch.load(os.path.join(opt.dataroot,'vtm.pth'))  
     freq = fftshift(fftfreq(t.shape[-1]))  
     rndm_args = {'mean': 0, 'std': 1}
 
@@ -63,33 +66,81 @@ def plot_signal_and_reconstruction(vld_set,encoder,decoder, outf,device='cuda'):
             plt.savefig(file)
 
 
-def model_visualization(train_set, model):
+def model_visualization_encoder_unic(trn_set, model, opt, outf):
     model.eval()
+    i, j = 0, 0
+    vtm = torch.load(os.path.join(opt.dataroot,'vtm.pth'))
+    batch = next(iter(trn_set))
+
+    x,*others =  batch
+    signals   = x.cuda()
+
+    pdb.set_trace()
+    seq = next(iter(model.children()))
+    # master = next(iter(seq.children()))
+    # master = master.cuda()
+    # x_temp = master(x)
+
+    plot_signal_layer(layer = seq.master,pfx='master')
+    # cnt = 1
+    # hfig, (p0, p1) = plt.subplots(2,1, figsize=(6,8))
+    # for layer in seq.master.children():
+    #     signals = layer(signals)
+    #     cnt = plot(x = signals, layer = layer, opt=opt,vtm = vtm, 
+    #         layer_val=cnt, pfx = 'master', p0=p0, p1 = p1)
+    # hfig.savefig(os.path.join(opt.outf,"cnn_branch_%s_layer_%u.png"%('master',cnt)),\
+    #                             bbox_inches='tight',dpi = 500)
+    # plt.close()
+
+    zyx = signals
+    cnt = 1
     hfig, (p0, p1) = plt.subplots(2,1, figsize=(6,8))
-    for model_child in model.children(): 
-        x = model_child(train_set)
-        plot(model_child, x, p0, p1)
-        for layer in model_child.children(): 
-            x = layer(train_set)
-            plot(layer,x, p0, p1) 
+    for layer in seq.cnn_common.children():
+        zyx = layer(zyx)
+        cnt = plot(x = zyx, layer = layer, opt=opt,vtm = vtm, 
+            layer_val=cnt, pfx = 'cnn_common', p0=p0, p1 = p1)
+    hfig.savefig(os.path.join(opt.outf,"cnn_branch_%s_layer_%u.png"%('cnn_common',cnt)),\
+                                bbox_inches='tight',dpi = 500)
+    plt.close()
+
+    zy = signals
+    cnt = 1
+    hfig, (p0, p1) = plt.subplots(2,1, figsize=(6,8))
+    for layer in seq.cnn_broadband.children():
+        zy = layer(zy)
+        cnt = plot(x = zy, layer = layer, opt=opt,vtm = vtm, 
+            layer_val=cnt, pfx = 'cnn_broadband', p0=p0, p1 = p1)
+    hfig.savefig(os.path.join(opt.outf,"cnn_branch_%s_layer_%u.png"%('cnn_broadband',cnt)),\
+                                bbox_inches='tight',dpi = 500)
+    plt.close()
 
 
+def plot_signal_layer(layer,pfx):
+    cnt = 1
+    hfig, (p0, p1) = plt.subplots(2,1, figsize=(6,8))
+    for layer in seq.master.children():
+        signals = layer(signals)
+        cnt = plot(x = signals, layer = layer, opt=opt,vtm = vtm, 
+            layer_val=cnt, pfx = pfx, p0=p0, p1 = p1)
+    hfig.savefig(os.path.join(opt.outf,"cnn_branch_%s_layer_%u.png"%(pfx,cnt)),\
+                                bbox_inches='tight',dpi = 500)
+    plt.close()
 
-def plot(layer, x, p0, p1):
-    classname = layer.__class__.__name__ 
-    if layer.find('Conv1d') or layer.find('ConvTranspose1d'):
-        #number of time steps
-        Nt = x.shape[2]
-        #time figure
-        t  = np.linspace(0,40.06, Nt)
-        st = x[1,1,:].cpu().data.numpy().copy()
-        p0.plot(t,st, label = 'layer')
-
-        #frequence figure
-        freq = fftshift(fftfreq(t.shape[-1])) 
-        sf = tfft(Xt,0.01).cpu().data.numpy().copy()
-        p1.plot(freq,sf, label = 'layer')
-
+def plot(x,layer,opt,vtm, layer_val, pfx, p1, p0):
+    classname = layer.__class__.__name__
+    if classname == 'Conv1d' or classname == 'ConvTranspose1d':
+        
+        t   = np.linspace(vtm[0],vtm[-1],x.shape[-1])
+        vfr = np.arange(0,t.size,1)/(t[1]-t[0])/(t.size-1)
+        xf  = tfft(x,t[1]-t[0]).cpu().data.numpy().copy()
+        st = x[1,1,: ].cpu().data.numpy().copy()
+        sf = xf[1,1,:]
+        p0.plot(t,st, label='signal_layer %u'%(layer_val))
+        p1.loglog(vfr,sf,label='signal_layer %u'%(layer_val))
+       
+        print("cnn_branch_%s_layer_%u.png"%(pfx,layer_val))
+        layer_val = layer_val +1
+    return layer_val
 def visualize_gradients(net,loss, color="C0"):
     """
     Args:
