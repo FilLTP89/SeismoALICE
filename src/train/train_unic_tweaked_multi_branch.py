@@ -328,7 +328,7 @@ class trainer(object):
         modalite(self.Dnets, mode ='train')
 
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,app.RNDM_ARGS)
-        breakpoint()
+        
         # 1. Concatenate inputs
         y_inp  = zcat(y,wny)
         z_inp  = zcat(zxy,zyy)

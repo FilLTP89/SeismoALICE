@@ -798,7 +798,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             # zt = torch.randn(*zt_shape).to(dev, non_blocking = True)
 
             wnx,*others = noise_generator(Xt.shape,zt.shape,dev,app.RNDM_ARGS)
-            X_inp = Xt+wnx
+            X_inp = zcat(Xt,wnx)
 
             # ztr = Qec(X_inp).to(dev)
 
@@ -810,7 +810,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 zy,zdf_gen,*other =  Qec(X_inp)
                 # wn = torch.empty(zt_shape).normal_(**app.RNDM_ARGS).to(dev)
                 # wn = torch.zeros_like(zt)
-                ztr = zdf_gen+zy
+                ztr = zcat(zdf_gen,zy)
             else:
                 ztr = Qec(X_inp)
 
