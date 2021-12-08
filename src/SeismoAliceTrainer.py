@@ -49,9 +49,12 @@ class trainer(object):
             configs = jsonfile.read()
         configs = json.loads(configs)
 
-        self.Fxy = Encoder(d_x=md['ntm'],d_z=[nzxy,nzyy])
-        self.Fxy.get(net_type='branched',config=configs["encoders"]["F"]).to(device)
-        
+        # Load encoder
+        self.F = Encoder(d_x=md['ntm'],d_z=[nzxy,nzyy])
+        self.F.get(net_type='branched',config=configs["encoders"]["F"]).to(device)
+
+        # Load decoder
+        self.F = Encoder(d_x=md['ntm'],d_z=[nzxy,nzyy]).get(net_type='branched',config=configs["encoders"]["F"]).to(device)
 
         # self.Gxx = Module()
         # self.Gyy = Module()
