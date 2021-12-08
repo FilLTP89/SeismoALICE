@@ -5,11 +5,10 @@ u'''Required modules'''
 from copy import deepcopy
 from profile_support import profile
 from CommonNN import *
-from CommonTorch import * 
+from CommonTorch import *
 from SeismoAliceModels import Encoder, Decoder
 from SeismoAliceModels import DCGAN_Dx, DCGAN_Dz
 from SeismoAliceModels import DCGAN_DXX, DCGAN_DZZ, DCGAN_DXZ
-from SeismoAliceModels import DenseEncoder
 import PlotTools as plt
 from GenerateNoise import latent_resampling, GetNoise
 from GenerateNoise import lowpass_biquad
@@ -34,56 +33,9 @@ b1 = 0.5
 b2 = 0.9999
 nch_tot = 3
 penalty_wgangp = 10.
-nly = 5
-#self.style='ALICE'#'WGAN'
-acts={}
-acts['ALICE'] = {'Fed' :[LeakyReLU(1.0,inplace=True) for t in range(nly)]+[LeakyReLU(1.0,inplace=True)],
-                 'Gdd' :[ReLU(inplace=True) for t in range(nly-1)]+[Tanh()],
-                 'Fef' :[LeakyReLU(1.0,inplace=True) for t in range(4)]+[LeakyReLU(1.0,inplace=True)],
-                 'Gdf' :[ReLU(inplace=True) for t in range(4)]+[Tanh()],
-                 'Ghz' :[ReLU(inplace=True) for t in range(2)]+[LeakyReLU(1.0,inplace=True)],
-                 'Dsx' :[LeakyReLU(1.0,inplace=True),LeakyReLU(1.0,inplace=True)],
-                 'Dsz' :[LeakyReLU(1.0,inplace=True),LeakyReLU(1.0,inplace=True)],
-                 'Drx' :[LeakyReLU(1.0,inplace=True),Sigmoid()],
-                 'Drz' :[LeakyReLU(1.0,inplace=True),Sigmoid()],
-                 'Ddxz':[LeakyReLU(1.0,inplace=True),Sigmoid()],
-                 'DhXd':[LeakyReLU(1.0,inplace=True) for t in range(2)]+[Sigmoid()]}
-
-acts['WGAN']  = {'Fed' :[LeakyReLU(1.0,inplace=True) for t in range(nly)]+[LeakyReLU(1.0,inplace=True)],
-                 'Gdd' :[ReLU(inplace=True) for t in range(nly-1)]+[Tanh()],
-                 'Fef' :[LeakyReLU(1.0,inplace=True) for t in range(4)]+[LeakyReLU(1.0,inplace=True)],
-                 'Gdf' :[ReLU(inplace=True) for t in range(4)]+[Tanh()],
-                 'Ghz' :[ReLU(inplace=True) for t in range(2)]+[LeakyReLU(1.0,inplace=True)],
-                 'Dsx' :[LeakyReLU(1.0,inplace=True),LeakyReLU(1.0,inplace=True)],
-                 'Dsz' :[LeakyReLU(1.0,inplace=True),LeakyReLU(1.0,inplace=True)],
-                 'Drx' :[LeakyReLU(1.0,inplace=True) for t in range(2)],
-                 'Drz' :[LeakyReLU(1.0,inplace=True) for t in range(2)],
-                 'Ddxz':[LeakyReLU(1.0,inplace=True) for t in range(2)],
-                 'DhXd':[LeakyReLU(1.0,inplace=True) for t in range(3)]}
-
-nlayers = {'Fed':5,'Gdd':5,
-           'Fef':5,'Gdf':5,
-           'Ghz':3,
-           }
-kernels = {'Fed':4,'Gdd':4,
-           'Fef':4,'Gdf':4,
-           'Ghz':3,
-           }
-strides = {'Fed':2,'Gdd':2,
-           'Fef':2,'Gdf':2,
-           'Ghz':1,
-           }
-padding = {'Fed':0,'Gdd':0,
-           'Fef':0,'Gdf':0,
-           'Ghz':1,
-           }
-outpads = {'Gdd':0,
-           'Gdf':0,
-           'Ghz':1,
-           }
 
 class trainer(object):
-    '''Initialize neural network'''
+
     @profile
     def __init__(self,cv):
         super(trainer, self).__init__()
@@ -92,90 +44,89 @@ class trainer(object):
         globals().update(cv)
         globals().update(opt.__dict__)
 
+        # read configuration for networks
         with open(config,'r') as jsonfile:
             configs = jsonfile.read()
-        import pdb
-        pdb.set_trace()
         configs = json.loads(configs)
 
-        self.Fxy = Module()
-        self.Gxx = Module()
-        self.Gyy = Module()
+        self.Fxy = Encoder(d_x=md['ntm'],d_z=[nzxy,nzyy])
+        self.Fxy.get(net_type='branched',config=configs["encoders"]["F"]).to(dev)
+        import pdb
+        pdb.set_trace()
 
-        self.DsXd = Module()
-        self.Dszd = Module()
-        self.DsXf = Module()
-        self.Dszf = Module()
+        # self.Gxx = Module()
+        # self.Gyy = Module()
 
-        self.Ddnets = []
-        self.Dfnets = []
-        self.Dhnets = []
-        self.optzd  = []
-        self.optzf  = []
-        self.optzh  = []
-        self.oGdxz=None
-        self.oGfxz=None
-        self.oGhxz=None
-        flagT=False
-        flagF=False
+        # self.DsXd = Module()
+        # self.Dszd = Module()
+        # self.DsXf = Module()
+        # self.Dszf = Module()
 
-        self.style='ALICE'
-        act = acts[self.style]
-        flagT = True
-        n = self.strategy['broadband']
-        print("Loading broadband generators")
-        # Encoder broadband Fed
-        self.Fed = Encoder(ngpu=ngpu,dev=device,nz=nzd,nzcl=0,
-                           nch=2*nch_tot,ndf=ndf,szs=md['ntm'],
-                           nly=nlayers['Fed'],ker=kernels['Fed'],
-                           std=strides['Fed'],pad=padding['Fed'],
-                           dil=1,grp=1,dpc=0.0,act=act['Fed']).to(device)
-        # Decoder broadband Gdd
-        self.Gdd = Decoder(ngpu=ngpu,nz=2*nzd,nch=nch_tot,
-                           ndf=ndf//(2**(5-nlayers['Gdd'])),
-                           nly=nlayers['Gdd'],ker=kernels['Gdd'],
-                           std=strides['Gdd'],pad=padding['Gdd'],\
-                           opd=outpads['Gdd'],dpc=0.0,act=act['Gdd']).to(device)
+        # self.Ddnets = []
+        # self.Dfnets = []
+        # self.Dhnets = []
+        # self.optzd  = []
+        # self.optzf  = []
+        # self.optzh  = []
+        # self.oGdxz=None
+        # self.oGfxz=None
+        # self.oGhxz=None
+        # flagT=False
+        # flagF=False
 
-        if None in n:
-            self.FGd = [self.Fed,self.Gdd]
-            self.oGdxz = reset_net(self.FGd,func=set_weights,lr=glr,b1=b1,b2=b2,\
-                    weight_decay=None)
-        else:
-            print("Broadband generators: {0} - {1}".format(*n))
-            self.Fed.load_state_dict(tload(n[0])['model_state_dict'])
-            self.Gdd.load_state_dict(tload(n[1])['model_state_dict'])
-            self.oGdxz = Adam(ittc(self.Fed.parameters(),self.Gdd.parameters()),
-                              lr=glr,betas=(b1,b2))#,weight_decay=None)
-        self.optzd.append(self.oGdxz)
-        self.Dszd = DCGAN_Dz(ngpu=ngpu,nz=nzd,ncl=512,n_extra_layers=1,dpc=0.25,
-                             bn=False,activation=act['Dsz']).to(device)
-        self.DsXd = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
-                             n_extra_layers=0,dpc=0.25,activation=act['Dsx']).to(device)
-        self.Ddxz = DCGAN_DXZ(ngpu=ngpu,nc=1024,n_extra_layers=2,dpc=0.25,
-                              activation=act['Ddxz']).to(device)    
-        self.Ddnets.append(self.DsXd)  
-        self.Ddnets.append(self.Dszd)
-        self.Ddnets.append(self.Ddxz)
-        self.oDdxz = reset_net(self.Ddnets,func=set_weights,lr=rlr,b1=b1,b2=b2)
-        self.optzd.append(self.oDdxz)   
+        # self.style='ALICE'
+        # act = acts[self.style]
+        # flagT = True
+        # n = self.strategy['broadband']
+        # print("Loading broadband generators")
+        # # Encoder broadband Fed
+        
+        # # Decoder broadband Gdd
+        # self.Gdd = Decoder(ngpu=ngpu,nz=2*nzd,nch=nch_tot,
+        #                    ndf=ndf//(2**(5-nlayers['Gdd'])),
+        #                    nly=nlayers['Gdd'],ker=kernels['Gdd'],
+        #                    std=strides['Gdd'],pad=padding['Gdd'],\
+        #                    opd=outpads['Gdd'],dpc=0.0,act=act['Gdd']).to(device)
+
+        # if None in n:
+        #     self.FGd = [self.Fed,self.Gdd]
+        #     self.oGdxz = reset_net(self.FGd,func=set_weights,lr=glr,b1=b1,b2=b2,\
+        #             weight_decay=None)
         # else:
-        #     if None not in n:
-        #         print("Broadband generators - NO TRAIN: {0} - {1}".format(*n))
-        #         self.Fed.load_state_dict(tload(n[0])['model_state_dict'])
-        #         self.Gdd.load_state_dict(tload(n[1])['model_state_dict'])
-        #     else:
-        #         flagT=False
+        #     print("Broadband generators: {0} - {1}".format(*n))
+        #     self.Fed.load_state_dict(tload(n[0])['model_state_dict'])
+        #     self.Gdd.load_state_dict(tload(n[1])['model_state_dict'])
+        #     self.oGdxz = Adam(ittc(self.Fed.parameters(),self.Gdd.parameters()),
+        #                       lr=glr,betas=(b1,b2))#,weight_decay=None)
+        # self.optzd.append(self.oGdxz)
+        # self.Dszd = DCGAN_Dz(ngpu=ngpu,nz=nzd,ncl=512,n_extra_layers=1,dpc=0.25,
+        #                      bn=False,activation=act['Dsz']).to(device)
+        # self.DsXd = DCGAN_Dx(ngpu=ngpu,isize=256,nc=nch_tot,ncl=512,ndf=64,fpd=1,
+        #                      n_extra_layers=0,dpc=0.25,activation=act['Dsx']).to(device)
+        # self.Ddxz = DCGAN_DXZ(ngpu=ngpu,nc=1024,n_extra_layers=2,dpc=0.25,
+        #                       activation=act['Ddxz']).to(device)    
+        # self.Ddnets.append(self.DsXd)  
+        # self.Ddnets.append(self.Dszd)
+        # self.Ddnets.append(self.Ddxz)
+        # self.oDdxz = reset_net(self.Ddnets,func=set_weights,lr=rlr,b1=b1,b2=b2)
+        # self.optzd.append(self.oDdxz)   
+        # # else:
+        # #     if None not in n:
+        # #         print("Broadband generators - NO TRAIN: {0} - {1}".format(*n))
+        # #         self.Fed.load_state_dict(tload(n[0])['model_state_dict'])
+        # #         self.Gdd.load_state_dict(tload(n[1])['model_state_dict'])
+        # #     else:
+        # #         flagT=False
 
-        # Loss Criteria
-        self.bce_loss = BCE(reduction='mean').to(device)
-        self.losses = {'Dloss_t':[0],'Dloss_f':[0],'Dloss_t':[0],
-                       'Gloss_x':[0],'Gloss_z':[0],'Gloss_t':[0],
-                       'Gloss_xf':[0],'Gloss_xt':[0],'Gloss_f':[0],
-                       'Gloss':[0],'Dloss':[0],'Gloss_ftm':[0],'Gloss_ali_X':[0],
-                       'Gloss_ali_z':[0],'Gloss_cycle_X':[0],
-                       'Gloss_cycle_z':[0],'Dloss_ali':[0],
-                       'Dloss_ali_X':[0],'Dloss_ali_z':[0]}
+        # # Loss Criteria
+        # self.bce_loss = BCE(reduction='mean').to(device)
+        # self.losses = {'Dloss_t':[0],'Dloss_f':[0],'Dloss_t':[0],
+        #                'Gloss_x':[0],'Gloss_z':[0],'Gloss_t':[0],
+        #                'Gloss_xf':[0],'Gloss_xt':[0],'Gloss_f':[0],
+        #                'Gloss':[0],'Dloss':[0],'Gloss_ftm':[0],'Gloss_ali_X':[0],
+        #                'Gloss_ali_z':[0],'Gloss_cycle_X':[0],
+        #                'Gloss_cycle_z':[0],'Dloss_ali':[0],
+        #                'Dloss_ali_X':[0],'Dloss_ali_z':[0]}
 
     @profile
     def discriminate_broadband_xz(self,Xd,Xdr,zd,zdr):
@@ -392,18 +343,20 @@ class trainer(object):
                 y,x,*others = batch
                 y = y.to(device) # BB-signal
                 x = x.to(device) # LF-signal
-                zxy = tFT(y.size[0],nzxy*latentSize).resize_(nsy,nzxy,latentSize).normal_(**rndm_args)
-                zyy = tFT(y.size[0],nzyy*latentSize).resize_(nsy,nzyy,latentSize).normal_(**rndm_args)
-                # Train G/D
-                for _ in range(5):
-                    self.alice_train_discriminator(y,zyy,x,zxy)
-                for _ in range(1):
-                    self.alice_train_generator(Xf,zf)
+                import pdb
+                pdb.set_trace()
+                zxy = tFT(y.shape[0],nzxy*latentSize).resize_(nsy,nzxy,latentSize).normal_(**rndm_args)
+                zyy = tFT(y.shape[0],nzyy*latentSize).resize_(nsy,nzyy,latentSize).normal_(**rndm_args)
+            #     # Train G/D
+            #     for _ in range(5):
+            #         self.alice_train_discriminator(y,zyy,x,zxy)
+            #     for _ in range(1):
+            #         self.alice_train_generator(Xf,zf)
 
-            str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
-            str = 'epoch: {:>d} --- '.format(epoch)
-            str = str + ' | '.join(str1)
-            print(str)
+            # str1 = ['{}: {:>5.3f}'.format(k,np.mean(np.array(v[-b:-1]))) for k,v in self.losses.items()]
+            # str = 'epoch: {:>d} --- '.format(epoch)
+            # str = str + ' | '.join(str1)
+            # print(str)
         #     if epoch%save_checkpoint==0:
         #         tsave({'epoch':epoch,'model_state_dict':self.Fef.state_dict(),
         #                'optimizer_state_dict':self.oGfxz.state_dict(),'loss':self.losses,},

@@ -6,169 +6,295 @@ from CommonNN import *
 import torch
 from CommonTorch import tdev
 
-class DenseEncoder(Module):
-    def __init__(self,ngpu,dev,ninp,nout,szs,nly,
-                 act=[LeakyReLU(1.0,True),Tanh()],dpc=0.10):
-        super(DenseEncoder,self).__init__()
-        self.ngpu = ngpu
-        self.gang = range(self.ngpu)
-        self.dev = dev
-        self.cnn = []
-        for l in range(nly):
-            self.cnn.append(ConvBlock(ni=ninp[l],no=nout[l],ks=szs-1,
-                                      stride=1,bias=True,act=act[l],
-                                      bn=False))
-        self.cnn = sqn(*self.cnn)
-        
-    def forward(self,Xn):
-        if Xn.is_cuda and self.ngpu > 1:
-            zlf   = pll(self.cnn,Xn,self.gang)
-        else:
-            zlf   = self.cnn(Xn)
-        if not self.training:
-            zlf=zlf.detach()
-        return zlf
-    
-class ResEncoder(Module):
-    def __init__(self,ngpu,dev,nz,nzcl,nch,ndf,\
-                 szs,nly,ker=7,std=4,pad=0,dil=1,grp=1,\
-                 dpc=0.10,act=[LeakyReLU(1.0,True),LeakyReLU(1.0,True),LeakyReLU(1.0,True),LeakyReLU(1.0,True),Tanh()],\
-                 with_noise=False,dtm=0.01,ffr=0.16,wpc=2.e-2):
-        super(ResEncoder,self).__init__()
-        self.ngpu = ngpu
-        self.gang = range(self.ngpu)
-        self.dev = dev
-        
-        self.cnn = [ConvBlock(ni=nch*1,no=ndf*2,ks=ker,stride=std,act=act[0],bn=False),
-                    ResConvBlock(ni=ndf*2,no=ndf*2,ks=3,stride=1,act=act[1],bn=True ,dpc=dpc),
-                    ResConvBlock(ni=ndf*2,no=ndf*2,ks=3,stride=1,act=act[2],bn=True ,dpc=dpc),
-                    ResConvBlock(ni=ndf*2,no=ndf*2,ks=3,stride=1,act=act[3],bn=True ,dpc=dpc),
-                    ResConvBlock(ni=ndf*2,no=ndf*2,ks=3,stride=1,act=act[4],bn=True,dpc=dpc)]
-        
-        self.cnn = [ResNet(ann=self.cnn),ConvBlock(ni=ndf*2,no=nz,ks=33,pad=16,stride=16,act=act[-1],bn=False)]
-        
-        self.cnn = sqn(*self.cnn)
-        
-    def forward(self,Xn):
-        if Xn.is_cuda and self.ngpu > 1:
-            zlf   = pll(self.cnn,Xn,self.gang)
-        else:
-            zlf   = self.cnn(Xn)
-        if not self.training:
-            zlf=zlf.detach()
-        return zlf
+# class DenseEncoder(Module):
+#     def __init__(self,ngpu,dev,ninp,nout,szs,nly,
+#                  act=[LeakyReLU(1.0,True),Tanh()],dpc=0.10):
+#         super(DenseEncoder,self).__init__()
+#         self.ngpu = ngpu
+#         self.gang = range(self.ngpu)
+#         self.dev = dev
+#         self.cnn = []
+#         for l in range(nly):
+#             self.cnn.append(ConvBlock(ni=ninp[l],no=nout[l],ks=szs-1,
+#                                       stride=1,bias=True,act=act[l],
+#                                       bn=False))
+#         self.cnn = sqn(*self.cnn)
 
-class EncoderDecoder(Module):
-    def __init__(self,ngpu,dev,nz,nch,ndf,nly,ker=7,std=4,opd=0,pad=0,dil=1,grp=1,bn=True,
-                 dpc=0.10,act=[LeakyReLU(1.0,True),LeakyReLU(1.0,True),
-                               LeakyReLU(1.0,True),LeakyReLU(1.0,True),
-                               LeakyReLU(1.0,True),Tanh()]):
-        super(EncoderDecoder,self).__init__()
-        self.ngpu = ngpu
-        self.gang = range(self.ngpu)
-        self.dev = dev
-        if nly==3:
-            self.cnn = \
-                cnn1d(nch*2,ndf*1,act[0],ker=ker,std=std,pad=pad+1,bn=bn,dpc=dpc  ,wn=False)+\
-                cnn1d(ndf*1,ndf*2,act[1],ker=ker,std=std,pad=pad+1,bn=bn,dpc=dpc  ,wn=False)+\
-                cnn1d(ndf*2,nz ,act[2],ker=ker,std=std,pad=pad+1,bn=False,dpc=0.0 ,wn=True,dev=self.dev)+\
-                cnn1dt(2*nz ,ndf*2,act[3],ker=ker,std=std,pad=1,opd=opd,bn=True, dpc=dpc)+\
-                cnn1dt(ndf*2,ndf*1,act[4],ker=ker,std=std,pad=1,opd=opd,bn=True, dpc=dpc)+\
-                cnn1dt(ndf*1,nch*1,act[5],ker=ker,std=std,pad=1,opd=opd,bn=False, dpc=0.0)
-        elif nly==5:
-            self.cnn = \
-                cnn1d(nch*2,ndf*1,act[0],ker=ker,std=std,pad=pad,bn=bn,dpc=0.0   ,wn=False)+\
-                cnn1d(ndf*1,ndf*2,act[1],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc   ,wn=False)+\
-                cnn1d(ndf*2,ndf*4,act[2],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc   ,wn=False)+\
-                cnn1d(ndf*4,ndf*8,act[3],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc   ,wn=False)+\
-                cnn1d(ndf*8,nz   ,act[4],ker=ker,std=std,pad=2  ,bn=False,dpc=0.0,wn=True)+\
-                cnn1dt(2*nz,ndf*8,act[5],ker=ker,std=std,pad=1,opd=opd,bn=True , dpc=dpc)+\
-                cnn1dt(ndf*8,ndf*4,act[6],ker=ker,std=std,pad=1,opd=opd,bn=True , dpc=dpc)+\
-                cnn1dt(ndf*4,ndf*2,act[7],ker=ker,std=std,pad=1,opd=opd,bn=True , dpc=dpc)+\
-                cnn1dt(ndf*2,ndf*1,act[8],ker=ker,std=std,pad=1,opd=opd,bn=True , dpc=dpc)+\
-                cnn1dt(ndf*1,nch*1,act[9],ker=ker,std=std,pad=1,opd=opd,bn=False, dpc=0.0)
-        self.cnn = sqn(*self.cnn)
+#     def forward(self,Xn):
+#         if Xn.is_cuda and self.ngpu > 1:
+#             zlf   = pll(self.cnn,Xn,self.gang)
+#         else:
+#             zlf   = self.cnn(Xn)
+#         if not self.training:
+#             zlf=zlf.detach()
+#         return zlf
+    
+# class ResEncoder(Module):
+#     def __init__(self,ngpu,dev,nz,nzcl,nch,ndf,\
+#                  szs,nly,ker=7,std=4,pad=0,dil=1,grp=1,\
+#                  dpc=0.10,act=[LeakyReLU(1.0,True),LeakyReLU(1.0,True),LeakyReLU(1.0,True),LeakyReLU(1.0,True),Tanh()],\
+#                  with_noise=False,dtm=0.01,ffr=0.16,wpc=2.e-2):
+#         super(ResEncoder,self).__init__()
+#         self.ngpu = ngpu
+#         self.gang = range(self.ngpu)
+#         self.dev = dev
         
+#         self.cnn = [ConvBlock(ni=nch*1,no=ndf*2,ks=ker,stride=std,act=act[0],bn=False),
+#                     ResConvBlock(ni=ndf*2,no=ndf*2,ks=3,stride=1,act=act[1],bn=True ,dpc=dpc),
+#                     ResConvBlock(ni=ndf*2,no=ndf*2,ks=3,stride=1,act=act[2],bn=True ,dpc=dpc),
+#                     ResConvBlock(ni=ndf*2,no=ndf*2,ks=3,stride=1,act=act[3],bn=True ,dpc=dpc),
+#                     ResConvBlock(ni=ndf*2,no=ndf*2,ks=3,stride=1,act=act[4],bn=True,dpc=dpc)]
         
-    def forward(self,Xn):
-        if Xn.is_cuda and self.ngpu > 1:
-            zlf   = pll(self.cnn,Xn,self.gang)
-        else:
-            zlf   = self.cnn(Xn)
-        if not self.training:
-            zlf=zlf.detach()
-        return zlf
+#         self.cnn = [ResNet(ann=self.cnn),ConvBlock(ni=ndf*2,no=nz,ks=33,pad=16,stride=16,act=act[-1],bn=False)]
+        
+#         self.cnn = sqn(*self.cnn)
+        
+#     def forward(self,Xn):
+#         if Xn.is_cuda and self.ngpu > 1:
+#             zlf   = pll(self.cnn,Xn,self.gang)
+#         else:
+#             zlf   = self.cnn(Xn)
+#         if not self.training:
+#             zlf=zlf.detach()
+#         return zlf
+
+# class EncoderDecoder(Module):
+#     def __init__(self,ngpu,dev,nz,nch,ndf,nly,ker=7,std=4,opd=0,pad=0,dil=1,grp=1,bn=True,
+#                  dpc=0.10,act=[LeakyReLU(1.0,True),LeakyReLU(1.0,True),
+#                                LeakyReLU(1.0,True),LeakyReLU(1.0,True),
+#                                LeakyReLU(1.0,True),Tanh()]):
+#         super(EncoderDecoder,self).__init__()
+#         self.ngpu = ngpu
+#         self.gang = range(self.ngpu)
+#         self.dev = dev
+#         if nly==3:
+#             self.cnn = \
+#                 cnn1d(nch*2,ndf*1,act[0],ker=ker,std=std,pad=pad+1,bn=bn,dpc=dpc  ,wn=False)+\
+#                 cnn1d(ndf*1,ndf*2,act[1],ker=ker,std=std,pad=pad+1,bn=bn,dpc=dpc  ,wn=False)+\
+#                 cnn1d(ndf*2,nz ,act[2],ker=ker,std=std,pad=pad+1,bn=False,dpc=0.0 ,wn=True,dev=self.dev)+\
+#                 cnn1dt(2*nz ,ndf*2,act[3],ker=ker,std=std,pad=1,opd=opd,bn=True, dpc=dpc)+\
+#                 cnn1dt(ndf*2,ndf*1,act[4],ker=ker,std=std,pad=1,opd=opd,bn=True, dpc=dpc)+\
+#                 cnn1dt(ndf*1,nch*1,act[5],ker=ker,std=std,pad=1,opd=opd,bn=False, dpc=0.0)
+#         elif nly==5:
+#             self.cnn = \
+#                 cnn1d(nch*2,ndf*1,act[0],ker=ker,std=std,pad=pad,bn=bn,dpc=0.0   ,wn=False)+\
+#                 cnn1d(ndf*1,ndf*2,act[1],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc   ,wn=False)+\
+#                 cnn1d(ndf*2,ndf*4,act[2],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc   ,wn=False)+\
+#                 cnn1d(ndf*4,ndf*8,act[3],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc   ,wn=False)+\
+#                 cnn1d(ndf*8,nz   ,act[4],ker=ker,std=std,pad=2  ,bn=False,dpc=0.0,wn=True)+\
+#                 cnn1dt(2*nz,ndf*8,act[5],ker=ker,std=std,pad=1,opd=opd,bn=True , dpc=dpc)+\
+#                 cnn1dt(ndf*8,ndf*4,act[6],ker=ker,std=std,pad=1,opd=opd,bn=True , dpc=dpc)+\
+#                 cnn1dt(ndf*4,ndf*2,act[7],ker=ker,std=std,pad=1,opd=opd,bn=True , dpc=dpc)+\
+#                 cnn1dt(ndf*2,ndf*1,act[8],ker=ker,std=std,pad=1,opd=opd,bn=True , dpc=dpc)+\
+#                 cnn1dt(ndf*1,nch*1,act[9],ker=ker,std=std,pad=1,opd=opd,bn=False, dpc=0.0)
+#         self.cnn = sqn(*self.cnn)
+
+#     def forward(self,Xn):
+#         if Xn.is_cuda and self.ngpu > 1:
+#             zlf   = pll(self.cnn,Xn,self.gang)
+#         else:
+#             zlf   = self.cnn(Xn)
+#         if not self.training:
+#             zlf=zlf.detach()
+#         return zlf
+
+# sum(p.numel() for p in self.parameters())
 
 class Encoder(Module):
-    def __init__(self,ngpu,dev,nz,nzcl,nch,ndf,\
-                 szs,nly,ker=7,std=4,pad=0,dil=1,grp=1,bn=True,
-                 dpc=0.10,act=[LeakyReLU(1.0,True),LeakyReLU(1.0,True),LeakyReLU(1.0,True),LeakyReLU(1.0,True),Tanh()],\
-                 with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2):
+    def __init__(self,d_x,d_z,**config):
         super(Encoder,self).__init__()
-        self.ngpu = ngpu
-        self.gang = range(self.ngpu)
-        self.dev = dev
-        if nly==3:
-            # 3 layers
-            if with_noise:
-                self.cnn = \
-                    cnn1d(nch*1,ndf*1,act[0],ker=ker,std=std,pad=pad,bn=bn,dpc=0.0,wn=False,\
-                          dtm=dtm,ffr=ffr,wpc=wpc,dev=self.dev)+\
-                    cnn1d(ndf*1,ndf*2,act[1],ker=ker,std=std,pad=pad,bn=bn ,dpc=dpc,wn=False)+\
-                    cnn1d(ndf*2,nz   ,act[2],ker=ker,std=std,pad=pad,bn=False,dpc=0.0,wn=False)
-            else:
-                self.cnn = \
-                    cnn1d(nch*1,ndf*1,act[0],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
-                    cnn1d(ndf*1,ndf*2,act[1],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
-                    cnn1d(ndf*2,nz ,act[2],ker=ker,std=std,pad=pad,bn=False,dpc=0.0,wn=False)
-        elif nly==5:
-            # 5 layers
-            if with_noise:
-                self.cnn = \
-                    cnn1d(nch*1,ndf*1,act[0],ker=ker,std=std,pad=pad,bn=bn,dpc=0.0,wn=True ,\
-                          dtm=dtm,ffr=ffr,wpc=wpc,dev=self.dev)+\
-                    cnn1d(ndf*1,ndf*2,act[1],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
-                    cnn1d(ndf*2,ndf*4,act[2],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
-                    cnn1d(ndf*4,ndf*8,act[3],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
-                    cnn1d(ndf*8,nz   ,act[4],ker=ker,std=std,pad=2  ,bn=False,dpc=0.0,wn=False)
-            else:
-                self.cnn = \
-                    cnn1d(nch*1,ndf*1,act[0],ker=ker,std=std,pad=pad,bn=bn,dpc=0.0)+\
-                    cnn1d(ndf*1,ndf*2,act[1],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
-                    cnn1d(ndf*2,ndf*4,act[2],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
-                    cnn1d(ndf*4,ndf*8,act[3],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
-                    cnn1d(ndf*8,nz   ,act[4],ker=ker,std=std,pad=2  ,bn=False,dpc=0.0)
-        elif nly==6:
-            # 6 layers
-            if with_noise:
-                self.cnn = \
-                    cnn1d(nch*1,ndf*1,act[0],ker=ker,std=std,pad=pad,bn=bn,dpc=0.0,wn=True ,\
-                          dtm=dtm,ffr=ffr,wpc=wpc,dev=self.dev)+\
-                    cnn1d(ndf*1 ,ndf*2 ,act[1],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
-                    cnn1d(ndf*2 ,ndf*4 ,act[2],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
-                    cnn1d(ndf*4 ,ndf*8 ,act[3],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
-                    cnn1d(ndf*8 ,ndf*16,act[4],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
-                    cnn1d(ndf*16,nz    ,act[5],ker=ker,std=std,pad=2  ,bn=False,dpc=0.0,wn=False)
-            else:
-                self.cnn = \
-                    cnn1d(nch*1 ,ndf*1 ,act[0],ker=ker,std=std,pad=pad,bn=bn,dpc=0.0)+\
-                    cnn1d(ndf*1 ,ndf*2 ,act[1],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
-                    cnn1d(ndf*2 ,ndf*4 ,act[2],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
-                    cnn1d(ndf*4 ,ndf*8 ,act[3],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
-                    cnn1d(ndf*8 ,ndf*16,act[4],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
-                    cnn1d(ndf*16,nz    ,act[5],ker=ker,std=std,pad=2  ,bn=False,dpc=0.0)
+        self.d_x = d_x
+        self.d_z = d_z
+        self.h = []
 
-        self.cnn = sqn(*self.cnn)
+    def compile(self,config):
+        self.h = Sequential(self.h)
+        pass
+
+    def get(self,net_type,**config):
+        if net_type=="branched":
+            net = BranchedEncoder(self.d_x,self.d_z,**config)
+        net.compile()
+        return net
+
+    def forward(self,x):
+        z = self.h(x)
+        return z if self.training else z.detach()
+
+class BranchedEncoder(Encoder):
+    def __init__(self,d_x,d_z,config):
+        super(BranchedEncoder,self).__init__(d_x,d_z)
+        self.config = config
+        self.hxy = []
+        self.hyy = []
+
+    def check_dimensions(self):
+        self.Lout = {}
+        self.Lout.fromkeys(self.config.keys(),[])
+        self.Lout["Fin"] = [self.d_x]
+
+        k,v=("Fin",self.config["Fin"])
+
+        for l in range(v["nlayers"]):
+            if "padding" not in self.config[k].keys():
+                self.config[k]["padding"]=[]
+
+            if len(self.config[k]["padding"])<self.config[k]["nlayers"]:
+                self.config[k]["padding"].append((
+                    self.config[k]["dilation"][l]*
+                    (self.config[k]["kernel_size"][l]-1)+1-
+                    self.config[k]["stride"][l])//2)
+
+            self.Lout[k].append(1+(self.Lout[k][l]+
+                2*self.config[k]["padding"][l]-
+                    self.config[k]["dilation"][l]*(
+                        self.config[k]["kernel_size"][l]-1
+                    )-1)//self.config[k]["stride"][l]
+                )
+
+        for k,v in self.config.items():
+            if k!="Fin":
+                self.Lout[k] = [self.Lout["Fin"][-1]]
+                for l in range(v["nlayers"]):
+                    if "padding" not in self.config[k].keys():
+                        self.config[k]["padding"]=[]
+                    if len(self.config[k]["padding"])<self.config[k]["nlayers"]:                        
+                        self.config[k]["padding"].append((
+                            self.config[k]["dilation"][l]*
+                            (self.config[k]["kernel_size"][l]-1)+1-
+                            self.config[k]["stride"][l])//2)
+
+                    self.Lout[k].append(1+(self.Lout[k][l]+
+                            2*self.config[k]["padding"][l]-
+                            self.config[k]["dilation"][l]*(
+                                self.config[k]["kernel_size"][l]-1
+                            )-1)//self.config[k]["stride"][l]
+                        )
+        return
+
+    def compile(self):
+
+        self.check_dimensions()
+
+        self.h = [Conv1dBAD(
+            in_channels=self.config["Fin"]["channels"][l],
+            out_channels=self.config["Fin"]["channels"][l+1],
+            kernel_size=self.config["Fin"]["kernel_size"][l],
+            stride=self.config["Fin"]["stride"][l],
+            padding=self.config["Fin"]["padding"][l],
+            dilation=self.config["Fin"]["dilation"][l],
+            bias=False,
+            activation=eval(self.config["Fin"]["activation"])[l],
+            batchnorm=eval(self.config["Fin"]["batchnorm"])[l],
+            dropout=self.config["Fin"]["dropout"][l]
+            )
+            for l in range(self.config["Fin"]["nlayers"])]
+
+        self.hxy = [Conv1dBAD(
+            in_channels=self.config["Fyy"]["channels"][l],
+            out_channels=self.config["Fyy"]["channels"][l+1],
+            kernel_size=self.config["Fyy"]["kernel_size"][l],
+            stride=self.config["Fyy"]["stride"][l],
+            padding=self.config["Fyy"]["padding"][l],
+            dilation=self.config["Fyy"]["dilation"][l],
+            bias=False,
+            activation=eval(self.config["Fyy"]["activation"])[l],
+            batchnorm=eval(self.config["Fyy"]["batchnorm"])[l],
+            dropout=self.config["Fyy"]["dropout"][l]
+            )
+            for l in range(self.config["Fxy"]["nlayers"])]
+
+        self.hyy = [Conv1dBAD(
+            in_channels=self.config["Fyy"]["channels"][l],
+            out_channels=self.config["Fyy"]["channels"][l+1],
+            kernel_size=self.config["Fyy"]["kernel_size"][l],
+            stride=self.config["Fyy"]["stride"][l],
+            padding=self.config["Fyy"]["padding"][l],
+            dilation=self.config["Fyy"]["dilation"][l],
+            bias=False,
+            activation=eval(self.config["Fyy"]["activation"])[l],
+            batchnorm=eval(self.config["Fyy"]["batchnorm"])[l],
+            dropout=self.config["Fyy"]["dropout"][l]
+            )
+            for l in range(self.config["Fyy"]["nlayers"])]
+
+        self.h = Sequential(*self.h)
+        self.hxy = Sequential(*self.hxy)
+        self.hyy = Sequential(*self.hyy)
+
+    def forward(self,x):
+        z = self.h(x)
+        zxy = self.hxy(z)
+        zyy = self.hyy(z)
+        return zxy,zyy if self.training else zxy.detach(),zyy.detach()
+
+    def get(self,*args,**kwargs):
+        return self
+
+
+# class Encoder(Module):
+#     def __init__(self,ngpu,dev,nz,nzcl,nch,ndf,\
+#                  szs,nly,ker=7,std=4,pad=0,dil=1,grp=1,bn=True,
+#                  dpc=0.10,act=[LeakyReLU(1.0,True),LeakyReLU(1.0,True),LeakyReLU(1.0,True),LeakyReLU(1.0,True),Tanh()],\
+#                  with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2):
+#         super(Encoder,self).__init__()
+#         self.ngpu = ngpu
+#         self.gang = range(self.ngpu)
+#         self.dev = dev
+#         if nly==3:
+#             # 3 layers
+#             if with_noise:
+#                 self.cnn = \
+#                     cnn1d(nch*1,ndf*1,act[0],ker=ker,std=std,pad=pad,bn=bn,dpc=0.0,wn=False,\
+#                           dtm=dtm,ffr=ffr,wpc=wpc,dev=self.dev)+\
+#                     cnn1d(ndf*1,ndf*2,act[1],ker=ker,std=std,pad=pad,bn=bn ,dpc=dpc,wn=False)+\
+#                     cnn1d(ndf*2,nz   ,act[2],ker=ker,std=std,pad=pad,bn=False,dpc=0.0,wn=False)
+#             else:
+#                 self.cnn = \
+#                     cnn1d(nch*1,ndf*1,act[0],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
+#                     cnn1d(ndf*1,ndf*2,act[1],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
+#                     cnn1d(ndf*2,nz ,act[2],ker=ker,std=std,pad=pad,bn=False,dpc=0.0,wn=False)
+#         elif nly==5:
+#             # 5 layers
+#             if with_noise:
+#                 self.cnn = \
+#                     cnn1d(nch*1,ndf*1,act[0],ker=ker,std=std,pad=pad,bn=bn,dpc=0.0,wn=True ,\
+#                           dtm=dtm,ffr=ffr,wpc=wpc,dev=self.dev)+\
+#                     cnn1d(ndf*1,ndf*2,act[1],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
+#                     cnn1d(ndf*2,ndf*4,act[2],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
+#                     cnn1d(ndf*4,ndf*8,act[3],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
+#                     cnn1d(ndf*8,nz   ,act[4],ker=ker,std=std,pad=2  ,bn=False,dpc=0.0,wn=False)
+#             else:
+#                 self.cnn = \
+#                     cnn1d(nch*1,ndf*1,act[0],ker=ker,std=std,pad=pad,bn=bn,dpc=0.0)+\
+#                     cnn1d(ndf*1,ndf*2,act[1],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
+#                     cnn1d(ndf*2,ndf*4,act[2],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
+#                     cnn1d(ndf*4,ndf*8,act[3],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
+#                     cnn1d(ndf*8,nz   ,act[4],ker=ker,std=std,pad=2  ,bn=False,dpc=0.0)
+#         elif nly==6:
+#             # 6 layers
+#             if with_noise:
+#                 self.cnn = \
+#                     cnn1d(nch*1,ndf*1,act[0],ker=ker,std=std,pad=pad,bn=bn,dpc=0.0,wn=True ,\
+#                           dtm=dtm,ffr=ffr,wpc=wpc,dev=self.dev)+\
+#                     cnn1d(ndf*1 ,ndf*2 ,act[1],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
+#                     cnn1d(ndf*2 ,ndf*4 ,act[2],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
+#                     cnn1d(ndf*4 ,ndf*8 ,act[3],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
+#                     cnn1d(ndf*8 ,ndf*16,act[4],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
+#                     cnn1d(ndf*16,nz    ,act[5],ker=ker,std=std,pad=2  ,bn=False,dpc=0.0,wn=False)
+#             else:
+#                 self.cnn = \
+#                     cnn1d(nch*1 ,ndf*1 ,act[0],ker=ker,std=std,pad=pad,bn=bn,dpc=0.0)+\
+#                     cnn1d(ndf*1 ,ndf*2 ,act[1],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
+#                     cnn1d(ndf*2 ,ndf*4 ,act[2],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
+#                     cnn1d(ndf*4 ,ndf*8 ,act[3],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
+#                     cnn1d(ndf*8 ,ndf*16,act[4],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
+#                     cnn1d(ndf*16,nz    ,act[5],ker=ker,std=std,pad=2  ,bn=False,dpc=0.0)
+
+#         self.cnn = sqn(*self.cnn)
         
         
-    def forward(self,Xn):
-        if Xn.is_cuda and self.ngpu > 1:
-            zlf   = pll(self.cnn,Xn,self.gang)
-        else:
-            zlf   = self.cnn(Xn)
-        if not self.training:
-            zlf=zlf.detach()
-        return zlf
+
 
 class Decoder(Module):
     def __init__(self,ngpu,nz,nch,ndf,nly,\
