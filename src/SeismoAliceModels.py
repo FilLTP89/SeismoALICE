@@ -5,7 +5,7 @@ u'''Required modules'''
 from CommonNN import *
 import torch
 from CommonTorch import tdev
-
+from math import ceil
 # class DenseEncoder(Module):
 #     def __init__(self,ngpu,dev,ninp,nout,szs,nly,
 #                  act=[LeakyReLU(1.0,True),Tanh()],dpc=0.10):
@@ -136,40 +136,58 @@ class BranchedEncoder(Encoder):
         k,v=("Fin",self.config["Fin"])
 
         for l in range(v["nlayers"]):
-            if "padding" not in self.config[k].keys():
-                self.config[k]["padding"]=[]
+            if "Conv1d" in v["layers"][l]:
+                if "padding" not in self.config[k].keys():
+                    self.config[k]["padding"]=[]
 
-            if len(self.config[k]["padding"])<self.config[k]["nlayers"]:
-                self.config[k]["padding"].append((
-                    self.config[k]["dilation"][l]*
-                    (self.config[k]["kernel_size"][l]-1)+1-
-                    self.config[k]["stride"][l])//2)
+                if len(self.config[k]["padding"])<self.config[k]["nlayers"]:
+                    self.config[k]["padding"].append(ceil((
+                        self.config[k]["dilation"][l]*
+                        (self.config[k]["kernel_size"][l]-1)+1-
+                        self.config[k]["stride"][l])/2))
 
-            self.Lout[k].append(1+(self.Lout[k][l]+
-                2*self.config[k]["padding"][l]-
-                    self.config[k]["dilation"][l]*(
-                        self.config[k]["kernel_size"][l]-1
-                    )-1)//self.config[k]["stride"][l]
-                )
+                self.Lout[k].append(int(1+(self.Lout[k][l]+
+                    2*self.config[k]["padding"][l]-
+                        self.config[k]["dilation"][l]*(
+                            self.config[k]["kernel_size"][l]-1
+                        )-1)/self.config[k]["stride"][l])
+                    )
+            elif "Flat" in v["layers"][l]:
+                self.config[k]["padding"].append(0)
+                self.Lout[k].append(self.Lout[k][-1]*self.config[k]["channels"][l])
+                self.config[k]["channels"][l+1] = self.Lout[k][-1]
+
+            elif "Linear" in v["layers"][l]:
+                self.config[k]["padding"].append(0)
+                self.Lout[k].append(-1)
 
         for k,v in self.config.items():
             if k!="Fin":
                 self.Lout[k] = [self.Lout["Fin"][-1]]
                 for l in range(v["nlayers"]):
-                    if "padding" not in self.config[k].keys():
-                        self.config[k]["padding"]=[]
-                    if len(self.config[k]["padding"])<self.config[k]["nlayers"]:                        
-                        self.config[k]["padding"].append((
-                            self.config[k]["dilation"][l]*
-                            (self.config[k]["kernel_size"][l]-1)+1-
-                            self.config[k]["stride"][l])//2)
+                    if "Conv1d" in v["layers"][l]:
+                        if "padding" not in self.config[k].keys():
+                            self.config[k]["padding"]=[]
+                        if len(self.config[k]["padding"])<self.config[k]["nlayers"]:
+                            self.config[k]["padding"].append(ceil((
+                                self.config[k]["dilation"][l]*
+                                (self.config[k]["kernel_size"][l]-1)+1-
+                                self.config[k]["stride"][l])/2))
 
-                    self.Lout[k].append(1+(self.Lout[k][l]+
-                            2*self.config[k]["padding"][l]-
-                            self.config[k]["dilation"][l]*(
-                                self.config[k]["kernel_size"][l]-1
-                            )-1)//self.config[k]["stride"][l]
-                        )
+                        self.Lout[k].append(int(1+(self.Lout[k][l]+
+                                2*self.config[k]["padding"][l]-
+                                self.config[k]["dilation"][l]*(
+                                    self.config[k]["kernel_size"][l]-1
+                                )-1)/self.config[k]["stride"][l])
+                            )
+                    elif "Flat" in v["layers"][l]:
+                        self.config[k]["padding"].append(0)
+                        self.Lout[k].append(self.Lout[k][-1]*self.config[k]["channels"][l])
+                        self.config[k]["channels"][l+1] = self.Lout[k][-1]
+
+                    elif "Linear" in v["layers"][l]:
+                        self.config[k]["padding"].append(0)
+                        self.Lout[k].append(-1)
         return
 
     def compile(self):
