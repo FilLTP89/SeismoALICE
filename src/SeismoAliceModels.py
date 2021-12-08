@@ -194,45 +194,48 @@ class BranchedEncoder(Encoder):
 
         self.check_dimensions()
 
-        self.h = [Conv1dBAD(
+        self.h = [eval(self.config["Fin"]["layers"][l]+
+            self.config["Fin"]["postconv"][l])(
             in_channels=self.config["Fin"]["channels"][l],
             out_channels=self.config["Fin"]["channels"][l+1],
+            batchnorm=eval(self.config["Fin"]["batchnorm"])[l],
+            activation=eval(self.config["Fin"]["activation"])[l],
+            dropout=self.config["Fin"]["dropout"][l],
+            bias=eval(self.config["Fin"]["bias"])[l],
             kernel_size=self.config["Fin"]["kernel_size"][l],
             stride=self.config["Fin"]["stride"][l],
             padding=self.config["Fin"]["padding"][l],
-            dilation=self.config["Fin"]["dilation"][l],
-            bias=False,
-            activation=eval(self.config["Fin"]["activation"])[l],
-            batchnorm=eval(self.config["Fin"]["batchnorm"])[l],
-            dropout=self.config["Fin"]["dropout"][l]
+            dilation=self.config["Fin"]["dilation"][l]
             )
             for l in range(self.config["Fin"]["nlayers"])]
 
-        self.hxy = [Conv1dBAD(
-            in_channels=self.config["Fyy"]["channels"][l],
-            out_channels=self.config["Fyy"]["channels"][l+1],
-            kernel_size=self.config["Fyy"]["kernel_size"][l],
-            stride=self.config["Fyy"]["stride"][l],
-            padding=self.config["Fyy"]["padding"][l],
-            dilation=self.config["Fyy"]["dilation"][l],
-            bias=False,
-            activation=eval(self.config["Fyy"]["activation"])[l],
-            batchnorm=eval(self.config["Fyy"]["batchnorm"])[l],
-            dropout=self.config["Fyy"]["dropout"][l]
+        self.hxy = [eval(self.config["Fxy"]["layers"][l]+
+            self.config["Fxy"]["postconv"][l])(
+            in_channels=self.config["Fxy"]["channels"][l],
+            out_channels=self.config["Fxy"]["channels"][l+1],
+            batchnorm=eval(self.config["Fxy"]["batchnorm"])[l],
+            activation=eval(self.config["Fxy"]["activation"])[l],
+            dropout=self.config["Fxy"]["dropout"][l],
+            bias=eval(self.config["Fxy"]["bias"])[l],
+            kernel_size=self.config["Fxy"]["kernel_size"][l],
+            stride=self.config["Fxy"]["stride"][l],
+            padding=self.config["Fxy"]["padding"][l],
+            dilation=self.config["Fxy"]["dilation"][l]
             )
             for l in range(self.config["Fxy"]["nlayers"])]
 
-        self.hyy = [Conv1dBAD(
+        self.hyy = [eval(self.config["Fyy"]["layers"][l]+
+            self.config["Fyy"]["postconv"][l])(
             in_channels=self.config["Fyy"]["channels"][l],
             out_channels=self.config["Fyy"]["channels"][l+1],
+            batchnorm=eval(self.config["Fyy"]["batchnorm"])[l],
+            activation=eval(self.config["Fyy"]["activation"])[l],
+            dropout=self.config["Fyy"]["dropout"][l],
+            bias=eval(self.config["Fyy"]["bias"])[l],
             kernel_size=self.config["Fyy"]["kernel_size"][l],
             stride=self.config["Fyy"]["stride"][l],
             padding=self.config["Fyy"]["padding"][l],
-            dilation=self.config["Fyy"]["dilation"][l],
-            bias=False,
-            activation=eval(self.config["Fyy"]["activation"])[l],
-            batchnorm=eval(self.config["Fyy"]["batchnorm"])[l],
-            dropout=self.config["Fyy"]["dropout"][l]
+            dilation=self.config["Fyy"]["dilation"][l]
             )
             for l in range(self.config["Fyy"]["nlayers"])]
 
@@ -244,7 +247,7 @@ class BranchedEncoder(Encoder):
         z = self.h(x)
         zxy = self.hxy(z)
         zyy = self.hyy(z)
-        return zxy,zyy if self.training else zxy.detach(),zyy.detach()
+        return (zxy,zyy) if self.training else (zxy.detach(),zyy.detach())
 
     def get(self,*args,**kwargs):
         return self
