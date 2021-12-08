@@ -43,7 +43,11 @@ rndm_args = {'mean': 0, 'std': 1}
 eps = 1e-15  # to avoid possible numerical instabilities during backward
 b1 = 0.5
 b2 = 0.9999
-  
+
+# activations = nn.ModuleDict([
+#     ['lrelu', nn.LeakyReLU(1.0,inplace=True)],
+#     ['relu', nn.ReLU(inplace=True)]])
+
 # def get_features(t_img,model,layer,szs):
 #     
 #      Create a vector of zeros that will hold our feature vector
@@ -105,15 +109,14 @@ class Swish(Module):
 
     def forward(self, x):
         return x * torch.sigmoid(self.weight * x)
-    
+
 # Dropout module
 class Dpout(Module):
-    def __init__(self,dpc=0.10):
+    def __init__(self,dropout=0.10):
         super(Dpout,self).__init__()
-        self.dpc = dpc
+        self.dropout = dropout
     def forward(self,x):
-        return F.dropout(x,p=self.dpc,\
-                         training=self.training)
+        return F.dropout(x,p=self.dropout,training=self.training)
 
 class Flatten(Module):
     def __init__(self):
@@ -171,22 +174,28 @@ def DenseBlock(in_channels,out_channels,\
                        out_channels,\
                        bias=False),
             act,Dpout(dpc=dpc)]
-    
+
     return block
 
-class ConvBlock(Module):
-    def __init__(self, ni, no, ks, stride, bias=False,
-                 act = None, bn=True, pad=None, dpc=None):
-        super(ConvBlock,self).__init__()
-        if pad is None: pad = ks//2//stride
-        self.ann = [Conv1d(ni, no, ks, stride, padding=pad, bias=bias)]
-        if bn: self.ann+= [BatchNorm1d(no)]
-        if dpc is not None: self.ann += [Dpout(dpc=dpc)]
-        if act is not None: self.ann += [act] 
-        
-        
+class Conv1dBAD(Module):
+    def __init__(self,in_channels,out_channels,kernel_size,stride,
+        padding=None,dilation=1,bias=False,activation=None,batchnorm=True,
+        dropout=None):
+        super(Conv1dBAD,self).__init__()
+
+        if padding is None: padding = kernel_size//2//stride
+
+        self.ann = [Conv1d(in_channels,out_channels,kernel_size,stride=stride,
+            padding=padding,dilation=dilation,groups=1,bias=bias)]
+
+        if batchnorm: self.ann+= [BatchNorm1d(out_channels)]
+
+        if activation is not None: self.ann += [activation] 
+
+        if dropout is not None: self.ann += [Dpout(dropout=dropout)]
+
         self.ann = sqn(*self.ann)
-        
+
     def forward(self, x):
         return self.ann(x)
 
