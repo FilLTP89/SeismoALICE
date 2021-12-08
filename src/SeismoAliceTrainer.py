@@ -50,9 +50,8 @@ class trainer(object):
         configs = json.loads(configs)
 
         self.Fxy = Encoder(d_x=md['ntm'],d_z=[nzxy,nzyy])
-        self.Fxy.get(net_type='branched',config=configs["encoders"]["F"]).to(dev)
-        import pdb
-        pdb.set_trace()
+        self.Fxy.get(net_type='branched',config=configs["encoders"]["F"]).to(device)
+        
 
         # self.Gxx = Module()
         # self.Gyy = Module()
