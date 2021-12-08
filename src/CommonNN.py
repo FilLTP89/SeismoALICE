@@ -78,7 +78,7 @@ b2 = 0.9999
 #             self.features.extend(output.view(output.size(0),-1).cpu().data)        
 #         def remove(self):                
 #             self.hook.remove()
-        
+
 class Feature_extractor(Module):
     def __init__(self,lay):
         super(Feature_extractor,self).__init__()
@@ -86,19 +86,7 @@ class Feature_extractor(Module):
     def forward(self,X):
         self.feature = self.lay(X)
         return X
-  
-# Add noise module
-class AddNoise(Module):
-    def __init__(self,dev=tdev("cpu")):
-        super(AddNoise,self).__init__()
-        self.dev = dev
-    def forward(self,X):
-        W,_,_ = noise_generator(X.shape,X.shape,self.dev,rndm_args)
-        #if X.is_cuda:
-        #    .cuda()
-        #else:
-        #    return zcat(X,W)
-        return zcat(X,W) 
+
 class Swish(Module):
     def __init__(self, train_beta=False):
         super(Swish, self).__init__()
@@ -118,11 +106,14 @@ class Dpout(Module):
     def forward(self,x):
         return F.dropout(x,p=self.dropout,training=self.training)
 
-class Flatten(Module):
-    def __init__(self):
-        super(Flatten,self).__init__()
+class FlattenModule(Module):
+    def __init__(self,**kwargs):
+        super(FlattenModule,self).__init__()
     def forward(self,x):
-        return x.view(-1,1).squeeze(1)
+        return torch.flatten(x,start_dim=1,end_dim=-1) 
+
+def Flat(**kwargs):
+    return Sequential(FlattenModule(**kwargs))
 
 class Squeeze(Module):
     def __init__(self):
@@ -153,7 +144,7 @@ def cnn1d(in_channels,out_channels,\
 def cnn1dt(in_channels,out_channels,\
            act=LeakyReLU(1.0,inplace=True),\
            bn=True,ker=7,std=4,pad=0,opd=0,\
-           dil=1,grp=1,dpc=0.1):
+           dil=1,grp=1,dpc=0.1,**kwargs):
 
     block = [ConvTranspose1d(in_channels=in_channels,\
                              out_channels=out_channels,\
@@ -167,37 +158,37 @@ def cnn1dt(in_channels,out_channels,\
     block.append(Dpout(dpc=dpc))
     return block
 
-def DenseBlock(in_channels,out_channels,\
-               act=[Sigmoid()],dpc=0.1):
+# class LinearBAD(Module):
+    # def __init__(self,in_channels,out_channels,batchnorm=False,
+def LinearBAD(in_channels,out_channels,batchnorm=False,
+    activation=None,dropout=None,bias=False,**kwargs):
+    # super(LinearBAD,self).__init__()
+    ann = [Linear(in_channels,out_channels,bias=bias)]
+    if batchnorm: ann+= [BatchNorm1d(out_channels)]
+    if activation is not None: ann += [activation] 
+    if dropout is not None: ann += [Dpout(dropout=dropout)]
+    return Sequential(*ann)
+    # self.ann = sqn(*self.ann)
+    # def forward(self, x):
+    #     return self.ann(x)
 
-    block = [Linear(in_channels,\
-                       out_channels,\
-                       bias=False),
-            act,Dpout(dpc=dpc)]
+# class Conv1dBAD(Module):
+    # def __init__(self,in_channels,out_channels,batchnorm=False,
+def Conv1dBAD(in_channels,out_channels,batchnorm=False,
+    activation=None,dropout=None,bias=False,kernel_size=1,
+    stride=1,padding=None,dilation=1,**kwargs):
+    # super(Conv1dBAD,self).__init__()
+    if padding is None: padding = kernel_size//2//stride
+    ann = [Conv1d(in_channels,out_channels,kernel_size,stride=stride,
+        padding=padding,dilation=dilation,groups=1,bias=bias)]
+    if batchnorm: ann+= [BatchNorm1d(out_channels)]
+    if activation is not None: ann += [activation] 
+    if dropout is not None: ann += [Dpout(dropout=dropout)]
+    return Sequential(*ann)
+    #     self.ann = sqn(*self.ann)
 
-    return block
-
-class Conv1dBAD(Module):
-    def __init__(self,in_channels,out_channels,kernel_size,stride,
-        padding=None,dilation=1,bias=False,activation=None,batchnorm=True,
-        dropout=None):
-        super(Conv1dBAD,self).__init__()
-
-        if padding is None: padding = kernel_size//2//stride
-
-        self.ann = [Conv1d(in_channels,out_channels,kernel_size,stride=stride,
-            padding=padding,dilation=dilation,groups=1,bias=bias)]
-
-        if batchnorm: self.ann+= [BatchNorm1d(out_channels)]
-
-        if activation is not None: self.ann += [activation] 
-
-        if dropout is not None: self.ann += [Dpout(dropout=dropout)]
-
-        self.ann = sqn(*self.ann)
-
-    def forward(self, x):
-        return self.ann(x)
+    # def forward(self, x):
+    #     return self.ann(x)
 
 class DeconvBlock(Module):
     def __init__(self,ni,no,ks,stride,pad,opd=0,bn=True,act=ReLU(inplace=True),
