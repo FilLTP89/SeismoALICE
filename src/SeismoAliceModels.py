@@ -252,8 +252,22 @@ class BranchedEncoder(Encoder):
     def get(self,*args,**kwargs):
         return self
 
+class Decoder(Module):
+    def __init__(self,d_x,d_z,**config):
+        super(Decoder,self).__init__()
+        self.d_x = d_x
+        self.d_z = d_z
+        self.h = []
 
+    def compile(self,config):
+        self.h = Sequential(self.h)
+        pass
 
+    def get(self,net_type,**config):
+        if net_type=="branched":
+            net = BranchedEncoder(self.d_x,self.d_z,**config)
+        net.compile()
+        return net
 
     def forward(self,x):
         z = self.h(x)
