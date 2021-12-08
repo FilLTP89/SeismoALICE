@@ -253,68 +253,6 @@ class BranchedEncoder(Encoder):
         return self
 
 
-# class Encoder(Module):
-#     def __init__(self,ngpu,dev,nz,nzcl,nch,ndf,\
-#                  szs,nly,ker=7,std=4,pad=0,dil=1,grp=1,bn=True,
-#                  dpc=0.10,act=[LeakyReLU(1.0,True),LeakyReLU(1.0,True),LeakyReLU(1.0,True),LeakyReLU(1.0,True),Tanh()],\
-#                  with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2):
-#         super(Encoder,self).__init__()
-#         self.ngpu = ngpu
-#         self.gang = range(self.ngpu)
-#         self.dev = dev
-#         if nly==3:
-#             # 3 layers
-#             if with_noise:
-#                 self.cnn = \
-#                     cnn1d(nch*1,ndf*1,act[0],ker=ker,std=std,pad=pad,bn=bn,dpc=0.0,wn=False,\
-#                           dtm=dtm,ffr=ffr,wpc=wpc,dev=self.dev)+\
-#                     cnn1d(ndf*1,ndf*2,act[1],ker=ker,std=std,pad=pad,bn=bn ,dpc=dpc,wn=False)+\
-#                     cnn1d(ndf*2,nz   ,act[2],ker=ker,std=std,pad=pad,bn=False,dpc=0.0,wn=False)
-#             else:
-#                 self.cnn = \
-#                     cnn1d(nch*1,ndf*1,act[0],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
-#                     cnn1d(ndf*1,ndf*2,act[1],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
-#                     cnn1d(ndf*2,nz ,act[2],ker=ker,std=std,pad=pad,bn=False,dpc=0.0,wn=False)
-#         elif nly==5:
-#             # 5 layers
-#             if with_noise:
-#                 self.cnn = \
-#                     cnn1d(nch*1,ndf*1,act[0],ker=ker,std=std,pad=pad,bn=bn,dpc=0.0,wn=True ,\
-#                           dtm=dtm,ffr=ffr,wpc=wpc,dev=self.dev)+\
-#                     cnn1d(ndf*1,ndf*2,act[1],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
-#                     cnn1d(ndf*2,ndf*4,act[2],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
-#                     cnn1d(ndf*4,ndf*8,act[3],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
-#                     cnn1d(ndf*8,nz   ,act[4],ker=ker,std=std,pad=2  ,bn=False,dpc=0.0,wn=False)
-#             else:
-#                 self.cnn = \
-#                     cnn1d(nch*1,ndf*1,act[0],ker=ker,std=std,pad=pad,bn=bn,dpc=0.0)+\
-#                     cnn1d(ndf*1,ndf*2,act[1],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
-#                     cnn1d(ndf*2,ndf*4,act[2],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
-#                     cnn1d(ndf*4,ndf*8,act[3],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
-#                     cnn1d(ndf*8,nz   ,act[4],ker=ker,std=std,pad=2  ,bn=False,dpc=0.0)
-#         elif nly==6:
-#             # 6 layers
-#             if with_noise:
-#                 self.cnn = \
-#                     cnn1d(nch*1,ndf*1,act[0],ker=ker,std=std,pad=pad,bn=bn,dpc=0.0,wn=True ,\
-#                           dtm=dtm,ffr=ffr,wpc=wpc,dev=self.dev)+\
-#                     cnn1d(ndf*1 ,ndf*2 ,act[1],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
-#                     cnn1d(ndf*2 ,ndf*4 ,act[2],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
-#                     cnn1d(ndf*4 ,ndf*8 ,act[3],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
-#                     cnn1d(ndf*8 ,ndf*16,act[4],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc,wn=False)+\
-#                     cnn1d(ndf*16,nz    ,act[5],ker=ker,std=std,pad=2  ,bn=False,dpc=0.0,wn=False)
-#             else:
-#                 self.cnn = \
-#                     cnn1d(nch*1 ,ndf*1 ,act[0],ker=ker,std=std,pad=pad,bn=bn,dpc=0.0)+\
-#                     cnn1d(ndf*1 ,ndf*2 ,act[1],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
-#                     cnn1d(ndf*2 ,ndf*4 ,act[2],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
-#                     cnn1d(ndf*4 ,ndf*8 ,act[3],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
-#                     cnn1d(ndf*8 ,ndf*16,act[4],ker=ker,std=std,pad=pad,bn=bn,dpc=dpc)+\
-#                     cnn1d(ndf*16,nz    ,act[5],ker=ker,std=std,pad=2  ,bn=False,dpc=0.0)
-
-#         self.cnn = sqn(*self.cnn)
-        
-        
 
 
 class Decoder(Module):
