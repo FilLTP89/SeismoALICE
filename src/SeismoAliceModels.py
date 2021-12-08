@@ -255,42 +255,9 @@ class BranchedEncoder(Encoder):
 
 
 
-class Decoder(Module):
-    def __init__(self,ngpu,nz,nch,ndf,nly,\
-                 ker=7,std=4,pad=0,opd=0,dil=1,grp=1,dpc=0.10,\
-                 act=[LeakyReLU(1.0,True),LeakyReLU(1.0,True),LeakyReLU(1.0,True),\
-                      LeakyReLU(1.0,True),LeakyReLU(1.0,True)]):
-        super(Decoder, self).__init__()
-        self.ngpu = ngpu
-        self.gang = range(self.ngpu)
-        if nly==3:
-            self.cnn = \
-                cnn1dt(nz   ,ndf*8,act[0],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
-                cnn1dt(ndf*8,ndf*4,act[1],ker=ker,std=std,pad=pad,opd=opd,bn=True , dpc=dpc)+\
-                cnn1dt(ndf*4,nch  ,act[2],ker=ker,std=std,pad=pad,opd=opd,bn=False, dpc=0.0)
-        elif nly==4:
-            self.cnn = \
-                cnn1dt(nz   ,ndf*8,act[0],ker=ker,std=std,pad=1,opd=opd,bn=True , dpc=dpc)+\
-                cnn1dt(ndf*8,ndf*4,act[1],ker=ker,std=std,pad=1,opd=opd,bn=True , dpc=dpc)+\
-                cnn1dt(ndf*4,ndf*2,act[2],ker=ker,std=std,pad=1,opd=opd,bn=True , dpc=dpc)+\
-                cnn1dt(ndf*2,ndf*1,act[3],ker=ker,std=std,pad=1,opd=opd,bn=False, dpc=0.0)
-        elif nly==5:
-            self.cnn = \
-                cnn1dt(nz   ,ndf*8,act[0],ker=ker,std=std,pad=1,opd=opd,bn=True , dpc=dpc)+\
-                cnn1dt(ndf*8,ndf*4,act[1],ker=ker,std=std,pad=1,opd=opd,bn=True , dpc=dpc)+\
-                cnn1dt(ndf*4,ndf*2,act[2],ker=ker,std=std,pad=1,opd=opd,bn=True , dpc=dpc)+\
-                cnn1dt(ndf*2,ndf*1,act[3],ker=ker,std=std,pad=1,opd=opd,bn=True , dpc=dpc)+\
-                cnn1dt(ndf*1,nch*1,act[4],ker=ker,std=std,pad=1,opd=opd,bn=False, dpc=0.0)
-        self.cnn = sqn(*self.cnn)
-            
-    def forward(self,zxn):
-        if zxn.is_cuda and self.ngpu > 1:
-            Xr = pll(self.cnn,zxn,self.gang)
-        else:
-            Xr = self.cnn(zxn)
-        if not self.training:
-            Xr=Xr.detach()
-        return Xr
+    def forward(self,x):
+        z = self.h(x)
+        return z if self.training else z.detach()
 
 class DCGAN_D(Module):
     def __init__(self, ngpu, isize, nc, ncl, ndf, n_extra_layers=0,
