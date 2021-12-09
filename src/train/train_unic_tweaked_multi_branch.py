@@ -56,7 +56,7 @@ class trainer(object):
 
         nzd = opt.nzd
         ndf = opt.ndf
-
+        ngpu_use = torch.cuda.device_count()
         # torch.backends.cudnn.deterministic  = True
         # torch.backends.cudnn.benchmark      = False
 
@@ -111,7 +111,7 @@ class trainer(object):
                 if None in n:       
                     self.FGf  = [self.F_,self.Gy]
                     self.oGyx = reset_net(self.FGf,
-                        func=set_weights,lr=glr,b1=b1,b2=b2,
+                        func=set_weights,lr=ngpu_use*glr,b1=b1,b2=b2,
                         weight_decay=0.00001)
                     # self.oGyx = Adam(ittc(self.F_.branch_common.parameters(),
                     #     self.Gx.parameters()),
@@ -132,11 +132,11 @@ class trainer(object):
                     # self.Gx.load_state_dict(tload(n[2])['model_state_dict'])
                     self.oGyx = Adam(ittc(self.F_.branch_common.parameters(),
                         self.Gx.parameters()),
-                        lr=glr,betas=(b1,b2),
+                        lr=ngpu_use*glr,betas=(b1,b2),
                         weight_decay=0.00001)
                     self.oGy = Adam(ittc(self.F_.branch_broadband.parameters(),
                         self.Gy.parameters()),
-                        lr=glr,betas=(b1,b2),
+                        lr=ngpu_use*glr,betas=(b1,b2),
                         weight_decay=0.00001)
                     self.FGf  = [self.F_,self.Gy,self.Gx]
 
@@ -174,7 +174,7 @@ class trainer(object):
                 self.Dnets.append(self.Dyy)
 
                 self.oDyxz = reset_net(self.Dnets,
-                    func=set_weights,lr=rlr,
+                    func=set_weights,lr=ngpu_use*rlr,
                     optim='Adam',b1=b1,b2=b2,
                     weight_decay=0.00001)
 
@@ -192,8 +192,8 @@ class trainer(object):
                     flagF=False
 
         
-        self.writer_debug_encoder.add_graph(next(iter(self.F_.children())),torch.randn(128,6,4096).cuda())
-        self.writer_debug_decoder.add_graph(next(iter(self.Gy.children())), torch.randn(128,512,256).cuda())
+        # self.writer_debug_encoder.add_graph(next(iter(self.F_.children())),torch.randn(128,6,4096).cuda())
+        # self.writer_debug_decoder.add_graph(next(iter(self.Gy.children())), torch.randn(128,512,256).cuda())
         self.bce_loss = BCE(reduction='mean')
         print("Parameters of  Decoders/Decoders ")
         count_parameters(self.FGf)
@@ -297,10 +297,14 @@ class trainer(object):
 
         # 6. Disciminate Cross Entropy  
         Dreal_y,Dfake_y     = self.discriminate_yy(y,y_rec)
-        Dloss_rec_y         = -torch.mean(ln0c(Dreal_y)+ln0c(1.0-Dfake_y))
+        Dloss_rec_y         = self.bce_loss(Dreal_y,o1l(Dreal_y))+\
+                                self.bce_loss(Dfake_y,o0l(Dfake_y))
+        # Dloss_rec_y         = -torch.mean(ln0c(Dreal_y)+ln0c(1.0-Dfake_y))
 
         Dreal_zd,Dfake_zd   = self.discriminate_zzb(z_inp,zyy_rec)
-        Dloss_rec_zy        = -torch.mean(ln0c(Dreal_zd)+ln0c(1.0-Dfake_zd))
+        Dloss_rec_zy        = self.bce_loss(Dreal_zd,o1l(Dreal_zd))+\
+                                self.bce_loss(Dfake_zd,o0l(Dfake_zd))
+        # Dloss_rec_zy        = -torch.mean(ln0c(Dreal_zd)+ln0c(1.0-Dfake_zd))
         
         # 7. Compute all losses
         Dloss_rec           = Dloss_rec_y + Dloss_rec_zy
@@ -308,9 +312,8 @@ class trainer(object):
         Dloss               = Dloss_ali   + Dloss_rec
 
         Dloss.backward()
+        self.oDyxz.step(), clipweights(self.Dnets), zerograd(self.optz)
 
-        self.oDyxz.step() ,clipweights(self.Dnets),
-        zerograd(self.optz)
         self.losses['Dloss'].append(Dloss.tolist())
         self.losses['Dloss_ali'].append(Dloss_ali.tolist())
 
@@ -396,51 +399,27 @@ class trainer(object):
         zxy  = torch.randn(*[batch,nch_zf,nzf]).to(app.DEVICE, non_blocking = True)
         return zyy, zyx, zxx, zxy
 
-    def get_encoder_parameter(self,model):
-        breakpoint()
-        cnt = 0
-        for module_group in model.children():
-            for module in module_group.children():
-                for name, params in module.named_parameters():
-
-                    if name in ['Conv1d','ConvTranspose1d']:
-                        cnt+=1
-                    writer.add_histogram("layer"+cnt+"/"+name, params)
-        # cnt = 0
-        # for seq in model.children():
-        #     for layer in seq.children():
-        #         x = layer(x)
-        #         classname = layer.__class__.__name__
-        #         if classname in ['Conv1d','ConvTranspose1d']:
-        #             cnt +=1
-        #             writer.add_histogram(tag+"/layer"+cnt+"/"+classname+"/weight",layer.weight)
-        #         elif classname in ['LeakyReLU','ReLU','Tanh']:
-        #             writer.add_histogram(tag+"/layer"+cnt+"/"+classname+"/activation",x)
-        #         elif classname == 'Dpout':
-        #             writer.add_histogram(tag+"/layer"+cnt+"/"+"layer"+"/activation",x)
-
-
     # @profile
     def train_unique(self):
-        print('Training on both recorded and synthetic signals ...') 
+        app.logger.info('Training on both recorded and synthetic signals ...') 
         globals().update(self.cv)
         globals().update(opt.__dict__)
 
         total_step = len(self.trn_loader)
-        print("Let's use", torch.cuda.device_count(), "GPUs!")
+        app.logger.info(f"Let's use {torch.cuda.device_count()} GPUs!")
 
         bar = trange(self.start_epoch, niter+1)
-        nch_zd, nzd = 256,128
-        nch_zf, nzf = 256,128
+        nch_zd, nzd = 24,128
+        nch_zf, nzf = 8,128
         
         for epoch in bar:
             for b,batch in enumerate(self.trn_loader):
-                y, x, *others = batch
+                y, *others = batch
+                # y   = y.to(app.DEVICE, non_blocking = True)
                 y   = y.to(app.DEVICE, non_blocking = True)
-                x   = x.to(app.DEVICE, non_blocking = True)
     
                 # getting noise shape
-                zyy, _,zyx, *other = self.generate_latent_variable(
+                zyy,zyx, *other = self.generate_latent_variable(
                             batch   = opt.batchSize,
                             nzd     = nzd,
                             nch_zd  = nch_zd,
@@ -458,7 +437,7 @@ class trainer(object):
                     self.writer_train.add_scalar('Loss/{}'.format(k),
                         np.mean(np.array(v[-b:-1])),epoch)
 
-                figure_bb = plt.plot_generate_classic(
+                figure_bb, gof_bb = plt.plot_generate_classic(
                         tag     = 'broadband',
                         Qec     = deepcopy(self.F_),
                         Pdc     = deepcopy(self.Gy),
@@ -467,8 +446,8 @@ class trainer(object):
                         opt     = opt,
                         outf    = outf, 
                         save    = False)
-
                 self.writer_val.add_figure('Broadband',figure_bb,epoch)
+                self.writer_val.add_figure('Goodness of Fit',gof_bb,epoch)
              
             Gloss = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss'][-b:-1])))
             Dloss = '{:>5.3f}'.format(np.mean(np.array(self.losses['Dloss'][-b:-1])))
@@ -483,13 +462,11 @@ class trainer(object):
                         'optimizer_state_dict'  : self.oGyx.state_dict(),
                         'loss'                  : self.losses,},
                         root_checkpoint+'/Fyx.pth')
-
                 tsave({ 'epoch'                 : epoch,
                         'model_state_dict'      : self.Gy.state_dict(),
                         'optimizer_state_dict'  : self.oGyx.state_dict(),
                         'loss'                  : self.losses,},
                         root_checkpoint +'/Gy.pth')
-
                 tsave({ 'epoch'                 : epoch,
                         'model_state_dict'      : self.Dy.state_dict(),
                         'optimizer_state_dict'  : self.oDyxz.state_dict(),

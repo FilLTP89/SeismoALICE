@@ -773,6 +773,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
     EG = []
     PG = []
     figure = []
+    gof    = []
     sns.set(style="whitegrid")
     # pdb.set_trace()
     # clr = sns.color_palette('Paired',5)
@@ -836,14 +837,14 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 ot,gt = Xt[io, 1, :]  ,Xr[ig, 1, :]
                 of,gf,ff = Xt_fsa[io,1,:],Xr_fsa[ig,1,:],Xf_fsa[io,1,:]
 
-                if io==6 and save == False:
+                if io==3 and save == False:
                     break
                 
-                # plot_tf_gofs(ot,gt,dt=vtm[1]-vtm[0],t0=0.0,fmin=0.1,fmax=30.0,
-                #     nf=100,w0=6,norm='global',st2_isref=True,a=10.,k=1.,left=0.1,
-                #     bottom=0.125, h_1=0.2,h_2=0.125,h_3=0.2, w_1=0.2,w_2=0.6,
-                #     w_cb=0.01, d_cb=0.0,show=False,plot_args=['k', 'r', 'b'],
-                #     ylim=0., clim=0.)
+                hgof = plot_tf_gofs(ot,gt,dt=vtm[1]-vtm[0],t0=0.0,fmin=0.1,fmax=30.0,
+                    nf=100,w0=6,norm='global',st2_isref=True,a=10.,k=1.,left=0.1,
+                    bottom=0.125, h_1=0.2,h_2=0.125,h_3=0.2, w_1=0.2,w_2=0.6,
+                    w_cb=0.01, d_cb=0.0,show=False,plot_args=['k', 'r', 'b'],
+                    ylim=0., clim=0.)
                 # EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
                 #     st2_isref=True,a=10.,k=1))
                 # PG.append(pg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
@@ -859,8 +860,8 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 
                 fig,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
                 # hax0.plot(vtm,gt,color=clr[3],label=r'$G_t(zcat(F_x(\mathbf{y},N(\mathbf{0},\mathbf{I})))$',linewidth=1.2)
+                hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{y}$',linewidth=1.2, alpha=0.70)
                 hax0.plot(vtm,gt,color=clr[3],label=r'$G_t(zcat(F_x(\mathbf{y},\mathbf{0}))$',linewidth=1.2)
-                hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{y}$',linewidth=1.2)
                 hax1.loglog(vfr,of,color=clr[0],label=r'$\mathbf{y}$',linewidth=2)
                 hax1.loglog(vfr,ff,color=clr[1],label=r'$\mathbf{x}$',linewidth=2)
                 hax1.loglog(vfr,gf,color=clr[3],label=r'$G_t(cat(F_t(\mathbf{y},z_{xy}))$',linewidth=2)
@@ -888,6 +889,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 
                 
                 figure.append(fig)
+                gof.append(hgof)
             cnt += 1
 
             # for (io, ig) in zip(range(Xt.shape[0]),range(Xp.shape[0])):
@@ -954,7 +956,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             # ztr = Qec(X_inp)[1] if 'unique' in pfx else Qec(X_inp)
             if 'unique' in pfx:
                 _,zfd_gen,*other = Qec(X_inp)
-                ztr = zfd_gen
+                ztr = zcat(zfd_gen)
             else:
                 ztr = Qec(X_inp)
             # ztr = latent_resampling(Qec(X_inp),zf.shape[1],wn1)
@@ -973,11 +975,11 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
 
                 if io == 3 and save == False:
                     break
-                # plot_tf_gofs(ot,gt,dt=vtm[1]-vtm[0],t0=0.0,fmin=0.1,fmax=20.0,
-                #         nf=100,w0=6,norm='global',st2_isref=True,a=10.,k=1.,left=0.1,
-                #         bottom=0.125, h_1=0.2,h_2=0.125,h_3=0.2, w_1=0.2,w_2=0.6,
-                #         w_cb=0.01, d_cb=0.0,show=False,plot_args=['k', 'r', 'b'],
-                #         ylim=0., clim=0.)
+                hgof = plot_tf_gofs(ot,gt,dt=vtm[1]-vtm[0],t0=0.0,fmin=0.1,fmax=20.0,
+                        nf=100,w0=6,norm='global',st2_isref=True,a=10.,k=1.,left=0.1,
+                        bottom=0.125, h_1=0.2,h_2=0.125,h_3=0.2, w_1=0.2,w_2=0.6,
+                        w_cb=0.01, d_cb=0.0,show=False,plot_args=['k', 'r', 'b'],
+                        ylim=0., clim=0.)
                 # EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=20.0,nf=100,w0=6,norm='global',
                 #     st2_isref=True,a=10.,k=1))
                 # PG.append(pg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=20.0,nf=100,w0=6,norm='global',
@@ -990,7 +992,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 # #            format='eps',bbox_inches='tight',dpi = 500)
                 # plt.close()
                 hfg,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
-                hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{x}$',linewidth=1.2)
+                hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{x}$',linewidth=1.2, alpha=0.7)
                 # hax0.plot(vtm,gt,color=clr[3],label=r'$G_m(F_m(\mathbf{x}))$',linewidth=1.2)
                 hax0.plot(vtm,gt,color=clr[3],label=r'$G_x(F_yx(\mathbf{y}))$',linewidth=1.2)
                 hax1.loglog(vfr,of,color=clr[0],label=r'$\mathbf{x}$',linewidth=2)
@@ -1018,13 +1020,14 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 
                
                 figure.append(hfg)
+                gof.append(hgof)
             cnt += 1
 
             if save:
                 app.logger.debug("savefig eg_pg ...")
                 plot_eg_pg(EG,PG, outf,pfx)
 
-    return figure
+    return figure, gof
         # plt.scatter(EG,PG,c = 'red')
         # plt.xlabel("EG")
         # plt.ylabel("PG")
