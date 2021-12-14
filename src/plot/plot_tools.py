@@ -18,6 +18,8 @@ from tools.generate_noise import latent_resampling, noise_generator
 from common.common_torch import tfft, trnd, tfnp, tnan, o0s
 from database.database_sae import arias_intensity
 import torch
+from torch import zeros_like as o0l
+from torch import ones_like as o1l
 from obspy.signal.tf_misfit import plot_tf_gofs, eg,pg
 from obspy.signal.tf_misfit import eg, pg
 from sklearn.covariance import EmpiricalCovariance
@@ -845,18 +847,18 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                     bottom=0.125, h_1=0.2,h_2=0.125,h_3=0.2, w_1=0.2,w_2=0.6,
                     w_cb=0.01, d_cb=0.0,show=False,plot_args=['k', 'r', 'b'],
                     ylim=0., clim=0.)
-                # EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
-                #     st2_isref=True,a=10.,k=1))
-                # PG.append(pg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
-                #     st2_isref=True,a=10.,k=1))
+                EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
+                    st2_isref=True,a=10.,k=1))
+                PG.append(pg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
+                    st2_isref=True,a=10.,k=1))
 
-                # if save:
-                #     plt.savefig(os.path.join(outf,"gof_bb_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
-                #             bbox_inches='tight',dpi = 300)
-                # # plt.savefig(os.path.join(outf,"gof_bb_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
-                # #            format='eps',bbox_inches='tight',dpi = 300)
-                # app.logger.info("saving gof_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
-                # plt.close()
+                if save:
+                    plt.savefig(os.path.join(outf,"gof_bb_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
+                            bbox_inches='tight',dpi = 300)
+                # plt.savefig(os.path.join(outf,"gof_bb_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
+                #            format='eps',bbox_inches='tight',dpi = 300)
+                app.logger.info("saving gof_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
+                plt.close()
                 
                 fig,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
                 # hax0.plot(vtm,gt,color=clr[3],label=r'$G_t(zcat(F_x(\mathbf{y},N(\mathbf{0},\mathbf{I})))$',linewidth=1.2)
@@ -932,10 +934,11 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             #    plt.close()
             #    cnt += 1
             if save:
-                app.logger.debug("savefig eg_pg ...")
+                app.logger.debug("savefig whole GOF eg_pg ...")
                 plot_eg_pg(EG,PG, outf,pfx)
             
     elif 'filtered' in tag:
+        rndm_args = {'mean': 0., 'std': 0.1}
         for _,batch in enumerate(trn_set):
             # _,xf_data,_,zf_data,_,_,_,*other = batch
             # xt_data,xf_data,zt_data,zf_data,_,_,_,*other = batch
@@ -949,16 +952,19 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             if cnt == 3 and not save == False:
                 break
 
-            wnx,wnz,wn1 = noise_generator(Xf.shape,zf.shape,dev,app.RNDM_ARGS)
+            wnx,*others = noise_generator(Xf.shape,zf.shape,dev,rndm_args)
             X_inp = zcat(Xf,wnx)
             # ztr = Qec(X_inp)
             # pdb.set_trace()
             # ztr = Qec(X_inp)[1] if 'unique' in pfx else Qec(X_inp)
             if 'unique' in pfx:
-                _,zfd_gen,*other = Qec(X_inp)
+                zff,zfd_gen,*other = Qec(X_inp)
+                zff = zff.detach()
                 ztr = zcat(zfd_gen)
             else:
                 ztr = Qec(X_inp)
+
+
             # ztr = latent_resampling(Qec(X_inp),zf.shape[1],wn1)
             z_inp = zcat(ztr)
             # z_inp = zcat(ztr,torch.zeros_like(wnz).to(dev))
@@ -980,17 +986,17 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                         bottom=0.125, h_1=0.2,h_2=0.125,h_3=0.2, w_1=0.2,w_2=0.6,
                         w_cb=0.01, d_cb=0.0,show=False,plot_args=['k', 'r', 'b'],
                         ylim=0., clim=0.)
-                # EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=20.0,nf=100,w0=6,norm='global',
-                #     st2_isref=True,a=10.,k=1))
-                # PG.append(pg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=20.0,nf=100,w0=6,norm='global',
-                #     st2_isref=True,a=10.,k=1))
-                # if save:
-                #     plt.savefig(os.path.join(outf,"gof_fl_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
-                #             bbox_inches='tight',dpi = 300)
-                # app.logger.info("saving gof_aae_%s_%u_%u ... "%(pfx,cnt,io))
-                # # plt.savefig(os.path.join(outf,"gof_fl_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
-                # #            format='eps',bbox_inches='tight',dpi = 500)
-                # plt.close()
+                EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=20.0,nf=100,w0=6,norm='global',
+                    st2_isref=True,a=10.,k=1))
+                PG.append(pg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=20.0,nf=100,w0=6,norm='global',
+                    st2_isref=True,a=10.,k=1))
+                if save:
+                    plt.savefig(os.path.join(outf,"gof_fl_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
+                            bbox_inches='tight',dpi = 300)
+                app.logger.debug("saving gof_aae_%s_%u_%u ... "%(pfx,cnt,io))
+                # plt.savefig(os.path.join(outf,"gof_fl_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
+                #            format='eps',bbox_inches='tight',dpi = 500)
+                plt.close()
                 hfg,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
                 hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{x}$',linewidth=1.2, alpha=0.7)
                 # hax0.plot(vtm,gt,color=clr[3],label=r'$G_m(F_m(\mathbf{x}))$',linewidth=1.2)

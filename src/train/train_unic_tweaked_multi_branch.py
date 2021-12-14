@@ -122,23 +122,27 @@ class trainer(object):
                     #     self.Gy.parameters()),
                     #     lr=glr,betas=(b1,b2),
                     #     weight_decay=0.00001)
-                else:   
-                    print("Unique encoder/Multi decoder: {0} - {1}".format(*n))
+                else: 
+                    # breakpoint()
+                    app.logger.info("Unique encoder/Multi decoder: {0} - {1}".format(*n))
                     checkpoint = tload(n[0])
                     self.start_epoch = checkpoint['epoch']
                     self.losses      = checkpoint['loss']
                     self.F_.load_state_dict(tload(n[0])['model_state_dict'])
                     self.Gy.load_state_dict(tload(n[1])['model_state_dict'])
                     # self.Gx.load_state_dict(tload(n[2])['model_state_dict'])
-                    self.oGyx = Adam(ittc(self.F_.branch_common.parameters(),
-                        self.Gx.parameters()),
-                        lr=ngpu_use*glr,betas=(b1,b2),
+                    # self.oGyx = Adam(ittc(self.F_.branch_common.parameters(),
+                    #     self.Gx.parameters()),
+                    #     lr=ngpu_use*glr,betas=(b1,b2),
+                    #     weight_decay=0.00001)
+                    # self.oGy = Adam(ittc(self.F_.branch_broadband.parameters(),
+                    #     self.Gy.parameters()),
+                    #     lr=ngpu_use*glr,betas=(b1,b2),
+                    #     weight_decay=0.00001)
+                    self.FGf  = [self.F_,self.Gy]
+                    self.oGyx = reset_net(self.FGf,
+                        func=set_weights,lr=ngpu_use*glr,b1=b1,b2=b2,
                         weight_decay=0.00001)
-                    self.oGy = Adam(ittc(self.F_.branch_broadband.parameters(),
-                        self.Gy.parameters()),
-                        lr=ngpu_use*glr,betas=(b1,b2),
-                        weight_decay=0.00001)
-                    self.FGf  = [self.F_,self.Gy,self.Gx]
 
                     # self.oGyx = RMSProp(ittc(self.F_.parameters(),
                     #     self.Gy.parameters(),
@@ -187,7 +191,8 @@ class trainer(object):
                     self.losses         = checkpoint['loss']
                     self.F_.load_state_dict(tload(n[0])['model_state_dict'])
                     self.Gy.load_state_dict(tload(n[1])['model_state_dict'])
-                    self.Gx.load_state_dict(tload(n[2])['model_state_dict'])  
+                    self.FGf  = [self.F_,self.Gy]
+                    # self.Gx.load_state_dict(tload(n[2])['model_state_dict'])  
                 else:
                     flagF=False
 
@@ -195,7 +200,8 @@ class trainer(object):
         # self.writer_debug_encoder.add_graph(next(iter(self.F_.children())),torch.randn(128,6,4096).cuda())
         # self.writer_debug_decoder.add_graph(next(iter(self.Gy.children())), torch.randn(128,512,256).cuda())
         self.bce_loss = BCE(reduction='mean')
-        print("Parameters of  Decoders/Decoders ")
+        # breakpoint()
+        print("Parameters of  Encoder/Decoders ")
         count_parameters(self.FGf)
         print("Parameters of Discriminators ")
         count_parameters(self.Dnets)
@@ -372,7 +378,7 @@ class trainer(object):
         if epoch == 10:
             for batch in range(opt.batchSize):
                 self.writer_debug.add_histogram("zyy_rec",zyy_rec[batch,:], epoch)
-                self.writer_debug.add_histogram("zyy",zxy[batch,:],epoch)
+                self.writer_debug.add_histogram("zxy",zxy[batch,:],epoch)
 
         Gloss.backward()
         self.oGyx.step()
@@ -501,6 +507,7 @@ class trainer(object):
 
     # @profile
     def train(self):
+        # breakpoint()
         for t,a in self.strategy['tract'].items():
             if 'unique' in t.lower() and a:
                 self.train_unique()
@@ -509,8 +516,8 @@ class trainer(object):
     def generate(self):
         globals().update(self.cv)
         globals().update(opt.__dict__)
-        print("generating result...")
-        
+        app.logger.info("generating result...")
+        # breakpoint()
         t = [y.lower() for y in list(self.strategy.keys())]
         if 'unique' in t and self.strategy['trplt']['unique']:
             plt.plot_generate_classic(tag = 'broadband',
