@@ -764,7 +764,120 @@ def plot_error(error, outf):
                             bbox_inches='tight',dpi = 500)
     plt.close()
 
-     
+
+def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./imgs',save = True):
+    dev = app.DEVICE
+    Qec.eval(), Pdc.eval()
+    Qec.to(dev),Pdc.to(dev)
+
+    EG  = []
+    PG  = []
+    cnt = 0
+    if opt is not None:
+        vtm = torch.load(os.path.join(opt.dataroot,'vtm.pth'))
+
+    if tag=='broadband':
+        # pass
+        for _,batch in enumerate(trn_set):
+            #_,xt_data,zt_data,_,_,_,_ = batch
+            app.logger.debug("Plotting signals ...")
+            xt_data,xf_data,zt_data,*other = batch
+            # xt_data,zt_data,*other = batch
+            Xt = Variable(xt_data).to(dev, non_blocking=True)
+            Xf = Variable(xf_data).to(dev, non_blocking=True)
+            zt = Variable(zt_data).to(dev, non_blocking=True)
+
+        wnx,*others = noise_generator(Xt.shape,zt.shape,dev,app.RNDM_ARGS)
+        X_inp = zcat(Xt,wnx)
+
+        if 'unique' in pfx:
+            # pdb.set_trace()
+            zy,zdf_gen,*other =  Qec(X_inp)
+            # wn = torch.empty(zt_shape).normal_(**app.RNDM_ARGS).to(dev)
+            # wn = torch.zeros_like(zt)
+            ztr = zcat(zdf_gen,zy)
+        else:
+            ztr = Qec(X_inp)
+
+        z_inp = zcat(ztr)
+        # breakpoint()
+        # z_inp = zcat(ztr,torch.zeros_like(wnz).to(dev))
+        # z_pre = zcat(zt,wnz.to(dev))
+        Xr = Pdc(z_inp)
+        #Xp = Pdc(z_pre)
+        Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+        Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+        Xr_fsa = tfft(Xr,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+        #Xp_fsa = tfft(Xp,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+        vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
+        Xt = Xt.cpu().data.numpy().copy()
+        Xr = Xr.cpu().data.numpy().copy()
+
+        for (io, ig) in zip(range(Xt.shape[0]),range(Xr.shape[0])):
+            ot,gt    = Xt[io, 1, :]  ,Xr[ig, 1, :]
+            of,gf,ff = Xt_fsa[io,1,:],Xr_fsa[ig,1,:],Xf_fsa[io,1,:]
+
+            if cnt == 50:
+                break
+            EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
+                    st2_isref=True,a=10.,k=1))
+            PG.append(pg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
+                    st2_isref=True,a=10.,k=1))
+            cnt+=1
+
+    elif 'filtered' in tag:
+        rndm_args = {'mean': 0., 'std': 0.1}
+        for _,batch in enumerate(trn_set):
+            # _,xf_data,_,zf_data,_,_,_,*other = batch
+            # xt_data,xf_data,zt_data,zf_data,_,_,_,*other = batch
+            xt_data,xf_data,_,zf_data,*other = batch
+            # _,xf_data,zf_data,*other = batch
+            # tweaked value
+            Xt = Variable(xt_data).to(dev, non_blocking=True)
+            Xf = Variable(xf_data).to(dev, non_blocking=True)
+            zf = Variable(zf_data).to(dev, non_blocking=True)
+
+            wnx,*others = noise_generator(Xf.shape,zf.shape,dev,rndm_args)
+            X_inp = zcat(Xf,wnx)
+            # ztr = Qec(X_inp)
+            # pdb.set_trace()
+            # ztr = Qec(X_inp)[1] if 'unique' in pfx else Qec(X_inp)
+            if 'unique' in pfx:
+                zff,zfd_gen,*other = Qec(X_inp)
+                zff = zff.detach()
+                ztr = zcat(zfd_gen)
+            else:
+                ztr = Qec(X_inp)
+
+            # ztr = latent_resampling(Qec(X_inp),zf.shape[1],wn1)
+            z_inp = zcat(ztr)
+            # z_inp = zcat(ztr,torch.zeros_like(wnz).to(dev))
+            Xr = Pdc(z_inp)
+            Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+            Xr_fsa = tfft(Xr,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+            vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
+            Xf = Xf.cpu().data.numpy().copy()
+            Xr = Xr.cpu().data.numpy().copy()
+            
+            for (io, ig) in zip(range(Xf.shape[0]),range(Xr.shape[0])):
+                ot,gt = Xf[io, 1, :]  ,Xr[ig, 1, :]
+                of,gf = Xf_fsa[io,1,:],Xr_fsa[ig,1,:]
+
+                if cnt == 50:
+                    break
+                EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=20.0,nf=100,w0=6,norm='global',
+                    st2_isref=True,a=10.,k=1))
+
+                PG.append(pg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=20.0,nf=100,w0=6,norm='global',
+                    st2_isref=True,a=10.,k=1))
+                cnt+=1
+
+    return EG, PG
+
+
+
+
+
 def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./imgs',save = True):
     
     dev = app.DEVICE
