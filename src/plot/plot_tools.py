@@ -970,7 +970,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                             bbox_inches='tight',dpi = 300)
                 # plt.savefig(os.path.join(outf,"gof_bb_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
                 #            format='eps',bbox_inches='tight',dpi = 300)
-                app.logger.info("saving gof_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
+                # app.logger.info("saving gof_bb_aae_%s_%u_%u ... "%(pfx,cnt,io))
                 plt.close()
                 
                 fig,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
