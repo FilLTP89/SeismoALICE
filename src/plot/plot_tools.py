@@ -765,6 +765,106 @@ def plot_error(error, outf):
     plt.close()
 
 
+def visualize_unic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./imgs',save = True):
+    dev = app.DEVICE
+    Qec.eval(), Pdc.eval()
+    Qec.to(dev),Pdc.to(dev)
+
+    EG  = []
+    PG  = []
+    cnt = 0
+    sns.set(style="whitegrid")
+    # pdb.set_trace()
+    # clr = sns.color_palette('Paired',5)
+    clr = ['black', 'blue','red', 'red']
+
+    if opt is not None:
+        vtm = torch.load(os.path.join(opt.dataroot,'vtm.pth'))
+
+    for _,batch in enumerate(trn_set):
+        #_,xt_data,zt_data,_,_,_,_ = batch
+        app.logger.debug("Plotting signals ...")
+        xt_data,xf_data,zt_data,*other = batch
+        # xt_data,zt_data,*other = batch
+        Xt = Variable(xt_data).to(dev, non_blocking=True)
+        Xf = Variable(xf_data).to(dev, non_blocking=True)
+        zt = Variable(zt_data).to(dev, non_blocking=True)
+        random_args = {'mean': 0., 'std': 0.1}
+        wnx,*others = noise_generator(Xt.shape,zt.shape,dev,random_args)
+        X_inp = zcat(Xt,wnx)
+        zy,zdf_gen,*other =  Qec(X_inp)
+        # zy = zy.detach()
+        # breakpoint()
+        z_inp = zcat(o0l(zdf_gen),zy)
+
+        Xr = Pdc(z_inp)
+        Xf_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+        Xr_fsa = tfft(Xr,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+        vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
+        Xf = Xt.cpu().data.numpy().copy()
+        Xr = Xr.cpu().data.numpy().copy()
+        
+        for (io, ig) in zip(range(Xf.shape[0]),range(Xr.shape[0])):
+            ot,gt = Xf[io, 1, :]  ,Xr[ig, 1, :]
+            of,gf = Xf_fsa[io,1,:],Xr_fsa[ig,1,:]
+
+            if io == 3 and save == False:
+                break
+            hgof = plot_tf_gofs(ot,gt,dt=vtm[1]-vtm[0],t0=0.0,fmin=0.1,fmax=20.0,
+                    nf=100,w0=6,norm='global',st2_isref=True,a=10.,k=1.,left=0.1,
+                    bottom=0.125, h_1=0.2,h_2=0.125,h_3=0.2, w_1=0.2,w_2=0.6,
+                    w_cb=0.01, d_cb=0.0,show=False,plot_args=['k', 'r', 'b'],
+                    ylim=0., clim=0.)
+            EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=20.0,nf=100,w0=6,norm='global',
+                st2_isref=True,a=10.,k=1))
+            PG.append(pg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=20.0,nf=100,w0=6,norm='global',
+                st2_isref=True,a=10.,k=1))
+            if save:
+                plt.savefig(os.path.join(outf,"gof_fl_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
+                        bbox_inches='tight',dpi = 300)
+            app.logger.debug("saving gof_aae_%s_%u_%u ... "%(pfx,cnt,io))
+            # plt.savefig(os.path.join(outf,"gof_fl_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
+            #            format='eps',bbox_inches='tight',dpi = 500)
+            plt.close()
+            hfg,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
+            hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{y}$',linewidth=1.2, alpha=0.7)
+            # hax0.plot(vtm,gt,color=clr[3],label=r'$G_m(F_m(\mathbf{x}))$',linewidth=1.2)
+            hax0.plot(vtm,gt,color=clr[3],label=r'$G_y(0, F_{yx}\|_{z_y}(\mathbf{y}))$',linewidth=1.2)
+            hax1.loglog(vfr,of,color=clr[0],label=r'$\mathbf{y}$',linewidth=2)
+            hax1.loglog(vfr,gf,color=clr[3],label=r'$G_y(0, F_{yx}\|_{z_y}(\mathbf{y}))$',linewidth=2)
+            hax0.set_xlim(0.0,int(vtm[-1]))
+            hax0.set_xticks(np.arange(0.0,int(vtm[-1])*11./10.,int(vtm[-1])/10.))
+            hax0.set_ylim(-1.0,1.0)
+            hax0.set_yticks(np.arange(-1.0,1.25,0.25))
+            hax0.set_xlabel('t [s]',fontsize=15,fontweight='bold')
+            hax0.set_ylabel('a(t) [1]',fontsize=15,fontweight='bold')
+            hax0.set_title('ALICE',fontsize=20,fontweight='bold')
+            hax1.set_xlim(0.1,51.), hax1.set_xticks(np.array([0.1,1.0,10.,50.]))
+            hax1.set_ylim(10.**-6,10.**0), hax1.set_yticks(10.**np.arange(-6,1))
+            hax1.set_xlabel('f [Hz]',fontsize=15,fontweight='bold')
+            hax1.set_ylabel('A(f) [1]',fontsize=15,fontweight='bold')
+            hax0.legend(loc = "lower right",frameon=False)
+            hax1.legend(loc = "lower right",frameon=False)
+            if save:
+                plt.savefig(os.path.join(outf,"res_fl_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
+                        bbox_inches='tight',dpi = 500)
+            # plt.savefig(os.path.join(outf,"res_fl_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
+            #             format='eps',bbox_inches='tight',dpi = 500)
+            plt.close()
+            app.logger.info("saving res_fl_aae_%s_%u_%u ... "%(pfx,cnt,io))
+            # figure.append(hfg)
+            # gof.append(hgof)
+        cnt += 1
+
+        if save:
+            app.logger.debug("savefig eg_pg ...")
+            plot_eg_pg(EG,PG, outf,pfx)
+
+
+
+
+
+
 def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./imgs',save = True):
     dev = app.DEVICE
     Qec.eval(), Pdc.eval()
@@ -976,10 +1076,10 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 fig,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
                 # hax0.plot(vtm,gt,color=clr[3],label=r'$G_t(zcat(F_x(\mathbf{y},N(\mathbf{0},\mathbf{I})))$',linewidth=1.2)
                 hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{y}$',linewidth=1.2, alpha=0.70)
-                hax0.plot(vtm,gt,color=clr[3],label=r'$G_t(zcat(F_x(\mathbf{y},\mathbf{0}))$',linewidth=1.2)
+                hax0.plot(vtm,gt,color=clr[3],label=r'$G(F(\mathbf{y})$',linewidth=1.2)
                 hax1.loglog(vfr,of,color=clr[0],label=r'$\mathbf{y}$',linewidth=2)
                 hax1.loglog(vfr,ff,color=clr[1],label=r'$\mathbf{x}$',linewidth=2)
-                hax1.loglog(vfr,gf,color=clr[3],label=r'$G_t(cat(F_t(\mathbf{y},z_{xy}))$',linewidth=2)
+                hax1.loglog(vfr,gf,color=clr[3],label=r'$G(F_t(\mathbf{y}))$',linewidth=2)
                 hax0.set_xlim(0.0,int(vtm[-1]))
                 hax0.set_xticks(np.arange(0.0,int(vtm[-1])*11./10.,int(vtm[-1])/10.))
                 hax0.set_ylim(-1.0,1.0)
