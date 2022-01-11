@@ -27,7 +27,7 @@ from sklearn.datasets import make_gaussian_quantiles
 from sklearn.neighbors import KernelDensity
 from sklearn.decomposition import PCA
 import pdb
-
+from tqdm import  tqdm,trange
 from tools.gmm import GaussianMixture 
 from database.toyset import Toyset
 from configuration import app
@@ -780,8 +780,8 @@ def visualize_unic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',out
 
     if opt is not None:
         vtm = torch.load(os.path.join(opt.dataroot,'vtm.pth'))
-
-    for _,batch in enumerate(trn_set):
+    bar = tqdm(trn_set)
+    for _,batch in enumerate(bar):
         #_,xt_data,zt_data,_,_,_,_ = batch
         app.logger.debug("Plotting signals ...")
         xt_data,xf_data,zt_data,*other = batch
@@ -789,19 +789,19 @@ def visualize_unic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',out
         Xt = Variable(xt_data).to(dev, non_blocking=True)
         Xf = Variable(xf_data).to(dev, non_blocking=True)
         zt = Variable(zt_data).to(dev, non_blocking=True)
-        random_args = {'mean': 0., 'std': 0.1}
+        random_args = {'mean': 0., 'std': 1.0}
         wnx,*others = noise_generator(Xt.shape,zt.shape,dev,random_args)
         X_inp = zcat(Xt,wnx)
         zy,zdf_gen,*other =  Qec(X_inp)
         # zy = zy.detach()
         # breakpoint()
-        z_inp = zcat(o0l(zdf_gen),zy)
+        z_inp = zcat(zdf_gen)
 
         Xr = Pdc(z_inp)
-        Xf_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+        Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
         Xr_fsa = tfft(Xr,vtm[1]-vtm[0]).cpu().data.numpy().copy()
         vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
-        Xf = Xt.cpu().data.numpy().copy()
+        Xf = Xf.cpu().data.numpy().copy()
         Xr = Xr.cpu().data.numpy().copy()
         
         for (io, ig) in zip(range(Xf.shape[0]),range(Xr.shape[0])):
@@ -851,7 +851,8 @@ def visualize_unic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',out
             # plt.savefig(os.path.join(outf,"res_fl_aae_%s_%u_%u.eps"%(pfx,cnt,io)),\
             #             format='eps',bbox_inches='tight',dpi = 500)
             plt.close()
-            app.logger.info("saving res_fl_aae_%s_%u_%u ... "%(pfx,cnt,io))
+            app.logger.debug("saving res_fl_aae_%s_%u_%u ... "%(pfx,cnt,io))
+            bar.set_postfix(file=str("saving res_fl_aae_%s_%u_%u ..."%(pfx,cnt,io)))
             # figure.append(hfg)
             # gof.append(hgof)
         cnt += 1
@@ -978,9 +979,11 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
 
 
 
-def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./imgs',save = True):
+def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./imgs',save = True, Qed=None):
     
     dev = app.DEVICE
+    
+
     Qec.eval(),Pdc.eval()
     Qec.to(dev),Pdc.to(dev)
     
@@ -999,6 +1002,9 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
 
     if tag=='broadband':
         # pass
+        if Qed is not None:
+            Qed.eval()
+
         for _,batch in enumerate(trn_set):
             #_,xt_data,zt_data,_,_,_,_ = batch
             app.logger.debug("Plotting signals ...")
@@ -1017,16 +1023,13 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             X_inp = zcat(Xt,wnx)
 
             # ztr = Qec(X_inp).to(dev)
-
-            # breakpoint()
-            # pdb.set_trace()
             # ztr = Qec(X_inp)[0] if 'unique' in pfx else Qec(X_inp)
             if 'unique' in pfx:
                 # pdb.set_trace()
-                zy,zdf_gen,*other =  Qec(X_inp)
+                zy,zdf_gen,*others =  Qec(X_inp)
                 # wn = torch.empty(zt_shape).normal_(**app.RNDM_ARGS).to(dev)
                 # wn = torch.zeros_like(zt)
-                ztr = zcat(zdf_gen,zy)
+                ztr = zcat(o0l(zdf_gen),zy)
             else:
                 ztr = Qec(X_inp)
 
@@ -2229,5 +2232,5 @@ def plot_eg_pg(x,y, outf,pfx=''):
 
     plt.savefig(os.path.join(outf,"gof_eg_pg%s.png"%(pfx)),\
                         bbox_inches='tight',dpi = 300)
-    print("saving gof_eg_pg%s.png"%(pfx))
+    app.logger.debug("saving gof_eg_pg%s.png"%(pfx))
     plt.close()
