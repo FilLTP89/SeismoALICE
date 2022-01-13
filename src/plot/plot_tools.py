@@ -884,6 +884,16 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             app.logger.debug("Plotting signals ...")
             xt_data,xf_data,zt_data,*other = batch
             # xt_data,zt_data,*other = batch
+            if torch.isnan(torch.max(xt_data)):
+                app.logger.debug("your model contain nan value "
+                    "this signals will be withdrawn from the training "
+                    "but style be present in the dataset. \n"
+                    "Then, remember to correct your dataset")
+                mask   = [not torch.isnan(torch.max(xt_data[e,:])).tolist() for e in range(len(xt_data))]
+                index  = np.array(range(len(xt_data)))
+                xd_data.data = xt_data[index[mask]]
+                xf_data.data = xf_data[index[mask]]
+
             Xt = Variable(xt_data).to(dev, non_blocking=True)
             Xf = Variable(xf_data).to(dev, non_blocking=True)
             zt = Variable(zt_data).to(dev, non_blocking=True)
@@ -918,7 +928,7 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             ot,gt    = Xt[io, 1, :]  ,Xr[ig, 1, :]
             of,gf,ff = Xt_fsa[io,1,:],Xr_fsa[ig,1,:],Xf_fsa[io,1,:]
 
-            if cnt == 50:
+            if cnt == 20:
                 break
             EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
                     st2_isref=True,a=10.,k=1))
@@ -964,7 +974,7 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
                 ot,gt = Xf[io, 1, :]  ,Xr[ig, 1, :]
                 of,gf = Xf_fsa[io,1,:],Xr_fsa[ig,1,:]
 
-                if cnt == 50:
+                if cnt == 20:
                     break
                 EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=20.0,nf=100,w0=6,norm='global',
                     st2_isref=True,a=10.,k=1))
@@ -1009,12 +1019,23 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             #_,xt_data,zt_data,_,_,_,_ = batch
             app.logger.debug("Plotting signals ...")
             xt_data,xf_data,zt_data,*other = batch
+
+            if torch.isnan(torch.max(xt_data)):
+                app.logger.debug("your model contain nan value "
+                    "this signals will be withdrawn from the training "
+                    "but style be present in the dataset. \n"
+                    "Then, remember to correct your dataset")
+                mask   = [not torch.isnan(torch.max(y[e,:])).tolist() for e in range(len(y))]
+                index  = np.array(range(len(y)))
+                xd_data.data = xt_data[index[mask]]
+                xf_data.data = xf_data[index[mask]]
+
             # xt_data,zt_data,*other = batch
             Xt = Variable(xt_data).to(dev, non_blocking=True)
             Xf = Variable(xf_data).to(dev, non_blocking=True)
             zt = Variable(zt_data).to(dev, non_blocking=True)
 
-            if cnt == 3 and save == False:
+            if cnt == 1 and save == False:
                 break
             # zt_shape = [zt.shape[0], 16]
             # zt = torch.randn(*zt_shape).to(dev, non_blocking = True)
