@@ -866,7 +866,7 @@ def visualize_unic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',out
 
 
 
-def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./imgs',save = True):
+def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./imgs',save = True, std=None):
     dev = app.DEVICE
     Qec.eval(), Pdc.eval()
     Qec.to(dev),Pdc.to(dev)
@@ -898,7 +898,7 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             Xf = Variable(xf_data).to(dev, non_blocking=True)
             zt = Variable(zt_data).to(dev, non_blocking=True)
 
-        wnx,*others = noise_generator(Xt.shape,zt.shape,dev,app.RNDM_ARGS)
+        wnx,*others = noise_generator(Xt.shape,zt.shape,dev,{'mean':0., 'std':0.1})
         X_inp = zcat(Xt,wnx)
 
         if 'unique' in pfx:
@@ -937,7 +937,7 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             cnt+=1
 
     elif 'filtered' in tag:
-        rndm_args = {'mean': 0., 'std': 0.1}
+        rndm_args = {'mean': 0., 'std': std}
         for _,batch in enumerate(trn_set):
             # _,xf_data,_,zf_data,_,_,_,*other = batch
             # xt_data,xf_data,zt_data,zf_data,_,_,_,*other = batch
