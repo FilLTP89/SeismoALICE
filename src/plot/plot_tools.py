@@ -876,9 +876,14 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
     cnt = 0
     if opt is not None:
         vtm = torch.load(os.path.join(opt.dataroot,'vtm.pth'))
-
+    
     if tag=='broadband':
+        if std is None:
+            random_args = {'mean':0., 'std':1.0}
+        else:
+            random_args = {'mean':0., 'std':std}
         # pass
+
         for _,batch in enumerate(trn_set):
             #_,xt_data,zt_data,_,_,_,_ = batch
             app.logger.debug("Plotting signals ...")
@@ -891,14 +896,17 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
                     "Then, remember to correct your dataset")
                 mask   = [not torch.isnan(torch.max(xt_data[e,:])).tolist() for e in range(len(xt_data))]
                 index  = np.array(range(len(xt_data)))
-                xd_data.data = xt_data[index[mask]]
+                xt_data.data = xt_data[index[mask]]
                 xf_data.data = xf_data[index[mask]]
+                zt_data.data = zt_data[index[mask]]
 
             Xt = Variable(xt_data).to(dev, non_blocking=True)
             Xf = Variable(xf_data).to(dev, non_blocking=True)
             zt = Variable(zt_data).to(dev, non_blocking=True)
 
-        wnx,*others = noise_generator(Xt.shape,zt.shape,dev,{'mean':0., 'std':0.1})
+
+       
+        wnx,*others = noise_generator(Xt.shape,zt.shape,dev,random_args)
         X_inp = zcat(Xt,wnx)
 
         if 'unique' in pfx:
@@ -937,25 +945,39 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             cnt+=1
 
     elif 'filtered' in tag:
-        rndm_args = {'mean': 0., 'std': std}
+        if std is None:
+            random_args = {'mean':0.,'std': 0.1}
+        else:
+            random_args = {'mean': 0., 'std': std}
         for _,batch in enumerate(trn_set):
             # _,xf_data,_,zf_data,_,_,_,*other = batch
             # xt_data,xf_data,zt_data,zf_data,_,_,_,*other = batch
             xt_data,xf_data,_,zf_data,*other = batch
             # _,xf_data,zf_data,*other = batch
             # tweaked value
+            if torch.isnan(torch.max(xt_data)):
+                app.logger.debug("your model contain nan value "
+                    "this signals will be withdrawn from the training "
+                    "but style be present in the dataset. \n"
+                    "Then, remember to correct your dataset")
+                mask   = [not torch.isnan(torch.max(xt_data[e,:])).tolist() for e in range(len(xt_data))]
+                index  = np.array(range(len(xt_data)))
+                xd_data.data = xt_data[index[mask]]
+                xf_data.data = xf_data[index[mask]]
+                zf_data.data = zf_data[index[mask]]
+
             Xt = Variable(xt_data).to(dev, non_blocking=True)
             Xf = Variable(xf_data).to(dev, non_blocking=True)
             zf = Variable(zf_data).to(dev, non_blocking=True)
 
-            wnx,*others = noise_generator(Xf.shape,zf.shape,dev,rndm_args)
+            wnx,*others = noise_generator(Xf.shape,zf.shape,dev,random_args)
             X_inp = zcat(Xf,wnx)
             # ztr = Qec(X_inp)
             # pdb.set_trace()
             # ztr = Qec(X_inp)[1] if 'unique' in pfx else Qec(X_inp)
             if 'unique' in pfx:
-                zff,zfd_gen,*other = Qec(X_inp)
-                zff = zff.detach()
+                _,zfd_gen,*other = Qec(X_inp)
+                # zff = zff.detach()
                 ztr = zcat(zfd_gen)
             else:
                 ztr = Qec(X_inp)
