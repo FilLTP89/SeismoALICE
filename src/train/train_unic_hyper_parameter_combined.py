@@ -37,7 +37,7 @@ __status__ = "Beta"
 # coder en dure dans le programme 
 class trainer(object):
     '''Initialize neural network'''
-    def __init__(self,cv,trial=None, study_name=None):
+    def __init__(self,cv, trial=None, study_dir=None):
 
         """
         Args
@@ -48,16 +48,16 @@ class trainer(object):
         self.cv = cv
         self.gr_norm = []
         self.std_y = 1.0
-        self.std_x = 0.1
+        self.std_x = 1.0
         self.trial = trial
-        self.study_name = study_name
+        self.study_dir = study_dir
         # rlr = 0.0003504249301844992
         # glr = 0.04850731189532911
         
         globals().update(cv)
         globals().update(opt.__dict__)
 
-        if study_name!=None:
+        if study_dir!=None:
             glr = self.trial.suggest_float("glrx",0.0001, 0.1,log=True)
             rlr = self.trial.suggest_float("rlrx",0.0001, 0.1,log=True)
         else:
@@ -65,7 +65,7 @@ class trainer(object):
             rlr = opt.rlr
             app.logger.info(f'glr = {glr}')
             app.logger.info(f'rlr = {rlr}')
-        
+
         b1              = 0.5
         b2              = 0.9999
         self.strategy   = strategy
@@ -112,15 +112,17 @@ class trainer(object):
             'Gloss_identity_x':[0],
             'Gloss_identity_zf':[0],
 
-            'Gloss_identity_zxy'
-
+            'Gloss_identity_zxy':[0],
         }
 
-        summary_dir       = './runs_both/unic/tuning/'
         network_path      = './network/unic/zyy24/nsy1280'
-        self.writer_train = SummaryWriter(f'{summary_dir}/training')
-        self.writer_val   = SummaryWriter(f'{summary_dir}/validation')
-        self.writer_debug = SummaryWriter(f'{summary_dir}/debug')
+        
+        if self.trial == None:
+            summary_dir       = './runs_both/unic/tuning/'
+            
+            self.writer_train = SummaryWriter(f'{summary_dir}/training')
+            self.writer_val   = SummaryWriter(f'{summary_dir}/validation')
+            self.writer_debug = SummaryWriter(f'{summary_dir}/debug')
         # self.writer_debug_encoder = SummaryWriter('runs_both/filtered/tuning/debug/encoder')
         
         flagT=False
@@ -215,7 +217,7 @@ class trainer(object):
                 self.Dzzb = net.DCGAN_Dz( opt.config['Dzzb'],opt)
                 self.Dyy  = net.DCGAN_Dx( opt.config['Dyy'], opt)
 
-                # self.Dzyx = net.DCGAN_Dz(opt.config['Dzyx'],opt)
+                self.Dzyx = net.DCGAN_Dz(opt.config['Dzyx'],opt)
 
                 self.Dx   = net.DCGAN_Dx(opt.config['Dx'],  opt)
                 self.Dzf  = net.DCGAN_Dz(opt.config['Dzf'], opt)
@@ -236,7 +238,7 @@ class trainer(object):
                     self.Dzzb.load_state_dict(tload(f'{network_path}/Dzzb.pth')['model_state_dict'])
                     self.Dyy.load_state_dict(tload(f'{network_path}/Dyy.pth')['model_state_dict'])
                 
-                # self.Dzyx = nn.DataParallel(self.Dzyx ).cuda()
+                self.Dzyx = nn.DataParallel(self.Dzyx ).cuda()
 
                 self.Dx   = nn.DataParallel(self.Dx   ).cuda()
                 self.Dzf  = nn.DataParallel(self.Dzf  ).cuda()
@@ -250,7 +252,7 @@ class trainer(object):
                 self.Dnetsy.append(self.Dzzb )
                 self.Dnetsy.append(self.Dyy  )
                 
-                # self.Dnetsx.append(self.Dzyx )
+                self.Dnetsx.append(self.Dzyx )
 
                 self.Dnetsx.append(self.Dx  )
                 self.Dnetsx.append(self.Dzf )
@@ -375,7 +377,7 @@ class trainer(object):
         modalite([self.F_],   mode = 'eval')
         modalite([self.Gy],   mode = 'eval')
         modalite([self.Gx],   mode = 'eval')
-        modalite(self.Dnetsy, mode = 'eval')
+        modalite(self.Dnetsy, mode = 'train')
         modalite(self.Dnetsx, mode = 'train')
         
         # I. Broadband training of Discriminator
@@ -486,13 +488,13 @@ class trainer(object):
         # III. Common latent space
         # zyx_gen = zyx_gen
         # zxy_gen = zxy_gen
-        Dzyx, Dzxy          = self.discriminate_zxy(zyx_gen, zxy_gen)
-        Dloss_identity_zxy  = 10.*self.bce_loss(Dzxy,o1l(Dzxy))+\
-                              self.bce_loss(Dzyx,o0l(Dzyx))
+        # Dzyx, Dzxy          = self.discriminate_zxy(zyx_gen, zxy_gen)
+        # Dloss_identity_zxy  = 10.*self.bce_loss(Dzxy,o1l(Dzxy))+\
+        #                       self.bce_loss(Dzyx,o0l(Dzyx))
         
 
         ## IV. Total loss 
-        Dloss               = Dloss_x*10 + Dloss_y + Dloss_identity_zxy
+        Dloss               = Dloss_x*10 + Dloss_y #+ Dloss_identity_zxy
 
         Dloss.backward()
         self.oDy.step(),
@@ -512,14 +514,14 @@ class trainer(object):
         self.losses['Dloss_ali_x'   ].append(Dloss_ali_x.tolist()) 
         self.losses['Dloss_rec_x'   ].append(Dloss_rec_x.tolist())
 
-        self.losses['Dloss_identity_zxy'].append(Dloss_identity_zxy.tolist())
+        # self.losses['Dloss_identity_zxy'].append(Dloss_identity_zxy.tolist())
 
     # @profile
     def alice_train_generator_adv(self,y,zyy, zyx, x,zxy, epoch = None):
         # Set-up training
         zerograd(self.optz)
         modalite([self.F_],   mode ='train')
-        modalite([self.Gy],   mode ='train')
+        modalite([self.Gy],   mode ='eval')
         modalite([self.Gx],   mode ='train')
         modalite(self.Dnetsy, mode ='train')
         modalite(self.Dnetsx, mode ='train')
@@ -611,19 +613,25 @@ class trainer(object):
                                         Gloss_cycle_consistency_x*app.LAMBDA_CONSISTENCY + 
                                         Gloss_identity_x*app.LAMBDA_IDENTITY
                                     )
+        
         # III. Common latent space
-        Dzyx, Dzxy                  = self.discriminate_zxy(zyx_gen, zxy_gen)
-        Gloss_identity_zxy          = torch.mean(torch.abs(Dzxy - Dzyx))
-        Gloss_identity_zxy          = 10.*self.bce_loss(Dzxy,o1l(Dzxy))+\
-                                      self.bce_loss(Dzyx,o0l(Dzyx))
+        # Dzyx, Dzxy                  = self.discriminate_zxy(zyx_gen, zxy_gen)
+        # Gloss_identity_zxy          = torch.mean(torch.abs(Dzxy - Dzyx))
+        # Gloss_identity_zxy          = 10.*self.bce_loss(Dzxy,o1l(Dzxy))+\
+        #                               self.bce_loss(Dzyx,o0l(Dzyx))
         
         ## IV. Total loss
-        Gloss                       = Gloss_x*10 + Gloss_y + Gloss_identity_zxy
+        Gloss                       = Gloss_x*10 + Gloss_y #+ Gloss_identity_zxy
 
         Gloss.backward()
         self.oGy.step()
         self.oGx.step()
         zerograd(self.optz)
+
+        if epoch%50 == 0 and self.trial == None:
+            for idx in range(opt.batchSize//torch.cuda.device_count()):
+                self.writer_debug.add_histogram("pseudo-random/zxy", zxy_gen[idx,:],2)
+                self.writer_debug.add_histogram("pseudo-random/zyx", zyx_gen[idx,:],2)
          
         self.losses['Gloss'].append(Gloss.tolist())
 
@@ -640,13 +648,13 @@ class trainer(object):
         self.losses['Gloss_identity_x'          ].append(Gloss_identity_x.tolist())
         self.losses['Gloss_identity_zf'         ].append(Gloss_identity_zf.tolist())
         
-        self.losses['Gloss_identity_zxy'        ].append(Gloss_identity_zxy.tolist())
+        # self.losses['Gloss_identity_zxy'        ].append(Gloss_identity_zxy.tolist())
 
     def generate_latent_variable(self, batch, nch_zd,nzd, nch_zf = 128,nzf = 128):
         zyy  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=self.std_y).to(app.DEVICE, non_blocking = True)
         zxx  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=self.std_x).to(app.DEVICE, non_blocking = True)
 
-        zyx  = torch.zeros([batch,nch_zf,nzf]).normal_(mean=0,std=self.std_y).to(app.DEVICE, non_blocking = True)
+        zyx  = torch.zeros([batch,nch_zf,nzf]).normal_(mean=0,std=self.std_x).to(app.DEVICE, non_blocking = True)
         zxy  = torch.zeros([batch,nch_zf,nzf]).normal_(mean=0,std=self.std_x).to(app.DEVICE, non_blocking = True)
         return zyy, zyx, zxy, zxx
 
@@ -659,11 +667,13 @@ class trainer(object):
         total_step = len(self.trn_loader)
         app.logger.info(f"Let's use {torch.cuda.device_count()} GPUs!")
 
-        if self.study_name!=None:
-            self.writer_loss    = SummaryWriter(f'{self.study_name}/hparams/loss/'
-                f'trial-{self.trial.number}-evento-{time.ctime(time.time()).replace(' ','-')}/')
-            self.writer_accuracy= SummaryWriter(f'{self.study_name}/hparams/accuracy/'
-                f'trial-{self.trial.number}-evento-{time.ctime(time.time()).replace(' ','-')}/')
+        if self.study_dir!=None:
+            start_time          = time.ctime(time.time()).replace(' ','-').replace(':','_')
+            writer_loss_dir     = f'{self.study_dir}/hparams/trial-{self.trial.number}/loss/evento-{start_time}/'
+            writer_accuracy_dir = f'{self.study_dir}/hparams/trial-{self.trial.number}/accuracy/evento-{start_time}/'
+            self.writer_loss    = SummaryWriter(writer_loss_dir)
+            self.writer_accuracy= SummaryWriter(writer_accuracy_dir)
+            app.logger.info(f'Tensorboard accuracy setted up for trial {self.trial.number} ...')
 
         # bar = trange(0,10)
         nch_zd, nzd = 24,128
@@ -672,6 +682,7 @@ class trainer(object):
         # torch.cuda.empty_cache()
         torch.random.manual_seed(0)
         for epoch in bar:
+            # breakpoint()
             for b,batch in enumerate(self.trn_loader):
                 y,x, *others = batch
                 # y   = y.to(app.DEVICE, non_blocking = True)
@@ -704,26 +715,15 @@ class trainer(object):
                 app.logger.debug(f'Epoch [{epoch}/{opt.niter}]\tStep [{b}/{total_step-1}]')
             # if epoch%10== 0:
             #     torch.manual_seed(100)
-                for k,v in self.losses.items():
-                    self.writer_train.add_scalar('Loss/{}'.format(k),
-                        np.mean(np.array(v[-b:-1])),epoch)
-
-            #     figure_bb, gof_bb = plt.plot_generate_classic(
-            #             tag     = 'filtered',
-            #             Qec     = deepcopy(self.F_),
-            #             Pdc     = deepcopy(self.Gy),
-            #             trn_set = self.vld_loader,
-            #             pfx     ="vld_set_bb_unique",
-            #             opt     = opt,
-            #             outf    = outf, 
-            #             save    = False)
-            #     self.writer_val.add_figure('Broadband',figure_bb,epoch)
-            #     self.writer_val.add_figure('Goodness of Fit',gof_bb,epoch)
+                if self.trial == None:
+                    for k,v in self.losses.items():
+                        self.writer_train.add_scalar('Loss/{}'.format(k),
+                            np.mean(np.array(v[-b:-1])),epoch)
              
             Gloss       = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss'][-b:-1])))
-            # Gloss_zxy   = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss_identity_zxy'][-b:-1])))
+            Gloss_zxy   = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss_identity_zxy'][-b:-1])))
             Dloss       = '{:>5.3f}'.format(np.mean(np.array(self.losses['Dloss'][-b:-1])))
-            # Dloss_zxy   = '{:>5.3f}'.format(np.mean(np.array(self.losses['Dloss_identity_zxy'][-b:-1])))
+            Dloss_zxy   = '{:>5.3f}'.format(np.mean(np.array(self.losses['Dloss_identity_zxy'][-b:-1])))
             
             bar.set_postfix(Gloss = Gloss, Dloss = Dloss) 
             
@@ -731,8 +731,6 @@ class trainer(object):
                 for k,v in self.losses.items():
                     self.writer_train.add_scalar('Loss/{}'.format(k),
                         np.mean(np.array(v[-b:-1])),epoch)
-
-
                 torch.manual_seed(100)
                 figure_bb, gof_bb = plt.plot_generate_classic(
                         tag     = 'broadband',
@@ -756,26 +754,25 @@ class trainer(object):
                         opt     = opt,
                         outf    = outf, 
                         save    = False)
-                bar.set_postfix(status = 'writing reconstructed filtered signals ...')
+                bar.set_postfix(status = 'Writing reconstructed filtered signals ...')
                 self.writer_val.add_figure('Filtered',figure_fl,epoch)
                 self.writer_val.add_figure('Goodness of Fit Filtered',gof_fl,epoch)
 
-            if epoch%25 == 0 and self.trial == True:
+            if (epoch+1)%25 == 0:
                 val_accuracy, val_accuracy_bb, val_accuracy_fl = self.accuracy()
                 # val_accuracy = self.accuracy()
                 # app.logger.info(f"val_accuracy_fl = {val_accuracy}")
-                app.logger.debug(f"val_accuracy_fl = {val_accuracy_fl}")
-                app.logger.debug(f"val_accuracy_bb = {val_accuracy_bb}")
-
-                self.writer_debug.add_scalar('Accuracy/Broadband',val_accuracy_bb, epoch)
-                self.writer_debug.add_scalar('Accuracy/Filtered' ,val_accuracy_fl, epoch)
-                self.writer_debug.add_scalar('Accuracy/Total'    ,val_accuracy   , epoch)
-
-                if self.study_name!=None:
-                    self.writer_accuracy.add_scalar('accuracy_fl',val_accuracy_fl,epoch)
-                    self.writer_accuracy.add_scalar('accuracy_bb',val_accuracy_bb,epoch)
-                    self.writer_accuracy.add_scalar('accuracy '  ,val_accuracy,   epoch)
-                
+                app.logger.info(f"val_accuracy_fl = {val_accuracy_fl}")
+                app.logger.info(f"val_accuracy_bb = {val_accuracy_bb}")
+                if self.study_dir == None:
+                    self.writer_debug.add_scalar('Accuracy/Broadband',val_accuracy_bb, epoch)
+                    self.writer_debug.add_scalar('Accuracy/Filtered' ,val_accuracy_fl, epoch)
+                    self.writer_debug.add_scalar('Accuracy/Total'    ,val_accuracy   , epoch)
+                elif self.study_dir!=None:
+                    self.writer_accuracy.add_scalar('Accuracy/Filtered' ,val_accuracy_fl,epoch)
+                    self.writer_accuracy.add_scalar('Accuracy/Broadband',val_accuracy_bb,epoch)
+                    self.writer_accuracy.add_scalar('Accuracy/Total'    ,val_accuracy   ,epoch)
+                    
                     self.writer_loss.add_scalar('Dloss',    float(Dloss),    epoch)
                     self.writer_loss.add_scalar('Dloss_zxy',float(Dloss_zxy),epoch)
                     self.writer_loss.add_scalar('Gloss',    float(Gloss),    epoch)
@@ -785,11 +782,11 @@ class trainer(object):
                     self.trial.report(val_accuracy, epoch)
                     if self.trial.should_prune():
                         raise optuna.exceptions.TrialPruned()
-                    app.logger.info('Evaluating ...')
-                    return val_accuracy
+                else:
+                    app.logger.info("No accuracy saved")
            
             if epoch%save_checkpoint == 0 and self.trial == None:
-                app.logger.info(f"saving model at this checkpoint :{epoch}")
+                app.logger.info(f"Saving model at this checkpoint :{epoch}")
                 
                 tsave({ 'epoch'                 : epoch,
                         'model_state_dict'      : self.F_.state_dict(),
@@ -826,10 +823,16 @@ class trainer(object):
                 #         'optimizer_state_dict'  : self.oDyxz.state_dict(),
                 #         'loss'                  :self.losses,},
                 #         root_checkpoint +'/Dyz.pth')
-
+        if (epoch +1) == opt.niter:
+            if self.trial == None:
+                for key, value in self.losses.items():
+                    plt.plot_loss_explicit(losses=value, key=key, outf=outf,niter=niter)
+            elif self.trial!= None:
+                app.logger.info('Evaluating ...')
+                return val_accuracy
+            else:
+                app.logger.info("Training finishes !")
         
-        for key, value in self.losses.items():
-            plt.plot_loss_explicit(losses=value, key=key, outf=outf,niter=niter)
         
                   
 
@@ -861,7 +864,7 @@ class trainer(object):
                      np.power([10 - pg for pg in PG_f],2))
         accuracy_fl = val_f.mean().tolist()
 
-        accuracy    = (accuracy_fl + accuracy_bb)/2
+        accuracy    = max(accuracy_fl,accuracy_bb)
         # return accuracy_fl
         return accuracy, accuracy_bb, accuracy_fl
 

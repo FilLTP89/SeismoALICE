@@ -75,6 +75,7 @@ class trainer(object):
         self.Dnetsx     = []
         self.optz       = []
         self.oGyx       = None
+        _blocked        = True
         # self.dp_mode    = True
         self.losses     = {
             'Dloss':[0],
@@ -104,15 +105,16 @@ class trainer(object):
             n = self.strategy['unique']
 
             self.F_  = net.Encoder(opt.config['F'],  opt)
-            # self.Gy  = net.Decoder(opt.config['Gy'], opt)
-            self.Gx  = net.Decoder(opt.config['Gx'], opt)
+            self.Gy  = net.Decoder(opt.config['Gy'], opt)
+            # self.Gx  = net.Decoder(opt.config['Gx'], opt)
+
             self.F_  = nn.DataParallel(self.F_).cuda()
-            # self.Gy  = nn.DataParallel(self.Gy).cuda()
-            self.Gx  = nn.DataParallel(self.Gx).cuda()
+            self.Gy  = nn.DataParallel(self.Gy).cuda()
+            # self.Gx  = nn.DataParallel(self.Gx).cuda()
 
             if  self.strategy['tract']['unique']:
                 if None in n:       
-                    self.FGf  = [self.F_, self.Gx]
+                    self.FGf  = [self.F_, self.Gy]
                     # self.FGf  = [self.F_,self.Gy, self.Gx]
                     self.oGyx = reset_net(self.FGf,
                         func=set_weights,lr=glr,b1=b1,b2=b2,
@@ -129,30 +131,32 @@ class trainer(object):
                 else: 
                     # breakpoint()
                     self.F_.load_state_dict(tload(n[0])['model_state_dict'])
-                    # self.Gy.load_state_dict(tload(n[1])['model_state_dict'])
+                    self.Gy.load_state_dict(tload(n[1])['model_state_dict'])
                     # self.Gx.load_state_dict(tload(n[2])['model_state_dict'])
+                    if not _blocked:
+                        app.logger.info("considering master part as pretrained : no grad required")
+                        for param in self.F_.module.master.parameters():
+                            param.requires_grad = False
 
-                    app.logger.info("considering master part as pretrained : no grad required")
-                    for param in self.F_.module.master.parameters():
-                        param.requires_grad = False
+                        app.logger.info("considering common part as pretrained : no grad required")
+                        for param in self.F_.module.cnn_common.parameters():
+                            param.requires_grad = False
 
-                    app.logger.info("considering common part as pretrained : no grad required")
-                    for param in self.F_.module.cnn_common.parameters():
-                        param.requires_grad = False
-
-                    self.oGyx = Adam(ittc(self.F_.parameters()),
-                        lr=glr,betas=(b1,b2),
-                        weight_decay=0.00001)
-                    # self.oGy = Adam(ittc(self.F_.branch_broadband.parameters(),
-                    #     self.Gy.parameters()),
-                    #     lr=ngpu_use*glr,betas=(b1,b2),
-                        # weight_decay=0.00001)
-                    
-                    self.FGf  = [self.F_,self.Gy]
-                    app.logger.info("intialization of Gy and the broadband branch for the broadband training ...")
-                    self.oGyx = reset_net([self.Gy,self.F_.module.cnn_broadband],
-                        func=set_weights,lr=glr,b1=b1,b2=b2,
-                        weight_decay=0.00001)
+                        self.oGyx = Adam(ittc(self.F_.parameters()),
+                            lr=glr,betas=(b1,b2),
+                            weight_decay=0.00001)
+                        # self.oGy = Adam(ittc(self.F_.branch_broadband.parameters(),
+                        #     self.Gy.parameters()),
+                        #     lr=ngpu_use*glr,betas=(b1,b2),
+                            # weight_decay=0.00001)
+                        
+                        self.FGf  = [self.F_,self.Gy]
+                        app.logger.info("intialization of Gy and the broadband branch for the broadband training ...")
+                        self.oGyx = reset_net([self.Gy,self.F_.module.cnn_broadband],
+                            func=set_weights,lr=glr,b1=b1,b2=b2,
+                            weight_decay=0.00001)
+                    else: 
+                        app.logger.info("starting for a previous trained auto-encoder without block back propagation")
 
                     # self.oGyx = RMSProp(ittc(self.F_.parameters(),
                     #     self.Gy.parameters(),
@@ -162,47 +166,47 @@ class trainer(object):
                 self.optz.append(self.oGyx)
                 # self.optz.append(self.oGx)
 
-                # self.Dy   = net.DCGAN_Dx( opt.config['Dy'],  opt)
-                # self.Dzb  = net.DCGAN_Dz( opt.config['Dzb'], opt)
-                # self.Dyz  = net.DCGAN_DXZ(opt.config['Dyz'], opt)
-                # self.Dzzb = net.DCGAN_Dz( opt.config['Dzzb'],opt)
-                # self.Dyy  = net.DCGAN_Dx( opt.config['Dyy'], opt)
+                self.Dy   = net.DCGAN_Dx( opt.config['Dy'],  opt)
+                self.Dzb  = net.DCGAN_Dz( opt.config['Dzb'], opt)
+                self.Dyz  = net.DCGAN_DXZ(opt.config['Dyz'], opt)
+                self.Dzzb = net.DCGAN_Dz( opt.config['Dzzb'],opt)
+                self.Dyy  = net.DCGAN_Dx( opt.config['Dyy'], opt)
 
                 # self.Dzyx = net.DCGAN_Dz(opt.config['Dzyx'],opt)
 
-                self.Dx   = net.DCGAN_Dx(opt.config['Dx'],  opt)
-                self.Dzf  = net.DCGAN_Dz(opt.config['Dzf'], opt)
-                self.Dxz  = net.DCGAN_DXZ(opt.config['Dxz'],opt)
-                self.Dzzf = net.DCGAN_Dz(opt.config['Dzzf'],opt)
-                self.Dxx  = net.DCGAN_Dx(opt.config['Dxx'], opt)
+                # self.Dx   = net.DCGAN_Dx(opt.config['Dx'],  opt)
+                # self.Dzf  = net.DCGAN_Dz(opt.config['Dzf'], opt)
+                # self.Dxz  = net.DCGAN_DXZ(opt.config['Dxz'],opt)
+                # self.Dzzf = net.DCGAN_Dz(opt.config['Dzzf'],opt)
+                # self.Dxx  = net.DCGAN_Dx(opt.config['Dxx'], opt)
 
-                # self.Dy   = nn.DataParallel(self.Dy  ).cuda()
-                # self.Dzb  = nn.DataParallel(self.Dzb ).cuda()
-                # self.Dyz  = nn.DataParallel(self.Dyz ).cuda()
-                # self.Dzzb = nn.DataParallel(self.Dzzb).cuda()
-                # self.Dyy  = nn.DataParallel(self.Dyy ).cuda()
+                self.Dy   = nn.DataParallel(self.Dy  ).cuda()
+                self.Dzb  = nn.DataParallel(self.Dzb ).cuda()
+                self.Dyz  = nn.DataParallel(self.Dyz ).cuda()
+                self.Dzzb = nn.DataParallel(self.Dzzb).cuda()
+                self.Dyy  = nn.DataParallel(self.Dyy ).cuda()
                 
                 # self.Dzyx = nn.DataParallel(self.Dzyx ).cuda()
 
-                self.Dx   = nn.DataParallel(self.Dx   ).cuda()
-                self.Dzf  = nn.DataParallel(self.Dzf  ).cuda()
-                self.Dxz  = nn.DataParallel(self.Dxz  ).cuda()
-                self.Dzzf = nn.DataParallel(self.Dzzf ).cuda()
-                self.Dxx  = nn.DataParallel(self.Dxx  ).cuda()
+                # self.Dx   = nn.DataParallel(self.Dx   ).cuda()
+                # self.Dzf  = nn.DataParallel(self.Dzf  ).cuda()
+                # self.Dxz  = nn.DataParallel(self.Dxz  ).cuda()
+                # self.Dzzf = nn.DataParallel(self.Dzzf ).cuda()
+                # self.Dxx  = nn.DataParallel(self.Dxx  ).cuda()
 
-                # self.Dnets.append(self.Dy   )
-                # self.Dnets.append(self.Dzb  )
-                # self.Dnets.append(self.Dyz  )
-                # self.Dnets.append(self.Dzzb )
-                # self.Dnets.append(self.Dyy  )
+                self.Dnets.append(self.Dy   )
+                self.Dnets.append(self.Dzb  )
+                self.Dnets.append(self.Dyz  )
+                self.Dnets.append(self.Dzzb )
+                self.Dnets.append(self.Dyy  )
                 
                 # self.Dnets.append(self.Dzyx )
 
-                self.Dnets.append(self.Dx  )
-                self.Dnets.append(self.Dzf )
-                self.Dnets.append(self.Dxz )
-                self.Dnets.append(self.Dzzf)
-                self.Dnets.append(self.Dxx )
+                # self.Dnets.append(self.Dx  )
+                # self.Dnets.append(self.Dzf )
+                # self.Dnets.append(self.Dxz )
+                # self.Dnets.append(self.Dzzf)
+                # self.Dnets.append(self.Dxx )
 
                 self.oDyxz = reset_net(self.Dnets,
                     func=set_weights,lr = rlr,
@@ -313,115 +317,116 @@ class trainer(object):
         modalite(self.Dnets,    mode = 'train')
         # modalite(self.Dnetsx,   mode = 'train')
         
-        ## I. Broadband training of Discriminator
+        # I. Broadband training of Discriminator
 
-        # # 0. Generate noise
-        # wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std_y})
+        # 0. Generate noise
+        wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std_y})
 
-        # # 1. Concatenate inputs
-        # z_inp = zcat(zyx,zyy)
-        # y_inp = zcat(y,wny)
+        # 1. Concatenate inputs
+        z_inp = zcat(zyx,zyy)
+        y_inp = zcat(y,wny)
         
 
-        # # 2.1 Generate conditional samples
-        # y_gen   = self.Gy(z_inp)
-        # app.logger.debug(f'max y_inp : {torch.max(y_inp)}')
-        # zyy_F,zyx_F,*other = self.F_(y_inp)
-        # #2.2 Concatanete outputs
-        # app.logger.debug(f'max zyx_F : {torch.max(zyx_F)}')
-        # app.logger.debug(f'max zyy_F : {torch.max(zyy_F)}')
-        # zyy_gen = zcat(zyx_F,zyy_F)
-        # zyx_gen = zcat(zyx_F)
-        # # 3. Cross-Discriminate YZ
-        # Dyz,Dzy = self.discriminate_yz(y,y_gen,z_inp,zyy_gen)
+        # 2.1 Generate conditional samples
+        y_gen   = self.Gy(z_inp)
+        app.logger.debug(f'max y_inp : {torch.max(y_inp)}')
+        zyy_F,zyx_F,*other = self.F_(y_inp)
+        #2.2 Concatanete outputs
+        app.logger.debug(f'max zyx_F : {torch.max(zyx_F)}')
+        app.logger.debug(f'max zyy_F : {torch.max(zyy_F)}')
+        zyy_gen = zcat(zyx_F,zyy_F)
+        zyx_gen = zcat(zyx_F)
+        # 3. Cross-Discriminate YZ
+        Dyz,Dzy = self.discriminate_yz(y,y_gen,z_inp,zyy_gen)
 
-        # # 4. Compute ALI discriminator loss
-        # Dloss_ali_y = -torch.mean(ln0c(Dzy)+ln0c(1.0-Dyz))
+        # 4. Compute ALI discriminator loss
+        Dloss_ali_y = -torch.mean(ln0c(Dzy)+ln0c(1.0-Dyz))
         
-        # wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std_y})
+        wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std_y})
 
-        # # 5. Generate reconstructions
-        # y_rec  = self.Gy(zyy_gen)
-        # app.logger.debug(f"max zyy_gen : {torch.max(zyy_gen)}")
-        # app.logger.debug(f'max y       : {torch.max(y_rec)}')
-        # assert torch.isfinite(torch.max(y_rec))
+        # 5. Generate reconstructions
+        y_rec  = self.Gy(zyy_gen)
+        app.logger.debug(f"max zyy_gen : {torch.max(zyy_gen)}")
+        app.logger.debug(f'max y       : {torch.max(y_rec)}')
+        assert torch.isfinite(torch.max(y_rec))
 
-        # y_gen  = zcat(y_gen,wny)
-        # zyy_F,zyx_F,*other = self.F_(y_gen)
-        # zyy_rec = zcat(zyx_F,zyy_F)
+        y_gen  = zcat(y_gen,wny)
+        zyy_F,zyx_F,*other = self.F_(y_gen)
+        zyy_rec = zcat(zyx_F,zyy_F)
 
-        # # 6. Disciminate Cross Entropy  
-        # Dreal_y,Dfake_y     = self.discriminate_yy(y,y_rec)
-        # Dloss_rec_y         = self.bce_loss(Dreal_y,o1l(Dreal_y))+\
-        #                       self.bce_loss(Dfake_y,o0l(Dfake_y))
-        # # Dloss_rec_y         = -torch.mean(ln0c(Dreal_y)+ln0c(1.0-Dfake_y))
+        # 6. Disciminate Cross Entropy  
+        Dreal_y,Dfake_y     = self.discriminate_yy(y,y_rec)
+        Dloss_rec_y         = self.bce_loss(Dreal_y,o1l(Dreal_y))+\
+                              self.bce_loss(Dfake_y,o0l(Dfake_y))
+        # Dloss_rec_y         = -torch.mean(ln0c(Dreal_y)+ln0c(1.0-Dfake_y))
 
-        # Dreal_zd,Dfake_zd   = self.discriminate_zzb(z_inp,zyy_rec)
-        # Dloss_rec_zy        = self.bce_loss(Dreal_zd,o1l(Dreal_zd))+\
-        #                       self.bce_loss(Dfake_zd,o0l(Dfake_zd))
-        # # Dloss_rec_zy        = -torch.mean(ln0c(Dreal_zd)+ln0c(1.0-Dfake_zd))
+        Dreal_zd,Dfake_zd   = self.discriminate_zzb(z_inp,zyy_rec)
+        Dloss_rec_zy        = self.bce_loss(Dreal_zd,o1l(Dreal_zd))+\
+                              self.bce_loss(Dfake_zd,o0l(Dfake_zd))
+        # Dloss_rec_zy        = -torch.mean(ln0c(Dreal_zd)+ln0c(1.0-Dfake_zd))
         
-        # 7. Compute all losses
-        Dloss_rec_y         = 0 #Dloss_rec_y + Dloss_rec_zy
-        Dloss_ali_y         = 0 #Dloss_ali_y 
-        Dloss_y             = 0 #Dloss_ali_y + Dloss_rec_y
+        #7. Compute all losses
+        Dloss_rec_y         = Dloss_rec_y + Dloss_rec_zy
+        Dloss_ali_y         = Dloss_ali_y 
+        Dloss_y             = Dloss_ali_y + Dloss_rec_y
 
 
         ## II. filtered part of training
 
-        # 0. Generate noise
-        wnx,*others = noise_generator(x.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std_x})
+        # # 0. Generate noise
+        # wnx,*others = noise_generator(x.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std_x})
 
-        # 1. Concatenate inputs
-        zf_inp = zcat(zxy)
-        x_inp  = zcat(x,wnx)
+        # # 1. Concatenate inputs
+        # zf_inp = zcat(zxy)
+        # x_inp  = zcat(x,wnx)
         
-        # 2.1 Generate conditional samples
-        x_gen = self.Gx(zf_inp)
-        # app.logger.debug(f'max y_inp : {torch.max(x_inp)}')
-        _,zyx_F,*other = self.F_(x_inp)
-        #2.2 Concatanete outputs
-        app.logger.debug(f'max zyx_F : {torch.max(zyx_F)}')
-        zxy_gen = zcat(zyx_F)
+        # # 2.1 Generate conditional samples
+        # x_gen = self.Gx(zf_inp)
+        # # app.logger.debug(f'max y_inp : {torch.max(x_inp)}')
+        # _,zyx_F,*other = self.F_(x_inp)
+        # #2.2 Concatanete outputs
+        # app.logger.debug(f'max zyx_F : {torch.max(zyx_F)}')
+        # zxy_gen = zcat(zyx_F)
 
-        # 3. Cross-Discriminate YZ
-        Dxz,Dzx = self.discriminate_xz(x,x_gen,zf_inp,zxy_gen)
+        # # 3. Cross-Discriminate YZ
+        # Dxz,Dzx = self.discriminate_xz(x,x_gen,zf_inp,zxy_gen)
 
-        # 4. Compute ALI discriminator loss
-        Dloss_ali_x = -torch.mean(ln0c(Dzx)+ln0c(1.0-Dxz))
+        # # 4. Compute ALI discriminator loss
+        # Dloss_ali_x = -torch.mean(ln0c(Dzx)+ln0c(1.0-Dxz))
         
-        wnx,*others = noise_generator(x.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std_x})
+        # wnx,*others = noise_generator(x.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std_x})
 
-        # 5. Generate reconstructions
-        x_rec  = self.Gx(zxy_gen)
-        # app.logger.debug(f"max zyy_gen : {torch.max(zyy_gen)}")
-        # app.logger.debug(f'max y       : {torch.max(y_rec)}')
-        # assert torch.isfinite(torch.max(y_rec))
-        x_gen  = zcat(x_gen,wnx)
-        _,zyx_F,*other = self.F_(x_gen)
-        zxy_rec = zcat(zyx_F)
+        # # 5. Generate reconstructions
+        # x_rec  = self.Gx(zxy_gen)
+        # # app.logger.debug(f"max zyy_gen : {torch.max(zyy_gen)}")
+        # # app.logger.debug(f'max y       : {torch.max(y_rec)}')
+        # # assert torch.isfinite(torch.max(y_rec))
+        # x_gen  = zcat(x_gen,wnx)
+        # _,zyx_F,*other = self.F_(x_gen)
+        # zxy_rec = zcat(zyx_F)
 
-        # 6. Disciminate Cross Entropy  
-        Dreal_x,Dfake_x     = self.discriminate_xx(x,x_rec)
-        Dloss_rec_x         = self.bce_loss(Dreal_x,o1l(Dreal_x))+\
-                              self.bce_loss(Dfake_x,o0l(Dfake_x))
-        # Dloss_rec_y         = -torch.mean(ln0c(Dreal_y)+ln0c(1.0-Dfake_y))
+        # # 6. Disciminate Cross Entropy  
+        # Dreal_x,Dfake_x     = self.discriminate_xx(x,x_rec)
+        # Dloss_rec_x         = self.bce_loss(Dreal_x,o1l(Dreal_x))+\
+        #                       self.bce_loss(Dfake_x,o0l(Dfake_x))
+        # # Dloss_rec_y         = -torch.mean(ln0c(Dreal_y)+ln0c(1.0-Dfake_y))
 
-        Dreal_zf,Dfake_zf   = self.discriminate_zzf(zf_inp,zxy_rec)
-        Dloss_rec_zx        = self.bce_loss(Dreal_zf,o1l(Dreal_zf))+\
-                              self.bce_loss(Dfake_zf,o0l(Dfake_zf))
-        # Dloss_rec_zy        = -torch.mean(ln0c(Dreal_zd)+ln0c(1.0-Dfake_zd))
+        # Dreal_zf,Dfake_zf   = self.discriminate_zzf(zf_inp,zxy_rec)
+        # Dloss_rec_zx        = self.bce_loss(Dreal_zf,o1l(Dreal_zf))+\
+        #                       self.bce_loss(Dfake_zf,o0l(Dfake_zf))
+        # # Dloss_rec_zy        = -torch.mean(ln0c(Dreal_zd)+ln0c(1.0-Dfake_zd))
         
-        # 7. Compute all losses
-        Dloss_rec_x         = Dloss_rec_x + Dloss_rec_zx
-        Dloss_ali_x         = Dloss_ali_x 
-        Dloss_x             = Dloss_ali_x + Dloss_rec_x
+        # # 7. Compute all losses
+        # Dloss_rec_x         = Dloss_rec_x + Dloss_rec_zx
+        # Dloss_ali_x         = Dloss_ali_x 
+        Dloss_x             = 0. #Dloss_ali_x + Dloss_rec_x
 
 
-        ## III. Common latent space
+        # III. Common latent space
         # Dzyx, Dzxy          = self.discriminate_zxy(zyx_gen, zxy_gen)
         # Dloss_identity_zxy  = self.bce_loss(Dzyx,o1l(Dzyx))+\
         #                       self.bce_loss(Dzxy,o0l(Dzxy))
+        
 
         ## IV. Total loss 
         Dloss               = Dloss_y + Dloss_x #+ Dloss_identity_zxy
@@ -450,95 +455,95 @@ class trainer(object):
         modalite(self.Dnets,    mode ='train')
         # modalite(self.Dnetsx,   mode ='train')
 
-        # ## I. Broadband part
-        # wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std_y})
+        ## I. Broadband part
+        wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std_y})
         
-        # # 1. Concatenate inputs
-        # y_inp  = zcat(y,wny)
-        # z_inp  = zcat(zxy,zyy)
+        # 1. Concatenate inputs
+        y_inp  = zcat(y,wny)
+        z_inp  = zcat(zxy,zyy)
          
-        # # 2. Generate conditional samples
-        # y_gen = self.Gy(z_inp)
-        # zyy_F,zyx_F,*other = self.F_(y_inp) 
+        # 2. Generate conditional samples
+        y_gen = self.Gy(z_inp)
+        zyy_F,zyx_F,*other = self.F_(y_inp) 
  
-        # zyy_gen = zcat(zyx_F,zyy_F) 
-        # zyx_gen = zcat(zyx_F)
-        # Dyz,Dzy = self.discriminate_yz(y,y_gen,z_inp,zyy_gen)
+        zyy_gen = zcat(zyx_F,zyy_F) 
+        zyx_gen = zcat(zyx_F)
+        Dyz,Dzy = self.discriminate_yz(y,y_gen,z_inp,zyy_gen)
         
-        # Gloss_ali_y =  torch.mean(-Dyz+Dzy) 
+        Gloss_ali_y =  torch.mean(-Dyz+Dzy) 
         
-        # # 3. Generate noise
-        # wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std_y})
+        # 3. Generate noise
+        wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std_y})
 
-        # # 4. Generate reconstructions
-        # y_rec = self.Gy(zyy_gen)
+        # 4. Generate reconstructions
+        y_rec = self.Gy(zyy_gen)
         
-        # y_gen = zcat(y_gen,wny)
-        # zyy_F,zyx_F,*other = self.F_(y_gen)
-        # zyy_rec = zcat(zyx_F,zyy_F)
+        y_gen = zcat(y_gen,wny)
+        zyy_F,zyx_F,*other = self.F_(y_gen)
+        zyy_rec = zcat(zyx_F,zyy_F)
     
-        # # 5. Cross-Discriminate XX
-        # _,Dfake_y = self.discriminate_yy(y,y_rec)
-        # Gloss_cycle_consistency_y   = self.bce_loss(Dfake_y,o1l(Dfake_y))
-        # Gloss_identity_y            = torch.mean(torch.abs(y-y_rec)) 
+        # 5. Cross-Discriminate XX
+        _,Dfake_y = self.discriminate_yy(y,y_rec)
+        Gloss_cycle_consistency_y   = self.bce_loss(Dfake_y,o1l(Dfake_y))
+        Gloss_identity_y            = torch.mean(torch.abs(y-y_rec)) 
         
-        # # 6. Cross-Discriminate ZZ
-        # _,Dfake_zd = self.discriminate_zzb(z_inp,zyy_rec)
-        # Gloss_cycle_consistency_zd  = self.bce_loss(Dfake_zd,o1l(Dfake_zd))
-        # Gloss_identity_zd           = torch.mean(torch.abs(z_inp-zyy_rec))
+        # 6. Cross-Discriminate ZZ
+        _,Dfake_zd = self.discriminate_zzb(z_inp,zyy_rec)
+        Gloss_cycle_consistency_zd  = self.bce_loss(Dfake_zd,o1l(Dfake_zd))
+        Gloss_identity_zd           = torch.mean(torch.abs(z_inp-zyy_rec))
 
         # 7. Total Loss
-        Gloss_cycle_consistency_y   = 0 #Gloss_cycle_consistency_y +  Gloss_cycle_consistency_zd
-        Gloss_identity_y            = 0 #Gloss_identity_y + Gloss_identity_zd
-        Gloss_y                     = 0 #(
-                                        # Gloss_ali_y + 
-                                        # Gloss_cycle_consistency_y*app.LAMBDA_CONSISTENCY + 
-                                        # Gloss_identity_y*app.LAMBDA_IDENTITY)
+        Gloss_cycle_consistency_y   = Gloss_cycle_consistency_y +  Gloss_cycle_consistency_zd
+        Gloss_identity_y            = Gloss_identity_y + Gloss_identity_zd
+        Gloss_y                     = (
+                                        Gloss_ali_y + 
+                                        Gloss_cycle_consistency_y*app.LAMBDA_CONSISTENCY + 
+                                        Gloss_identity_y*app.LAMBDA_IDENTITY)
 
 
         ## II. Filtered part
-        wnx,*others = noise_generator(x.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std_x})
+        # wnx,*others = noise_generator(x.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std_x})
         
-        # 1. Concatenate inputs
-        x_inp   = zcat(x,wnx)
-        zf_inp  = zcat(zxy)
+        # # 1. Concatenate inputs
+        # x_inp   = zcat(x,wnx)
+        # zf_inp  = zcat(zxy)
          
-        # 2. Generate conditional samples
-        x_gen = self.Gx(zf_inp)
-        _,zyx_F,*other = self.F_(x_inp) 
-        zxy_gen = zcat(zyx_F) 
-        Dxz,Dzx = self.discriminate_xz(x,x_gen,zf_inp,zxy_gen)
+        # # 2. Generate conditional samples
+        # x_gen = self.Gx(zf_inp)
+        # _,zyx_F,*other = self.F_(x_inp) 
+        # zxy_gen = zcat(zyx_F) 
+        # Dxz,Dzx = self.discriminate_xz(x,x_gen,zf_inp,zxy_gen)
         
-        Gloss_ali_x =  torch.mean(-Dxz+Dzx) 
+        # Gloss_ali_x =  torch.mean(-Dxz+Dzx) 
         
-        # 3. Generate noise
-        wnx,*others = noise_generator(x.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std_x})
+        # # 3. Generate noise
+        # wnx,*others = noise_generator(x.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std_x})
 
-        # 4. Generate reconstructions
-        x_rec = self.Gx(zxy_gen)
-        x_gen = zcat(x_gen,wnx)
-        _,zyx_F,*other = self.F_(x_gen)
-        zxy_rec = zcat(zyx_F)
+        # # 4. Generate reconstructions
+        # x_rec = self.Gx(zxy_gen)
+        # x_gen = zcat(x_gen,wnx)
+        # _,zyx_F,*other = self.F_(x_gen)
+        # zxy_rec = zcat(zyx_F)
     
-        # 5. Cross-Discriminate XX
-        _,Dfake_x = self.discriminate_xx(x,x_rec)
-        Gloss_cycle_consistency_x   = self.bce_loss(Dfake_x,o1l(Dfake_x))
-        Gloss_identity_x            = torch.mean(torch.abs(x-x_rec)) 
+        # # 5. Cross-Discriminate XX
+        # _,Dfake_x = self.discriminate_xx(x,x_rec)
+        # Gloss_cycle_consistency_x   = self.bce_loss(Dfake_x,o1l(Dfake_x))
+        # Gloss_identity_x            = torch.mean(torch.abs(x-x_rec)) 
         
-        # 6. Cross-Discriminate ZZ
-        _,Dfake_zf = self.discriminate_zzf(zf_inp,zxy_rec)
-        Gloss_cycle_consistency_zf  = self.bce_loss(Dfake_zf,o1l(Dfake_zf))
-        Gloss_identity_zf           = torch.mean(torch.abs(zf_inp-zxy_rec)**2)
+        # # 6. Cross-Discriminate ZZ
+        # _,Dfake_zf = self.discriminate_zzf(zf_inp,zxy_rec)
+        # Gloss_cycle_consistency_zf  = self.bce_loss(Dfake_zf,o1l(Dfake_zf))
+        # Gloss_identity_zf           = torch.mean(torch.abs(zf_inp-zxy_rec)**2)
 
-        # 7. Total Loss
-        Gloss_cycle_consistency_x   = Gloss_cycle_consistency_x +  Gloss_cycle_consistency_zf
-        Gloss_identity_x            = Gloss_identity_x + Gloss_identity_zf
-        Gloss_x                     = (
-                                        Gloss_ali_x + 
-                                        Gloss_cycle_consistency_x*app.LAMBDA_CONSISTENCY + 
-                                        Gloss_identity_x*app.LAMBDA_IDENTITY
-                                    )
-        ## III. Common latent space
+        # # 7. Total Loss
+        # Gloss_cycle_consistency_x   = Gloss_cycle_consistency_x +  Gloss_cycle_consistency_zf
+        # Gloss_identity_x            = Gloss_identity_x + Gloss_identity_zf
+        Gloss_x                     = 0 # (
+                                    #     Gloss_ali_x + 
+                                    #     Gloss_cycle_consistency_x*app.LAMBDA_CONSISTENCY + 
+                                    #     Gloss_identity_x*app.LAMBDA_IDENTITY
+                                    # )
+        # III. Common latent space
         # Dzyx, Dzxy                  = self.discriminate_zxy(zyx_gen, zxy_gen)
         # Gloss_identity_zxy          = torch.mean(torch.abs(Dzxy - Dzyx))*app.LAMBDA
         
@@ -649,21 +654,21 @@ class trainer(object):
             
             if epoch%25 == 0:
                 torch.manual_seed(100)
-                # val_accuracy, val_accuracy_bb, val_accuracy_fl = self.accuracy()
-                val_accuracy = self.accuracy()
-                app.logger.info(f"val_accuracy_fl = {val_accuracy}")
-                # app.logger.info(f"val_accuracy_fl = {val_accuracy_fl}")
-                # app.logger.info(f"val_accuracy_bb = {val_accuracy_bb}")
+                val_accuracy, val_accuracy_bb, val_accuracy_fl = self.accuracy()
+                # val_accuracy = self.accuracy()
+                # app.logger.info(f"val_accuracy_fl = {val_accuracy}")
+                app.logger.info(f"val_accuracy_fl = {val_accuracy_fl}")
+                app.logger.info(f"val_accuracy_bb = {val_accuracy_bb}")
                 bar.set_postfix(accuracy    = val_accuracy)
 
-                # self.writer_accuracy.add_scalar('accuracy_fl',val_accuracy_fl,epoch)
-                # self.writer_accuracy.add_scalar('accuracy_bb',val_accuracy_bb,epoch)
-                # self.writer_accuracy.add_scalar('accuracy '  ,val_accuracy,   epoch)
+                self.writer_accuracy.add_scalar('accuracy_fl',val_accuracy_fl,epoch)
+                self.writer_accuracy.add_scalar('accuracy_bb',val_accuracy_bb,epoch)
+                self.writer_accuracy.add_scalar('accuracy '  ,val_accuracy,   epoch)
             
-                # self.writer_loss.add_scalar('Dloss',    float(Dloss),    epoch)
-                # self.writer_loss.add_scalar('Dloss_zxy',float(Dloss_zxy),epoch)
-                # self.writer_loss.add_scalar('Gloss',    float(Gloss),    epoch)
-                # self.writer_loss.add_scalar('Gloss_zxy',float(Gloss_zxy),epoch)
+                self.writer_loss.add_scalar('Dloss',    float(Dloss),    epoch)
+                self.writer_loss.add_scalar('Dloss_zxy',float(Dloss_zxy),epoch)
+                self.writer_loss.add_scalar('Gloss',    float(Gloss),    epoch)
+                self.writer_loss.add_scalar('Gloss_zxy',float(Gloss_zxy),epoch)
                 # bar.set_postfix(accuracy_fl = val_accuracy_fl)
                 # bar.set_postfix(accuracy_bb = val_accuracy_bb)
 
@@ -719,36 +724,35 @@ class trainer(object):
 
 
     def accuracy(self):
-        total = 0
-        # EG_b, PG_b  = plt.get_gofs(tag = 'broadband', 
-        #     Qec = self.F_, 
-        #     Pdc = self.Gy , 
-        #     trn_set = self.vld_loader, 
-        #     pfx="vld_set_bb_unique",
-        #     opt = opt,
-        #     std = self.std_y, 
-        #     outf = outf)
-
-        EG_f, PG_f  = plt.get_gofs(tag = 'filtered', 
+        EG_b, PG_b  = plt.get_gofs(tag = 'broadband', 
             Qec = self.F_, 
-            Pdc = self.Gx , 
+            Pdc = self.Gy , 
             trn_set = self.vld_loader, 
             pfx="vld_set_bb_unique",
             opt = opt,
-            std = self.std_x, 
+            std = self.std_y, 
             outf = outf)
 
-        # val_b       = np.sqrt(np.power([10 - eg for eg in EG_b],2)+\
-        #              np.power([10 - pg for pg in PG_b],2))
-        # accuracy_bb = val_b.mean().tolist()
+        # EG_f, PG_f  = plt.get_gofs(tag = 'filtered', 
+        #     Qec = self.F_, 
+        #     Pdc = self.Gx , 
+        #     trn_set = self.vld_loader, 
+        #     pfx="vld_set_bb_unique",
+        #     opt = opt,
+        #     std = self.std_x, 
+        #     outf = outf)
 
-        val_f       = np.sqrt(np.power([10 - eg for eg in EG_f],2)+\
-                     np.power([10 - pg for pg in PG_f],2))
-        accuracy_fl = val_f.mean().tolist()
+        val_b       = np.sqrt(np.power([10 - eg for eg in EG_b],2)+\
+                     np.power([10 - pg for pg in PG_b],2))
+        accuracy_bb = val_b.mean().tolist()
 
-        # accuracy    = (accuracy_fl + accuracy_bb)/2
-        return accuracy_fl
-        # return accuracy, accuracy_bb, accuracy_fl
+        # val_f       = np.sqrt(np.power([10 - eg for eg in EG_f],2)+\
+        #              np.power([10 - pg for pg in PG_f],2))
+        accuracy_fl = 0. #val_f.mean().tolist()
+
+        accuracy    = 2*(accuracy_fl + accuracy_bb)/2
+        # return accuracy_fl
+        return accuracy, accuracy_bb, accuracy_fl
 
 
 
