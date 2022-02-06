@@ -969,8 +969,8 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             Xt = Variable(xt_data).to(dev, non_blocking=True)
             Xf = Variable(xf_data).to(dev, non_blocking=True)
             zf = Variable(zf_data).to(dev, non_blocking=True)
-
-            wnx,*others = noise_generator(Xf.shape,zf.shape,dev,random_args)
+            nch_zf, nzf =  8,128
+            wnx,wnz,*others = noise_generator(Xf.shape,[Xf.shape[0],nch_zf,nzf],dev,random_args)
             X_inp = zcat(Xf,wnx)
             # ztr = Qec(X_inp)
             # pdb.set_trace()
@@ -983,7 +983,7 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
                 ztr = Qec(X_inp)
 
             # ztr = latent_resampling(Qec(X_inp),zf.shape[1],wn1)
-            z_inp = zcat(ztr)
+            z_inp = zcat(ztr,wnz)
             # z_inp = zcat(ztr,torch.zeros_like(wnz).to(dev))
             Xr = Pdc(z_inp)
             Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
@@ -1011,7 +1011,8 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
 
 
 
-def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./imgs',save = True, Qed=None):
+def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',
+    outf='./imgs',save = True, Qed=None,std=None):
     
     dev = app.DEVICE
     
@@ -1033,6 +1034,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
         vtm = torch.load(os.path.join(opt.dataroot,'vtm.pth'))
 
     if tag=='broadband':
+        rndm_args = {'mean': 0., 'std': 1.0} if std == None else {'mean':0., 'std':std}
         # pass
         if Qed is not None:
             Qed.eval()
@@ -1062,7 +1064,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             # zt_shape = [zt.shape[0], 16]
             # zt = torch.randn(*zt_shape).to(dev, non_blocking = True)
 
-            wnx,*others = noise_generator(Xt.shape,zt.shape,dev,app.RNDM_ARGS)
+            wnx,*others = noise_generator(Xt.shape,zt.shape,dev,random_args)
             X_inp = zcat(Xt,wnx)
 
             # ztr = Qec(X_inp).to(dev)
@@ -1197,7 +1199,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 plot_eg_pg(EG,PG, outf,pfx)
             
     elif 'filtered' in tag:
-        rndm_args = {'mean': 0., 'std': 0.1}
+        rndm_args = {'mean': 0., 'std': 0.1} if std == None else {'mean':0., 'std':std}
         for _,batch in enumerate(trn_set):
             # _,xf_data,_,zf_data,_,_,_,*other = batch
             # xt_data,xf_data,zt_data,zf_data,_,_,_,*other = batch
