@@ -905,8 +905,10 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             zt = Variable(zt_data).to(dev, non_blocking=True)
 
 
-       
-        wnx,*others = noise_generator(Xt.shape,zt.shape,dev,random_args)
+        
+        nch, nz         = 24,128
+        wnx,wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
+
         X_inp = zcat(Xt,wnx)
 
         if 'unique' in pfx:
@@ -918,7 +920,7 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
         else:
             ztr = Qec(X_inp)
 
-        z_inp = zcat(ztr)
+        z_inp = zcat(ztr,wnz)
         # breakpoint()
         # z_inp = zcat(ztr,torch.zeros_like(wnz).to(dev))
         # z_pre = zcat(zt,wnz.to(dev))
@@ -946,34 +948,37 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
 
     elif 'filtered' in tag:
         if std is None:
-            random_args = {'mean':0.,'std': 0.1}
+            random_args = {'mean':0.,'std': 1.0}
         else:
             random_args = {'mean': 0., 'std': std}
         for _,batch in enumerate(trn_set):
             # _,xf_data,_,zf_data,_,_,_,*other = batch
             # xt_data,xf_data,zt_data,zf_data,_,_,_,*other = batch
-            xt_data,xf_data,_,zf_data,*other = batch
+            _,xf_data,*other = batch
             # _,xf_data,zf_data,*other = batch
             # tweaked value
-            if torch.isnan(torch.max(xt_data)):
+            if torch.isnan(torch.max(xf_data)):
                 app.logger.debug("your model contain nan value "
                     "this signals will be withdrawn from the training "
                     "but style be present in the dataset. \n"
                     "Then, remember to correct your dataset")
                 mask   = [not torch.isnan(torch.max(xt_data[e,:])).tolist() for e in range(len(xt_data))]
-                index  = np.array(range(len(xt_data)))
-                xd_data.data = xt_data[index[mask]]
+                index  = np.array(range(len(xf_data)))
+                # xd_data.data = xt_data[index[mask]]
                 xf_data.data = xf_data[index[mask]]
-                zf_data.data = zf_data[index[mask]]
+                # zf_data.data = zf_data[index[mask]]
 
-            Xt = Variable(xt_data).to(dev, non_blocking=True)
+            # Xt = Variable(xt_data).to(dev, non_blocking=True)
             Xf = Variable(xf_data).to(dev, non_blocking=True)
-            zf = Variable(zf_data).to(dev, non_blocking=True)
-            nch_zf, nzf =  8,128
+            # zf = Variable(zf_data).to(dev, non_blocking=True)
+            
+            nch_zf, nzf     =  8,128
             wnx,wnz,*others = noise_generator(Xf.shape,[Xf.shape[0],nch_zf,nzf],dev,random_args)
+            
             X_inp = zcat(Xf,wnx)
             # ztr = Qec(X_inp)
             # pdb.set_trace()
+            # breakpoint()
             # ztr = Qec(X_inp)[1] if 'unique' in pfx else Qec(X_inp)
             if 'unique' in pfx:
                 _,zfd_gen,*other = Qec(X_inp)
@@ -1064,7 +1069,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             # zt_shape = [zt.shape[0], 16]
             # zt = torch.randn(*zt_shape).to(dev, non_blocking = True)
 
-            wnx,*others = noise_generator(Xt.shape,zt.shape,dev,random_args)
+            wnx,*others = noise_generator(Xt.shape,zt.shape,dev,rndm_args)
             X_inp = zcat(Xt,wnx)
 
             # ztr = Qec(X_inp).to(dev)
@@ -1213,7 +1218,8 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             if cnt == 3 and not save == False:
                 break
 
-            wnx,*others = noise_generator(Xf.shape,zf.shape,dev,rndm_args)
+            nch_zf, nzf =  8,128
+            wnx,wnz,*others = noise_generator(Xf.shape,[Xf.shape[0],nch_zf,nzf],dev,rndm_args)
             X_inp = zcat(Xf,wnx)
             # ztr = Qec(X_inp)
             # pdb.set_trace()
@@ -1227,7 +1233,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
 
 
             # ztr = latent_resampling(Qec(X_inp),zf.shape[1],wn1)
-            z_inp = zcat(ztr)
+            z_inp = zcat(ztr,wnz)
             # z_inp = zcat(ztr,torch.zeros_like(wnz).to(dev))
             Xr = Pdc(z_inp)
             Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
