@@ -49,7 +49,7 @@ class trainer(object):
         self.cv = cv
         self.gr_norm = []
         self.std_y = 1.0
-        self.std_x = 0.01
+        self.std_x = 1.0
         self.trial = trial
         self.study_dir = study_dir
         # rlr = 0.0003504249301844992
@@ -59,8 +59,8 @@ class trainer(object):
         globals().update(opt.__dict__)
 
         if study_dir!=None:
-            self.glr =  self.trial.suggest_float("glrx",0.0001, 0.001,log=True)
-            self.rlr =  self.trial.suggest_float("rlrx",0.0001, 0.001,log=True)
+            self.glr =  self.trial.suggest_float("glrx",0.0001, 0.1,log=True)
+            self.rlr =  self.trial.suggest_float("rlrx",0.0001, 0.1,log=True)
         else:
             self.glr = opt.glr
             self.rlr = opt.rlr
@@ -127,7 +127,7 @@ class trainer(object):
         else:
             hparams_dir         = f'{self.study_dir}/hparams/'
             self.writer_hparams = SummaryWriter(f'{hparams_dir}')
-            self.writer_debug_decoder   = SummaryWriter(f'{hparams_dir}/debug/decoder')
+            self.writer_debug_decoder = SummaryWriter(f'{hparams_dir}/debug/decoder_2')
         # self.writer_debug_encoder = SummaryWriter('runs_both/filtered/tuning/debug/encoder')
         
         flagT=False
@@ -155,6 +155,8 @@ class trainer(object):
 
             # self.FGf  = [self.F_,self.Gy, self.Gx]
             self.FGf  = [self.F_, self.Gx]
+
+            breakpoint()
 
             if  self.strategy['tract']['unique']:
                 if None in n:       
@@ -389,7 +391,7 @@ class trainer(object):
         
         # 1. Concatenate inputs
         zf_inp = zcat(zxy,wnz)
-        x_inp  = zcat(x,wnx)
+        x_inp  = zcat(x)
         # breakpoint()
         # 2.1 Generate conditional samples
         x_gen = self.Gx(zf_inp)
@@ -412,7 +414,7 @@ class trainer(object):
         # 5. Generate reconstructions
         zxy_gen = zcat(_zxy_gen,wnz)
         x_rec   = self.Gx(zxy_gen)
-        x_gen   = zcat(x_gen,wnx)
+        x_gen   = zcat(x_gen)
         _,zyx_F,*other = self.F_(x_gen)
         zxy_rec = zcat(zyx_F)
 
@@ -533,7 +535,7 @@ class trainer(object):
         wnx,wnz,*others   = noise_generator(x.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std_x})
         
         # 1. Concatenate inputs
-        x_inp   = zcat(x,wnx)
+        x_inp   = zcat(x)
         zf_inp  = zcat(zxy,wnz)
          
         # 2. Generate conditional samples
@@ -545,12 +547,12 @@ class trainer(object):
         Gloss_ali_fl =  torch.mean(-Dxz+Dzx) 
         
         # 3. Generate noise
-        wnx,*others   = noise_generator(x.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std_x})
+        wnx,wnz,*others   = noise_generator(x.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std_x})
 
         # 4. Generate reconstructions*
         zxy_gen = zcat(_zxy_gen,wnz)
         x_rec   = self.Gx(zxy_gen)
-        x_gen   = zcat(x_gen,wnx)
+        x_gen   = zcat(x_gen)
         _,zyx_F,*other = self.F_(x_gen)
         zxy_rec = zcat(zyx_F)
     
@@ -696,7 +698,7 @@ class trainer(object):
         globals().update(self.cv)
         globals().update(opt.__dict__)
 
-        total_step = len(self.tst_loader)
+        total_step = len(self.trn_loader)
         app.logger.info(f"Let's use {torch.cuda.device_count()} GPUs!")
         self.writer_histo = None
 
@@ -720,7 +722,7 @@ class trainer(object):
         
         for epoch in bar:
             # breakpoint()
-            for b,batch in enumerate(self.tst_loader):
+            for b,batch in enumerate(self.trn_loader):
                 y,x, *others = batch
                 # y   = y.to(app.DEVICE, non_blocking = True)
                 y   = y.to(app.DEVICE, non_blocking = True)
