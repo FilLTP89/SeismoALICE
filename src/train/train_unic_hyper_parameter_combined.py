@@ -130,7 +130,7 @@ class trainer(object):
         else:
             hparams_dir         = f'{self.study_dir}/hparams/'
             self.writer_hparams = SummaryWriter(f'{hparams_dir}')
-            if self.trial.number == 1:
+            if self.trial.number == 0:
                 self.writer_debug_decoder= SummaryWriter(f'{hparams_dir}/debug/decoder')
                 self.writer_debug_encoder= SummaryWriter(f'{hparams_dir}/debug/encoder')
                 self.writer_debug_Dxz    = SummaryWriter(f'{hparams_dir}/debug/Dxz')
@@ -310,7 +310,7 @@ class trainer(object):
                 else:
                     flagF=False
 
-        if self.trial.number == 1:
+        if self.trial.number == 0:
             self.writer_debug_encoder.add_graph(next(iter(self.F_.children())), torch.randn(128,6,4096).cuda())
             self.writer_debug_decoder.add_graph(next(iter(self.Gx.children())), torch.randn(128,16,128).cuda())
             self.writer_debug_Dxz.add_graph(next(iter(self.Dxz.children())),    torch.randn(128,256,128).cuda())
