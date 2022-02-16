@@ -1,5 +1,6 @@
 from torch.nn.modules import activation
 from core.net.basic_model import BasicModel
+from conv.resnet.residual import EncoderResnet,block_2x2
 u'''AE design'''
 from torch.nn.modules import activation
 u'''AE design'''
@@ -88,6 +89,7 @@ class BasicDCGAN_DxDataParallel(BasicModel):
                         ker = kernel_size,
                         std = stride,
                         pad = padding,
+                        act =acts,
                         dil = dilation,*args, **kwargs)
         return cnn
 
@@ -231,6 +233,25 @@ class DCGAN_Dx_Lite(BasicDCGAN_DxDataParallel):
         if not self.training:
             z =  z.detach()
         return z
+
+class DCGAN_Dx_Resnet(BasicDCGAN_DxDataParallel):
+    """docstring for DCGAN_Dx_Resnet"""
+    def __init__(self, ngpu, nc, ncl, ndf, nly,act, channel, fpd=1, isize=256, limit = 256,\
+                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.0, path = '',\
+                 prob = False,batch_size =128,n_extra_layers=0, extra = 128, *args,**kwargs):
+        super(DCGAN_Dx_Resnet, self).__init__()
+        
+        self.cnn = EncoderResnet(in_signals_channels = 6, out_signals_channels=8,
+            channels = [6,8,16,32], layers = [2,2,2,2], block = block_2x2
+        )
+        
+        if prob:
+            lout = self.lout(nch = nc,
+                        padding = pad, dilation = dil,\
+                        kernel_size = ker, stride = std)
+            self.cnn += [nn.Flatten(start_dim = 1, end_dim=2)]
+            self.cnn += [nn.Linear(lout*channel[-1],1, bias=False)]
+            self.cnn += [nn.Sigmoid()]
 
 
 class DCGAN_Dx_Flatten(BasicDCGAN_DxDataParallel):

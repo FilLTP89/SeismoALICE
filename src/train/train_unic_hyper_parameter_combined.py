@@ -59,8 +59,8 @@ class trainer(object):
         globals().update(opt.__dict__)
 
         if study_dir!=None:
-            self.glr =  self.trial.suggest_float("glrx",0.0001, 0.1,log=True)
-            self.rlr =  self.trial.suggest_float("rlrx",0.0001, 0.1,log=True)
+            self.glr =  self.trial.suggest_float("glrx",0.0001, 0.001,log=True)
+            self.rlr =  self.trial.suggest_float("rlrx",0.0001, 0.001,log=True)
         else:
             self.glr = opt.glr
             self.rlr = opt.rlr
@@ -91,8 +91,10 @@ class trainer(object):
             'Dloss':[0],
 
             # 'Dloss_y':[0],
-            # 'Dloss_ali_fl':[0],
-            # 'Dloss_rec_fl':[0],
+            'Dloss_ali_fl':[0],
+            'Dloss_rec_fl':[0],
+            'Dloss_rec_x':[0],
+            'Dloss_rec_zf':[0],
 
             # 'Dloss_x':[0],
             # 'Dloss_ali_bb':[0],
@@ -103,7 +105,7 @@ class trainer(object):
             'Gloss':[0],
 
             # 'Gloss_ali_y':[0],
-            'Gloss_ali_x':[0],
+            'Gloss_ali_fl':[0],
             # 'Gloss_cycle_consistency_y':[0],
             # 'Gloss_cycle_consistency_zd':[0],
             # 'Gloss_identity_y':[0],
@@ -114,7 +116,7 @@ class trainer(object):
             'Gloss_identity_x':[0],
             'Gloss_identity_zf':[0],
 
-            'Gloss_identity_zxy':[0],
+            # 'Gloss_identity_zxy':[0],
         }
 
         network_path = './network/unic/zyy24/nsy1280'
@@ -124,11 +126,19 @@ class trainer(object):
             self.writer_train = SummaryWriter(f'{summary_dir}/training')
             self.writer_val   = SummaryWriter(f'{summary_dir}/validation')
             self.writer_debug = SummaryWriter(f'{summary_dir}/debug')
+            app.logger.info(f'Setting up tensorboard information on directory : {summary_dir}')
         else:
             hparams_dir         = f'{self.study_dir}/hparams/'
             self.writer_hparams = SummaryWriter(f'{hparams_dir}')
-            self.writer_debug_decoder = SummaryWriter(f'{hparams_dir}/debug/decoder_2')
-        # self.writer_debug_encoder = SummaryWriter('runs_both/filtered/tuning/debug/encoder')
+            if self.trial.number == 1:
+                self.writer_debug_decoder= SummaryWriter(f'{hparams_dir}/debug/decoder')
+                self.writer_debug_encoder= SummaryWriter(f'{hparams_dir}/debug/encoder')
+                self.writer_debug_Dxz    = SummaryWriter(f'{hparams_dir}/debug/Dxz')
+                self.writer_debug_Dx     = SummaryWriter(f'{hparams_dir}/debug/Dx')
+                self.writer_debug_Dxx    = SummaryWriter(f'{hparams_dir}/debug/Dxx')
+                self.writer_debug_Dzf    = SummaryWriter(f'{hparams_dir}/debug/Dzf')
+                self.writer_debug_Dzzf   = SummaryWriter(f'{hparams_dir}/debug/Dzzf')
+            app.logger.info(f'Setting hyper parameters tunin in {hparams_dir}')
         
         flagT=False
         flagF=False
@@ -155,8 +165,6 @@ class trainer(object):
 
             # self.FGf  = [self.F_,self.Gy, self.Gx]
             self.FGf  = [self.F_, self.Gx]
-
-            breakpoint()
 
             if  self.strategy['tract']['unique']:
                 if None in n:       
@@ -302,13 +310,19 @@ class trainer(object):
                 else:
                     flagF=False
 
-        
-        # self.writer_debug_encoder.add_graph(next(iter(self.F_.children())),torch.randn(128,6,4096).cuda())
-        self.writer_debug_decoder.add_graph(next(iter(self.Gx.children())), torch.randn(128,16,128).cuda())
-        self.bce_loss = BCE(reduction='mean')
-        self.l2_loss  = MSELoss(reduction='mean')
-        self.l1_loss  = L1Loss(reduction='mean')
-        # breakpoint()
+        if self.trial.number == 1:
+            self.writer_debug_encoder.add_graph(next(iter(self.F_.children())), torch.randn(128,6,4096).cuda())
+            self.writer_debug_decoder.add_graph(next(iter(self.Gx.children())), torch.randn(128,16,128).cuda())
+            self.writer_debug_Dxz.add_graph(next(iter(self.Dxz.children())),    torch.randn(128,256,128).cuda())
+            self.writer_debug_Dx.add_graph(next(iter(self.Dx.children())),      torch.randn(128,3,4096).cuda())
+            self.writer_debug_Dzf.add_graph(next(iter(self.Dzf.children())),    torch.randn(128,8,128).cuda())
+            self.writer_debug_Dzzf.add_graph(next(iter(self.Dzzf.children())),  torch.randn(128,16,128).cuda())
+            self.writer_debug_Dxx.add_graph(next(iter(self.Dxx.children())),    torch.randn(128,6,4096).cuda())
+
+        self.bce_loss=BCE(reduction='mean')
+        self.l2_loss =MSELoss(reduction='mean')
+        self.l1_loss =L1Loss(reduction='mean')
+
         print("Parameters of Encoder/Decoders ")
         count_parameters(self.FGf)
         # count_parameters(self.FGx)
@@ -391,7 +405,7 @@ class trainer(object):
         
         # 1. Concatenate inputs
         zf_inp = zcat(zxy,wnz)
-        x_inp  = zcat(x)
+        x_inp  = zcat(x,wnx)
         # breakpoint()
         # 2.1 Generate conditional samples
         x_gen = self.Gx(zf_inp)
@@ -414,7 +428,7 @@ class trainer(object):
         # 5. Generate reconstructions
         zxy_gen = zcat(_zxy_gen,wnz)
         x_rec   = self.Gx(zxy_gen)
-        x_gen   = zcat(x_gen)
+        x_gen   = zcat(x_gen,wnx)
         _,zyx_F,*other = self.F_(x_gen)
         zxy_rec = zcat(zyx_F)
 
@@ -425,12 +439,12 @@ class trainer(object):
         # Dloss_rec_y         = -torch.mean(ln0c(Dreal_y)+ln0c(1.0-Dfake_y))
 
         Dreal_zf,Dfake_zf   = self.discriminate_zzf(zxy,zxy_rec)
-        Dloss_rec_zx        = self.bce_loss(Dreal_zf,o1l(Dreal_zf))+\
+        Dloss_rec_zf        = self.bce_loss(Dreal_zf,o1l(Dreal_zf))+\
                               self.bce_loss(Dfake_zf,o0l(Dfake_zf))
         # Dloss_rec_zy        = -torch.mean(ln0c(Dreal_zd)+ln0c(1.0-Dfake_zd))
         
         # 7. Compute all losses
-        Dloss_rec_fl        = Dloss_rec_x + Dloss_rec_zx
+        Dloss_rec_fl        = Dloss_rec_x + Dloss_rec_zf
         Dloss_ali_fl        = Dloss_ali_x 
         Dloss_x             = Dloss_ali_fl + Dloss_rec_fl
 
@@ -512,15 +526,15 @@ class trainer(object):
         # self.losses['Dloss_y'       ].append(Dloss_y.tolist())
         # self.losses['Dloss_x'       ].append(Dloss_x.tolist())
 
-        # self.losses['Dloss_ali_fl'  ].append(Dloss_ali_fl.tolist()) 
-        # self.losses['Dloss_rec_fl'  ].append(Dloss_rec_fl.tolist())
+        self.losses['Dloss_ali_fl'  ].append(Dloss_ali_fl.tolist()) 
+        self.losses['Dloss_rec_fl'  ].append(Dloss_rec_fl.tolist())
 
         # self.losses['Dloss_ali_bb'  ].append(Dloss_ali_bb.tolist()) 
         # self.losses['Dloss_rec_bb'  ].append(Dloss_rec_bb.tolist())
 
         # self.losses['Dloss_x'       ].append(Dloss_x.tolist())
-        # self.losses['Dloss_ali_x'   ].append(Dloss_ali_x.tolist()) 
-        # self.losses['Dloss_rec_x'   ].append(Dloss_rec_x.tolist())
+        self.losses['Dloss_rec_x'   ].append(Dloss_rec_x.tolist())
+        self.losses['Dloss_rec_zf'   ].append(Dloss_rec_zf.tolist())
 
         # self.losses['Dloss_identity_zxy'].append(Dloss_identity_zxy.tolist())
 
@@ -535,7 +549,7 @@ class trainer(object):
         wnx,wnz,*others   = noise_generator(x.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std_x})
         
         # 1. Concatenate inputs
-        x_inp   = zcat(x)
+        x_inp   = zcat(x,wnx)
         zf_inp  = zcat(zxy,wnz)
          
         # 2. Generate conditional samples
@@ -552,7 +566,7 @@ class trainer(object):
         # 4. Generate reconstructions*
         zxy_gen = zcat(_zxy_gen,wnz)
         x_rec   = self.Gx(zxy_gen)
-        x_gen   = zcat(x_gen)
+        x_gen   = zcat(x_gen,wnx)
         _,zyx_F,*other = self.F_(x_gen)
         zxy_rec = zcat(zyx_F)
     
@@ -669,7 +683,7 @@ class trainer(object):
 
         self.losses['Gloss'].append(Gloss.tolist())
 
-        # self.losses['Gloss_ali_fl'].append(Gloss_ali_fl.tolist())
+        self.losses['Gloss_ali_fl'].append(Gloss_ali_fl.tolist())
         # self.losses['Gloss_ali_bb'].append(Gloss_ali_bb.tolist())
 
         # self.losses['Gloss_cycle_consistency_y' ].append(Gloss_cycle_consistency_y.tolist())
@@ -704,9 +718,9 @@ class trainer(object):
 
         if self.study_dir!=None:
             
-            writer_loss_dir     = f'{self.study_dir}/hparams/trial-{self.trial.number}/loss/evento/'
-            writer_accuracy_dir = f'{self.study_dir}/hparams/trial-{self.trial.number}/accuracy/evento/'
-            writer_histo_dir    = f'{self.study_dir}/hparams/trial-{self.trial.number}/histogram/evento/'
+            writer_loss_dir     = f'{self.study_dir}/hparams/trial-{self.trial.number}/loss/'
+            writer_accuracy_dir = f'{self.study_dir}/hparams/trial-{self.trial.number}/accuracy/'
+            writer_histo_dir    = f'{self.study_dir}/hparams/trial-{self.trial.number}/histogram/'
             
             self.writer_loss     = SummaryWriter(writer_loss_dir)
             self.writer_accuracy = SummaryWriter(writer_accuracy_dir)

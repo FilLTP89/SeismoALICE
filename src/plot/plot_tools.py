@@ -975,7 +975,7 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             nch_zf, nzf     =  8,128
             wnx,wnz,*others = noise_generator(Xf.shape,[Xf.shape[0],nch_zf,nzf],dev,random_args)
             
-            X_inp = zcat(Xf)
+            X_inp = zcat(Xf,wnx)
             # ztr = Qec(X_inp)
             # pdb.set_trace()
             # breakpoint()

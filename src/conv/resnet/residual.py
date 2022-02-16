@@ -10,7 +10,7 @@ class based in the implemented code from :
 https://github.com/aladdinpersson/Machine-Learning-Collection/blob/master/ML/Pytorch/CNN_architectures/pytorch_resnet.py
 """
 
-def activation_func(activation, slope=1.0):
+def activation_func(activation, slope=0.1):
     return  nn.ModuleDict([
         ['relu', nn.ReLU(inplace=True)],
         ['tanh', nn.Tanh()],
@@ -41,7 +41,7 @@ class ConvolutionTools(IStrategyConvolution):
         return channels*expansion
 
     def functions(self,*args, **kwargs):
-        func1, func2 =  activation_func('leaky_relu',*args, **kwargs), activation_func('leaky_relu',*args, **kwargs)
+        func1, func2 =  activation_func('relu',*args, **kwargs), activation_func('relu',*args, **kwargs)
         return func1, func2
 
     def padding(self):
@@ -347,10 +347,10 @@ def test():
     # y = net(torch.randn(4, 3, 224, 224)).to("cuda")
     # print(y.size())
 
-    net =EncoderResnet(in_signals_channels = 6, out_signals_channels=32,
-            channels = [32,64,128,256], layers = [2,2,2,2], block = block_2x2
+    net = EncoderResnet(in_signals_channels = 32, out_signals_channels=8,
+            channels = [32,64], layers = [2,2], block = block_2x2
         )
-    t   = torch.randn(10, 6, 4096)
+    t   = torch.randn(10, 32, 1024)
     print(t.shape)
     y   =  net(t)
     print(y.shape)
