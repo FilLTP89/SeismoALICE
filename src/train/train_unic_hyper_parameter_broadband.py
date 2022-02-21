@@ -370,6 +370,7 @@ class trainer(object):
         Dloss               = Dloss_ali   + Dloss_rec
 
         Dloss.backward()
+        # [TODO] check WGAN
         self.oDyxz.step(), clipweights(self.Dnets), zerograd(self.optz)
 
         self.losses['Dloss'].append(Dloss.tolist())
@@ -500,6 +501,7 @@ class trainer(object):
                 y, *others = batch
                 y   = y.to(app.DEVICE, non_blocking = True)
                 
+                # [TODO] generate zxy with std=0.1 and zyy with std=1
                 zyy,zyx, *other = self.generate_latent_variable(
                             batch   = len(y),
                             nzd     = nzd,
