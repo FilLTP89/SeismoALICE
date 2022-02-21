@@ -1,3 +1,8 @@
+hinfo.txt
+log/*
+tuner/*
+runs_both/*
+dataset/*.npy
 database/*
 *.csv
 *.txt
