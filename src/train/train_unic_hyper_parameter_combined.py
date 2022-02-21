@@ -402,7 +402,7 @@ class trainer(object):
 
         ## II. filtered part of training
         wnx,wnz,*others   = noise_generator(x.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std_x})
-        
+        # breakpoint()
         # 1. Concatenate inputs
         zf_inp = zcat(zxy,wnz)
         x_inp  = zcat(x,wnx)

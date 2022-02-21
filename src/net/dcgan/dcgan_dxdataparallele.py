@@ -127,7 +127,7 @@ class DCGAN_Dx(BasicDCGAN_DxDataParallel):
         #building network
         self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
                 ker = ker[0], std = std[0], pad = pad[0], dil = dil[0],\
-                bn = False, act = activation[0], dpc = dpc))
+                bn = False, act = activation[0], dpc = dpc,normalization=BatchNorm1d))
 
         for i in range(2, nly+1):
             act = activation[i-1]
@@ -137,7 +137,7 @@ class DCGAN_Dx(BasicDCGAN_DxDataParallel):
             _dpc = 0.0 if i == nly else dpc
             self.net.append(ConvBlock(ni = channel[i-1], no = channel[i],
                 ker = ker[i-1], std = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = False,\
-                bn = _bn, dpc = dpc, act = act)) 
+                bn = _bn, dpc = dpc, act = act,normalization=BatchNorm1d)) 
 
         """
             The kernel = 3 and the stride = 1 not change the third dimension
@@ -160,9 +160,10 @@ class DCGAN_Dx(BasicDCGAN_DxDataParallel):
                 torch.nn.Sigmoid()]
         else:
             self.final+=[Conv1d(channel[i], channel[i], 3, padding=1, bias=False)]
-            self.final+=[activation[-1]]
-            self.final+=[BatchNorm1d(channel[i])]
-            self.final+=[Dpout(dpc=dpc)]
+            self.final+=[nn.LeakyReLU(negative_slope=1.0)]
+            # self.final+=[activation[-1]]
+            # self.final+=[InstanceNorm1d(channel[i], affine=True)]
+            # self.final+=[Dpout(dpc=dpc)]
 
         #compute values 
         self.exf  = self.net
@@ -216,7 +217,7 @@ class DCGAN_Dx_Lite(BasicDCGAN_DxDataParallel):
 
         self.cnn = self.block_conv( channel = channel,kernel = ker,\
                     strides = std, dilation= dil,  activation = activation,\
-                    padding = pad, bn = bn, dpc = dpc)
+                    padding = pad, bn = bn, dpc = dpc, normalization=nn.BatchNorm1d)
 
         if prob:
             lout = self.lout(nch = nc,

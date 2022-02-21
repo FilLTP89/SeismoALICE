@@ -920,7 +920,7 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
         else:
             ztr = Qec(X_inp)
 
-        z_inp = zcat(ztr,wnz)
+        z_inp = zcat(ztr)
         # breakpoint()
         # z_inp = zcat(ztr,torch.zeros_like(wnz).to(dev))
         # z_pre = zcat(zt,wnz.to(dev))
@@ -973,9 +973,9 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             # zf = Variable(zf_data).to(dev, non_blocking=True)
             
             nch_zf, nzf     =  8,128
-            wnx,wnz,*others = noise_generator(Xf.shape,[Xf.shape[0],nch_zf,nzf],dev,random_args)
+            _,wnz,*others = noise_generator(Xf.shape,[Xf.shape[0],nch_zf,nzf],dev,random_args)
             
-            X_inp = zcat(Xf,wnx)
+            X_inp = zcat(Xf)
             # ztr = Qec(X_inp)
             # pdb.set_trace()
             # breakpoint()
@@ -1079,7 +1079,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 zy,zdf_gen,*others =  Qec(X_inp)
                 # wn = torch.empty(zt_shape).normal_(**app.RNDM_ARGS).to(dev)
                 # wn = torch.zeros_like(zt)
-                ztr = zcat(o0l(zdf_gen),zy)
+                ztr = zcat(zdf_gen,zy)
             else:
                 ztr = Qec(X_inp)
 
@@ -1204,7 +1204,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 plot_eg_pg(EG,PG, outf,pfx)
             
     elif 'filtered' in tag:
-        rndm_args = {'mean': 0., 'std': 0.1} if std == None else {'mean':0., 'std':std}
+        rndm_args = {'mean': 0., 'std': 1.0} if std == None else {'mean':0., 'std':std}
         for _,batch in enumerate(trn_set):
             # _,xf_data,_,zf_data,_,_,_,*other = batch
             # xt_data,xf_data,zt_data,zf_data,_,_,_,*other = batch
