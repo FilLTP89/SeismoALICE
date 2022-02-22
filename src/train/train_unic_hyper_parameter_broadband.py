@@ -127,7 +127,7 @@ class trainer(object):
         net = Network(DataParalleleFactory())
 
         self.trn_loader, self.vld_loader, self.tst_loader = trn_loader, vld_loader, tst_loader
-
+        # [TODO] remove these if everywhere
         if 'unique' in t:
             self.style='ALICE'
             # act = acts[self.style]
@@ -247,9 +247,7 @@ class trainer(object):
         count_parameters(self.FGf)
         print("Parameters of Discriminators ")
         count_parameters(self.Dnets)
-        
-        
-       
+
     def discriminate_xz(self,x,xr,z,zr):
         # Discriminate real
         ftz = self.Dzf(zr) #OK: no batchNorm
@@ -269,13 +267,13 @@ class trainer(object):
 
     def discriminate_yz(self,y,yr,z,zr):
         # Discriminate real
-        
+
         ftz = self.Dzb(zr) #OK : no batchNorm
         ftx = self.Dy(y) #OK : with batchNorm
         zrc = zcat(ftx,ftz)
         ftxz = self.Dyz(zrc)
         Dxz  = ftxz
-        
+
         # Discriminate fake
         ftz = self.Dzb(z)
         ftx = self.Dy(yr)
@@ -310,7 +308,7 @@ class trainer(object):
         D_zyx = self.Dzyx(z_yx)
         D_zxy = self.Dzyx(z_xy)
         return D_zyx,D_zxy
-    
+
     # @profile
     def alice_train_discriminator_adv(self,y,zyy,zxy, x =  None):
          # Set-up training        
@@ -322,7 +320,7 @@ class trainer(object):
         # 1. Concatenate inputs
         z_inp = zcat(zxy,zyy)
         y_inp = zcat(y,wny)
-        
+
         # 2.1 Generate conditional samples
         y_gen = self.Gy(z_inp)
         zyy_F,zyx_F,*other = self.F_(y_inp)
@@ -337,7 +335,7 @@ class trainer(object):
 
         # 4. Compute ALI discriminator loss
         Dloss_ali_y = -torch.mean(ln0c(Dzy)+ln0c(1.0-Dyz))
-        
+
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
 
         # 5. Generate reconstructions
