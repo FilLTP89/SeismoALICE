@@ -2,29 +2,38 @@ import os
 import pdb
 import torch
 import numpy as np
+import seaborn as sns
 import matplotlib.pyplot as plt
+from obspy.signal.tf_misfit import plot_tf_gofs, eg,pg
 from scipy.fft import fft, fftfreq, fftshift
 from tools.generate_noise import noise_generator
 from common.common_nn import zcat
 from common.common_torch import tfft
+from tqdm import  tqdm,trange
 
 
 def plot_signal_and_reconstruction(vld_set,encoder,
-        decoder, outf, opt, device='cuda'):
+        decoder, outf, opt, device='cuda',pfx='investigate'):
     # extract data : 
     # breakpoint()
+    encoder.eval()
+    decoder.eval()
+    sns.set(style="whitegrid")
+    clr = sns.color_palette('tab10',5)
+    cnt = 0
     t = np.linspace(0,40.96,4096) 
     vtm = torch.load(os.path.join(opt.dataroot,'vtm.pth'))  
     freq = fftshift(fftfreq(t.shape[-1]))  
     rndm_args = {'mean': 0, 'std': 1.0}
-
-    for b, batch in enumerate(vld_set):
-        _, xd_data, *others = batch
+    bar = tqdm(vld_set)
+    for b, batch in enumerate(bar):
+        
+        xd_data,zd_data, *others = batch
         Xt = xd_data.to(device)
         zt = zd_data.to(device)
 
         #noise
-        wnx,_ = noise_generator(Xt.shape,zt.shape,device,rndm_args)
+        wnx,*others = noise_generator(Xt.shape,zt.shape,device,rndm_args)
         X_inp = zcat(Xt,wnx.to(device))
         #encoding
         zy, zyx = encoder(X_inp)
@@ -33,8 +42,9 @@ def plot_signal_and_reconstruction(vld_set,encoder,
         #decoding
         Xr = decoder(z_inp)
 
-        Xt_fsa = tfft(Xt,0.01).cpu().data.numpy().copy()
-        Xr_fsa = tfft(Xr,0.01).cpu().data.numpy().copy()
+        Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+        Xr_fsa = tfft(Xr,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+        vfr    = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
 
         Xt = Xt.cpu().data.numpy().copy()
         Xr = Xr.cpu().data.numpy().copy()
@@ -45,20 +55,39 @@ def plot_signal_and_reconstruction(vld_set,encoder,
             ot, gt = Xt[io,1,:], Xr[io,1,:]
             of, gf = Xt_fsa[io,1,:], Xr_fsa[ig,1,:]
 
-            hfig, (p0, p1) = plt.subplots(2,1, figsize=(6,8))
+            cnt+=1
             
-            p0.plot(t, ot, label=r'$\mathbf{x}$',linewidth=1.2)
-            p0.plot(t, gt, label=r'$\mathbf{\hat{x}}$',linewidth=1.2)
-            p0.set_xlabel('t')
-            p0.set_ylabel('A(t)')
+            hgof = plot_tf_gofs(ot,gt,dt=vtm[1]-vtm[0],t0=0.0,fmin=0.1,fmax=30.0,
+                    nf=100,w0=6,norm='global',st2_isref=True,a=10.,k=1.,left=0.1,
+                    bottom=0.125, h_1=0.2,h_2=0.125,h_3=0.2, w_1=0.2,w_2=0.6,
+                    w_cb=0.01, d_cb=0.0,show=False,plot_args=['k', 'r', 'b'],
+                    ylim=0., clim=0.)
+            
+            plt.savefig(os.path.join(outf,"gof_bb_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
+                            bbox_inches='tight',dpi = 300)
 
-            p1.loglog(freq, of, label=r'$\mathbf{x}$',linewidth=1.2)
-            p1.loglog(freq, gf, label=r'$\mathbf{\hat{x}}$',linewidth=1.2)
-            p0.set_xlabel('f')
-            p0.set_ylabel('A(f)')
-            file = outf+"/signal_{0}_{1}_{2}.png".format(b,io,ig)
-            print(file)
-            plt.savefig(file)
+            fig,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
+                # hax0.plot(vtm,gt,color=clr[3],label=r'$G_t(zcat(F_x(\mathbf{y},N(\mathbf{0},\mathbf{I})))$',linewidth=1.2)
+            hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{x}$',linewidth=1.2, alpha=0.70)
+            hax0.plot(vtm,gt,color=clr[3],label=r'$G_y(F(\mathbf{x})$',linewidth=1.2)
+            hax1.loglog(vfr,of,color=clr[0],label=r'$\mathbf{x}$',linewidth=2)
+            # hax1.loglog(vfr,ff,color=clr[1],label=r'$\mathbf{x}$',linewidth=2)
+            hax1.loglog(vfr,gf,color=clr[3],label=r'$G_y(F_t(\mathbf{x}))$',linewidth=2)
+            hax0.set_xlim(0.0,int(vtm[-1]))
+            hax0.set_xticks(np.arange(0.0,int(vtm[-1])*11./10.,int(vtm[-1])/10.))
+            hax0.set_ylim(-1.0,1.0)
+            hax0.set_yticks(np.arange(-1.0,1.25,0.25))
+            hax0.set_xlabel('t [s]',fontsize=15,fontweight='bold')
+            hax0.set_ylabel('a(t) [1]',fontsize=15,fontweight='bold')
+            hax0.set_title('ALICE',fontsize=20,fontweight='bold')
+            hax1.set_xlim(0.1,51.), hax1.set_xticks(np.array([0.1,1.0,10.,50.]))
+            hax1.set_ylim(10.**-6,10.**0), hax1.set_yticks(10.**np.arange(-6,1))
+            hax1.set_xlabel('f [Hz]',fontsize=15,fontweight='bold')
+            hax1.set_ylabel('A(f) [1]',fontsize=15,fontweight='bold')
+            hax0.legend(loc = "lower right",frameon=False)
+            hax1.legend(loc = "lower right",frameon=False)
+            plt.savefig(os.path.join(outf,"res_bb_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
+                            bbox_inches='tight',dpi = 500)
 
 
 def model_visualization_encoder_unic(trn_set, model, opt, outf):

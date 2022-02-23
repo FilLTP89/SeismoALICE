@@ -891,7 +891,7 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             if str(pfx).find('Niigata')!=-1:
                 xt_data = batch
             else:
-                _,xt_data,*other = batch
+                xt_data,*other = batch
             # xt_data,zt_data,*other = batch
             if torch.isnan(torch.max(xt_data)):
                 app.logger.debug("your model contain nan value "
