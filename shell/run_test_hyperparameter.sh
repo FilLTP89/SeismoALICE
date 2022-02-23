@@ -22,7 +22,7 @@ python ./src/aae/aae_drive_hyper_parameter.py \
     --cutoff=30. --imageSize=4096 --latentSize=64 \
     --niter=1001 --cuda --ngpu=4 --nzd=16 --nzf=8 --rlr=0.00025164314945158394 --glr=0.0003 \
     --outf='./imgs_bb_ls64_nf8_nzd32/unic/config_27/ter/filtered/' \
-    --workers=8 --nsy=1280 --batchSize=128 \
+    --workers=8 --nsy=1280 --batchSize=1024 \
     --actions='./action/actions_unic.txt' --strategy='./strategy/strategy_unic.txt' \
     --save_checkpoint=1000 --root_checkpoint='./network/bb_ls64_nf8_nzd32/unic/config_27/ter/filtered/'\
     --config='./config/unic-zyy16-zxy8-wgan-1.json'

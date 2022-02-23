@@ -9,30 +9,26 @@ from common.common_nn import zcat
 from common.common_torch import tfft
 
 
-
-
-
-def plot_signal_and_reconstruction(vld_set,encoder,decoder, outf, opt, device='cuda'):
+def plot_signal_and_reconstruction(vld_set,encoder,
+        decoder, outf, opt, device='cuda'):
     # extract data : 
     # breakpoint()
     t = np.linspace(0,40.96,4096) 
     vtm = torch.load(os.path.join(opt.dataroot,'vtm.pth'))  
     freq = fftshift(fftfreq(t.shape[-1]))  
-    rndm_args = {'mean': 0, 'std': 1}
+    rndm_args = {'mean': 0, 'std': 1.0}
 
     for b, batch in enumerate(vld_set):
-        xd_data, zd_data = batch
+        _, xd_data, *others = batch
         Xt = xd_data.to(device)
         zt = zd_data.to(device)
 
         #noise
-        wnx,wnz,wn1 = noise_generator(Xt.shape,zt.shape,device,rndm_args)
+        wnx,_ = noise_generator(Xt.shape,zt.shape,device,rndm_args)
         X_inp = zcat(Xt,wnx.to(device))
         #encoding
-        ztr   = encoder(X_inp)
-        
-        #noise
-        z_inp = zcat(ztr,wnz)
+        zy, zyx = encoder(X_inp)
+        z_inp = zcat(zyx,zy)
 
         #decoding
         Xr = decoder(z_inp)
@@ -40,7 +36,6 @@ def plot_signal_and_reconstruction(vld_set,encoder,decoder, outf, opt, device='c
         Xt_fsa = tfft(Xt,0.01).cpu().data.numpy().copy()
         Xr_fsa = tfft(Xr,0.01).cpu().data.numpy().copy()
 
-        
         Xt = Xt.cpu().data.numpy().copy()
         Xr = Xr.cpu().data.numpy().copy()
 
@@ -141,6 +136,7 @@ def plot(x,layer,opt,vtm, layer_val, pfx, p1, p0):
         print("cnn_branch_%s_layer_%u.png"%(pfx,layer_val))
         layer_val = layer_val +1
     return layer_val
+
 def visualize_gradients(net,loss, color="C0"):
     """
     Args:

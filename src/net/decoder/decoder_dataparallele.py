@@ -124,6 +124,8 @@ class Decoder(BasicDecoderDataParallel):
     def forward(self,zxn, features = None):
         if features is None:
             Xr = self.cnn1(zxn)
+            app.logger.debug("In Model: input size {} - {}  output size {} - {}".
+                format(zxn.size(),zxn.device,Xr.size(),Xr.device))
         else:
             Xr = feed(zxn,features)
         if not self.training:

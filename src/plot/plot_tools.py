@@ -887,7 +887,11 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
         for _,batch in enumerate(trn_set):
             #_,xt_data,zt_data,_,_,_,_ = batch
             app.logger.debug("Plotting signals ...")
-            xt_data,xf_data,zt_data,*other = batch
+
+            if str(pfx).find('Niigata')!=-1:
+                xt_data = batch
+            else:
+                _,xt_data,*other = batch
             # xt_data,zt_data,*other = batch
             if torch.isnan(torch.max(xt_data)):
                 app.logger.debug("your model contain nan value "
@@ -897,12 +901,12 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
                 mask   = [not torch.isnan(torch.max(xt_data[e,:])).tolist() for e in range(len(xt_data))]
                 index  = np.array(range(len(xt_data)))
                 xt_data.data = xt_data[index[mask]]
-                xf_data.data = xf_data[index[mask]]
-                zt_data.data = zt_data[index[mask]]
+                # xf_data.data = xf_data[index[mask]]
+                # zt_data.data = zt_data[index[mask]]
 
             Xt = Variable(xt_data).to(dev, non_blocking=True)
-            Xf = Variable(xf_data).to(dev, non_blocking=True)
-            zt = Variable(zt_data).to(dev, non_blocking=True)
+            # Xf = Variable(xf_data).to(dev, non_blocking=True)
+            # zt = Variable(zt_data).to(dev, non_blocking=True)
 
 
         
@@ -910,9 +914,10 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
         wnx,wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
 
         X_inp = zcat(Xt,wnx)
-
+        
         if 'unique' in pfx:
             # pdb.set_trace()
+
             zy,zdf_gen,*other =  Qec(X_inp)
             # wn = torch.empty(zt_shape).normal_(**app.RNDM_ARGS).to(dev)
             # wn = torch.zeros_like(zt)
@@ -927,7 +932,7 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
         Xr = Pdc(z_inp)
         #Xp = Pdc(z_pre)
         Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
-        Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+        # Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
         Xr_fsa = tfft(Xr,vtm[1]-vtm[0]).cpu().data.numpy().copy()
         #Xp_fsa = tfft(Xp,vtm[1]-vtm[0]).cpu().data.numpy().copy()
         vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
@@ -935,10 +940,10 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
         Xr = Xr.cpu().data.numpy().copy()
 
         for (io, ig) in zip(range(Xt.shape[0]),range(Xr.shape[0])):
-            ot,gt    = Xt[io, 1, :]  ,Xr[ig, 1, :]
-            of,gf,ff = Xt_fsa[io,1,:],Xr_fsa[ig,1,:],Xf_fsa[io,1,:]
+            ot,gt  = Xt[io, 1, :]  ,Xr[ig, 1, :]
+            of,gf  = Xt_fsa[io,1,:],Xr_fsa[ig,1,:]
 
-            if cnt == 20:
+            if cnt == 20 and str(pfx).find('investigate')==-1:
                 break
             EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
                     st2_isref=True,a=10.,k=1))
@@ -973,9 +978,9 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             # zf = Variable(zf_data).to(dev, non_blocking=True)
             
             nch_zf, nzf     =  8,128
-            _,wnz,*others = noise_generator(Xf.shape,[Xf.shape[0],nch_zf,nzf],dev,random_args)
+            wnx,wnz,*others = noise_generator(Xf.shape,[Xf.shape[0],nch_zf,nzf],dev,random_args)
             
-            X_inp = zcat(Xf)
+            X_inp = zcat(Xf,wnx)
             # ztr = Qec(X_inp)
             # pdb.set_trace()
             # breakpoint()
@@ -988,7 +993,7 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
                 ztr = Qec(X_inp)
 
             # ztr = latent_resampling(Qec(X_inp),zf.shape[1],wn1)
-            z_inp = zcat(ztr,wnz)
+            z_inp = zcat(ztr)
             # z_inp = zcat(ztr,torch.zeros_like(wnz).to(dev))
             Xr = Pdc(z_inp)
             Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
@@ -2264,7 +2269,7 @@ def plot_eg_pg(x,y, outf,pfx=''):
     ax_histy.tick_params(direction='in', labelleft=False)
 
     # the scatter plot:
-    ax_scatter.scatter(x, y)
+    ax_scatter.scatter(x, y, edgecolor='black')
     
 
     # now determine nice limits by hand:

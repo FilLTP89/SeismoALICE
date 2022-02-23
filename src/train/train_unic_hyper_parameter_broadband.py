@@ -53,14 +53,15 @@ class trainer(object):
         
         globals().update(cv)
         globals().update(opt.__dict__)
+        ngpu_use = torch.cuda.device_count()
 
         if self.trial!=None:
             self.glr = self.trial.suggest_float("glrx",0.0001, 0.1,log=True)
             self.rlr = self.trial.suggest_float("rlrx",0.0001, 0.1,log=True)
         else:
             try:
-                self.glr = float(opt.config["hparams"]['glry'])
-                self.rlr = float(opt.config["hparams"]['rlry'])
+                self.glr = float(opt.config["hparams"]['glry'])/2
+                self.rlr = float(opt.config["hparams"]['rlry'])/2
             except Exception as e:
                 self.glr = opt.glr
                 self.rlr = opt.rlr
@@ -68,6 +69,8 @@ class trainer(object):
 
             app.logger.info(f'glr = {self.glr}')
             app.logger.info(f'rlr = {self.rlr}')
+
+        
 
         b1              = 0.5
         b2              = 0.9999
@@ -112,7 +115,7 @@ class trainer(object):
         # self.writer_debug_encoder = SummaryWriter('runs_both/filtered/tuning/debug/encoder')
         
         if self.trial == None:
-            summary_dir       = './runs_both/broadband/zyy16/back-test'
+            summary_dir       = './runs_both/broadband/zyy16/back-test/nsy12800/test-2'
             self.writer_train = SummaryWriter(f'{summary_dir}/training')
             self.writer_val   = SummaryWriter(f'{summary_dir}/validation')
             self.writer_debug = SummaryWriter(f'{summary_dir}/debug')
@@ -247,7 +250,9 @@ class trainer(object):
         count_parameters(self.FGf)
         print("Parameters of Discriminators ")
         count_parameters(self.Dnets)
-        
+        app.logger.info(f" Root checkpoint : {root_checkpoint}")
+        app.logger.info(f" Summary dir     : {summary_dir}")
+        app.logger.info(f" Batch size per GPU : {opt.batchSize // torch.cuda.device_count()}")
         
        
     def discriminate_xz(self,x,xr,z,zr):
@@ -522,7 +527,7 @@ class trainer(object):
                     self.alice_train_generator_adv(y,zyy,zyx,epoch, self.writer_histo)
                 app.logger.debug(f'Epoch [{epoch}/{opt.niter}]\tStep [{b}/{total_step-1}]')
                 
-                if self.trial == None:
+                if epoch%20 == 0 and self.trial == None:
                     for k,v in self.losses.items():
                         self.writer_train.add_scalar('Loss/{}'.format(k),
                             np.mean(np.array(v[-b:-1])),epoch)
@@ -535,10 +540,10 @@ class trainer(object):
             bar.set_postfix(Gloss = Gloss, Dloss = Dloss) 
             # bar.set_postfix(Gloss = Gloss, Gloss_zxy = Gloss_zxy, Dloss = Dloss, Dloss_zxy = Dloss_zxy) 
             
-            if epoch%50 == 0 and self.trial == None:
-                for k,v in self.losses.items():
-                    self.writer_train.add_scalar('Loss/{}'.format(k),
-                        np.mean(np.array(v[-b:-1])),epoch)
+            if epoch%25 == 0 and self.trial == None:
+                # for k,v in self.losses.items():
+                #     self.writer_train.add_scalar('Loss/{}'.format(k),
+                #         np.mean(np.array(v[-b:-1])),epoch)
                 torch.manual_seed(100)
                 figure_bb, gof_bb = plt.plot_generate_classic(
                         tag     = 'broadband',
@@ -554,8 +559,9 @@ class trainer(object):
 
                 self.writer_val.add_figure('Broadband',figure_bb, epoch)
                 self.writer_val.add_figure('Goodness of Fit Broadband',gof_bb, epoch)
+
             
-            if (epoch+1)%25 == 0:
+            if (epoch+1)%55 == 0:
                 val_accuracy_bb = self.accuracy()
                 app.logger.debug("val_accuracy = {:>5.3f}".format(val_accuracy_bb))
                 bar.set_postfix(accuracy = val_accuracy_bb)
@@ -582,7 +588,7 @@ class trainer(object):
                 else:
                     app.logger.info("No accuracy saved ...")
            
-            if epoch%save_checkpoint == 0 and self.trial == None:
+            if (epoch+1)%save_checkpoint == 0 and self.trial == None:
                 app.logger.info(f"saving model at this checkpoint :{epoch}")
                 
                 tsave({ 'epoch'                 : epoch,
