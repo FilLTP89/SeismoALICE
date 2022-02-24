@@ -1068,6 +1068,10 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 xf_data.data = xf_data[index[mask]]
 
             # xt_data,zt_data,*other = batch
+            # trying to force the CNN to regenerate filtered signals
+            if str(pfx).find("hack") !=-1:
+                xt_data = xf_data
+            
             Xt = Variable(xt_data).to(dev, non_blocking=True)
             Xf = Variable(xf_data).to(dev, non_blocking=True)
             zt = Variable(zt_data).to(dev, non_blocking=True)

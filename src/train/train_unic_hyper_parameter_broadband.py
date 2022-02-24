@@ -221,6 +221,7 @@ class trainer(object):
                 self.Dnets.append(self.Dyz)
                 self.Dnets.append(self.Dzzb)
                 self.Dnets.append(self.Dyy)
+                self.Dnets.append(self.Dzyx)
 
                 self.oDyxz = reset_net(self.Dnets,
                     func=set_weights,lr = self.rlr,
@@ -317,7 +318,7 @@ class trainer(object):
         return D_zyx,D_zxy
     
     # @profile
-    def alice_train_discriminator_adv(self,y,zyy,zxy, x =  None):
+    def alice_train_discriminator_adv(self,y,zyy,zxy, x):
          # Set-up training        
         zerograd(self.optz)
         modalite(self.FGf,  mode = 'eval')
@@ -366,17 +367,17 @@ class trainer(object):
                                 self.bce_loss(Dfake_zd,o0l(Dfake_zd))
         # Dloss_rec_zy        = -torch.mean(ln0c(Dreal_zd)+ln0c(1.0-Dfake_zd)
 
-        # Adding getting encoding of x
+        # 7. Adding getting encoding of x
         wnx,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         x_inp = zcat(x,wnx)
         _, zxy_F, *others = self.F_(x_inp)
         zxy_gen = zcat(zxy_F)
 
-        Dzyx, Dzxy                  = self.discriminate_zxy(zyx_gen, zyx_gen)
+        Dzyx, Dzxy                  = self.discriminate_zxy(zyx_gen.detach(), zxy_gen)
         Dloss_identity_zxy          = self.bce_loss(Dzxy,o1l(Dzxy))+\
                                         self.bce_loss(Dzyx,o0l(Dzyx))
 
-        # 7. Compute all losses
+        # 8. Compute all losses
         Dloss_rec           = Dloss_rec_y + Dloss_rec_zy + Dloss_identity_zxy
         Dloss_ali           = Dloss_ali_y 
         Dloss               = Dloss_ali   + Dloss_rec
@@ -395,7 +396,7 @@ class trainer(object):
         
 
     # @profile
-    def alice_train_generator_adv(self,y,zyy, zxy, epoch, trial_writer=None):
+    def alice_train_generator_adv(self,y,zyy, zxy, x,epoch, trial_writer=None):
         # Set-up training
         zerograd(self.optz)
         modalite(self.FGf,   mode ='train')
@@ -437,12 +438,12 @@ class trainer(object):
         Gloss_cycle_consistency_zd  = self.bce_loss(Dfake_zd,o1l(Dfake_zd))
         Gloss_identity_zd           = torch.mean(torch.abs(z_inp-zyy_rec))
 
-        # Adding filtered signal in the training
+        #7. Adding filtered signal in the training
         wnx,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        x_inp = zcat(x,wnx)
+        x_inp   = zcat(x,wnx)
         _, zxy_F, *others = self.F_(x_inp)
         zxy_gen = zcat(zxy_F)
-        Dzyx, Dzxy                  = self.discriminate_zxy(zyx_gen, zyx_gen)
+        Dzyx, Dzxy                  = self.discriminate_zxy(zyx_gen.detach(), zxy_gen)
         Gloss_identity_zxy          = torch.mean(torch.abs(Dzyx - Dzxy))
 
         # 7. Total Loss
@@ -453,7 +454,6 @@ class trainer(object):
                                         Gloss_cycle_consistency*app.LAMBDA_CONSISTENCY + 
                                         Gloss_identity*app.LAMBDA_IDENTITY
                                     )
-        
         Gloss.backward()
         self.oGyx.step()
         zerograd(self.optz)
@@ -462,6 +462,12 @@ class trainer(object):
             writer = self.writer_debug if trial_writer == None else trial_writer
             for idx in range(opt.batchSize//torch.cuda.device_count()):
                 writer.add_histogram("common/zyx", zyx_gen[idx,:], epoch)
+                if idx == 10:
+                    break
+            for idx in range(opt.batchSize//torch.cuda.device_count()):
+                writer.add_histogram("common/zxy", zxy_gen[idx,:], epoch)
+                if idx == 10:
+                    break
          
         self.losses['Gloss'].append(Gloss.tolist())
         self.losses['Gloss_ali'].append(Gloss_ali.tolist())
@@ -514,8 +520,9 @@ class trainer(object):
         torch.random.manual_seed(0)
         for epoch in bar:
             for b,batch in enumerate(self.trn_loader):
-                y, *others = batch
+                y,x, *others = batch
                 y   = y.to(app.DEVICE, non_blocking = True)
+                x   = x.to(app.DEVICE, non_blocking = True)
                 
                 zyy,zyx, *other = self.generate_latent_variable(
                             batch   = len(y),
@@ -531,12 +538,13 @@ class trainer(object):
                     mask   = [not torch.isnan(torch.max(y[e,:])).tolist() for e in range(len(y))]
                     index  = np.array(range(len(y)))
                     y.data = y[index[mask]]
+                    x.data = x[index[mask]]
                     zyy.data, zyx.data = zyy[index[mask]],zyx[index[mask]]
                 
                 for _ in range(5):
-                    self.alice_train_discriminator_adv(y,zyy,zyx)                 
+                    self.alice_train_discriminator_adv(y,zyy,zyx,x)                 
                 for _ in range(1):
-                    self.alice_train_generator_adv(y,zyy,zyx,epoch, self.writer_histo)
+                    self.alice_train_generator_adv(y,zyy,zyx,x,epoch, self.writer_histo)
                 app.logger.debug(f'Epoch [{epoch}/{opt.niter}]\tStep [{b}/{total_step-1}]')
                 
                 if epoch%20 == 0 and self.trial == None:
@@ -568,21 +576,37 @@ class trainer(object):
                         save    = False)
 
                 bar.set_postfix(status = 'writing reconstructed broadband signals ...')
-
                 self.writer_val.add_figure('Broadband',figure_bb, epoch)
                 self.writer_val.add_figure('Goodness of Fit Broadband',gof_bb, epoch)
 
+                figure_fl, gof_fl = plt.plot_generate_classic(
+                        tag     = 'broadband',
+                        Qec     = deepcopy(self.F_),
+                        Pdc     = deepcopy(self.Gy),
+                        trn_set = self.vld_loader,
+                        pfx     ="vld_set_bb_unique_hack",
+                        opt     = opt,
+                        outf    = outf, 
+                        save    = False)
+
+                bar.set_postfix(status = 'writing reconstructed filtered signals ...')
+                self.writer_val.add_figure('Filtered',figure_fl, epoch)
+                self.writer_val.add_figure('Goodness of Fit Filtered',gof_fl, epoch)
+
             
-            if (epoch+1)%20 == 0:
+            if (epoch+1)%31 == 0:
                 val_accuracy_bb, val_accuracy_fl = self.accuracy()
-                # app.logger.debug("val_accuracy = {:>5.3f}".format(val_accuracy_bb))
-                bar.set_postfix(*{'val_accuracy_bb':val_accuracy_bb,'val_accuracy_fl':val_accuracy_fl})
+                app.logger.debug("val_accuracy broadband = {:>5.3f}".format(val_accuracy_bb))
+                app.logger.debug("val_accuracy filtered  = {:>5.3f}".format(val_accuracy_fl))
+                bar.set_postfix(**{'val_accuracy_bb':val_accuracy_bb,'val_accuracy_fl':val_accuracy_fl})
        
                 if self.study_dir == None:
                     self.writer_debug.add_scalar('Accuracy/Broadband',val_accuracy_bb, epoch)
+                    self.writer_debug.add_scalar('Accuracy/Filtered',val_accuracy_fl, epoch)
 
                 elif self.study_dir!=None:
                     self.writer_accuracy.add_scalar('Accuracy/Broadband',val_accuracy_bb,epoch)
+                    self.writer_accuracy.add_scalar('Accuracy/Filtered',val_accuracy_fl,epoch)
                     
                     self.writer_loss.add_scalar('Loss/Dloss',    float(Dloss),    epoch)
                     self.writer_loss.add_scalar('Loss/Dloss_zxy',float(Dloss_zxy),epoch)
