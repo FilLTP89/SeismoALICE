@@ -890,6 +890,9 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
 
             if str(pfx).find('Niigata')!=-1:
                 xt_data = batch
+
+            elif str(pfx).find('hack')!=-1:
+                _,xt_data,*other = batch
             else:
                 xt_data,*other = batch
             # xt_data,zt_data,*other = batch

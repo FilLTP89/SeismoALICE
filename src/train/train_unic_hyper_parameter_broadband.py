@@ -115,7 +115,7 @@ class trainer(object):
         # self.writer_debug_encoder = SummaryWriter('runs_both/filtered/tuning/debug/encoder')
         
         if self.trial == None:
-            summary_dir       = './runs_both/broadband/zyy16/back-test/nsy12800/test-2'
+            summary_dir       = './runs_both/broadband/zyy16/back-test/nsy1280/test-dxy'
             self.writer_train = SummaryWriter(f'{summary_dir}/training')
             self.writer_val   = SummaryWriter(f'{summary_dir}/validation')
             self.writer_debug = SummaryWriter(f'{summary_dir}/debug')
@@ -199,7 +199,7 @@ class trainer(object):
                 self.Dzzb = net.DCGAN_Dz( opt.config['Dzzb'],opt)
                 self.Dyy  = net.DCGAN_Dx( opt.config['Dyy'], opt)
 
-                # self.Dzyx = net.DCGAN_Dz(opt.config['Dzyx'],opt)
+                self.Dzyx = net.DCGAN_Dz(opt.config['Dzyx'],opt)
                 
                 # self.Dx   = net.DCGAN_Dx(opt.config['Dx'],  opt)
                 # self.Dzf  = net.DCGAN_Dz(opt.config['Dzf'], opt)
@@ -213,7 +213,7 @@ class trainer(object):
                 self.Dzzb = nn.DataParallel(self.Dzzb).cuda()
                 self.Dyy  = nn.DataParallel(self.Dyy ).cuda()
 
-                # self.Dzyx = nn.DataParallel(self.Dzyx ).cuda()
+                self.Dzyx = nn.DataParallel(self.Dzyx ).cuda()
                 
 
                 self.Dnets.append(self.Dy)
@@ -377,7 +377,7 @@ class trainer(object):
                                         self.bce_loss(Dzyx,o0l(Dzyx))
 
         # 7. Compute all losses
-        Dloss_rec           = Dloss_rec_y + Dloss_rec_zy +Dloss_identity_zxy
+        Dloss_rec           = Dloss_rec_y + Dloss_rec_zy + Dloss_identity_zxy
         Dloss_ali           = Dloss_ali_y 
         Dloss               = Dloss_ali   + Dloss_rec
 
@@ -474,9 +474,7 @@ class trainer(object):
         self.losses['Gloss_identity_y' ].append(Gloss_identity_y.tolist())
         self.losses['Gloss_identity_zd'].append(Gloss_identity_zd.tolist())
 
-        # self.losses['Gloss_identity_zxy'].append(Gloss_identity_zxy.tolist())
-
-        
+        self.losses['Gloss_identity_zxy'].append(Gloss_identity_zxy.tolist())
 
     def generate_latent_variable(self, batch, nch_zd,nzd, nch_zf = 128,nzf = 128):
         zyy  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
@@ -575,10 +573,10 @@ class trainer(object):
                 self.writer_val.add_figure('Goodness of Fit Broadband',gof_bb, epoch)
 
             
-            if (epoch+1)%55 == 0:
-                val_accuracy_bb = self.accuracy()
-                app.logger.debug("val_accuracy = {:>5.3f}".format(val_accuracy_bb))
-                bar.set_postfix(accuracy = val_accuracy_bb)
+            if (epoch+1)%20 == 0:
+                val_accuracy_bb, val_accuracy_fl = self.accuracy()
+                # app.logger.debug("val_accuracy = {:>5.3f}".format(val_accuracy_bb))
+                bar.set_postfix(*{'val_accuracy_bb':val_accuracy_bb,'val_accuracy_fl':val_accuracy_fl})
        
                 if self.study_dir == None:
                     self.writer_debug.add_scalar('Accuracy/Broadband',val_accuracy_bb, epoch)
@@ -656,7 +654,7 @@ class trainer(object):
 
     def accuracy(self):
         total = 0
-        EG, PG  = plt.get_gofs(tag = 'broadband', 
+        EG_b, PG_b  = plt.get_gofs(tag = 'broadband', 
             Qec = self.F_, 
             Pdc = self.Gy , 
             trn_set = self.vld_loader, 
@@ -665,14 +663,27 @@ class trainer(object):
             std = self.std, 
             outf = outf)
 
-        val = np.sqrt(np.power([10 - eg for eg in EG],2)+\
-                     np.power([10 - pg for pg in PG],2))
-        accuracy = val.mean().tolist()
+        EG_f, PG_f  = plt.get_gofs(tag = 'broadband', 
+            Qec = self.F_, 
+            Pdc = self.Gy , 
+            trn_set = self.vld_loader, 
+            pfx="vld_set_bb_unique_hack",
+            opt = opt,
+            std = self.std, 
+            outf = outf)
 
-        if accuracy == np.nan:
-            accuracy =10*np.sqrt(2)
-            return accuracy
-        return accuracy
+        val_b = np.sqrt(np.power([10 - eg for eg in EG_b],2)+\
+                     np.power([10 - pg for pg in PG_b],2))
+        accuracy_bb = val_b.mean().tolist()
+
+        val_f = np.sqrt(np.power([10 - eg for eg in EG_f],2)+\
+                     np.power([10 - pg for pg in PG_f],2))
+        accuracy_fl = val_f.mean().tolist()
+
+        # if accuracy == np.nan:
+        #     accuracy =10*np.sqrt(2)
+        #     return accuracy
+        return accuracy_bb, accuracy_fl
 
 
 
