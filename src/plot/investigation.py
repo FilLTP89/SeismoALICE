@@ -18,10 +18,14 @@ def plot_signal_and_reconstruction(vld_set,encoder,
     # breakpoint()
     encoder.eval()
     decoder.eval()
+    
     sns.set(style="whitegrid")
+    
     clr = sns.color_palette('tab10',5)
     cnt = 0
+    
     t = np.linspace(0,40.96,4096) 
+
     vtm = torch.load(os.path.join(opt.dataroot,'vtm.pth'))  
     freq = fftshift(fftfreq(t.shape[-1]))  
     rndm_args = {'mean': 0, 'std': 1.0}
@@ -89,6 +93,73 @@ def plot_signal_and_reconstruction(vld_set,encoder,
             plt.savefig(os.path.join(outf,"res_bb_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
                             bbox_inches='tight',dpi = 500)
 
+
+def plot_latent_signals(vld_set,encoder, outf, opt, device='cuda',pfx='investigate'):
+    encoder.eval()
+    sns.set(style="whitegrid")
+    
+    
+    clr = sns.color_palette('tab10',5)
+    cnt = 0
+    time_signal = 40.96 
+    vtm = torch.load(os.path.join(opt.dataroot,'vtm.pth'))    
+    rndm_args = {'mean': 0, 'std': 1.0}
+    bar = tqdm(vld_set)
+    for b, batch in enumerate(bar):
+        
+        xd_data,zd_data, *others = batch
+        Xt = xd_data.to(device)
+        zt = zd_data.to(device)
+
+        # Noise for the orignal signals
+        wnx,*others = noise_generator(Xt.shape,zt.shape,device,rndm_args)
+        X_inp = zcat(Xt,wnx.to(device))
+        
+        # Encoding de signal. The latent space is splited in two variable
+        # On represents de specific branch for the y signal 
+        # and the other is specific for the low frequency
+        zy, zyx = encoder(X_inp)
+        #Definition of the lenght of the time step
+        nzd     = zy.shape[-1]
+        #Definition of the time-step
+        dt      = time_signal/nzd
+        #Fast Fourier Transfor of the latent variable
+        zy_fsa  = tfft(zy,dt).cpu().data.numpy().copy()
+        zyx_fsa = tfft(zyx,dt).cpu().data.numpy().copy()
+        vfr     = np.arange(0,nzd,1)/(dt)/(nzd-1)
+        vtm     = np.arange(0,nzd)*dt
+        #puttin vtm to torch.tensor format and adding it to proper device
+        vtm     = torch.tensor(vtm).to(device)
+
+        for (io, ig) in zip(range(zy.shape[0]),range(zyx.shape[0])):
+            ot, gt = zy[io,1,:], zyx[io,1,:]
+            of, gf = zy_fsa[io,1,:], zyx_fsa[ig,1,:]
+
+            cnt+=1
+
+            fig,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
+                # hax0.plot(vtm,gt,color=clr[3],label=r'$G_t(zcat(F_x(\mathbf{y},N(\mathbf{0},\mathbf{I})))$',linewidth=1.2)
+            hax0.plot(vtm.cpu(),ot.cpu(),color=clr[0],label=r'$\mathbf{z}_y$',linewidth=1.2, alpha=0.70)
+            hax0.plot(vtm.cpu(),gt.cpu(),color=clr[3],label=r'$\mathbf{z}_{yx}$',linewidth=1.2)
+            hax1.loglog(vfr,of,color=clr[0],label=r'$\mathbf{z}_y$',linewidth=2)
+            # hax1.loglog(vfr,ff,color=clr[1],label=r'$\mathbf{x}$',linewidth=2)
+            hax1.loglog(vfr,gf,color=clr[3],label=r'$\mathbf{z}_{yx}$',linewidth=2)
+            hax0.set_xlim(0.0,int(vtm[-1]))
+            hax0.set_xticks(np.arange(0.0,int(vtm[-1])*11./10.,int(vtm[-1])/10.))
+            hax0.set_ylim(-5.0,5.0)
+            hax0.set_yticks(np.arange(-1.0,1.25,0.25))
+            hax0.set_xlabel('t [s]',fontsize=15,fontweight='bold')
+            hax0.set_ylabel('a(t) [1]',fontsize=15,fontweight='bold')
+            hax0.set_title('Latent Space',fontsize=20,fontweight='bold')
+            hax1.set_xlim(0.1,51.), hax1.set_xticks(np.array([0.1,1.0,10.,50.]))
+            hax1.set_ylim(10.**-6,10.**2), hax1.set_yticks(10.**np.arange(-6,1))
+            hax1.set_xlabel('f [Hz]',fontsize=15,fontweight='bold')
+            hax1.set_ylabel('A(f) [1]',fontsize=15,fontweight='bold')
+            hax0.legend(loc = "lower right",frameon=False)
+            hax1.legend(loc = "lower right",frameon=False)
+
+            plt.savefig(os.path.join(outf,"res_latent_encoder_%s_%u_%u.png"%(pfx,cnt,io)),\
+                            bbox_inches='tight',dpi = 500)
 
 def model_visualization_encoder_unic(trn_set, model, opt, outf):
     model.eval()

@@ -364,13 +364,20 @@ class trainer(object):
         Dreal_zd,Dfake_zd   = self.discriminate_zzb(z_inp,zyy_rec)
         Dloss_rec_zy        = self.bce_loss(Dreal_zd,o1l(Dreal_zd))+\
                                 self.bce_loss(Dfake_zd,o0l(Dfake_zd))
-        # Dloss_rec_zy        = -torch.mean(ln0c(Dreal_zd)+ln0c(1.0-Dfake_zd))
-        
-        # Dzyx, Dzxy                  = self.discriminate_zxy(zyx_gen, o1l(zyx_gen))
-        # Dloss_identity_zxy          = torch.mean(torch.abs(Dzxy - Dzyx))
+        # Dloss_rec_zy        = -torch.mean(ln0c(Dreal_zd)+ln0c(1.0-Dfake_zd)
+
+        # Adding getting encoding of x
+        wnx,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        x_inp = zcat(x,wnx)
+        _, zxy_F, *others = self.F_(x_inp)
+        zxy_gen = zcat(zxy_F)
+
+        Dzyx, Dzxy                  = self.discriminate_zxy(zyx_gen, zyx_gen)
+        Dloss_identity_zxy          = self.bce_loss(Dzxy,o1l(Dzxy))+\
+                                        self.bce_loss(Dzyx,o0l(Dzyx))
 
         # 7. Compute all losses
-        Dloss_rec           = Dloss_rec_y + Dloss_rec_zy
+        Dloss_rec           = Dloss_rec_y + Dloss_rec_zy +Dloss_identity_zxy
         Dloss_ali           = Dloss_ali_y 
         Dloss               = Dloss_ali   + Dloss_rec
 
@@ -384,7 +391,7 @@ class trainer(object):
         self.losses['Dloss_rec_y' ].append(Dloss_rec_y.tolist())
         self.losses['Dloss_rec_zy'].append(Dloss_rec_zy.tolist())
 
-        # self.losses['Dloss_identity_zxy'].append(Dloss_identity_zxy.tolist())
+        self.losses['Dloss_identity_zxy'].append(Dloss_identity_zxy.tolist())
         
 
     # @profile
@@ -430,16 +437,23 @@ class trainer(object):
         Gloss_cycle_consistency_zd  = self.bce_loss(Dfake_zd,o1l(Dfake_zd))
         Gloss_identity_zd           = torch.mean(torch.abs(z_inp-zyy_rec))
 
+        # Adding filtered signal in the training
+        wnx,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        x_inp = zcat(x,wnx)
+        _, zxy_F, *others = self.F_(x_inp)
+        zxy_gen = zcat(zxy_F)
+        Dzyx, Dzxy                  = self.discriminate_zxy(zyx_gen, zyx_gen)
+        Gloss_identity_zxy          = torch.mean(torch.abs(Dzyx - Dzxy))
+
         # 7. Total Loss
         Gloss_cycle_consistency     = Gloss_cycle_consistency_y +  Gloss_cycle_consistency_zd
-        Gloss_identity              = Gloss_identity_y + Gloss_identity_zd
+        Gloss_identity              = Gloss_identity_y + Gloss_identity_zd + Gloss_identity_zxy
         Gloss                       = (
                                         Gloss_ali + 
                                         Gloss_cycle_consistency*app.LAMBDA_CONSISTENCY + 
                                         Gloss_identity*app.LAMBDA_IDENTITY
                                     )
-        # Dzyx, Dzxy                  = self.discriminate_zxy(zyx_gen, o1l(zyx_gen))
-        # Gloss_identity_zxy          = torch.mean(torch.abs(Dzxy - Dzyx))
+        
         Gloss.backward()
         self.oGyx.step()
         zerograd(self.optz)
