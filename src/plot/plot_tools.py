@@ -1070,13 +1070,13 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             # xt_data,zt_data,*other = batch
             # trying to force the CNN to regenerate filtered signals
             if str(pfx).find("hack") !=-1:
-                xt_data = xf_data
+                xt_data = xt_data
             
             Xt = Variable(xt_data).to(dev, non_blocking=True)
             Xf = Variable(xf_data).to(dev, non_blocking=True)
             zt = Variable(zt_data).to(dev, non_blocking=True)
 
-            if cnt == 1 and save == False:
+            if cnt == 12 and save == False:
                 break
             # zt_shape = [zt.shape[0], 16]
             # zt = torch.randn(*zt_shape).to(dev, non_blocking = True)
@@ -1091,7 +1091,13 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 zy,zdf_gen,*others =  Qec(X_inp)
                 # wn = torch.empty(zt_shape).normal_(**app.RNDM_ARGS).to(dev)
                 # wn = torch.zeros_like(zt)
-                ztr = zcat(zdf_gen,zy)
+                if str(pfx).find("hack") !=-1:
+                    nch_zd, nzd = 24,128
+                    nch_zf, nzf =  8,128
+                    wnx, wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch_zd,nzd],dev,rndm_args)
+                    ztr = zcat(zdf_gen,o0l(wnz))
+                else:
+                    ztr = zcat(zdf_gen,zy)
             else:
                 ztr = Qec(X_inp)
 
@@ -1117,7 +1123,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 ot,gt = Xt[io, 1, :]  ,Xr[ig, 1, :]
                 of,gf,ff = Xt_fsa[io,1,:],Xr_fsa[ig,1,:],Xf_fsa[io,1,:]
 
-                if io==3 and save == False:
+                if io==12 and save == False:
                     break
                 
                 hgof = plot_tf_gofs(ot,gt,dt=vtm[1]-vtm[0],t0=0.0,fmin=0.1,fmax=30.0,
