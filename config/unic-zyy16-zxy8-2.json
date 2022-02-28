@@ -1,4 +1,10 @@
-{
+{   "hparams":
+    {
+        "glry":0.0029053911829946006,
+        "rlry":0.0028623974420206983,
+        "glrx":0.0029053911829946006,
+        "rlrx":0.0028623974420206983
+    },
      "F":{
         "name"      :"Unic",
         "nlayers"   :3, 
@@ -13,7 +19,7 @@
         "limit"     :256,
         "broadband" :{
             "nlayers"   :3, 
-            "channel"   :[32,64,128,24],
+            "channel"   :[32,64,128,16],
             "kernel"    :[3,3,3],
             "strides"   :[2,2,2],
             "dilation"  :[1,1,1],
@@ -36,7 +42,7 @@
     },
     "Gy":{
         "nlayers"   :5, 
-        "channel"   :[32,128,64,32,16,3],
+        "channel"   :[24,128,64,32,16,3],
         "kernel"    :[3,3,3,3,3,3],
         "strides"   :[2,2,2,2,2,2],
         "dilation"  :[1,1,1,1,1,1],
@@ -62,7 +68,7 @@
         "limit"     :256},
     "Dzb":{
         "nlayers"   :2, 
-        "channel"   :[32,64,128],
+        "channel"   :[24,64,128],
         "kernel"    :[3,3],
         "strides"   :[1,1],
         "dilation"  :[1,1],
@@ -71,6 +77,7 @@
         "dpc"       :0.20,
         "extra"     :128,
         "act"       :"Dfz",
+        "bn"        :"True",
         "prob"      :"False",
         "wf"        :"False",
         "limit"     :256},
@@ -88,7 +95,7 @@
         "extra"     :128,
         "act"       :"Dfz",
         "bn"        :"True",
-        "prob"      :"False",
+        "prob"      :"True",
         "wf"        :"False",
         "limit"     :256},
     "Dyy":{
@@ -112,7 +119,7 @@
         "name"      :"Lite",
         "nlayers"   :2,
         "nc"        :128,
-        "channel"   :[64,32,16],
+        "channel"   :[48,32,16],
         "kernel"    :[3,3],
         "strides"   :[2,2],
         "dilation"  :[1,1],
@@ -128,14 +135,14 @@
     "Gx":{
         "nlayers"   :5, 
         "channel"   :[8,128,64,32,16,3],
-        "kernel"    :[3,3,3,3,3,3],
-        "strides"   :[2,2,2,2,2,2],
-        "dilation"  :[1,1,1,1,1,1],
-        "outpads"   :[1,1,1,1,1,1],
-        "padding"   :[1,1,1,1,1,1],
+        "kernel"    :[4,4,4,4,4],
+        "strides"   :[2,2,2,2,2],
+        "dilation"  :[1,1,1,1,1],
+        "outpads"   :[0,0,0,0,0],
+        "padding"   :[1,1,1,1,1],
         "dpc"       :0.0,
         "extra"     :128,
-        "act"       :"Gdd",
+        "act"       :"Gdf",
         "limit"     :256},
     "Dx":{
         "nlayers"   :5, 
@@ -162,6 +169,7 @@
         "dpc"       :0.20,
         "extra"     :128,
         "act"       :"Dfz",
+        "bn"        :"True",
         "prob"      :"False",
         "wf"        :"False",
         "limit"     :256},
@@ -179,7 +187,7 @@
         "extra"     :128,
         "act"       :"Dfz",
         "bn"        :"True",
-        "prob"      :"False",
+        "prob"      :"True",
         "wf"        :"False",
         "limit"     :256},
     "Dxx":{
@@ -220,7 +228,7 @@
         "name":"Lite",
         "nlayers"   :4,
         "nc"        :128,
-        "channel"   :[8,32,64,128,256],
+        "channel"   :[8,256,128,64,32],
         "kernel"    :[3,3,3,3],
         "strides"   :[2,2,2,2],
         "dilation"  :[1,1,1,1],
@@ -229,7 +237,7 @@
         "dpc"       :0.40,
         "extra"     :128,
         "act"       :"Dfz",
-        "bn"        :"False",
+        "bn"        :"True",
         "prob"      :"True",
         "wf"        :"False",
         "limit"     :256}

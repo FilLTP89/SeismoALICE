@@ -913,7 +913,7 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
 
 
         
-        nch, nz         = 24,128
+        nch, nz         = 8,128
         wnx,wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
 
         X_inp = zcat(Xt,wnx)
@@ -1070,7 +1070,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             # xt_data,zt_data,*other = batch
             # trying to force the CNN to regenerate filtered signals
             if str(pfx).find("hack") !=-1:
-                xt_data = xt_data
+                xt_data = xf_data
             
             Xt = Variable(xt_data).to(dev, non_blocking=True)
             Xf = Variable(xf_data).to(dev, non_blocking=True)
@@ -1093,10 +1093,10 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 # wn = torch.empty(zt_shape).normal_(**app.RNDM_ARGS).to(dev)
                 # wn = torch.zeros_like(zt)
                 if str(pfx).find("hack") !=-1:
-                    nch_zd, nzd = 24,128
-                    nch_zf, nzf =  8,128
+                    nch_zd, nzd = 8,128
+                    nch_zf, nzf = 8,128
                     wnx, wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch_zd,nzd],dev,rndm_args)
-                    ztr = zcat(o0l(zdf_gen),zy)
+                    ztr = zcat(zdf_gen,zy)
                 else:
                     ztr = zcat(zdf_gen,zy)
             else:

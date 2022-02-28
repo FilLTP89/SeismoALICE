@@ -57,19 +57,20 @@ class trainer(object):
         ngpu_use = torch.cuda.device_count()
 
         if self.trial!=None:
-            self.glr = self.trial.suggest_float("glrx",0.0001, 0.1,log=True)
-            self.rlr = self.trial.suggest_float("rlrx",0.0001, 0.1,log=True)
+            self.glr = self.trial.suggest_float("glrx",0.0001, 0.01,log=True)
+            self.rlr = self.trial.suggest_float("rlrx",0.0001, 0.01,log=True)
         else:
             try:
-                self.glr = float(opt.config["hparams"]['glry'])/2
-                self.rlr = float(opt.config["hparams"]['rlry'])/2
+                # [TODO] divide by two the learning rate values
+                self.glr = float(opt.config["hparams"]['glry'])
+                self.rlr = float(opt.config["hparams"]['rlry'])
             except Exception as e:
                 self.glr = opt.glr
                 self.rlr = opt.rlr
                 pass
 
-            app.logger.info(f'glr = {self.glr}')
-            app.logger.info(f'rlr = {self.rlr}')
+        app.logger.info(f'glr = {self.glr}')
+        app.logger.info(f'rlr = {self.rlr}')
 
         
 
@@ -251,9 +252,12 @@ class trainer(object):
         count_parameters(self.FGf)
         print("Parameters of Discriminators ")
         count_parameters(self.Dnets)
-        app.logger.info(f" Root checkpoint : {opt.root_checkpoint}")
-        app.logger.info(f" Summary dir     : {opt.summary_dir}")
-        app.logger.info(f" Batch size per GPU : {opt.batchSize // torch.cuda.device_count()}")
+        if self.trial == None:
+            app.logger.info(f" Root checkpoint  : {opt.root_checkpoint}")
+            app.logger.info(f" Summary dir      : {opt.summary_dir}")
+        else: 
+            app.logger.info(f" Tuner dir        : {self.study_dir}")
+        app.logger.info(f" Batch size per GPU   : {opt.batchSize // torch.cuda.device_count()}")
         
        
     def discriminate_xz(self,x,xr,z,zr):
@@ -411,8 +415,8 @@ class trainer(object):
         # 2. Generate conditional samples
         y_gen = self.Gy(z_inp)
         zyy_F,zyx_F,*other = self.F_(y_inp) 
-        zyx_gen = zcat(zyx_F) 
- 
+        zyx_gen = zcat(zyx_F)
+        _zyy_gen= zyy_F
         zyy_gen = zcat(zyx_F,zyy_F) 
         Dyz,Dzy = self.discriminate_yz(y,y_gen,z_inp,zyy_gen)
         
@@ -462,11 +466,12 @@ class trainer(object):
             writer = self.writer_debug if trial_writer == None else trial_writer
             for idx in range(opt.batchSize//torch.cuda.device_count()):
                 writer.add_histogram("common/zyx", zyx_gen[idx,:], epoch)
-                if idx == 10:
+                writer.add_histogram("specific/zyy", _zyy_gen[idx,:], epoch)
+                if idx == 50:
                     break
             for idx in range(opt.batchSize//torch.cuda.device_count()):
                 writer.add_histogram("common/zxy", zxy_gen[idx,:], epoch)
-                if idx == 10:
+                if idx == 50:
                     break
          
         self.losses['Gloss'].append(Gloss.tolist())
@@ -496,7 +501,8 @@ class trainer(object):
         globals().update(self.cv)
         globals().update(opt.__dict__)
 
-        total_step = len(self.trn_loader)
+        loader =  self.trn_loader if self.trial ==  None else self.tst_loader
+        total_step = len(loader)
 
         app.logger.info(f"Let's use {torch.cuda.device_count()} GPUs!")
 
@@ -514,12 +520,13 @@ class trainer(object):
 
             app.logger.info(f'Tensorboard Writer setted up for trial {self.trial.number} ...')
 
-        nch_zd, nzd = 24,128
+        nch_zd, nzd = 16,128
         nch_zf, nzf =  8,128
         bar = trange(opt.niter)
         # torch.random.manual_seed(0)
+        
         for epoch in bar:
-            for b,batch in enumerate(self.trn_loader):
+            for b,batch in enumerate(loader):
                 y,x, *others = batch
                 y   = y.to(app.DEVICE, non_blocking = True)
                 x   = x.to(app.DEVICE, non_blocking = True)
@@ -554,8 +561,8 @@ class trainer(object):
             # breakpoint()
             Gloss = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss'][-b:-1])))
             Dloss = '{:>5.3f}'.format(np.mean(np.array(self.losses['Dloss'][-b:-1])))
-            # Gloss_zxy   = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss_identity_zxy'][-b:-1])))
-            # Dloss_zxy   = '{:>5.3f}'.format(np.mean(np.array(self.losses['Dloss_identity_zxy'][-b:-1])))
+            Gloss_zxy = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss_identity_zxy'][-b:-1])))
+            Dloss_zxy = '{:>5.3f}'.format(np.mean(np.array(self.losses['Dloss_identity_zxy'][-b:-1])))
 
             bar.set_postfix(Gloss = Gloss, Dloss = Dloss) 
             # bar.set_postfix(Gloss = Gloss, Gloss_zxy = Gloss_zxy, Dloss = Dloss, Dloss_zxy = Dloss_zxy) 
@@ -595,7 +602,7 @@ class trainer(object):
                 random.seed(opt.manualSeed)
 
             
-            if (epoch+1)%10 == 0:
+            if (epoch+1)%20 == 0:
                 val_accuracy_bb, val_accuracy_fl = self.accuracy()
                 app.logger.debug("val_accuracy broadband = {:>5.3f}".format(val_accuracy_bb))
                 app.logger.debug("val_accuracy filtered  = {:>5.3f}".format(val_accuracy_fl))
@@ -619,7 +626,8 @@ class trainer(object):
                     if self.trial.should_prune():
                         self.writer_hparams.add_hparams(
                         {'rlr' : self.rlr, 'glr':self.glr},
-                        {'hparams/total'    : val_accuracy_bb})
+                        {'hparams/broadband'  : val_accuracy_bb,
+                        'hparams/filtered'    : val_accuracy_fl})
 
                         raise optuna.exceptions.TrialPruned()
                 else:
@@ -678,9 +686,10 @@ class trainer(object):
                 else:
                     self.writer_hparams.add_hparams(
                     {'rlr'  : self.rlr, 'glr'  : self.glr},
-                    {'hparams/broadband': val_accuracy_bb})
+                    {'hparams/broadband': val_accuracy_bb,
+                    'hparams/filtered' : val_accuracy_fl})
                     app.logger.info('Evaluating ...')
-                    return val_accuracy_bb
+                    return max(val_accuracy_bb,val_accuracy_fl)
 
     def accuracy(self):
         total = 0

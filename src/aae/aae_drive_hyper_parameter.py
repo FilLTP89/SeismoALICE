@@ -40,8 +40,8 @@ def main():
     locals().update(cv)
 
     optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
-    study_name   = "unic-classic-zyy16-zxy8-tuning-dummy-6"
-    study_dir    = "tuner/unic/filtered-3/"
+    study_name   = "unic-classic-zyy8-zxy8-tuning"
+    study_dir    = "tuner/broadband/test-2/"
     storage_name = "sqlite:///{}{}.db".format(study_dir,study_name)
 
     study = optuna.create_study(study_name=study_name, storage=storage_name,\
