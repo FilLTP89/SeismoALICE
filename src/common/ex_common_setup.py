@@ -80,6 +80,7 @@ def setup():
     parser.add_argument('--config',default='./config.txt', help='configuration file')
     parser.add_argument('--root_checkpoint',default='./network/', help='configuration file')
     parser.add_argument('--save_checkpoint',type=int,default=1,help='Number of epochs for each checkpoint')
+    parser.add_argument('--summary_dir',default='./runs_both/',help='Number of epochs for each checkpoint')
     parser.set_defaults(stack=False,ftune=False,feat=False,plot=True)
     parser.add_argument('--ip_address', type=str, required=False, help='ip address of the host node')
     opt = parser.parse_args()

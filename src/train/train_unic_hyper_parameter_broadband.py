@@ -11,7 +11,8 @@ import profiling.profile_support as profile
 from tools.generate_noise import latent_resampling, noise_generator
 from database.database_sae import random_split 
 from database.database_sae import thsTensorData
-import torch.nn as nn 
+import torch.nn as nn
+import random 
 import json
 import pdb
 import numpy as np
@@ -115,10 +116,9 @@ class trainer(object):
         # self.writer_debug_encoder = SummaryWriter('runs_both/filtered/tuning/debug/encoder')
         
         if self.trial == None:
-            summary_dir       = './runs_both/broadband/zyy16/back-test/nsy1280/test-dxy'
-            self.writer_train = SummaryWriter(f'{summary_dir}/training')
-            self.writer_val   = SummaryWriter(f'{summary_dir}/validation')
-            self.writer_debug = SummaryWriter(f'{summary_dir}/debug')
+            self.writer_train = SummaryWriter(f'{opt.summary_dir}/training')
+            self.writer_val   = SummaryWriter(f'{opt.summary_dir}/validation')
+            self.writer_debug = SummaryWriter(f'{opt.summary_dir}/debug')
         else:
             hparams_dir         = f'{self.study_dir}/hparams/'
             self.writer_hparams = SummaryWriter(f'{hparams_dir}')
@@ -251,8 +251,8 @@ class trainer(object):
         count_parameters(self.FGf)
         print("Parameters of Discriminators ")
         count_parameters(self.Dnets)
-        app.logger.info(f" Root checkpoint : {root_checkpoint}")
-        app.logger.info(f" Summary dir     : {summary_dir}")
+        app.logger.info(f" Root checkpoint : {opt.root_checkpoint}")
+        app.logger.info(f" Summary dir     : {opt.summary_dir}")
         app.logger.info(f" Batch size per GPU : {opt.batchSize // torch.cuda.device_count()}")
         
        
@@ -517,7 +517,7 @@ class trainer(object):
         nch_zd, nzd = 24,128
         nch_zf, nzf =  8,128
         bar = trange(opt.niter)
-        torch.random.manual_seed(0)
+        # torch.random.manual_seed(0)
         for epoch in bar:
             for b,batch in enumerate(self.trn_loader):
                 y,x, *others = batch
@@ -592,9 +592,10 @@ class trainer(object):
                 bar.set_postfix(status = 'writing reconstructed filtered signals ...')
                 self.writer_val.add_figure('Filtered',figure_fl, epoch)
                 self.writer_val.add_figure('Goodness of Fit Filtered',gof_fl, epoch)
+                random.seed(opt.manualSeed)
 
             
-            if (epoch+1)%31 == 0:
+            if (epoch+1)%10 == 0:
                 val_accuracy_bb, val_accuracy_fl = self.accuracy()
                 app.logger.debug("val_accuracy broadband = {:>5.3f}".format(val_accuracy_bb))
                 app.logger.debug("val_accuracy filtered  = {:>5.3f}".format(val_accuracy_fl))
@@ -662,6 +663,11 @@ class trainer(object):
                         'optimizer_state_dict'  : self.oDyxz.state_dict(),
                         'loss'                  :self.losses,},
                         root_checkpoint +'/Dyz.pth')
+                tsave({ 'epoch'                 : epoch,
+                        'model_state_dict'      : self.Dzyx.state_dict(),
+                        'optimizer_state_dict'  : self.oDyxz.state_dict(),
+                        'loss'                  :self.losses,},
+                        root_checkpoint +'/Dzyx.pth')
 
             if (epoch +1) == opt.niter:
                 if self.trial == None:
