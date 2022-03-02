@@ -946,7 +946,7 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             ot,gt  = Xt[io, 1, :]  ,Xr[ig, 1, :]
             of,gf  = Xt_fsa[io,1,:],Xr_fsa[ig,1,:]
 
-            if cnt == 20 and str(pfx).find('investigate')==-1:
+            if cnt == 10 and str(pfx).find('investigate')==-1:
                 break
             EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
                     st2_isref=True,a=10.,k=1))
@@ -1009,7 +1009,7 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
                 ot,gt = Xf[io, 1, :]  ,Xr[ig, 1, :]
                 of,gf = Xf_fsa[io,1,:],Xr_fsa[ig,1,:]
 
-                if cnt == 20:
+                if cnt == 10:
                     break
                 EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=20.0,nf=100,w0=6,norm='global',
                     st2_isref=True,a=10.,k=1))

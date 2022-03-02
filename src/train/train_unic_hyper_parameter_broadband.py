@@ -95,6 +95,7 @@ class trainer(object):
             'Dloss_ali':[0],
             'Dloss_rec':[0],
             'Dloss_rec_y':[0],
+            'Dloss_rec_zx':[0],
             'Dloss_rec_zy':[0],
 
             'Dloss_identity_zxy':[0],
@@ -103,9 +104,12 @@ class trainer(object):
             'Gloss_cycle_consistency':[0],
             'Gloss_cycle_consistency_y':[0],
             'Gloss_cycle_consistency_zd':[0],
+            'Gloss_cycle_consistency_zx':[0],
+
             'Gloss_identity':[0],
             'Gloss_identity_y':[0],
             'Gloss_identity_zd':[0],
+            'Gloss_identity_zx':[0],
             'Gloss_ali':[0],
 
             'Gloss_identity_zxy':[0]
@@ -215,6 +219,8 @@ class trainer(object):
                 self.Dyy  = nn.DataParallel(self.Dyy ).cuda()
 
                 self.Dzyx = nn.DataParallel(self.Dzyx ).cuda()
+
+                # self.Dzzf = nn.DataParallel(self.Dzzf).cuda()
                 
 
                 self.Dnets.append(self.Dy)
@@ -223,6 +229,7 @@ class trainer(object):
                 self.Dnets.append(self.Dzzb)
                 self.Dnets.append(self.Dyy)
                 self.Dnets.append(self.Dzyx)
+                # self.Dnets.append(self.Dzzf)
 
                 self.oDyxz = reset_net(self.Dnets,
                     func=set_weights,lr = self.rlr,
@@ -253,11 +260,11 @@ class trainer(object):
         print("Parameters of Discriminators ")
         count_parameters(self.Dnets)
         if self.trial == None:
-            app.logger.info(f" Root checkpoint  : {opt.root_checkpoint}")
-            app.logger.info(f" Summary dir      : {opt.summary_dir}")
+            app.logger.info(f" Root checkpoint: {opt.root_checkpoint}")
+            app.logger.info(f" Summary dir    : {opt.summary_dir}")
         else: 
-            app.logger.info(f" Tuner dir        : {self.study_dir}")
-        app.logger.info(f" Batch size per GPU   : {opt.batchSize // torch.cuda.device_count()}")
+            app.logger.info(f" Tuner dir      : {self.study_dir}")
+        app.logger.info(f" Batch size per GPU: {opt.batchSize // torch.cuda.device_count()}")
         
        
     def discriminate_xz(self,x,xr,z,zr):
@@ -371,18 +378,20 @@ class trainer(object):
                                 self.bce_loss(Dfake_zd,o0l(Dfake_zd))
         # Dloss_rec_zy        = -torch.mean(ln0c(Dreal_zd)+ln0c(1.0-Dfake_zd)
 
-        # 7. Adding getting encoding of x
+        # 7. Forcing zxy to equal zyx an zx to equal 0 of the space
+        # 7.1 Trying to match zxy and zy
         wnx,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         x_inp = zcat(x,wnx)
-        _, zxy_F, *others = self.F_(x_inp)
+        zxx_F, zxy_F, *others = self.F_(x_inp)
         zxy_gen = zcat(zxy_F)
-
-        Dzyx, Dzxy                  = self.discriminate_zxy(zyx_gen.detach(), zxy_gen)
-        Dloss_identity_zxy          = self.bce_loss(Dzxy,o1l(Dzxy))+\
-                                        self.bce_loss(Dzyx,o0l(Dzyx))
+        Dzyx, Dzxy          = self.discriminate_zxy(zyx_gen, zxy_gen)
+        Dloss_identity_zxy  = self.bce_loss(Dzxy,o1l(Dzxy))+\
+                                self.bce_loss(Dzyx,o0l(Dzyx))
+        # 7.2 Trying to for zy to equal 0 of the space
+        Dloss_rec_zx        = torch.mean(torch.abs(zxx_F))
 
         # 8. Compute all losses
-        Dloss_rec           = Dloss_rec_y + Dloss_rec_zy + Dloss_identity_zxy
+        Dloss_rec           = Dloss_rec_y + Dloss_rec_zy + Dloss_identity_zxy + Dloss_rec_zx
         Dloss_ali           = Dloss_ali_y 
         Dloss               = Dloss_ali   + Dloss_rec
 
@@ -395,6 +404,7 @@ class trainer(object):
         self.losses['Dloss_rec'   ].append(Dloss_rec.tolist()) 
         self.losses['Dloss_rec_y' ].append(Dloss_rec_y.tolist())
         self.losses['Dloss_rec_zy'].append(Dloss_rec_zy.tolist())
+        self.losses['Dloss_rec_zx'].append(Dloss_rec_zx.tolist())
 
         self.losses['Dloss_identity_zxy'].append(Dloss_identity_zxy.tolist())
         
@@ -405,7 +415,7 @@ class trainer(object):
         zerograd(self.optz)
         modalite(self.FGf,   mode ='train')
         modalite(self.Dnets, mode ='train')
-
+        # breakpoint()
         wny,wnz,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         
         # 1. Concatenate inputs
@@ -442,17 +452,22 @@ class trainer(object):
         Gloss_cycle_consistency_zd  = self.bce_loss(Dfake_zd,o1l(Dfake_zd))
         Gloss_identity_zd           = torch.mean(torch.abs(z_inp-zyy_rec))
 
-        #7. Adding filtered signal in the training
+        #7. Forcing zxy to equal zyx an zx to equal 0 of the space
+        # 7.1 Forcing zxy ot equal zyx
         wnx,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         x_inp   = zcat(x,wnx)
-        _, zxy_F, *others = self.F_(x_inp)
+        zxx_F, zxy_F, *others = self.F_(x_inp)
         zxy_gen = zcat(zxy_F)
-        Dzyx, Dzxy                  = self.discriminate_zxy(zyx_gen.detach(), zxy_gen)
+        Dzyx, Dzxy                  = self.discriminate_zxy(zyx_gen, zxy_gen)
         Gloss_identity_zxy          = torch.mean(torch.abs(Dzyx - Dzxy))
 
+        # 7.2 Forcig zx to equal 0
+        Gloss_identity_zx           = torch.mean(torch.abs(zxx_F))
+
         # 7. Total Loss
+
         Gloss_cycle_consistency     = Gloss_cycle_consistency_y +  Gloss_cycle_consistency_zd
-        Gloss_identity              = Gloss_identity_y + Gloss_identity_zd + Gloss_identity_zxy
+        Gloss_identity              = Gloss_identity_y + Gloss_identity_zd + Gloss_identity_zxy + Gloss_identity_zx
         Gloss                       = (
                                         Gloss_ali + 
                                         Gloss_cycle_consistency*app.LAMBDA_CONSISTENCY + 
@@ -462,7 +477,7 @@ class trainer(object):
         self.oGyx.step()
         zerograd(self.optz)
 
-        if epoch%50 == 0: 
+        if epoch%50 == 0:
             writer = self.writer_debug if trial_writer == None else trial_writer
             for idx in range(opt.batchSize//torch.cuda.device_count()):
                 writer.add_histogram("common/zyx", zyx_gen[idx,:], epoch)
@@ -471,6 +486,7 @@ class trainer(object):
                     break
             for idx in range(opt.batchSize//torch.cuda.device_count()):
                 writer.add_histogram("common/zxy", zxy_gen[idx,:], epoch)
+                writer.add_histogram("specific/zxx",zxx_F[idx,:], epoch)
                 if idx == 50:
                     break
          
@@ -480,10 +496,12 @@ class trainer(object):
         self.losses['Gloss_cycle_consistency'   ].append(Gloss_cycle_consistency.tolist())
         self.losses['Gloss_cycle_consistency_y' ].append(Gloss_cycle_consistency_y.tolist())
         self.losses['Gloss_cycle_consistency_zd'].append(Gloss_cycle_consistency_zd.tolist())
+        
 
         self.losses['Gloss_identity'   ].append(Gloss_identity.tolist())
         self.losses['Gloss_identity_y' ].append(Gloss_identity_y.tolist())
         self.losses['Gloss_identity_zd'].append(Gloss_identity_zd.tolist())
+        self.losses['Gloss_identity_zx'].append(Gloss_identity_zx.tolist())
 
         self.losses['Gloss_identity_zxy'].append(Gloss_identity_zxy.tolist())
 
@@ -501,7 +519,7 @@ class trainer(object):
         globals().update(self.cv)
         globals().update(opt.__dict__)
 
-        loader =  self.trn_loader if self.trial ==  None else self.tst_loader
+        loader     =  self.trn_loader #if self.trial == None else self.tst_loader
         total_step = len(loader)
 
         app.logger.info(f"Let's use {torch.cuda.device_count()} GPUs!")
@@ -604,8 +622,8 @@ class trainer(object):
             
             if (epoch+1)%20 == 0:
                 val_accuracy_bb, val_accuracy_fl = self.accuracy()
-                app.logger.debug("val_accuracy broadband = {:>5.3f}".format(val_accuracy_bb))
-                app.logger.debug("val_accuracy filtered  = {:>5.3f}".format(val_accuracy_fl))
+                app.logger.info("val_accuracy broadband = {:>5.3f}".format(val_accuracy_bb))
+                app.logger.info("val_accuracy filtered  = {:>5.3f}".format(val_accuracy_fl))
                 bar.set_postfix(**{'val_accuracy_bb':val_accuracy_bb,'val_accuracy_fl':val_accuracy_fl})
        
                 if self.study_dir == None:
