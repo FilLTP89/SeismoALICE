@@ -913,7 +913,7 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
 
 
         
-        nch, nz         = 8,128
+        nch, nz         = 4,128
         wnx,wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
 
         X_inp = zcat(Xt,wnx)
@@ -1093,8 +1093,8 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 # wn = torch.empty(zt_shape).normal_(**app.RNDM_ARGS).to(dev)
                 # wn = torch.zeros_like(zt)
                 if str(pfx).find("hack") !=-1:
-                    nch_zd, nzd = 8,128
-                    nch_zf, nzf = 8,128
+                    nch_zd, nzd = 4,128
+                    nch_zf, nzf = 4,128
                     wnx, wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch_zd,nzd],dev,rndm_args)
                     ztr = zcat(zdf_gen,zy)
                 else:
