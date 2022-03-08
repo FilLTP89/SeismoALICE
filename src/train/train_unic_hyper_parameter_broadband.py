@@ -614,7 +614,7 @@ class trainer(object):
             Gloss = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss'][-b:-1])))
             Dloss = '{:>5.3f}'.format(np.mean(np.array(self.losses['Dloss'][-b:-1])))
             Gloss_zxy = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss_identity_zxy'][-b:-1])))
-            Dloss_zxy = '{:>5.3f}'.format(np.mean(np.array(self.losses['Dloss_identity_zxy'][-b:-1])))
+            Dloss_zxy = '{:>5.3f}'.format(np.mean(np.array(self.losses['Dloss_rec_zxy'][-b:-1])))
 
             bar.set_postfix(Gloss = Gloss, Dloss = Dloss) 
             # bar.set_postfix(Gloss = Gloss, Gloss_zxy = Gloss_zxy, Dloss = Dloss, Dloss_zxy = Dloss_zxy) 
