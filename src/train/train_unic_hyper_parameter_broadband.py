@@ -343,25 +343,19 @@ class trainer(object):
         # 2.1 Generate conditional samples
         y_gen = self.Gy(z_inp)
         zyy_F,zyx_F,*other = self.F_(y_inp)
-        #2.2 Concatanete outputs
+        #2.2 Concatenate outputs
         zyy_gen = zcat(zyx_F,zyy_F)
         zyx_gen = zcat(zyx_F)
-
-        # breakpoint()
 
         # 3. Cross-Discriminate YZ
         Dyz,Dzy = self.discriminate_yz(y,y_gen,z_inp,zyy_gen)
 
         # 4. Compute ALI discriminator loss
         Dloss_ali_y = -torch.mean(ln0c(Dzy)+ln0c(1.0-Dyz))
-        
-        wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
 
         # 5. Generate reconstructions
+        wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         y_rec  = self.Gy(zyy_gen)
-        app.logger.debug(f"max zyy_gen : {torch.max(zyy_gen)}")
-        app.logger.debug(f'max y       : {torch.max(y_rec)}')
-        assert torch.isfinite(torch.max(y_rec))
 
         y_gen  = zcat(y_gen,wny)
         zyy_F,zyx_F,*other = self.F_(y_gen)
@@ -379,19 +373,36 @@ class trainer(object):
         # Dloss_rec_zy        = -torch.mean(ln0c(Dreal_zd)+ln0c(1.0-Dfake_zd)
 
         # 7. Forcing zxy to equal zyx an zx to equal 0 of the space
+
         # 7.1 Trying to match zxy and zy
         wnx,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        x_inp = zcat(x,wnx)
+        x_inp   = zcat(x,wnx)
+        zf_inp  = zcat(zxy,o0l(zy))
+
+        x_gen   = self.Gy(zf_inp)
         zxx_F, zxy_F, *others = self.F_(x_inp)
         zxy_gen = zcat(zxy_F)
-        Dzyx, Dzxy          = self.discriminate_zxy(zyx_gen, zxy_gen)
-        Dloss_identity_zxy  = self.bce_loss(Dzxy,o1l(Dzxy))+\
-                                self.bce_loss(Dzyx,o0l(Dzyx))
-        # 7.2 Trying to for zy to equal 0 of the space
-        Dloss_rec_zx        = torch.mean(torch.abs(zxx_F))
+
+        wnx,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        x_gen = zcat(x_gen,wnx)
+        _ , zxy_F,*others = self.F_(x_gen)
+        zxy_rec = zcat(zxy_F)
+
+        zf_gen = zcat(zxy_gen,o0l(zy))
+        x_rec = self.Gy(zf_gen)
+
+        #forcing zxy from x to be guassian
+        Dreal_zxy,Dfake_zxy = self.discriminate_zxy(zxy, zxy_rec)
+        Dloss_rec_zxy       = self.bce_loss(Dreal_zxy,o1l(Dreal_zxy))+\
+                                self.bce_loss(Dfake_zxy,o0l(Dfake_zxy))
+
+        #forcing zy from x to be useless for the training
+        Dreal_x, Dfake_x    = self.discriminate_xx(x,x_rec)
+        Dloss_rec_x         = self.bce_loss(Dreal_x,o1l(Dreal_x))+\
+                                self.bce_loss(Dfake_x,o0l(Dfake_x))
 
         # 8. Compute all losses
-        Dloss_rec           = Dloss_rec_y + Dloss_rec_zy + Dloss_identity_zxy + Dloss_rec_zx
+        Dloss_rec           = Dloss_rec_y + Dloss_rec_zy + Dloss_rec_zxy + Dloss_rec_x
         Dloss_ali           = Dloss_ali_y 
         Dloss               = Dloss_ali   + Dloss_rec
 
@@ -455,24 +466,49 @@ class trainer(object):
         #7. Forcing zxy to equal zyx an zx to equal 0 of the space
         # 7.1 Forcing zxy ot equal zyx
         wnx,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        x_inp   = zcat(x,wnx)
+        x_inp   = zcat(x_gen,wnx)
+        zf_inp  = zcat(zxy,o0l(zy))
+
         zxx_F, zxy_F, *others = self.F_(x_inp)
         zxy_gen = zcat(zxy_F)
-        Dzyx, Dzxy                  = self.discriminate_zxy(zyx_gen, zxy_gen)
-        Gloss_identity_zxy          = torch.mean(torch.abs(Dzyx - Dzxy))
+        x_gen   = self.Gy(zf_inp)
+
+        wnx,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        zf_gen  = zcat(zxy_gen,o0l(zy))
+        x_rec   = self.Gy(zf_gen)
+
+        x_gen   = zcat(x_gen,wnx)
+        zxx_F, zxy_F, *others = self.F_(x_gen)
+        zf_rec = zcat(zxx_F,o0l(zy))
+
+        Gloss_rec_x = torch.mean(torch.abs(x - x_rec))
+        Gloss_rec_zf= torch.mean(torch.abs(zf_inp - zf_rec))
+
+        #forcing zxy to be guassian
+        _, Dfake_zxy            = self.discriminate_zxy(zyx, zxy_gen)
+        Gloss_identity_zxy      = self.bce_loss(Dfake_zxy)
+
+        #forcing reconstruction of x
+        _, Dfake_x              = self.discriminate_xx(x,x_gen)
+        Gloss_identity_x        = self.bce_loss(Dfake_x, o1l(Dfake_x)) 
 
         # 7.2 Forcig zx to equal 0
-        Gloss_identity_zx           = torch.mean(torch.abs(zxx_F))
+        Gloss_identity_zx       = torch.mean(torch.abs(zxx_F))
 
         # 7. Total Loss
-
-        Gloss_cycle_consistency     = Gloss_cycle_consistency_y +  Gloss_cycle_consistency_zd
-        Gloss_identity              = Gloss_identity_y + Gloss_identity_zd + Gloss_identity_zxy + Gloss_identity_zx
-        Gloss                       = (
+        Gloss_cycle_consistency = Gloss_cycle_consistency_y +  Gloss_cycle_consistency_zd
+        Gloss_identity          = ( 
+                                    Gloss_identity_y +
+                                    Gloss_identity_x +
+                                    Gloss_identity_zd + 
+                                    Gloss_identity_zxy + 
+                                    Gloss_identity_zx + 
+                                )
+        Gloss                   = (
                                         Gloss_ali + 
                                         Gloss_cycle_consistency*app.LAMBDA_CONSISTENCY + 
                                         Gloss_identity*app.LAMBDA_IDENTITY
-                                    )
+                                )
         Gloss.backward()
         self.oGyx.step()
         zerograd(self.optz)
@@ -541,7 +577,10 @@ class trainer(object):
         nch_zd, nzd = 16,128
         nch_zf, nzf =  8,128
         bar = trange(opt.niter)
-        # torch.random.manual_seed(0)
+
+        if self.trial != None:
+            #forcing the same seed to increase the research of good hyper parameter
+            torch.random.manual_seed(0)
         
         for epoch in bar:
             for b,batch in enumerate(loader):
@@ -617,7 +656,10 @@ class trainer(object):
                 bar.set_postfix(status = 'writing reconstructed filtered signals ...')
                 self.writer_val.add_figure('Filtered',figure_fl, epoch)
                 self.writer_val.add_figure('Goodness of Fit Filtered',gof_fl, epoch)
-                random.seed(opt.manualSeed)
+
+                if self.trial == None:
+                    #in case of real training
+                    random.seed(opt.manualSeed)
 
             
             if (epoch+1)%20 == 0:
