@@ -493,7 +493,7 @@ class trainer(object):
 
         Gloss_rec_x = torch.mean(torch.abs(x - x_rec))
         Gloss_rec_zf= torch.mean(torch.abs(zf_inp - zf_rec))
-        Gloss_rec_zxy = torch.mean(torch.abs(zxy_rec - zxy_rec))
+        Gloss_rec_zxy = torch.mean(torch.abs(zxy_rec - zyx_rec))
 
         #forcing zxy to be guassian
         _, Dfake_zxy            = self.discriminate_zxy(zxy, zxy_rec)
