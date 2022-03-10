@@ -111,7 +111,8 @@ class trainer(object):
             'Gloss_identity_x':[0],
             'Gloss_identity_zd':[0],
             'Gloss_identity_zx':[0],
-            'Gloss_identity_zxy':[0]
+            'Gloss_identity_zxy':[0],
+            'Gloss_rec_zxy':[0]
         }
 
         # self.writer_train = SummaryWriter('runs_both/filtered/tuning/training')
@@ -350,6 +351,7 @@ class trainer(object):
         # 2.1 Generate conditional samples
         y_gen = self.Gy(z_inp)
         zyy_F,zyx_F,*other = self.F_(y_inp)
+        
         #2.2 Concatenate outputs
         zyy_gen = zcat(zyx_F,zyy_F)
         zyx_gen = zcat(zyx_F)
@@ -382,7 +384,7 @@ class trainer(object):
         # 7. Forcing zxy to equal zyx an zx to equal 0 of the space
 
         # 7.1 Trying to match zxy and zy
-        wnx,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         x_inp   = zcat(x,wnx)
         zf_inp  = zcat(zxy,o0l(zyy))
 
@@ -390,7 +392,7 @@ class trainer(object):
         zxx_F, zxy_F, *others = self.F_(x_inp)
         zxy_gen = zcat(zxy_F)
 
-        wnx,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         x_gen = zcat(x_gen,wnx)
         _ , zxy_F,*others = self.F_(x_gen)
         zxy_rec = zcat(zxy_F)
@@ -458,6 +460,7 @@ class trainer(object):
         y_gen = zcat(y_gen,wny)
         zyy_F,zyx_F,*other = self.F_(y_gen)
         zyy_rec = zcat(zyx_F,zyy_F)
+        zyx_rec = zyx_F
     
         # 5. Cross-Discriminate XX
         _,Dfake_y = self.discriminate_yy(y,y_rec)
@@ -477,19 +480,20 @@ class trainer(object):
 
         _, _zxy_F, *others = self.F_(x_inp)
         zxy_gen = zcat(_zxy_F)
-        x_gen   = self.Gy(zf_inp)
+        _x_gen   = self.Gy(zf_inp)
 
         wnx,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         zf_gen  = zcat(zxy_gen,o0l(zyy))
         x_rec   = self.Gy(zf_gen)
 
-        x_gen   = zcat(x_gen,wnx)
+        x_gen   = zcat(_x_gen,wnx)
         zxx_F, zxy_F, *others = self.F_(x_gen)
-        zxy_rec = zcat(zxx_F)
+        zxy_rec = zcat(zxy_F)
         zf_rec  = zcat(zxy_F,zxx_F)
 
         Gloss_rec_x = torch.mean(torch.abs(x - x_rec))
         Gloss_rec_zf= torch.mean(torch.abs(zf_inp - zf_rec))
+        Gloss_rec_zxy = torch.mean(torch.abs(zxy_rec - zxy_rec))
 
         #forcing zxy to be guassian
         _, Dfake_zxy            = self.discriminate_zxy(zxy, zxy_rec)
@@ -509,13 +513,28 @@ class trainer(object):
                                     Gloss_identity_x +
                                     Gloss_identity_zd + 
                                     Gloss_identity_zxy + 
-                                    Gloss_identity_zx  
+                                    Gloss_identity_zx + 
+                                    Gloss_rec_zxy 
                                 )
         Gloss                   = (
                                     Gloss_ali + 
                                     Gloss_cycle_consistency*app.LAMBDA_CONSISTENCY + 
                                     Gloss_identity*app.LAMBDA_IDENTITY
                                 )
+
+        if epoch%57 == 0: 
+            writer = self.writer_debug if trial_writer == None else trial_writer
+            for idx in range(opt.batchSize//torch.cuda.device_count()):
+                writer.add_histogram("common/zyx", zyx_rec[idx,:], epoch)
+            for idx in range(opt.batchSize//torch.cuda.device_count()):
+                writer.add_histogram("common/zxy", zxy_rec[idx,:], epoch)
+
+            for idx in range(opt.batchSize//torch.cuda.device_count()):
+                writer.add_histogram("specific/zyy", zyy_F[idx,:], epoch)
+            for idx in range(opt.batchSize//torch.cuda.device_count()):
+                writer.add_histogram("specific/zxx", zxx_F[idx,:], epoch)
+
+
         Gloss.backward()
         self.oGyx.step()
         zerograd(self.optz)
@@ -535,6 +554,7 @@ class trainer(object):
         self.losses['Gloss_identity_zx'].append(Gloss_identity_zx.tolist())
 
         self.losses['Gloss_identity_zxy'].append(Gloss_identity_zxy.tolist())
+        self.losses['Gloss_rec_zxy'].append(Gloss_rec_zxy.tolist())
 
     def generate_latent_variable(self, batch, nch_zd,nzd, nch_zf = 128,nzf = 128):
         zyy  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
@@ -573,9 +593,10 @@ class trainer(object):
         nch_zf, nzf = 4,128
         bar = trange(opt.niter)
 
-        if self.trial != None:
-            #forcing the same seed to increase the research of good hyper parameter
-            torch.random.manual_seed(0)
+        # if self.trial != None:
+        #     #forcing the same seed to increase the research of good hyper parameter
+        #     torch.random.manual_seed(0)
+        torch.random.manual_seed(0)
         
         for epoch in bar:
             for b,batch in enumerate(loader):
@@ -652,24 +673,44 @@ class trainer(object):
                 self.writer_val.add_figure('Filtered',figure_fl, epoch)
                 self.writer_val.add_figure('Goodness of Fit Filtered',gof_fl, epoch)
 
-                if self.trial == None:
-                    #in case of real training
-                    random.seed(opt.manualSeed)
+                figure_hb, gof_hb = plt.plot_generate_classic(
+                        tag     = 'hybrid',
+                        Qec     = deepcopy(self.F_),
+                        Pdc     = deepcopy(self.Gy),
+                        trn_set = self.vld_loader,
+                        pfx     ="vld_set_bb_unique",
+                        opt     = opt,
+                        outf    = outf, 
+                        save    = False)
+
+                bar.set_postfix(status = 'writing reconstructed hybrid signals ...')
+                self.writer_val.add_figure('Hybrid',figure_hb, epoch)
+                self.writer_val.add_figure('Goodness of Fit Hybrid',gof_hb, epoch)
+
+                # if self.trial == None:
+                #     #in case of real training
+                #     random.seed(opt.manualSeed)
+                torch.manual_seed(0)
 
             
             if (epoch+1)%20 == 0:
-                val_accuracy_bb, val_accuracy_fl = self.accuracy()
+                val_accuracy_bb, val_accuracy_fl, val_accuracy_hb = self.accuracy()
                 app.logger.info("val_accuracy broadband = {:>5.3f}".format(val_accuracy_bb))
                 app.logger.info("val_accuracy filtered  = {:>5.3f}".format(val_accuracy_fl))
-                bar.set_postfix(**{'val_accuracy_bb':val_accuracy_bb,'val_accuracy_fl':val_accuracy_fl})
+                app.logger.info("val_accuracy hybrid    = {:>5.3f}".format(val_accuracy_hb))
+                bar.set_postfix(**{'val_accuracy_bb':val_accuracy_bb,
+                                    'val_accuracy_fl':val_accuracy_fl,
+                                    'val_accuracy_hb':val_accuracy_hb})
        
                 if self.study_dir == None:
                     self.writer_debug.add_scalar('Accuracy/Broadband',val_accuracy_bb, epoch)
                     self.writer_debug.add_scalar('Accuracy/Filtered',val_accuracy_fl, epoch)
+                    self.writer_debug.add_scalar('Accuracy/JHybrid',val_accuracy_hb, epoch)
 
                 elif self.study_dir!=None:
                     self.writer_accuracy.add_scalar('Accuracy/Broadband',val_accuracy_bb,epoch)
                     self.writer_accuracy.add_scalar('Accuracy/Filtered',val_accuracy_fl,epoch)
+                    self.writer_accuracy.add_scalar('Accuracy/Hybrid',val_accuracy_hb,epoch)
                     
                     self.writer_loss.add_scalar('Loss/Dloss',    float(Dloss),    epoch)
                     self.writer_loss.add_scalar('Loss/Dloss_zxy',float(Dloss_zxy),epoch)
@@ -677,12 +718,14 @@ class trainer(object):
                     self.writer_loss.add_scalar('Loss/Gloss_zxy',float(Gloss_zxy),epoch)
                     # bar.set_postfix(accuracy_fl = val_accuracy_fl)
                     # bar.set_postfix(accuracy_bb = val_accuracy_bb)
-                    self.trial.report(val_accuracy_bb, epoch)
+                    self.trial.report(val_accuracy_hb, epoch)
                     if self.trial.should_prune():
                         self.writer_hparams.add_hparams(
                         {'rlr' : self.rlr, 'glr':self.glr},
-                        {'hparams/broadband'  : val_accuracy_bb,
-                        'hparams/filtered'    : val_accuracy_fl})
+                        {'hparams/broadband': val_accuracy_bb,
+                         'hparams/filtered' : val_accuracy_fl,
+                         'hparams/hybrid'   : val_accuracy_hb
+                        })
 
                         raise optuna.exceptions.TrialPruned()
                 else:
@@ -742,12 +785,23 @@ class trainer(object):
                     self.writer_hparams.add_hparams(
                     {'rlr'  : self.rlr, 'glr'  : self.glr},
                     {'hparams/broadband': val_accuracy_bb,
-                    'hparams/filtered' : val_accuracy_fl})
+                     'hparams/filtered' : val_accuracy_fl,
+                     'hparams/hybrid'   : val_accuracy_hb,
+                    })
                     app.logger.info('Evaluating ...')
-                    return max(val_accuracy_bb,val_accuracy_fl)
+                    return val_accuracy_hb
 
     def accuracy(self):
         total = 0
+        EG_h, PG_h  = plt.get_gofs(tag = 'hybrid', 
+            Qec = self.F_, 
+            Pdc = self.Gy , 
+            trn_set = self.vld_loader, 
+            pfx="vld_set_bb_unique",
+            opt = opt,
+            std = self.std, 
+            outf = outf)
+
         EG_b, PG_b  = plt.get_gofs(tag = 'broadband', 
             Qec = self.F_, 
             Pdc = self.Gy , 
@@ -766,6 +820,11 @@ class trainer(object):
             std = self.std, 
             outf = outf)
 
+        val_h = np.sqrt(np.power([10 - eg for eg in EG_h],2)+\
+                np.power([10 - pg for pg in PG_h],2))
+        accuracy_hb = val_h.mean().tolist()
+
+
         val_b = np.sqrt(np.power([10 - eg for eg in EG_b],2)+\
                      np.power([10 - pg for pg in PG_b],2))
         accuracy_bb = val_b.mean().tolist()
@@ -777,7 +836,7 @@ class trainer(object):
         # if accuracy == np.nan:
         #     accuracy =10*np.sqrt(2)
         #     return accuracy
-        return accuracy_bb, accuracy_fl
+        return accuracy_bb, accuracy_fl,accuracy_hb
 
 
 
