@@ -4,6 +4,8 @@ u'''Train and Test AAE'''
 u'''Required modules'''
 
 from copy import deepcopy
+import imp
+import torch
 from common.common_nn import *
 from common.common_torch import * 
 import plot.plot_tools as plt
@@ -112,7 +114,9 @@ class trainer(object):
             'Gloss_identity_zd':[0],
             'Gloss_identity_zx':[0],
             'Gloss_identity_zxy':[0],
-            'Gloss_rec_zxy':[0]
+            'Gloss_rec_zxy':[0],
+            'Gloss_rec_x':[0],
+            'Gloss_rec_zf':[0]
         }
 
         # self.writer_train = SummaryWriter('runs_both/filtered/tuning/training')
@@ -332,8 +336,8 @@ class trainer(object):
         return Dreal,Dfake
 
     def discriminate_zxy(self,z_yx,z_xy):
-        D_zyx = self.Dzyx(z_yx)
-        D_zxy = self.Dzyx(z_xy)
+        D_zyx = self.Dzyx(zcat(z_yx,z_yx))
+        D_zxy = self.Dzyx(zcat(z_yx,z_xy))
         return D_zyx,D_zxy
     
     # @profile
@@ -389,16 +393,16 @@ class trainer(object):
         zf_inp  = zcat(zxy,o0l(zyy))
 
         x_gen   = self.Gy(zf_inp)
-        zxx_F, zxy_F, *others = self.F_(x_inp)
+        _ ,zxy_F, *others = self.F_(x_inp)
         zxy_gen = zcat(zxy_F)
 
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        x_gen = zcat(x_gen,wnx)
+        x_gen   = zcat(x_gen,wnx)
         _ , zxy_F,*others = self.F_(x_gen)
         zxy_rec = zcat(zxy_F)
 
-        zf_gen = zcat(zxy_gen,o0l(zyy))
-        x_rec = self.Gy(zf_gen)
+        zf_gen  = zcat(zxy_gen,o0l(zyy))
+        x_rec   = self.Gy(zf_gen)
 
         #forcing zxy from x to be guassian
         Dreal_zxy,Dfake_zxy = self.discriminate_zxy(zxy, zxy_rec)
@@ -445,7 +449,6 @@ class trainer(object):
         y_gen = self.Gy(z_inp)
         zyy_F,zyx_F,*other = self.F_(y_inp) 
         zyx_gen = zcat(zyx_F)
-        _zyy_gen= zyy_F
         zyy_gen = zcat(zyx_F,zyy_F) 
         Dyz,Dzy = self.discriminate_yz(y,y_gen,z_inp,zyy_gen)
         
@@ -491,9 +494,9 @@ class trainer(object):
         zxy_rec = zcat(zxy_F)
         zf_rec  = zcat(zxy_F,zxx_F)
 
-        Gloss_rec_x = torch.mean(torch.abs(x - x_rec))
-        Gloss_rec_zf= torch.mean(torch.abs(zf_inp - zf_rec))
-        Gloss_rec_zxy = torch.mean(torch.abs(zxy_rec - zyx_rec))
+        Gloss_rec_x     = torch.mean(torch.abs(x - x_rec))
+        Gloss_rec_zf    = torch.mean(torch.abs(zf_inp - zf_rec))
+        Gloss_rec_zxy   = torch.mean(torch.abs(zxy_gen - zyx_gen))
 
         #forcing zxy to be guassian
         _, Dfake_zxy            = self.discriminate_zxy(zxy, zxy_rec)
@@ -507,13 +510,15 @@ class trainer(object):
         Gloss_identity_zx       = torch.mean(torch.abs(zxx_F))
 
         # 7. Total Loss
-        Gloss_cycle_consistency = Gloss_cycle_consistency_y + Gloss_cycle_consistency_zd
+        Gloss_cycle_consistency = Gloss_cycle_consistency_y + Gloss_cycle_consistency_zd 
         Gloss_identity          = ( 
                                     Gloss_identity_y +
                                     Gloss_identity_x +
                                     Gloss_identity_zd + 
                                     Gloss_identity_zxy + 
                                     Gloss_identity_zx + 
+                                    Gloss_rec_zf +
+                                    Gloss_rec_x+
                                     Gloss_rec_zxy 
                                 )
         Gloss                   = (
@@ -555,6 +560,8 @@ class trainer(object):
 
         self.losses['Gloss_identity_zxy'].append(Gloss_identity_zxy.tolist())
         self.losses['Gloss_rec_zxy'].append(Gloss_rec_zxy.tolist())
+        self.losses['Gloss_rec_x'].append(Gloss_rec_x.tolist())
+        self.losses['Gloss_rec_zf'].append(Gloss_rec_zf.tolist())
 
     def generate_latent_variable(self, batch, nch_zd,nzd, nch_zf = 128,nzf = 128):
         zyy  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
@@ -581,7 +588,7 @@ class trainer(object):
             start_time          = time.ctime(time.time()).replace(' ','-').replace(':','_')
             writer_loss_dir     = f'{self.study_dir}/hparams/trial-{self.trial.number}/loss/evento-{start_time}/'
             writer_accuracy_dir = f'{self.study_dir}/hparams/trial-{self.trial.number}/accuracy/evento-{start_time}/'
-            writer_histo_dir    = f'{self.study_dir}/hparams/trial-{self.trial.number}/histogram/evento-{start_time}/'
+            # writer_histo_dir    = f'{self.study_dir}/hparams/trial-{self.trial.number}/histogram/evento-{start_time}/'
             
             self.writer_loss     = SummaryWriter(writer_loss_dir)
             self.writer_accuracy = SummaryWriter(writer_accuracy_dir)

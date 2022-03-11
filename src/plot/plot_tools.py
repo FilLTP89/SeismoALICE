@@ -921,9 +921,12 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             # pdb.set_trace()
 
             zy,zdf_gen,*other =  Qec(X_inp)
-            # wn = torch.empty(zt_shape).normal_(**app.RNDM_ARGS).to(dev)
-            # wn = torch.zeros_like(zt)
-            ztr = zcat(zdf_gen,zy)
+            if str(pfx).find('hack')!=-1:
+                ztr =  zcat(zdf_gen,o0l(zy))
+                # wn = torch.empty(zt_shape).normal_(**app.RNDM_ARGS).to(dev)
+                # wn = torch.zeros_like(zt)
+            else:
+                ztr = zcat(zdf_gen,zy)
         else:
             ztr = Qec(X_inp)
 
@@ -1173,7 +1176,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                     nch_zd, nzd = 4,128
                     nch_zf, nzf = 4,128
                     wnx, wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch_zd,nzd],dev,rndm_args)
-                    ztr = zcat(zdf_gen,zy)
+                    ztr = zcat(zdf_gen,o0l(zy))
                 else:
                     ztr = zcat(zdf_gen,zy)
             else:
