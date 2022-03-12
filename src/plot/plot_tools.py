@@ -1064,11 +1064,11 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
         if 'unique' in pfx:
             # pdb.set_trace()
 
-            zy,_,*other =  Qec(X_inp)
+            # zy,_,*other =  Qec(X_inp)
             _,zdf_gen,*other = Qec(Xf_inp)
-            # wn = torch.empty(zt_shape).normal_(**app.RNDM_ARGS).to(dev)
+            wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(dev)
             # wn = torch.zeros_like(zt)
-            ztr = zcat(zdf_gen,zy)
+            ztr = zcat(zdf_gen,wn)
         else:
             ztr = Qec(X_inp)
 
@@ -1442,11 +1442,11 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             if 'unique' in pfx:
                 # pdb.set_trace()
 
-                zy,_,*other =  Qec(X_inp)
+                # zy,_,*other =  Qec(X_inp)
                 _,zdf_gen,*other = Qec(Xf_inp)
-                # wn = torch.empty(zt_shape).normal_(**app.RNDM_ARGS).to(dev)
+                wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(dev)
                 # wn = torch.zeros_like(zt)
-                ztr = zcat(zdf_gen,zy)
+                ztr = zcat(zdf_gen,wn)
             else:
                 ztr = Qec(X_inp)
 

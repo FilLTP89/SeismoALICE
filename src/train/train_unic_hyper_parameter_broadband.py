@@ -495,8 +495,8 @@ class trainer(object):
         zf_rec  = zcat(zxy_F,zxx_F)
 
         Gloss_rec_x     = torch.mean(torch.abs(x - x_rec))
-        Gloss_rec_zf    = torch.mean(torch.abs(zf_inp - zf_rec))
-        Gloss_rec_zxy   = torch.mean(torch.abs(zxy_gen - zyx_gen))
+        # Gloss_rec_zf    = torch.mean(torch.abs(zf_inp - zf_rec))
+        Gloss_rec_zxy   = torch.mean(torch.abs(zxy_rec - zyx_rec))
 
         #forcing zxy to be guassian
         _, Dfake_zxy            = self.discriminate_zxy(zxy, zxy_rec)
@@ -517,8 +517,8 @@ class trainer(object):
                                     Gloss_identity_zd + 
                                     Gloss_identity_zxy + 
                                     Gloss_identity_zx + 
-                                    Gloss_rec_zf +
-                                    Gloss_rec_x+
+                                    # Gloss_rec_zf +
+                                    Gloss_rec_x + 
                                     Gloss_rec_zxy 
                                 )
         Gloss                   = (
@@ -561,7 +561,7 @@ class trainer(object):
         self.losses['Gloss_identity_zxy'].append(Gloss_identity_zxy.tolist())
         self.losses['Gloss_rec_zxy'].append(Gloss_rec_zxy.tolist())
         self.losses['Gloss_rec_x'].append(Gloss_rec_x.tolist())
-        self.losses['Gloss_rec_zf'].append(Gloss_rec_zf.tolist())
+        # self.losses['Gloss_rec_zf'].append(Gloss_rec_zf.tolist())
 
     def generate_latent_variable(self, batch, nch_zd,nzd, nch_zf = 128,nzf = 128):
         zyy  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
