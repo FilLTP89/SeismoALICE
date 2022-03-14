@@ -507,7 +507,7 @@ class trainer(object):
         Gloss_rec_x             = torch.mean(torch.abs(x - x_rec))
 
         # 7.5 Forcig zx to equal 0
-        Gloss_rec_zx       = torch.mean(torch.abs(zxx_rec))
+        Gloss_rec_zx            = torch.mean(torch.abs(zxx_rec))
         Gloss_rec_zf            = torch.mean(torch.abs(zf_inp - zf_rec))
 
         # 8. Total Loss
@@ -528,7 +528,7 @@ class trainer(object):
                                     Gloss_identity*app.LAMBDA_IDENTITY
                                 )
 
-        if (epoch+1)%31 == 0: 
+        if epoch%30 == 0: 
             writer = self.writer_debug if trial_writer == None else trial_writer
             for idx in range(opt.batchSize//torch.cuda.device_count()):
                 writer.add_histogram("common/zyx", zyx_rec[idx,:], epoch)
@@ -636,7 +636,7 @@ class trainer(object):
                     self.alice_train_generator_adv(y,zyy,zyx,x,epoch, self.writer_histo)
                 app.logger.debug(f'Epoch [{epoch}/{opt.niter}]\tStep [{b}/{total_step-1}]')
                 
-                if epoch%20 == 0 and self.trial == None:
+                if epoch%20 == 0:
                     for k,v in self.losses.items():
                         self.writer_train.add_scalar('Loss/{}'.format(k),
                             np.mean(np.array(v[-b:-1])),epoch)
