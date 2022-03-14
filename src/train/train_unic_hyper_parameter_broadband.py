@@ -112,7 +112,7 @@ class trainer(object):
             'Gloss_identity_y':[0],
             'Gloss_identity_x':[0],
             'Gloss_identity_zd':[0],
-            'Gloss_identity_zx':[0],
+            'Gloss_rec_zx':[0],
             'Gloss_identity_zxy':[0],
             'Gloss_rec_zxy':[0],
             'Gloss_rec_x':[0],
@@ -349,67 +349,68 @@ class trainer(object):
         # 0. Generate noise
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         # 1. Concatenate inputs
-        z_inp = zcat(zxy,zyy)
-        y_inp = zcat(y,wny)
+        zd_inp  = zcat(zxy,zyy)
+        y_inp   = zcat(y,wny)
         
         # 2.1 Generate conditional samples
-        y_gen = self.Gy(z_inp)
+        y_gen   = self.Gy(zd_inp)
         zyy_F,zyx_F,*other = self.F_(y_inp)
         
         #2.2 Concatenate outputs
-        zyy_gen = zcat(zyx_F,zyy_F)
-        zyx_gen = zcat(zyx_F)
+        zd_gen= zcat(zyx_F,zyy_F)
 
         # 3. Cross-Discriminate YZ
-        Dyz,Dzy = self.discriminate_yz(y,y_gen,z_inp,zyy_gen)
+        Dyz,Dzy = self.discriminate_yz(y,y_gen,zd_inp,zd_gen)
 
         # 4. Compute ALI discriminator loss
         Dloss_ali_y = -torch.mean(ln0c(Dzy)+ln0c(1.0-Dyz))
 
         # 5. Generate reconstructions
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        y_rec  = self.Gy(zyy_gen)
+        y_rec       = self.Gy(zd_gen)
 
-        y_gen  = zcat(y_gen,wny)
-        zyy_F,zyx_F,*other = self.F_(y_gen)
-        zyy_rec = zcat(zyx_F,zyy_F)
+        y_gen   = zcat(y_gen,wny)
+        zyy_gen,zyx_gen,*other = self.F_(y_gen)
+        zd_rec  = zcat(zyx_gen,zyy_gen)
 
         # 6. Disciminate Cross Entropy  
         Dreal_y,Dfake_y     = self.discriminate_yy(y,y_rec)
         Dloss_rec_y         = self.bce_loss(Dreal_y,o1l(Dreal_y))+\
                                 self.bce_loss(Dfake_y,o0l(Dfake_y))
-        # Dloss_rec_y         = -torch.mean(ln0c(Dreal_y)+ln0c(1.0-Dfake_y))
+        # Dloss_rec_y       = -torch.mean(ln0c(Dreal_y)+ln0c(1.0-Dfake_y))
 
-        Dreal_zd,Dfake_zd   = self.discriminate_zzb(z_inp,zyy_rec)
+        Dreal_zd,Dfake_zd   = self.discriminate_zzb(zd_inp,zd_rec)
         Dloss_rec_zy        = self.bce_loss(Dreal_zd,o1l(Dreal_zd))+\
                                 self.bce_loss(Dfake_zd,o0l(Dfake_zd))
         # Dloss_rec_zy        = -torch.mean(ln0c(Dreal_zd)+ln0c(1.0-Dfake_zd)
 
         # 7. Forcing zxy to equal zyx an zx to equal 0 of the space
 
-        # 7.1 Trying to match zxy and zy
+        # 7.1 Concatenate inputs
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         x_inp   = zcat(x,wnx)
         zf_inp  = zcat(zxy,o0l(zyy))
 
+        # 7.2 Generate samples
         x_gen   = self.Gy(zf_inp)
-        _ ,zxy_F, *others = self.F_(x_inp)
-        zxy_gen = zcat(zxy_F)
+        zxx_F, zxy_F, *others = self.F_(x_inp)
+        
+        # 7.3 Concatenate outputs
+        zf_gen = zcat(zxy_F,zxx_F)
 
+        # 7.4 Generate reconstructions
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        x_gen   = zcat(x_gen,wnx)
-        _ , zxy_F,*others = self.F_(x_gen)
-        zxy_rec = zcat(zxy_F)
+        x_gen       = zcat(x_gen,wnx)
+        _, zxy_rec,*others = self.F_(x_gen)
 
-        zf_gen  = zcat(zxy_gen,o0l(zyy))
-        x_rec   = self.Gy(zf_gen)
+        x_rec       = self.Gy(zf_gen)
 
-        #forcing zxy from x to be guassian
-        Dreal_zxy,Dfake_zxy = self.discriminate_zxy(zxy, zxy_rec)
+        # 7.5 Forcing Zxy from X to be guassian
+        Dreal_zxy, Dfake_zxy= self.discriminate_zxy(zxy, zxy_rec)
         Dloss_rec_zxy       = self.bce_loss(Dreal_zxy,o1l(Dreal_zxy))+\
                                 self.bce_loss(Dfake_zxy,o0l(Dfake_zxy))
 
-        #forcing zy from x to be useless for the training
+        # 7.6 Forcing Zy from X to be useless for the training
         Dreal_x, Dfake_x    = self.discriminate_xx(x,x_rec)
         Dloss_rec_x         = self.bce_loss(Dreal_x,o1l(Dreal_x))+\
                                 self.bce_loss(Dfake_x,o0l(Dfake_x))
@@ -437,20 +438,18 @@ class trainer(object):
         zerograd(self.optz)
         modalite(self.FGf,   mode ='train')
         modalite(self.Dnets, mode ='train')
-
-        
-        wny,wnz,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         
         # 1. Concatenate inputs
-        y_inp  = zcat(y,wny)
-        z_inp  = zcat(zxy,zyy)
-         
+        wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        y_inp   = zcat(y,wny)
+        zd_inp   = zcat(zxy,zyy)
+
         # 2. Generate conditional samples
-        y_gen = self.Gy(z_inp)
-        zyy_F,zyx_F,*other = self.F_(y_inp) 
-        zyx_gen = zcat(zyx_F)
-        zyy_gen = zcat(zyx_F,zyy_F) 
-        Dyz,Dzy = self.discriminate_yz(y,y_gen,z_inp,zyy_gen)
+        y_gen   = self.Gy(zd_inp)
+        zyy_F,zyx_F,*others = self.F_(y_inp)
+
+        _zyy_gen= zcat(zyx_F,zyy_F) 
+        Dyz,Dzy = self.discriminate_yz(y,y_gen,zd_inp,_zyy_gen)
         
         Gloss_ali =  torch.mean(-Dyz+Dzy) 
         
@@ -458,66 +457,68 @@ class trainer(object):
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
 
         # 4. Generate reconstructions
-        y_rec = self.Gy(zyy_gen)
+        y_rec = self.Gy(_zyy_gen)
         
         y_gen = zcat(y_gen,wny)
-        zyy_F,zyx_F,*other = self.F_(y_gen)
-        zyy_rec = zcat(zyx_F,zyy_F)
-        zyx_rec = zyx_F
+        zyy_rec,zyx_rec,*other = self.F_(y_gen)
+
+        zd_rec = zcat(zyx_rec,zyy_rec)
     
-        # 5. Cross-Discriminate XX
+        # 5. Cross-Discriminate YY
         _,Dfake_y = self.discriminate_yy(y,y_rec)
         Gloss_cycle_consistency_y   = self.bce_loss(Dfake_y,o1l(Dfake_y))
         Gloss_identity_y            = torch.mean(torch.abs(y-y_rec)) 
         
         # 6. Cross-Discriminate ZZ
-        _,Dfake_zd = self.discriminate_zzb(z_inp,zyy_rec)
+        _,Dfake_zd = self.discriminate_zzb(zd_inp,zd_rec)
         Gloss_cycle_consistency_zd  = self.bce_loss(Dfake_zd,o1l(Dfake_zd))
-        Gloss_identity_zd           = torch.mean(torch.abs(z_inp-zyy_rec))
+        Gloss_identity_zd           = torch.mean(torch.abs(zd_inp-zd_rec))
 
         #7. Forcing zxy to equal zyx an zx to equal 0 of the space
-        # 7.1 Forcing zxy ot equal zyx
-        wnx,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        
+        # 7.1 Inputs
+        wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         x_inp   = zcat(x,wnx)
         zf_inp  = zcat(zxy,o0l(zyy))
 
-        _, _zxy_F, *others = self.F_(x_inp)
-        zxy_gen = zcat(_zxy_F)
+        # 7.2 Generate conditional outputs
+        zxx_F, zxy_F, *others = self.F_(x_inp)
+        zf_gen  = zcat(zxy_F, zxx_F)
+
         _x_gen   = self.Gy(zf_inp)
 
-        wnx,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        zf_gen  = zcat(zxy_gen,o0l(zyy))
+        # 7.3 Generate reconstructions values
+        wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         x_rec   = self.Gy(zf_gen)
 
         x_gen   = zcat(_x_gen,wnx)
-        zxx_F, zxy_F, *others = self.F_(x_gen)
-        zxy_rec = zcat(zxy_F)
-        zf_rec  = zcat(zxy_F,zxx_F)
+        zxx_rec, zxy_rec, *others = self.F_(x_gen)
 
-        Gloss_rec_x     = torch.mean(torch.abs(x - x_rec))
-        # Gloss_rec_zf    = torch.mean(torch.abs(zf_inp - zf_rec))
-        Gloss_rec_zxy   = torch.mean(torch.abs(zxy_rec - zyx_rec))
+        zf_rec  = zcat(zxy_rec,zxx_rec)
 
-        #forcing zxy to be guassian
+        # 7.4 Forcing Zxy from X to be guassian
         _, Dfake_zxy            = self.discriminate_zxy(zxy, zxy_rec)
         Gloss_identity_zxy      = self.bce_loss(Dfake_zxy, o1l(Dfake_zxy))
+        Gloss_rec_zxy           = torch.mean(torch.abs(zxy - zxy_rec)) + torch.mean(torch.abs(zxy-zyx_rec))
 
-        #forcing reconstruction of x
+        # 7.4 Cross-Discriminate XX
         _, Dfake_x              = self.discriminate_xx(x,x_rec)
-        Gloss_identity_x        = self.bce_loss(Dfake_x, o1l(Dfake_x)) 
+        Gloss_identity_x        = self.bce_loss(Dfake_x, o1l(Dfake_x))
+        Gloss_rec_x             = torch.mean(torch.abs(x - x_rec))
 
-        # 7.2 Forcig zx to equal 0
-        Gloss_identity_zx       = torch.mean(torch.abs(zxx_F))
+        # 7.5 Forcig zx to equal 0
+        Gloss_rec_zx       = torch.mean(torch.abs(zxx_rec))
+        Gloss_rec_zf            = torch.mean(torch.abs(zf_inp - zf_rec))
 
-        # 7. Total Loss
+        # 8. Total Loss
         Gloss_cycle_consistency = Gloss_cycle_consistency_y + Gloss_cycle_consistency_zd 
         Gloss_identity          = ( 
                                     Gloss_identity_y +
                                     Gloss_identity_x +
                                     Gloss_identity_zd + 
                                     Gloss_identity_zxy + 
-                                    Gloss_identity_zx + 
-                                    # Gloss_rec_zf +
+                                    Gloss_rec_zx + 
+                                    Gloss_rec_zf +
                                     Gloss_rec_x + 
                                     Gloss_rec_zxy 
                                 )
@@ -527,7 +528,7 @@ class trainer(object):
                                     Gloss_identity*app.LAMBDA_IDENTITY
                                 )
 
-        if epoch%57 == 0: 
+        if (epoch+1)%31 == 0: 
             writer = self.writer_debug if trial_writer == None else trial_writer
             for idx in range(opt.batchSize//torch.cuda.device_count()):
                 writer.add_histogram("common/zyx", zyx_rec[idx,:], epoch)
@@ -535,9 +536,9 @@ class trainer(object):
                 writer.add_histogram("common/zxy", zxy_rec[idx,:], epoch)
 
             for idx in range(opt.batchSize//torch.cuda.device_count()):
-                writer.add_histogram("specific/zyy", zyy_F[idx,:], epoch)
+                writer.add_histogram("specific/zyy", zyy_rec[idx,:], epoch)
             for idx in range(opt.batchSize//torch.cuda.device_count()):
-                writer.add_histogram("specific/zxx", zxx_F[idx,:], epoch)
+                writer.add_histogram("specific/zxx", zxx_rec[idx,:], epoch)
 
 
         Gloss.backward()
@@ -556,9 +557,10 @@ class trainer(object):
         self.losses['Gloss_identity_y' ].append(Gloss_identity_y.tolist())
         self.losses['Gloss_identity_x' ].append(Gloss_identity_x.tolist())
         self.losses['Gloss_identity_zd'].append(Gloss_identity_zd.tolist())
-        self.losses['Gloss_identity_zx'].append(Gloss_identity_zx.tolist())
-
+        
         self.losses['Gloss_identity_zxy'].append(Gloss_identity_zxy.tolist())
+
+        self.losses['Gloss_rec_zx'].append(Gloss_rec_zx.tolist())
         self.losses['Gloss_rec_zxy'].append(Gloss_rec_zxy.tolist())
         self.losses['Gloss_rec_x'].append(Gloss_rec_x.tolist())
         # self.losses['Gloss_rec_zf'].append(Gloss_rec_zf.tolist())
