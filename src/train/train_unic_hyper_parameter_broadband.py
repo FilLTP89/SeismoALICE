@@ -85,8 +85,9 @@ class trainer(object):
         nzd = opt.nzd
         ndf = opt.ndf
         ngpu_use = torch.cuda.device_count()
-        # torch.backends.cudnn.deterministic  = True
-        # torch.backends.cudnn.benchmark      = False
+        # To make sure that all operation are deterministic in that GPU for reproductibility
+        torch.backends.cudnn.deterministic  = True
+        torch.backends.cudnn.benchmark      = False
 
         self.Dnets      = []
         self.optz       = []
