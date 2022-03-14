@@ -86,8 +86,8 @@ class trainer(object):
         ndf = opt.ndf
         ngpu_use = torch.cuda.device_count()
         # To make sure that all operation are deterministic in that GPU for reproductibility
-        torch.backends.cudnn.deterministic  = True
-        torch.backends.cudnn.benchmark      = False
+        # torch.backends.cudnn.deterministic  = True
+        # torch.backends.cudnn.benchmark      = False
 
         self.Dnets      = []
         self.optz       = []
@@ -500,16 +500,17 @@ class trainer(object):
         # 7.4 Forcing Zxy from X to be guassian
         _, Dfake_zxy            = self.discriminate_zxy(zxy, zxy_rec)
         Gloss_identity_zxy      = self.bce_loss(Dfake_zxy, o1l(Dfake_zxy))
-        Gloss_rec_zxy           = torch.mean(torch.abs(zxy - zxy_rec)) + torch.mean(torch.abs(zxy-zyx_rec))
+        Gloss_rec_zxy           = torch.mean(torch.abs(zxy-zxy_rec)) +\
+                                     torch.mean(torch.abs(zxy-zyx_rec))
 
         # 7.4 Cross-Discriminate XX
         _, Dfake_x              = self.discriminate_xx(x,x_rec)
         Gloss_identity_x        = self.bce_loss(Dfake_x, o1l(Dfake_x))
         Gloss_rec_x             = torch.mean(torch.abs(x - x_rec))
 
-        # 7.5 Forcig zx to equal 0
+        # 7.5 Forcig Zx to equal 0
         Gloss_rec_zx            = torch.mean(torch.abs(zxx_rec))
-        Gloss_rec_zf            = torch.mean(torch.abs(zf_inp - zf_rec))
+        Gloss_rec_zf            = torch.mean(torch.abs(zf_inp-zf_rec))
 
         # 8. Total Loss
         Gloss_cycle_consistency = Gloss_cycle_consistency_y + Gloss_cycle_consistency_zd 
@@ -564,7 +565,7 @@ class trainer(object):
         self.losses['Gloss_rec_zx'].append(Gloss_rec_zx.tolist())
         self.losses['Gloss_rec_zxy'].append(Gloss_rec_zxy.tolist())
         self.losses['Gloss_rec_x'].append(Gloss_rec_x.tolist())
-        # self.losses['Gloss_rec_zf'].append(Gloss_rec_zf.tolist())
+        self.losses['Gloss_rec_zf'].append(Gloss_rec_zf.tolist())
 
     def generate_latent_variable(self, batch, nch_zd,nzd, nch_zf = 128,nzf = 128):
         zyy  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
