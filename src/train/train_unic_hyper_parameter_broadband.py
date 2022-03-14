@@ -6,6 +6,7 @@ u'''Required modules'''
 from copy import deepcopy
 import imp
 import torch
+import random
 from common.common_nn import *
 from common.common_torch import * 
 import plot.plot_tools as plt
@@ -606,8 +607,6 @@ class trainer(object):
 
         # if self.trial != None:
         #     #forcing the same seed to increase the research of good hyper parameter
-        #     torch.random.manual_seed(0)
-        torch.random.manual_seed(0)
         
         for epoch in bar:
             for b,batch in enumerate(loader):
@@ -638,7 +637,7 @@ class trainer(object):
                     self.alice_train_generator_adv(y,zyy,zyx,x,epoch, self.writer_histo)
                 app.logger.debug(f'Epoch [{epoch}/{opt.niter}]\tStep [{b}/{total_step-1}]')
                 
-                if epoch%20 == 0:
+                if epoch%20 == 0 and self.trial== None:
                     for k,v in self.losses.items():
                         self.writer_train.add_scalar('Loss/{}'.format(k),
                             np.mean(np.array(v[-b:-1])),epoch)
@@ -700,9 +699,7 @@ class trainer(object):
 
                 # if self.trial == None:
                 #     #in case of real training
-                #     random.seed(opt.manualSeed)
-                torch.manual_seed(0)
-
+                random.seed(opt.manualSeed)
             
             if (epoch+1)%20 == 0:
                 val_accuracy_bb, val_accuracy_fl, val_accuracy_hb = self.accuracy()
