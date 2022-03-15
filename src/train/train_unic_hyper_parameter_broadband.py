@@ -14,6 +14,7 @@ import profiling.profile_support as profile
 from tools.generate_noise import latent_resampling, noise_generator
 from database.database_sae import random_split 
 from database.database_sae import thsTensorData
+from torch.optim.lr_scheduler import MultiStepLR
 import torch.nn as nn
 import random 
 import json
@@ -60,12 +61,11 @@ class trainer(object):
         ngpu_use = torch.cuda.device_count()
 
         if self.trial!=None:
-            self.glr = self.trial.suggest_float("glrx",0.0001, 0.01,log=True)
-            self.rlr = self.trial.suggest_float("rlrx",0.0001, 0.01,log=True)
-            self.weight_decay = self.trial.suggest_float("weight_decay",1.E-6,1.E-4)
+            self.glr = self.trial.suggest_float("glrx",0.0001, 0.1,log=True)
+            self.rlr = self.trial.suggest_float("rlrx",0.0001, 0.1,log=True)
+            self.weight_decay = self.trial.suggest_float("weight_decay",1.E-6,1.E-5,log=True)
         else:
             try:
-                # [TODO] divide by two the learning rate values
                 self.glr = float(opt.config["hparams"]['glry'])
                 self.rlr = float(opt.config["hparams"]['rlry'])
                 self.weight_decay = float(opt.config["hparams"]["weight_decay"])
@@ -90,8 +90,8 @@ class trainer(object):
         ndf = opt.ndf
         ngpu_use = torch.cuda.device_count()
         # To make sure that all operation are deterministic in that GPU for reproductibility
-        torch.backends.cudnn.deterministic  = True
-        torch.backends.cudnn.benchmark      = False
+        # torch.backends.cudnn.deterministic  = True
+        # torch.backends.cudnn.benchmark      = False
 
         self.Dnets      = []
         self.optz       = []
@@ -163,6 +163,8 @@ class trainer(object):
                     self.oGyx = reset_net(self.FGf,
                         func=set_weights,lr=self.glr,b1=b1,b2=b2,
                         weight_decay=self.weight_decay)
+
+                    self.g_scheduler = MultiStepLR(self.oGyx,milestones=[30,80], gamma=0.1) 
                     # self.oGyx = Adam(ittc(self.F_.branch_common.parameters(),
                     #     self.Gx.parameters()),
                     #     lr=glr,betas=(b1,b2),
@@ -186,9 +188,11 @@ class trainer(object):
                     for param in self.F_.module.cnn_common.parameters():
                         param.requires_grad = False
 
-                    self.oGyx = Adam(ittc(self.F_.parameters()),
+                    self.oGyx = MultiStepLR(Adam(ittc(self.F_.parameters()),
                         lr=self.glr,betas=(b1,b2),
-                        weight_decay=self.weight_decay)
+                        weight_decay=self.weight_decay))
+                    
+                    self.g_scheduler = MultiStepLR(self.oGyx,milestones=[30,80], gamma=0.1)
                     # self.oGy = Adam(ittc(self.F_.branch_broadband.parameters(),
                     #     self.Gy.parameters()),
                     #     lr=ngpu_use*glr,betas=(b1,b2),
@@ -199,6 +203,7 @@ class trainer(object):
                     self.oGyx = reset_net([self.Gy,self.F_.module.cnn_broadband],
                         func=set_weights,lr=self.glr,b1=b1,b2=b2,
                         weight_decay=self.weight_decay)
+                    self.g_scheduler = MultiStepLR(self.oGyx,milestones=[30,80], gamma=0.1)
 
                     # self.oGyx = RMSProp(ittc(self.F_.parameters(),
                     #     self.Gy.parameters(),
@@ -248,6 +253,8 @@ class trainer(object):
                     func=set_weights,lr = self.rlr,
                     optim='Adam', b1 = b1, b2 = b2,
                     weight_decay=self.weight_decay)
+                
+                self.d_scheduler = MultiStepLR(self.oDyxz,milestones=[30,80], gamma=0.1)
 
                 self.optz.append(self.oDyxz)
 
@@ -426,7 +433,9 @@ class trainer(object):
         Dloss               = Dloss_ali   + Dloss_rec
 
         Dloss.backward()
-        self.oDyxz.step(), clipweights(self.Dnets), zerograd(self.optz)
+        self.d_scheduler.step(),
+        clipweights(self.Dnets), 
+        zerograd(self.optz)
 
         self.losses['Dloss'].append(Dloss.tolist())
         self.losses['Dloss_ali'].append(Dloss_ali.tolist())
@@ -548,7 +557,7 @@ class trainer(object):
 
 
         Gloss.backward()
-        self.oGyx.step()
+        self.g_scheduler.step()
         zerograd(self.optz)
          
         self.losses['Gloss'].append(Gloss.tolist())
