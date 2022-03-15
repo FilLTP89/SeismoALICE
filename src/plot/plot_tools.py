@@ -1412,9 +1412,8 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
 
             if str(pfx).find('Niigata')!=-1:
                 xt_data = batch
-
-            elif str(pfx).find('hack')!=-1:
-                _,xt_data,*other = batch
+            # elif str(pfx).find('hack')!=-1:
+            #     _,xt_data,*other = batch
             else:
                 xt_data,xf_data,*other = batch
             # xt_data,zt_data,*other = batch
@@ -1441,12 +1440,16 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             
             if 'unique' in pfx:
                 # pdb.set_trace()
-
-                # zy,_,*other =  Qec(X_inp)
-                _,zdf_gen,*other = Qec(Xf_inp)
-                wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(dev)
-                # wn = torch.zeros_like(zt)
-                ztr = zcat(zdf_gen,wn)
+                if str(pfx).find("hack") !=-1:
+                    _,zdf_gen, *others = Qec(X_inp)
+                    wn,*others = Qec(Xf_inp)
+                    ztr = zcat(zdf_gen, wn)
+                else: 
+                    # zy,_,*other =  Qec(X_inp)
+                    _,zdf_gen,*other = Qec(Xf_inp)
+                    wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(dev)
+                    # wn = torch.zeros_like(zt)
+                    ztr = zcat(zdf_gen,wn)
             else:
                 ztr = Qec(X_inp)
 
@@ -1456,12 +1459,17 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             # z_pre = zcat(zt,wnz.to(dev))
             Xr = Pdc(z_inp)
             #Xp = Pdc(z_pre)
-            Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+            if str(pfx).find("hack") !=-1:
+                Xt_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+                Xt = Xf.cpu().data.numpy().copy()
+            else:
+                Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+                Xt = Xt.cpu().data.numpy().copy()
             Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             Xr_fsa = tfft(Xr,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             #Xp_fsa = tfft(Xp,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
-            Xt = Xt.cpu().data.numpy().copy()
+            # Xt = Xt.cpu().data.numpy().copy()
             Xr = Xr.cpu().data.numpy().copy()
 
             for (io, ig) in zip(range(Xt.shape[0]),range(Xr.shape[0])):

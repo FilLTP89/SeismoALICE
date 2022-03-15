@@ -62,14 +62,17 @@ class trainer(object):
         if self.trial!=None:
             self.glr = self.trial.suggest_float("glrx",0.0001, 0.01,log=True)
             self.rlr = self.trial.suggest_float("rlrx",0.0001, 0.01,log=True)
+            self.weight_decay = self.trial.suggest_float("weight_decay",1.E-6,1.E-4)
         else:
             try:
                 # [TODO] divide by two the learning rate values
                 self.glr = float(opt.config["hparams"]['glry'])
                 self.rlr = float(opt.config["hparams"]['rlry'])
+                self.weight_decay = float(opt.config["hparams"]["weight_decay"])
             except Exception as e:
                 self.glr = opt.glr
                 self.rlr = opt.rlr
+                self.weight_decay = 0.00001
                 pass
 
         app.logger.info(f'glr = {self.glr}')
@@ -87,8 +90,8 @@ class trainer(object):
         ndf = opt.ndf
         ngpu_use = torch.cuda.device_count()
         # To make sure that all operation are deterministic in that GPU for reproductibility
-        # torch.backends.cudnn.deterministic  = True
-        # torch.backends.cudnn.benchmark      = False
+        torch.backends.cudnn.deterministic  = True
+        torch.backends.cudnn.benchmark      = False
 
         self.Dnets      = []
         self.optz       = []
@@ -159,7 +162,7 @@ class trainer(object):
                     self.FGf  = [self.F_,self.Gy]
                     self.oGyx = reset_net(self.FGf,
                         func=set_weights,lr=self.glr,b1=b1,b2=b2,
-                        weight_decay=0.00001)
+                        weight_decay=self.weight_decay)
                     # self.oGyx = Adam(ittc(self.F_.branch_common.parameters(),
                     #     self.Gx.parameters()),
                     #     lr=glr,betas=(b1,b2),
@@ -185,7 +188,7 @@ class trainer(object):
 
                     self.oGyx = Adam(ittc(self.F_.parameters()),
                         lr=self.glr,betas=(b1,b2),
-                        weight_decay=0.00001)
+                        weight_decay=self.weight_decay)
                     # self.oGy = Adam(ittc(self.F_.branch_broadband.parameters(),
                     #     self.Gy.parameters()),
                     #     lr=ngpu_use*glr,betas=(b1,b2),
@@ -195,7 +198,7 @@ class trainer(object):
                     app.logger.info("intialization of Gy and the broadband branch for the broadband training ...")
                     self.oGyx = reset_net([self.Gy,self.F_.module.cnn_broadband],
                         func=set_weights,lr=self.glr,b1=b1,b2=b2,
-                        weight_decay=0.00001)
+                        weight_decay=self.weight_decay)
 
                     # self.oGyx = RMSProp(ittc(self.F_.parameters(),
                     #     self.Gy.parameters(),
@@ -244,7 +247,7 @@ class trainer(object):
                 self.oDyxz = reset_net(self.Dnets,
                     func=set_weights,lr = self.rlr,
                     optim='Adam', b1 = b1, b2 = b2,
-                    weight_decay=0.00001)
+                    weight_decay=self.weight_decay)
 
                 self.optz.append(self.oDyxz)
 
@@ -531,7 +534,7 @@ class trainer(object):
                                     Gloss_identity*app.LAMBDA_IDENTITY
                                 )
 
-        if epoch%30 == 0: 
+        if epoch%55 == 0: 
             writer = self.writer_debug if trial_writer == None else trial_writer
             for idx in range(opt.batchSize//torch.cuda.device_count()):
                 writer.add_histogram("common/zyx", zyx_rec[idx,:], epoch)
@@ -692,10 +695,24 @@ class trainer(object):
                         opt     = opt,
                         outf    = outf, 
                         save    = False)
+                
+                bar.set_postfix(status = 'writing reconstructed hybrid broadband signals ...')
+                self.writer_val.add_figure('Hybrid (Broadband)',figure_hb, epoch)
+                self.writer_val.add_figure('Goodness of Fit Hybrid (Broadband)',gof_hb, epoch)
+                
+                figure_hf, gof_hf = plt.plot_generate_classic(
+                        tag     = 'hybrid',
+                        Qec     = deepcopy(self.F_),
+                        Pdc     = deepcopy(self.Gy),
+                        trn_set = self.vld_loader,
+                        pfx     ="vld_set_bb_unique_hack",
+                        opt     = opt,
+                        outf    = outf, 
+                        save    = False)
 
-                bar.set_postfix(status = 'writing reconstructed hybrid signals ...')
-                self.writer_val.add_figure('Hybrid',figure_hb, epoch)
-                self.writer_val.add_figure('Goodness of Fit Hybrid',gof_hb, epoch)
+                bar.set_postfix(status = 'writing reconstructed hybrid filtered signals ...')
+                self.writer_val.add_figure('Hybrid (Filtered)',figure_hf, epoch)
+                self.writer_val.add_figure('Goodness of Fit Hybrid (Filtered)',gof_hf, epoch)
 
                 # if self.trial == None:
                 #     #in case of real training
@@ -707,8 +724,8 @@ class trainer(object):
                 app.logger.info("val_accuracy filtered  = {:>5.3f}".format(val_accuracy_fl))
                 app.logger.info("val_accuracy hybrid    = {:>5.3f}".format(val_accuracy_hb))
                 bar.set_postfix(**{'val_accuracy_bb':val_accuracy_bb,
-                                    'val_accuracy_fl':val_accuracy_fl,
-                                    'val_accuracy_hb':val_accuracy_hb})
+                                'val_accuracy_fl':val_accuracy_fl,
+                                'val_accuracy_hb':val_accuracy_hb})
        
                 if self.study_dir == None:
                     self.writer_debug.add_scalar('Accuracy/Broadband',val_accuracy_bb, epoch)
@@ -729,10 +746,15 @@ class trainer(object):
                     self.trial.report(val_accuracy_hb, epoch)
                     if self.trial.should_prune():
                         self.writer_hparams.add_hparams(
-                        {'rlr' : self.rlr, 'glr':self.glr},
-                        {'hparams/broadband': val_accuracy_bb,
-                         'hparams/filtered' : val_accuracy_fl,
-                         'hparams/hybrid'   : val_accuracy_hb
+                        {
+                            'rlr' : self.rlr, 
+                            'glr' :self.glr,
+                            'weight_decay':self.weight_decay
+                        },
+                        {
+                            'hparams/broadband': val_accuracy_bb,
+                            'hparams/filtered' : val_accuracy_fl,
+                            'hparams/hybrid'   : val_accuracy_hb
                         })
 
                         raise optuna.exceptions.TrialPruned()
@@ -791,10 +813,15 @@ class trainer(object):
                     return self
                 else:
                     self.writer_hparams.add_hparams(
-                    {'rlr'  : self.rlr, 'glr'  : self.glr},
-                    {'hparams/broadband': val_accuracy_bb,
-                     'hparams/filtered' : val_accuracy_fl,
-                     'hparams/hybrid'   : val_accuracy_hb,
+                    {
+                        'rlr'  : self.rlr, 
+                        'glr'  : self.glr, 
+                        'weight_decay':self.weight_decay
+                    },
+                    {
+                        'hparams/broadband': val_accuracy_bb,
+                        'hparams/filtered' : val_accuracy_fl,
+                        'hparams/hybrid'   : val_accuracy_hb,
                     })
                     app.logger.info('Evaluating ...')
                     return val_accuracy_hb
