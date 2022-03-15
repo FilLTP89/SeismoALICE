@@ -160,9 +160,15 @@ class trainer(object):
             if  self.strategy['tract']['unique']:
                 if None in n:       
                     self.FGf  = [self.F_,self.Gy]
-                    self.oGyx = reset_net(self.FGf,
-                        func=set_weights,lr=self.glr,b1=b1,b2=b2,
-                        weight_decay=self.weight_decay)
+                    self.oGyx = reset_net(
+                        self.FGf,
+                        func=set_weights,
+                        lr=self.glr,b1=b1,b2=b2,
+                        weight_decay=self.weight_decay,
+                        name='CyclicLR',
+                        base_lr=self.glr/10,max_lr=self.glr,
+                        cycle_momentum=False
+                    )
 
                     # self.g_scheduler = MultiStepLR(self.oGyx,milestones=[30,80], gamma=0.1) 
                     # self.oGyx = Adam(ittc(self.F_.branch_common.parameters(),
@@ -249,13 +255,18 @@ class trainer(object):
                 self.Dnets.append(self.Dxx)
                 # self.Dnets.append(self.Dzzf)
 
-                self.oDyxz = reset_net(self.Dnets,
+                self.oDyxz = reset_net(
+                    self.Dnets,
                     func=set_weights,lr = self.rlr,
                     optim='Adam', b1 = b1, b2 = b2,
-                    weight_decay=self.weight_decay)
+                    weight_decay=self.weight_decay,
+                    name='CyclicLR',
+                    base_lr=self.rlr/10, max_lr=self.rlr,
+                    cycle_momentum=False
+                )
                 
                 # self.d_scheduler = MultiStepLR(self.oDyxz,milestones=[30,80], gamma=0.1)
-
+                breakpoint()
                 self.optz.append(self.oDyxz)
 
             else:
@@ -543,7 +554,7 @@ class trainer(object):
                                     Gloss_identity*app.LAMBDA_IDENTITY
                                 )
 
-        if epoch%55 == 0: 
+        if epoch%35 == 0: 
             writer = self.writer_debug if trial_writer == None else trial_writer
             for idx in range(opt.batchSize//torch.cuda.device_count()):
                 writer.add_histogram("common/zyx", zyx_rec[idx,:], epoch)

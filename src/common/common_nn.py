@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
 #!/usr/bin/env python
 u'''Required modules'''
+from curses import noecho
+import optparse
+import re
 import warnings
+
+from matplotlib.pyplot import sca
 warnings.filterwarnings("ignore")
 # COMMON
 from common.common_model import AKA
@@ -362,10 +367,17 @@ class ResNetLayer(Module):
 
 u'''[Zeroed gradient for selected optimizers]'''
 def zerograd(optz):
-    for o in optz: 
-        if o is not None:
-            o.zero_grad()
-    # exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
+    try:
+        for o in optz: 
+            if o is not None:
+                o.zero_grad()
+        # exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
+    except:
+        _optim = [o.optimizer for o in optz]
+        for o in _optim:
+            if o is not None:
+                o.zero_grad()
+
         
 def penalty(loss,params,typ,lam=1.e-5):
     pen = {'L1':1,'L2':2}
@@ -438,16 +450,27 @@ def tie_weights(m):
         except: 
             pass
 
-def reset_net(nets,func=set_weights,lr=0.0002,b1=b1,b2=b2,weight_decay=None,optim='Adam'):
+def scheduler(name,optimizer,*args,**kwargs):
+    scale_fn = None
+    if name == 'CyclicLR':
+        scale_fn = torch.optim.lr_scheduler.CyclicLR(optimizer,*args,**kwargs)
+    elif name == 'MultiStepLR':
+        scale_fn = torch.optim.lr_scheduler.MultiStepLR(optimizer,*args, **kwargs)
+    else:
+        scale_fn = optimizer
+    return scale_fn
+
+def reset_net(nets,func=set_weights,lr=0.0002,b1=b1,b2=b2,
+    weight_decay=None,optim='Adam',scheduler=scheduler,name=None, *args, **kwargs):
     p = []
     for n in nets:
         n.apply(func)
         p.append(n.parameters())
     if 'adam' in optim.lower():
         if  weight_decay is None:
-            return Adam(ittc(*p),lr=lr,betas=(b1,b2))
+            return scheduler(name,Adam(ittc(*p),lr=lr,betas=(b1,b2)),*args,**kwargs)
         else:
-            return Adam(ittc(*p),lr=lr,betas=(b1,b2),weight_decay=weight_decay) 
+            return scheduler(name,Adam(ittc(*p),lr=lr,betas=(b1,b2),weight_decay=weight_decay),*args,**kwargs)
     elif 'rmsprop' in optim.lower():
         return RMSprop(ittc(*p),lr=lr)
     elif 'sgd' in optim.lower():
