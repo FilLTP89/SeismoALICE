@@ -505,32 +505,24 @@ class trainer(object):
         Gloss_identity_zd           = torch.mean(torch.abs(zd_inp-zd_rec))
 
         #7. Forcing zxy to equal zyx an zx to equal 0 of the space
-        
         # 7.1 Inputs
-        nch,nz  = 4,128
+        nch,nz  = 4, 128
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         wn      = torch.empty([x.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(dev)
         x_inp   = zcat(x,wnx)
         zf_inp  = zcat(zxy,o0l(zyy))
 
         # 7.2 Generate conditional outputs
-        _, zxy_gen, *others = self.F_(x_inp)
-        zf_gen  = zcat(zxy_gen, wn)
+        zx_gen, zxy_gen, *others = self.F_(x_inp)
+        zf_gen  = zcat(zxy_gen, zx_gen)
         _x_gen  = self.Gy(zf_inp)
 
         # 7.3 Generate reconstructions values
-        wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        y_hib   = self.Gy(zf_gen)
+        x_rec   = self.Gy(zf_gen)
         x_gen   = zcat(_x_gen,wnx)
+
         zxx_rec, zxy_rec, *others = self.F_(x_gen)
-
         zf_rec  = zcat(zxy_rec,zxx_rec)
-        wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        y_hib = zcat(y_hib,wnx)
-        _zxx,zdf_gen = self.F_(y_hib)
-
-        zf_hib = zcat(zdf_gen,o0l(_zxx))
-        x_rec  = self.Gy(zf_hib)
 
         # 7.4 Forcing Zxy from X to be guassian
         _, Dfake_zf            = self.discriminate_zzf(zf_inp, zf_rec)
@@ -567,7 +559,7 @@ class trainer(object):
                                     Gloss_identity*app.LAMBDA_IDENTITY
                                 )
 
-        if epoch%53 == 0: 
+        if epoch%35 == 0: 
             writer = self.writer_debug if trial_writer == None else trial_writer
             for idx in range(opt.batchSize//torch.cuda.device_count()):
                 writer.add_histogram("common/zyx", zyx_rec[idx,:], epoch)
@@ -687,7 +679,7 @@ class trainer(object):
             bar.set_postfix(Gloss = Gloss, Dloss = Dloss)
 
             # bar.set_postfix(Gloss = Gloss, Gloss_zxy = Gloss_zxy, Dloss = Dloss, Dloss_zxy = Dloss_zxy) 
-            if epoch%25 == 0 and self.trial == None:
+            if epoch%100 == 0 and self.trial == None:
                 # for k,v in self.losses.items():
                 #     self.writer_train.add_scalar('Loss/{}'.format(k),
                 #         np.mean(np.array(v[-b:-1])),epoch)
