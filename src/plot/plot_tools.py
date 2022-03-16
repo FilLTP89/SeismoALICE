@@ -1442,7 +1442,8 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 # pdb.set_trace()
                 if str(pfx).find("hack") !=-1:
                     _,zdf_gen, *others = Qec(X_inp)
-                    wn,*others = Qec(Xf_inp)
+                    # wn,*others = Qec(Xf_inp)
+                    wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(dev)
                     ztr = zcat(zdf_gen, wn)
                 else: 
                     # zy,_,*other =  Qec(X_inp)

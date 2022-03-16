@@ -70,7 +70,7 @@ class trainer(object):
             try:
                 self.glr = float(opt.config["hparams"]['glry'])
                 self.rlr = float(opt.config["hparams"]['rlry'])
-                self.weight_decay = 0.00001 #float(opt.config["hparams"]["weight_decay"])
+                self.weight_decay = 0.00001 # float(opt.config["hparams"]["weight_decay"])
             except Exception as e:
                 self.glr = opt.glr
                 self.rlr = opt.rlr
@@ -161,10 +161,7 @@ class trainer(object):
                         self.FGf,
                         func=set_weights,
                         lr=self.glr,b1=b1,b2=b2,
-                        weight_decay=self.weight_decay,
-                        scheduler_name='MultiStepLR',
-                        milestones=[30,80],
-                        gamma=0.1
+                        weight_decay=self.weight_decay
                     )
 
                     # self.g_scheduler = MultiStepLR(self.oGyx,milestones=[30,80], gamma=0.1) 
@@ -256,10 +253,7 @@ class trainer(object):
                     self.Dnets,
                     func=set_weights,lr = self.rlr,
                     optim='Adam', b1 = b1, b2 = b2,
-                    weight_decay=self.weight_decay,
-                    scheduler_name='MultiStepLR',
-                    milestones=[30,80],
-                    gamma=0.1
+                    weight_decay=self.weight_decay
                 )
                 
                 # self.d_scheduler = MultiStepLR(self.oDyxz,milestones=[30,80], gamma=0.1)
@@ -426,9 +420,9 @@ class trainer(object):
         x_rec       = self.Gy(zf_gen)
 
         # 7.5 Forcing Zxy from X to be guassian
-        Dreal_zxy, Dfake_zxy= self.discriminate_zxy(zxy, zxy_rec)
-        Dloss_rec_zxy       = self.bce_loss(Dreal_zxy,o1l(Dreal_zxy))+\
-                                self.bce_loss(Dfake_zxy,o0l(Dfake_zxy))
+        # Dreal_zxy, Dfake_zxy= self.discriminate_zxy(zxy, zxy_rec)
+        # Dloss_rec_zxy       = self.bce_loss(Dreal_zxy,o1l(Dreal_zxy))+\
+        #                         self.bce_loss(Dfake_zxy,o0l(Dfake_zxy))
 
         # 7.6 Forcing Zy from X to be useless for the training
         Dreal_x, Dfake_x    = self.discriminate_xx(x,x_rec)
@@ -442,7 +436,6 @@ class trainer(object):
 
         Dloss.backward()
         self.oDyxz.step(),
-        app.logger.debug(f'lr : {self.oDyxz.get_last_lr()}')
         clipweights(self.Dnets), 
         zerograd(self.optz)
 
@@ -552,7 +545,7 @@ class trainer(object):
                                     Gloss_identity*app.LAMBDA_IDENTITY
                                 )
 
-        if epoch%55 == 0: 
+        if epoch%53 == 0: 
             writer = self.writer_debug if trial_writer == None else trial_writer
             for idx in range(opt.batchSize//torch.cuda.device_count()):
                 writer.add_histogram("common/zyx", zyx_rec[idx,:], epoch)
@@ -671,70 +664,70 @@ class trainer(object):
             bar.set_postfix(Gloss = Gloss, Dloss = Dloss)
 
             # bar.set_postfix(Gloss = Gloss, Gloss_zxy = Gloss_zxy, Dloss = Dloss, Dloss_zxy = Dloss_zxy) 
-            # if epoch%25 == 0 and self.trial == None:
-            #     # for k,v in self.losses.items():
-            #     #     self.writer_train.add_scalar('Loss/{}'.format(k),
-            #     #         np.mean(np.array(v[-b:-1])),epoch)
-            #     torch.manual_seed(100)
-            #     figure_bb, gof_bb = plt.plot_generate_classic(
-            #             tag     = 'broadband',
-            #             Qec     = deepcopy(self.F_),
-            #             Pdc     = deepcopy(self.Gy),
-            #             trn_set = self.vld_loader,
-            #             pfx     ="vld_set_bb_unique",
-            #             opt     = opt,
-            #             outf    = outf, 
-            #             save    = False)
+            if epoch%25 == 0 and self.trial == None:
+                # for k,v in self.losses.items():
+                #     self.writer_train.add_scalar('Loss/{}'.format(k),
+                #         np.mean(np.array(v[-b:-1])),epoch)
+                torch.manual_seed(100)
+                figure_bb, gof_bb = plt.plot_generate_classic(
+                        tag     = 'broadband',
+                        Qec     = deepcopy(self.F_),
+                        Pdc     = deepcopy(self.Gy),
+                        trn_set = self.vld_loader,
+                        pfx     ="vld_set_bb_unique",
+                        opt     = opt,
+                        outf    = outf, 
+                        save    = False)
 
-            #     bar.set_postfix(status = 'writing reconstructed broadband signals ...')
-            #     self.writer_val.add_figure('Broadband',figure_bb, epoch)
-            #     self.writer_val.add_figure('Goodness of Fit Broadband',gof_bb, epoch)
+                bar.set_postfix(status = 'writing reconstructed broadband signals ...')
+                self.writer_val.add_figure('Broadband',figure_bb, epoch)
+                self.writer_val.add_figure('Goodness of Fit Broadband',gof_bb, epoch)
 
-            #     figure_fl, gof_fl = plt.plot_generate_classic(
-            #             tag     = 'broadband',
-            #             Qec     = deepcopy(self.F_),
-            #             Pdc     = deepcopy(self.Gy),
-            #             trn_set = self.vld_loader,
-            #             pfx     ="vld_set_bb_unique_hack",
-            #             opt     = opt,
-            #             outf    = outf, 
-            #             save    = False)
+                figure_fl, gof_fl = plt.plot_generate_classic(
+                        tag     = 'broadband',
+                        Qec     = deepcopy(self.F_),
+                        Pdc     = deepcopy(self.Gy),
+                        trn_set = self.vld_loader,
+                        pfx     ="vld_set_bb_unique_hack",
+                        opt     = opt,
+                        outf    = outf, 
+                        save    = False)
 
-            #     bar.set_postfix(status = 'writing reconstructed filtered signals ...')
-            #     self.writer_val.add_figure('Filtered',figure_fl, epoch)
-            #     self.writer_val.add_figure('Goodness of Fit Filtered',gof_fl, epoch)
+                bar.set_postfix(status = 'writing reconstructed filtered signals ...')
+                self.writer_val.add_figure('Filtered',figure_fl, epoch)
+                self.writer_val.add_figure('Goodness of Fit Filtered',gof_fl, epoch)
 
-            #     figure_hb, gof_hb = plt.plot_generate_classic(
-            #             tag     = 'hybrid',
-            #             Qec     = deepcopy(self.F_),
-            #             Pdc     = deepcopy(self.Gy),
-            #             trn_set = self.vld_loader,
-            #             pfx     ="vld_set_bb_unique",
-            #             opt     = opt,
-            #             outf    = outf, 
-            #             save    = False)
+                figure_hb, gof_hb = plt.plot_generate_classic(
+                        tag     = 'hybrid',
+                        Qec     = deepcopy(self.F_),
+                        Pdc     = deepcopy(self.Gy),
+                        trn_set = self.vld_loader,
+                        pfx     ="vld_set_bb_unique",
+                        opt     = opt,
+                        outf    = outf, 
+                        save    = False)
                 
-            #     bar.set_postfix(status = 'writing reconstructed hybrid broadband signals ...')
-            #     self.writer_val.add_figure('Hybrid (Broadband)',figure_hb, epoch)
-            #     self.writer_val.add_figure('Goodness of Fit Hybrid (Broadband)',gof_hb, epoch)
+                bar.set_postfix(status = 'writing reconstructed hybrid broadband signals ...')
+                self.writer_val.add_figure('Hybrid (Broadband)',figure_hb, epoch)
+                self.writer_val.add_figure('Goodness of Fit Hybrid (Broadband)',gof_hb, epoch)
                 
-            #     figure_hf, gof_hf = plt.plot_generate_classic(
-            #             tag     = 'hybrid',
-            #             Qec     = deepcopy(self.F_),
-            #             Pdc     = deepcopy(self.Gy),
-            #             trn_set = self.vld_loader,
-            #             pfx     ="vld_set_bb_unique_hack",
-            #             opt     = opt,
-            #             outf    = outf, 
-            #             save    = False)
+                figure_hf, gof_hf = plt.plot_generate_classic(
+                        tag     = 'hybrid',
+                        Qec     = deepcopy(self.F_),
+                        Pdc     = deepcopy(self.Gy),
+                        trn_set = self.vld_loader,
+                        pfx     ="vld_set_bb_unique_hack",
+                        opt     = opt,
+                        outf    = outf, 
+                        save    = False)
 
-            #     bar.set_postfix(status = 'writing reconstructed hybrid filtered signals ...')
-            #     self.writer_val.add_figure('Hybrid (Filtered)',figure_hf, epoch)
-            #     self.writer_val.add_figure('Goodness of Fit Hybrid (Filtered)',gof_hf, epoch)
+                bar.set_postfix(status = 'writing reconstructed hybrid filtered signals ...')
+                self.writer_val.add_figure('Hybrid (Filtered)',figure_hf, epoch)
+                self.writer_val.add_figure('Goodness of Fit Hybrid (Filtered)',gof_hf, epoch)
 
-            #     # if self.trial == None:
-            #     #     #in case of real training
-            #     random.seed(opt.manualSeed)
+                # if self.trial == None:
+                #     #in case of real training
+                random.seed(opt.manualSeed)
             
             if (epoch+1)%20 == 0:
                 val_accuracy_bb, val_accuracy_fl, val_accuracy_hb = self.accuracy()
