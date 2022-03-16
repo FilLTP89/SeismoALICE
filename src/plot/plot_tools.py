@@ -1144,7 +1144,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                     "Then, remember to correct your dataset")
                 mask   = [not torch.isnan(torch.max(y[e,:])).tolist() for e in range(len(y))]
                 index  = np.array(range(len(y)))
-                xd_data.data = xt_data[index[mask]]
+                xt_data.data = xt_data[index[mask]]
                 xf_data.data = xf_data[index[mask]]
 
             # xt_data,zt_data,*other = batch

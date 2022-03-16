@@ -350,8 +350,8 @@ class trainer(object):
         return Dreal,Dfake
 
     def discriminate_zxy(self,z_yx,z_xy):
-        D_zyx = self.Dzyx(zcat(z_yx,z_yx))
-        D_zxy = self.Dzyx(zcat(z_yx,z_xy))
+        D_zyx = self.Dzyx(zcat(z_yx))
+        D_zxy = self.Dzyx(zcat(z_yx))
         return D_zyx,D_zxy
     
     # @profile
@@ -410,7 +410,8 @@ class trainer(object):
         zxx_F, zxy_F, *others = self.F_(x_inp)
         
         # 7.3 Concatenate outputs
-        zf_gen = zcat(zxy_F,zxx_F)
+        zf_gen  = zcat(zxy_F,zxx_F)
+        zxy_gen = zxy_F 
 
         # 7.4 Generate reconstructions
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
@@ -420,9 +421,9 @@ class trainer(object):
         x_rec       = self.Gy(zf_gen)
 
         # 7.5 Forcing Zxy from X to be guassian
-        # Dreal_zxy, Dfake_zxy= self.discriminate_zxy(zxy, zxy_rec)
-        # Dloss_rec_zxy       = self.bce_loss(Dreal_zxy,o1l(Dreal_zxy))+\
-        #                         self.bce_loss(Dfake_zxy,o0l(Dfake_zxy))
+        Dreal_zxy, Dfake_zxy= self.discriminate_zxy(zxy_gen, zyx_gen)
+        Dloss_rec_zxy       = self.bce_loss(Dreal_zxy,o1l(Dreal_zxy))+\
+                                self.bce_loss(Dfake_zxy,o0l(Dfake_zxy))
 
         # 7.6 Forcing Zy from X to be useless for the training
         Dreal_x, Dfake_x    = self.discriminate_xx(x,x_rec)
@@ -430,7 +431,7 @@ class trainer(object):
                                 self.bce_loss(Dfake_x,o0l(Dfake_x))
 
         # 8. Compute all losses
-        Dloss_rec           = Dloss_rec_y + Dloss_rec_zy + Dloss_rec_zxy + Dloss_rec_x
+        Dloss_rec           = Dloss_rec_y + Dloss_rec_zy + Dloss_rec_zxy+ Dloss_rec_x
         Dloss_ali           = Dloss_ali_y 
         Dloss               = Dloss_ali   + Dloss_rec
 
@@ -462,9 +463,9 @@ class trainer(object):
 
         # 2. Generate conditional samples
         y_gen   = self.Gy(zd_inp)
-        zyy_F,zyx_F,*others = self.F_(y_inp)
+        zyy_gen,zyx_gen,*others = self.F_(y_inp)
 
-        _zyy_gen= zcat(zyx_F,zyy_F) 
+        _zyy_gen= zcat(zyx_gen,zyy_gen) 
         Dyz,Dzy = self.discriminate_yz(y,y_gen,zd_inp,_zyy_gen)
         
         Gloss_ali =  torch.mean(-Dyz+Dzy) 
@@ -493,30 +494,40 @@ class trainer(object):
         #7. Forcing zxy to equal zyx an zx to equal 0 of the space
         
         # 7.1 Inputs
+        nch,nz  = 8,128
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        wn = torch.empty([x.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(dev)
         x_inp   = zcat(x,wnx)
         zf_inp  = zcat(zxy,o0l(zyy))
 
         # 7.2 Generate conditional outputs
-        zxx_F, zxy_F, *others = self.F_(x_inp)
-        zf_gen  = zcat(zxy_F, zxx_F)
+        _, zxy_gen, *others = self.F_(x_inp)
+
+        zf_gen  = zcat(zxy_gen, wn)
 
         _x_gen   = self.Gy(zf_inp)
 
         # 7.3 Generate reconstructions values
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        x_rec   = self.Gy(zf_gen)
+        y_hib   = self.Gy(zf_gen)
 
         x_gen   = zcat(_x_gen,wnx)
         zxx_rec, zxy_rec, *others = self.F_(x_gen)
 
         zf_rec  = zcat(zxy_rec,zxx_rec)
+        
+        wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        y_hib = zcat(y_hib,wnx)
+        _zxx,zdf_gen = self.F_(y_hib)
+
+        zf_hib = zcat(zdf_gen,o0l(_zxx))
+        x_rec  = self.Gy(zf_hib)
+
 
         # 7.4 Forcing Zxy from X to be guassian
-        _, Dfake_zxy            = self.discriminate_zxy(zxy, zxy_rec)
+        _, Dfake_zxy            = self.discriminate_zxy(zxy_gen, zyx_gen)
         Gloss_identity_zxy      = self.bce_loss(Dfake_zxy, o1l(Dfake_zxy))
-        Gloss_rec_zxy           = torch.mean(torch.abs(zxy-zxy_rec)) +\
-                                    torch.mean(torch.abs(zxy-zyx_rec))
+        Gloss_rec_zxy           = torch.mean(torch.abs(zxy_rec-zyx_rec))
 
         # 7.4 Cross-Discriminate XX
         _, Dfake_x              = self.discriminate_xx(x,x_rec)
@@ -533,7 +544,7 @@ class trainer(object):
                                     Gloss_identity_y +
                                     Gloss_identity_x +
                                     Gloss_identity_zd + 
-                                    Gloss_identity_zxy + 
+                                    # Gloss_identity_zxy + 
                                     Gloss_rec_zx + 
                                     Gloss_rec_zf +
                                     Gloss_rec_x + 
