@@ -98,26 +98,30 @@ class trainer(object):
         # self.dp_mode    = True
         self.losses     = {
             'Dloss':[0],
-
             'Dloss_ali':[0],
             'Dloss_rec':[0],
+            'Dloss_cycle':[0],
             'Dloss_cycle_y':[0],
             'Dloss_cycle_x':[0],
             'Dloss_cycle_zy':[0],
             'Dloss_cycle_zxy':[0],
+
             'Gloss':[0],
             'Gloss_ali':[0],
             'Gloss_cycle':[0],
+            'Gloss_cycle_x':[0],
             'Gloss_cycle_y':[0],
             'Gloss_cycle_zd':[0],
             'Gloss_cycle_zf':[0],
+            'Gloss_cycle_zxy':[0],
+
             'Gloss_rec':[0],
             'Gloss_rec_y':[0],
             'Gloss_rec_x':[0],
             'Gloss_rec_zd':[0],
             'Gloss_rec_zf':[0],
             'Gloss_rec_zx':[0],
-            'Gloss_cycle_zxy':[0],
+            
             'Gloss_rec_zxy':[0],
             'Gloss_rec_x':[0],
             'Gloss_rec_zf':[0]
@@ -553,23 +557,23 @@ class trainer(object):
         Gloss_ali_x =  torch.mean(-Dxz+Dzx)
 
         # Cross Discriminate for zxy to ensure it's Gaussian
-        _,Dfake_zxy             = self.discriminate_zxy(zxy, zxy_rec)
+        _,Dfake_zxy          = self.discriminate_zxy(zxy, zxy_rec)
         Gloss_cycle_zxy      = self.bce_loss(Dfake_zxy,o1l(Dfake_zxy))
 
         # Cross Discimininate for Z from X to be [guassian,0]
-        _, Dfake_zf             = self.discriminate_zzf(zf_inp, zf_rec)
+        _, Dfake_zf          = self.discriminate_zzf(zf_inp, zf_rec)
         Gloss_cycle_zf       = self.bce_loss(Dfake_zf, o1l(Dfake_zf))
-        Gloss_rec_zf            = torch.mean(torch.abs(zf_inp-zf_rec))
+        Gloss_rec_zf         = torch.mean(torch.abs(zf_inp-zf_rec))
 
         # 7.4 Cross-Discriminate XX
-        _, Dfake_x              = self.discriminate_xx(x,x_rec)
+        _, Dfake_x           = self.discriminate_xx(x,x_rec)
         Gloss_cycle_x        = self.bce_loss(Dfake_x, o1l(Dfake_x))
-        Gloss_rec_x             = torch.mean(torch.abs(x - x_rec))
+        Gloss_rec_x          = torch.mean(torch.abs(x - x_rec))
 
         # 7.5 Forcing zxx_rec to be 0
-        Gloss_rec_zx            = torch.mean(torch.abs(zxx_rec))
+        Gloss_rec_zx         = torch.mean(torch.abs(zxx_rec))
         # 7.6 Forcing zxy to  be gaussian by a cycling and independant to the value of z
-        Gloss_rec_zxy           = torch.mean(torch.abs(zxy-zxy_fake))
+        Gloss_rec_zxy        = torch.mean(torch.abs(zxy-zxy_fake))
 
         
         # 8. Total Loss
@@ -622,17 +626,16 @@ class trainer(object):
         self.losses['Gloss_cycle_y' ].append(Gloss_cycle_y.tolist())
         self.losses['Gloss_cycle_zd'].append(Gloss_cycle_zd.tolist())
         
-
-        self.losses['Gloss_rec'   ].append(Gloss_rec.tolist())
-        self.losses['Gloss_rec_y' ].append(Gloss_rec_y.tolist())
-        self.losses['Gloss_rec_x' ].append(Gloss_cycle_x.tolist())
-        self.losses['Gloss_rec_zd'].append(Gloss_rec_zd.tolist())
-        self.losses['Gloss_rec_zf'].append(Gloss_cycle_zf.tolist())
+        self.losses['Gloss_cycle_x' ].append(Gloss_cycle_x.tolist())
         
-        self.losses['Gloss_rec_zxy'].append(Gloss_cycle_zxy.tolist())
+        self.losses['Gloss_cycle_zf'].append(Gloss_cycle_zf.tolist())
+        
+        self.losses['Gloss_cycle_zxy'].append(Gloss_cycle_zxy.tolist())
 
+        self.losses['Gloss_rec'    ].append(Gloss_rec.tolist())
+        self.losses['Gloss_rec_zd' ].append(Gloss_rec_zd.tolist())
+        self.losses['Gloss_rec_y'  ].append(Gloss_rec_y.tolist())
         self.losses['Gloss_rec_zx' ].append(Gloss_rec_zx.tolist())
-        self.losses['Gloss_rec_zxy'].append(Gloss_rec_zxy.tolist())
         self.losses['Gloss_rec_x'  ].append(Gloss_rec_x.tolist())
         self.losses['Gloss_rec_zf' ].append(Gloss_rec_zf.tolist())
 
@@ -709,15 +712,15 @@ class trainer(object):
                     for k,v in self.losses.items():
                         self.writer_train.add_scalar('Loss/{}'.format(k),
                             np.mean(np.array(v[-b:-1])),epoch)
-            # breakpoint()
+
             Gloss = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss'][-b:-1])))
             Dloss = '{:>5.3f}'.format(np.mean(np.array(self.losses['Dloss'][-b:-1])))
-            Gloss_zxy = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss_identity_zxy'][-b:-1])))
-            Dloss_zxy = '{:>5.3f}'.format(np.mean(np.array(self.losses['Dloss_rec_zxy'][-b:-1])))
+            Gloss_zxy = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss_cycle_zxy'][-b:-1])))
+            Dloss_zxy = '{:>5.3f}'.format(np.mean(np.array(self.losses['Dloss_cycle_zxy'][-b:-1])))
 
-            bar.set_postfix(Gloss = Gloss, Dloss = Dloss)
+            # bar.set_postfix(Gloss = Gloss, Dloss = Dloss)
 
-            # bar.set_postfix(Gloss = Gloss, Gloss_zxy = Gloss_zxy, Dloss = Dloss, Dloss_zxy = Dloss_zxy) 
+            bar.set_postfix(Gloss = Gloss, Gloss_zxy = Gloss_zxy, Dloss = Dloss, Dloss_zxy = Dloss_zxy) 
             if epoch%100 == 0 and self.trial == None:
                 # for k,v in self.losses.items():
                 #     self.writer_train.add_scalar('Loss/{}'.format(k),
