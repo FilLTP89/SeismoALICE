@@ -1,3 +1,4 @@
+from msilib.schema import Class
 from torch.nn.modules import activation
 from core.net.basic_model import BasicModel
 from conv.resnet.residual import DecoderResnet,block_2x2
@@ -24,7 +25,7 @@ class DecoderDataParallele(object):
         pass
     
     @staticmethod
-    def getDecoder(name, ngpu, nz, nch, nly, ndf, ker, std, pad, dil,dconv,\
+    def getDecoder(name, ngpu, nz, nch, nly, ndf, config, ker, std, pad, dil,dconv,\
                      channel,n_extra_layers,act, opd, bn, dpc,path, limit, extra):
 
         # pdb.set_trace()
@@ -34,14 +35,14 @@ class DecoderDataParallele(object):
             module = importlib.import_module(module_name)
             class_ = getattr(module,classname)
             try:
-                return class_(ngpu = ngpu, nz = nz, nch = nch, limit = limit, bn = bn, path=path,\
+                return class_(ngpu = ngpu, nz = nz, nch = nch, config= config, limit = limit, bn = bn, path=path,\
                         nly = nly, act=act, ndf =ndf, ker = ker, std =std, pad = pad, opd = opd,dconv = dconv,\
                         dil=dil, dpc = dpc,n_extra_layers=n_extra_layers, channel = channel, extra = extra)
             except Exception as e:
                 raise e
                 print("The class ",classname," does not exit")
         else:
-            return Decoder(ngpu = ngpu, nz = nz, nch = nch, limit = limit, bn = bn, path=path,\
+            return Decoder(ngpu = ngpu, nz = nz, nch = nch, config=config, limit = limit, bn = bn, path=path,\
         nly = nly, act=act, ndf =ndf, ker = ker, std =std, pad = pad, opd = opd,dconv = dconv,\
         dil=dil, dpc = dpc,n_extra_layers=n_extra_layers, channel = channel, extra = extra)
 
@@ -130,7 +131,7 @@ class Decoder(BasicDecoderDataParallel):
             Xr = feed(zxn,features)
         if not self.training:
             result = Xr.detach() + 0.
-            
+
             return result
         return Xr
 
@@ -241,4 +242,102 @@ class Decoder_Octave(BasicDecoderDataParallel):
         x_h, x_l = self.conv(z)
         x_h = self.conv_h(x_h)
         x_l = self.conv_l(x_l)
+
+        if not self.training:
+            x_h, x_l = x_h.detach(), x_l.detach()
+
         return x_h, x_l
+
+class Decoder_Unic(BasicDecoderDataParallel):
+    """docstring for Decoder_Unic"""
+    def __init__(self,ngpu,nz,nch,ndf,nly,config,channel,act, extra, dconv = "",\
+                 ker=7,std=4,pad=0,opd=0,dil=1,grp=1,dpc=0.10,limit = 256, bn=True, path='',n_extra_layers=0):
+        super(Decoder_Unic, self).__init__()
+
+        acts      = T.activation(act, nly)
+        self.branch_common      = []
+        self.branch_broadband   = []
+        self.branch_master      = []
+        self.cnn1               = []
+
+        #broadband part
+        channel_bb  = config["broadband"]["channel"]
+        ker_bb      = config["broadband"]["kernel"]
+        std_bb      = config["broadband"]["strides"]
+        dil_bb      = config["broadband"]["dilation"]
+        pad_bb      = config["broadband"]["padding"]
+        opd_bb      = config["broadband"]["outpads"]
+        nly_bb      = config["broadband"]["nlayers"]
+        dpc_bb      = config["broadband"]["dpc"]
+        extra_bb    = config["broadband"]["extra"]
+        acts_bb     = T.activation(config["broadband"]["act"], config["broadband"]["nlayers"])
+
+        #common part
+        channel_com  = config["common"]["channel"]
+        ker_com      = config["common"]["kernel"]
+        std_com      = config["common"]["strides"]
+        dil_com      = config["common"]["dilation"]
+        pad_com      = config["common"]["padding"]
+        opd_com      = config["common"]["outpads"]
+        nly_com      = config["common"]["nlayers"]
+        dpc_com      = config["common"]["dpc"]
+        acts_com     = T.activation(config["common"]["act"], config["common"]["nlayers"])
+        
+        for i in range(1, nly+1):
+            _dpc = 0.0 if i ==nly_com else dpc_com
+            _bn =  False if i == nly_com else config["broadband"]["bn"]
+            self.branch_common += cnn1dt(channel_com[i-1],
+                        channel_com[i], 
+                        acts_com[i-1],
+                        ker=ker_com[i-1],
+                        std=std_com[i-1],
+                        pad=pad_com[i-1],\
+                        dil=dil_com[i-1],
+                        opd=opd_com[i-1], 
+                        bn=_bn,
+                        dpc=_dpc)
+        
+        for i in range(1, nly+1):
+            _dpc = 0.0 if i ==nly_bb else dpc_bb
+            _bn =  False if i == nly_bb else config["common"]["bn"]
+            self.branch_broadband += cnn1dt(channel_bb[i-1],
+                        channel_bb[i], 
+                        acts_bb[i-1],
+                        ker=ker_bb[i-1],
+                        std=std_bb[i-1],
+                        pad=pad_bb[i-1],\
+                        dil=dil_bb[i-1],
+                        opd=opd_bb[i-1], 
+                        bn=_bn,
+                        dpc=_dpc)
+        
+        for i in range(1, nly+1):
+            _dpc = 0.0 if i ==nly else dpc
+            _bn =  False if i == nly else bn
+            self.branch_master += cnn1dt(channel[i-1],
+                        channel[i], 
+                        acts[i-1],
+                        ker=ker[i-1],
+                        std=std[i-1],
+                        pad=pad[i-1],\
+                        dil=dil[i-1], 
+                        opd=opd[i-1], 
+                        bn=_bn,
+                        dpc=_dpc)
+        
+        self.branch_common      = sqn(*self.branch_common)
+        self.branch_broadband   = sqn(*self.branch_broadband)
+        self.branch_master      = sqn(*self.branch_master)
+
+    def forward(self,z_com,z_bb):
+        z_com   = self.branch_common(z_com)
+        z_bb    = self.branch_broadband(z_bb)
+        z   =  zcat(z_com, z_bb)
+        x   = self.branch_master(z)
+
+        if not self.training:
+            x = x.detach()
+        return x
+        
+
+        

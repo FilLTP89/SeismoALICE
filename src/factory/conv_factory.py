@@ -214,6 +214,7 @@ class DataParalleleFactory(ConvNetFactory):
             path    = path,\
             dconv   = dconv,\
             dpc     = dpc,\
+            config  = config,\
             extra   = extra,\
             *args, **kwargs)
 
