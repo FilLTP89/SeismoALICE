@@ -1030,13 +1030,13 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             #_,xt_data,zt_data,_,_,_,_ = batch
             app.logger.debug("Plotting signals ...")
 
-            if str(pfx).find('Niigata')!=-1:
-                xt_data = batch
+            # if str(pfx).find('Niigata')!=-1:
+            #     xt_data = batch
 
-            elif str(pfx).find('hack')!=-1:
-                _,xt_data,*other = batch
-            else:
-                xt_data,xf_data,*other = batch
+            # elif str(pfx).find('hack')!=-1:
+            #     _,xt_data,*other = batch
+            # else:
+            xt_data, xf_data,*other = batch
             # xt_data,zt_data,*other = batch
             if torch.isnan(torch.max(xt_data)):
                 app.logger.debug("your model contain nan value "
@@ -1055,28 +1055,31 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
 
         
         nch, nz         = 4,128
-        wny,wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
-        X_inp   = zcat(Xt,wny)
-
-        wnx,wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
+        # wny,wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
+        # X_inp   = zcat(Xt,wny)
+        wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
         Xf_inp  = zcat(Xf,wnx)
         
-        if 'unique' in pfx:
-            # pdb.set_trace()
+        # if 'unique' in pfx:
+        # pdb.set_trace()
 
-            # zy,_,*other =  Qec(X_inp)
-            _,zdf_gen,*other = Qec(Xf_inp)
-            wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(dev)
-            # wn = torch.zeros_like(zt)
-            ztr = zcat(zdf_gen,wn)
-        else:
-            ztr = Qec(X_inp)
+        # zy,_,*other =  Qec(X_inp)
+        _, zdf_gen, *other = Qec(Xf_inp)
+        wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(dev)
+        # wn = torch.zeros_like(zt)
+        ztr = zcat(zdf_gen,wn)
+        # else:
+        #     ztr = Qec(X_inp)
 
         z_inp = zcat(ztr)
         # breakpoint()
         # z_inp = zcat(ztr,torch.zeros_like(wnz).to(dev))
         # z_pre = zcat(zt,wnz.to(dev))
-        Xr = Pdc(z_inp)
+        _Xr     = Pdc(z_inp)
+        wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
+        z2, z1  = Qec(zcat(_Xr,wnx))
+        Xr      = Pdc(zcat(z1,o0l(z2)))
+
         #Xp = Pdc(z_pre)
         # Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
         # Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()

@@ -417,7 +417,7 @@ class trainer(object):
         zf_inp  = zcat(zxy,o0l(zyy))
 
         # 7.2 Generate samples
-        x_gen   = self.Gy(zf_inp)
+        _x_gen   = self.Gy(zf_inp)
         zxx_F, zxy_F, *others = self.F_(x_inp)
         
         # 7.3 Concatenate outputs
@@ -425,14 +425,14 @@ class trainer(object):
 
         # 7.4 Generate reconstructions
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        x_gen       = zcat(x_gen,wnx)
+        x_gen       = zcat(_x_gen,wnx)
         zx_rec, zxy_rec,*others = self.F_(x_gen)
 
         x_rec       = self.Gy(zf_gen)
         zf_rec      = zcat(zxy_rec,zx_rec)
 
         # 7.5 Forcing zxy from X to be guassian
-        Dxz,Dzx = self.discriminate_xz(x,x_gen,zf_inp,zf_gen)
+        Dxz,Dzx = self.discriminate_xz(x,_x_gen,zf_inp,zf_gen)
         Dloss_ali_x = -torch.mean(ln0c(Dzx)+ln0c(1.0-Dxz))
 
 
@@ -544,7 +544,7 @@ class trainer(object):
         _, zxy_rec_fake, *others = self.F_(x_gen_fake)
         zxy_fake    =  zxy_rec_fake
 
-        Dxz,Dzx     = self.discriminate_xz(x,x_gen,zf_inp,zf_gen)
+        Dxz,Dzx     = self.discriminate_xz(x,_x_gen,zf_inp,zf_gen)
         Gloss_ali_x =  torch.mean(-Dxz+Dzx)
 
         # Cross Discriminate for zxy to ensure it's Gaussian
@@ -746,33 +746,33 @@ class trainer(object):
                 self.writer_val.add_figure('Filtered',figure_fl, epoch)
                 self.writer_val.add_figure('Goodness of Fit Filtered',gof_fl, epoch)
 
-                figure_hb, gof_hb = plt.plot_generate_classic(
-                        tag     = 'hybrid',
-                        Qec     = deepcopy(self.F_),
-                        Pdc     = deepcopy(self.Gy),
-                        trn_set = self.vld_loader,
-                        pfx     ="vld_set_bb_unique",
-                        opt     = opt,
-                        outf    = outf, 
-                        save    = False)
+                # figure_hb, gof_hb = plt.plot_generate_classic(
+                #         tag     = 'hybrid',
+                #         Qec     = deepcopy(self.F_),
+                #         Pdc     = deepcopy(self.Gy),
+                #         trn_set = self.vld_loader,
+                #         pfx     ="vld_set_bb_unique",
+                #         opt     = opt,
+                #         outf    = outf, 
+                #         save    = False)
                 
-                bar.set_postfix(status = 'writing reconstructed hybrid broadband signals ...')
-                self.writer_val.add_figure('Hybrid (Broadband)',figure_hb, epoch)
-                self.writer_val.add_figure('Goodness of Fit Hybrid (Broadband)',gof_hb, epoch)
+                # bar.set_postfix(status = 'writing reconstructed hybrid broadband signals ...')
+                # self.writer_val.add_figure('Hybrid (Broadband)',figure_hb, epoch)
+                # self.writer_val.add_figure('Goodness of Fit Hybrid (Broadband)',gof_hb, epoch)
                 
-                figure_hf, gof_hf = plt.plot_generate_classic(
-                        tag     = 'hybrid',
-                        Qec     = deepcopy(self.F_),
-                        Pdc     = deepcopy(self.Gy),
-                        trn_set = self.vld_loader,
-                        pfx     ="vld_set_bb_unique_hack",
-                        opt     = opt,
-                        outf    = outf, 
-                        save    = False)
+                # figure_hf, gof_hf = plt.plot_generate_classic(
+                #         tag     = 'hybrid',
+                #         Qec     = deepcopy(self.F_),
+                #         Pdc     = deepcopy(self.Gy),
+                #         trn_set = self.vld_loader,
+                #         pfx     ="vld_set_bb_unique_hack",
+                #         opt     = opt,
+                #         outf    = outf, 
+                #         save    = False)
 
-                bar.set_postfix(status = 'writing reconstructed hybrid filtered signals ...')
-                self.writer_val.add_figure('Hybrid (Filtered)',figure_hf, epoch)
-                self.writer_val.add_figure('Goodness of Fit Hybrid (Filtered)',gof_hf, epoch)
+                # bar.set_postfix(status = 'writing reconstructed hybrid filtered signals ...')
+                # self.writer_val.add_figure('Hybrid (Filtered)',figure_hf, epoch)
+                # self.writer_val.add_figure('Goodness of Fit Hybrid (Filtered)',gof_hf, epoch)
 
                 # if self.trial == None:
                 #     #in case of real training
@@ -887,7 +887,6 @@ class trainer(object):
                     return val_accuracy_hb
 
     def accuracy(self):
-        total = 0
         EG_h, PG_h  = plt.get_gofs(tag = 'hybrid', 
             Qec = self.F_, 
             Pdc = self.Gy , 
