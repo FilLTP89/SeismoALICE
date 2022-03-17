@@ -63,9 +63,9 @@ class trainer(object):
         ngpu_use = torch.cuda.device_count()
 
         if self.trial!=None:
-            self.glr = self.trial.suggest_float("glrx",0.0001, 0.1,log=True)
-            self.rlr = self.trial.suggest_float("rlrx",0.0001, 0.1,log=True)
-            self.weight_decay = self.trial.suggest_float("weight_decay",1.E-6,1.E-5,log=True)
+            self.glr = self.trial.suggest_float("glrx",0.0001, 0.001,log=True)
+            self.rlr = self.trial.suggest_float("rlrx",0.0001, 0.001,log=True)
+            self.weight_decay = 0.00001 #self.trial.suggest_float("weight_decay",1.E-6,1.E-5,log=True)
         else:
             try:
                 self.glr = float(opt.config["hparams"]['glry'])
@@ -101,23 +101,23 @@ class trainer(object):
 
             'Dloss_ali':[0],
             'Dloss_rec':[0],
-            'Dloss_rec_y':[0],
-            'Dloss_rec_x':[0],
-            'Dloss_rec_zy':[0],
-            'Dloss_rec_zxy':[0],
+            'Dloss_cycle_y':[0],
+            'Dloss_cycle_x':[0],
+            'Dloss_cycle_zy':[0],
+            'Dloss_cycle_zxy':[0],
             'Gloss':[0],
             'Gloss_ali':[0],
-            'Gloss_cycle_consistency':[0],
-            'Gloss_cycle_consistency_y':[0],
-            'Gloss_cycle_consistency_zd':[0],
-            'Gloss_cycle_consistency_zf':[0],
-            'Gloss_identity':[0],
-            'Gloss_identity_y':[0],
-            'Gloss_identity_x':[0],
-            'Gloss_identity_zd':[0],
-            'Gloss_identity_zf':[0],
+            'Gloss_cycle':[0],
+            'Gloss_cycle_y':[0],
+            'Gloss_cycle_zd':[0],
+            'Gloss_cycle_zf':[0],
+            'Gloss_rec':[0],
+            'Gloss_rec_y':[0],
+            'Gloss_rec_x':[0],
+            'Gloss_rec_zd':[0],
+            'Gloss_rec_zf':[0],
             'Gloss_rec_zx':[0],
-            'Gloss_identity_zxy':[0],
+            'Gloss_cycle_zxy':[0],
             'Gloss_rec_zxy':[0],
             'Gloss_rec_x':[0],
             'Gloss_rec_zf':[0]
@@ -401,12 +401,12 @@ class trainer(object):
 
         # 6. Disciminate Cross Entropy  
         Dreal_y,Dfake_y     = self.discriminate_yy(y,y_rec)
-        Dloss_rec_y         = self.bce_loss(Dreal_y,o1l(Dreal_y))+\
+        Dloss_cycle_y         = self.bce_loss(Dreal_y,o1l(Dreal_y))+\
                                 self.bce_loss(Dfake_y,o0l(Dfake_y))
         # Dloss_rec_y       = -torch.mean(ln0c(Dreal_y)+ln0c(1.0-Dfake_y))
 
         Dreal_zd,Dfake_zd   = self.discriminate_zzb(zd_inp,zd_rec)
-        Dloss_rec_zy        = self.bce_loss(Dreal_zd,o1l(Dreal_zd))+\
+        Dloss_cycle_zy        = self.bce_loss(Dreal_zd,o1l(Dreal_zd))+\
                                 self.bce_loss(Dfake_zd,o0l(Dfake_zd))
         # Dloss_rec_zy        = -torch.mean(ln0c(Dreal_zd)+ln0c(1.0-Dfake_zd)
 
@@ -437,29 +437,32 @@ class trainer(object):
 
 
         Dreal_zxy, Dfake_zxy= self.discriminate_zxy(zxy, zxy_rec)
-        Dloss_rec_zxy       = self.bce_loss(Dreal_zxy,o1l(Dreal_zxy))+\
+        Dloss_cycle_zxy       = self.bce_loss(Dreal_zxy,o1l(Dreal_zxy))+\
                                 self.bce_loss(Dfake_zxy,o0l(Dfake_zxy))
 
         # 7.6 Forcing Zy from X to be useless for the training
         Dreal_x, Dfake_x    = self.discriminate_xx(x,x_rec)
-        Dloss_rec_x         = self.bce_loss(Dreal_x,o1l(Dreal_x))+\
+        Dloss_cycle_x         = self.bce_loss(Dreal_x,o1l(Dreal_x))+\
                                 self.bce_loss(Dfake_x,o0l(Dfake_x))
 
         # 7.7 Discriminate Cross Entropy for zf 
         Dreal_zf, Dfake_zf = self.discriminate_zzf(zf_inp,zf_rec)
-        Dloss_rec_zf       = self.bce_loss(Dreal_zf,o1l(Dreal_zf))+\
+        Dloss_cycle_zf       = self.bce_loss(Dreal_zf,o1l(Dreal_zf))+\
                                 self.bce_loss(Dfake_zf,o1l(Dfake_zf))
 
         # 8. Compute all losses
-        Dloss_rec           = (
-                                Dloss_rec_y + 
-                                Dloss_rec_zy + 
-                                Dloss_rec_zxy + 
-                                Dloss_rec_zf+  
-                                Dloss_rec_x 
+        Dloss_cycle           = (
+                                Dloss_cycle_y + 
+                                Dloss_cycle_zy + 
+                                Dloss_cycle_zxy + 
+                                Dloss_cycle_zf +  
+                                Dloss_cycle_x 
                             )
-        Dloss_ali           = Dloss_ali_y + Dloss_ali_x
-        Dloss               = Dloss_ali + Dloss_rec
+        Dloss_ali           = (
+                                Dloss_ali_y + 
+                                Dloss_ali_x 
+                            )
+        Dloss               = Dloss_ali + Dloss_cycle
 
         Dloss.backward()
         self.oDyxz.step(),
@@ -469,11 +472,13 @@ class trainer(object):
         self.losses['Dloss'].append(Dloss.tolist())
         self.losses['Dloss_ali'].append(Dloss_ali.tolist())
 
-        self.losses['Dloss_rec'   ].append(Dloss_rec.tolist()) 
-        self.losses['Dloss_rec_y' ].append(Dloss_rec_y.tolist())
-        self.losses['Dloss_rec_x' ].append(Dloss_rec_x.tolist())
-        self.losses['Dloss_rec_zy'].append(Dloss_rec_zy.tolist())
-        self.losses['Dloss_rec_zxy'].append(Dloss_rec_zxy.tolist())        
+        self.losses['Dloss_cycle'   ].append(Dloss_cycle.tolist()) 
+        self.losses['Dloss_cycle_y' ].append(Dloss_cycle_y.tolist())
+        self.losses['Dloss_cycle_zxy'].append(Dloss_cycle_zxy.tolist())  
+
+        self.losses['Dloss_cycle_x' ].append(Dloss_cycle_x.tolist())
+        self.losses['Dloss_cycle_zy'].append(Dloss_cycle_zy.tolist())
+              
 
     # @profile
     def alice_train_generator_adv(self,y,zyy, zxy, x,epoch, trial_writer=None):
@@ -508,13 +513,13 @@ class trainer(object):
     
         # 5. Cross-Discriminate YY
         _,Dfake_y = self.discriminate_yy(y,y_rec)
-        Gloss_cycle_consistency_y   = self.bce_loss(Dfake_y,o1l(Dfake_y))
-        Gloss_identity_y            = torch.mean(torch.abs(y-y_rec)) 
+        Gloss_cycle_y   = self.bce_loss(Dfake_y,o1l(Dfake_y))
+        Gloss_rec_y            = torch.mean(torch.abs(y-y_rec)) 
         
         # 6. Cross-Discriminate ZZ
         _,Dfake_zd = self.discriminate_zzb(zd_inp,zd_rec)
-        Gloss_cycle_consistency_zd  = self.bce_loss(Dfake_zd,o1l(Dfake_zd))
-        Gloss_identity_zd           = torch.mean(torch.abs(zd_inp-zd_rec))
+        Gloss_cycle_zd  = self.bce_loss(Dfake_zd,o1l(Dfake_zd))
+        Gloss_rec_zd           = torch.mean(torch.abs(zd_inp-zd_rec))
 
         #7. Forcing zxy to equal zyx an zx to equal 0 of the space
         # 7.1 Inputs
@@ -549,16 +554,16 @@ class trainer(object):
 
         # Cross Discriminate for zxy to ensure it's Gaussian
         _,Dfake_zxy             = self.discriminate_zxy(zxy, zxy_rec)
-        Gloss_identity_zxy      = self.bce_loss(Dfake_zxy,o1l(Dfake_zxy))
+        Gloss_cycle_zxy      = self.bce_loss(Dfake_zxy,o1l(Dfake_zxy))
 
         # Cross Discimininate for Z from X to be [guassian,0]
         _, Dfake_zf             = self.discriminate_zzf(zf_inp, zf_rec)
-        Gloss_identity_zf       = self.bce_loss(Dfake_zf, o1l(Dfake_zf))
+        Gloss_cycle_zf       = self.bce_loss(Dfake_zf, o1l(Dfake_zf))
         Gloss_rec_zf            = torch.mean(torch.abs(zf_inp-zf_rec))
 
         # 7.4 Cross-Discriminate XX
         _, Dfake_x              = self.discriminate_xx(x,x_rec)
-        Gloss_identity_x        = self.bce_loss(Dfake_x, o1l(Dfake_x))
+        Gloss_cycle_x        = self.bce_loss(Dfake_x, o1l(Dfake_x))
         Gloss_rec_x             = torch.mean(torch.abs(x - x_rec))
 
         # 7.5 Forcing zxx_rec to be 0
@@ -568,30 +573,30 @@ class trainer(object):
 
         
         # 8. Total Loss
-        Gloss_cycle_consistency =(
-                                    Gloss_cycle_consistency_y + 
-                                    Gloss_cycle_consistency_zd
-                                )
-        Gloss_identity          =( 
-                                    Gloss_identity_y +
-                                    Gloss_identity_x +
-                                    Gloss_identity_zd + 
-                                    Gloss_identity_zf +
-                                    Gloss_identity_zxy+ 
-                                    Gloss_rec_zx + 
-                                    Gloss_rec_zf +
-                                    Gloss_rec_x + 
-                                    Gloss_rec_zxy 
-                                )
-        Gloss_ali               = (
-                                    Gloss_ali_y+
-                                    Gloss_ali_x
-                                )
-        Gloss                   = (
-                                    Gloss_ali + 
-                                    Gloss_cycle_consistency*app.LAMBDA_CONSISTENCY + 
-                                    Gloss_identity*app.LAMBDA_IDENTITY
-                                )
+        Gloss_cycle =(
+                        Gloss_cycle_y + 
+                        Gloss_cycle_zd
+                    )
+        Gloss_rec   =( 
+                        Gloss_rec_y +
+                        Gloss_cycle_x +
+                        Gloss_rec_zd + 
+                        Gloss_cycle_zf +
+                        Gloss_cycle_zxy+ 
+                        Gloss_rec_zx + 
+                        Gloss_rec_zf +
+                        Gloss_rec_x + 
+                        Gloss_rec_zxy 
+                    )
+        Gloss_ali   = (
+                        Gloss_ali_y+
+                        Gloss_ali_x
+                    )
+        Gloss       = (
+                        Gloss_ali + 
+                        Gloss_cycle*app.LAMBDA_CONSISTENCY + 
+                        Gloss_rec*app.LAMBDA_IDENTITY
+                    )
 
         if epoch%35 == 0: 
             writer = self.writer_debug if trial_writer == None else trial_writer
@@ -613,23 +618,23 @@ class trainer(object):
         self.losses['Gloss'].append(Gloss.tolist())
         self.losses['Gloss_ali'].append(Gloss_ali.tolist())
 
-        self.losses['Gloss_cycle_consistency'   ].append(Gloss_cycle_consistency.tolist())
-        self.losses['Gloss_cycle_consistency_y' ].append(Gloss_cycle_consistency_y.tolist())
-        self.losses['Gloss_cycle_consistency_zd'].append(Gloss_cycle_consistency_zd.tolist())
+        self.losses['Gloss_cycle'   ].append(Gloss_cycle.tolist())
+        self.losses['Gloss_cycle_y' ].append(Gloss_cycle_y.tolist())
+        self.losses['Gloss_cycle_zd'].append(Gloss_cycle_zd.tolist())
         
 
-        self.losses['Gloss_identity'   ].append(Gloss_identity.tolist())
-        self.losses['Gloss_identity_y' ].append(Gloss_identity_y.tolist())
-        self.losses['Gloss_identity_x' ].append(Gloss_identity_x.tolist())
-        self.losses['Gloss_identity_zd'].append(Gloss_identity_zd.tolist())
-        self.losses['Gloss_identity_zf'].append(Gloss_identity_zf.tolist())
+        self.losses['Gloss_rec'   ].append(Gloss_rec.tolist())
+        self.losses['Gloss_rec_y' ].append(Gloss_rec_y.tolist())
+        self.losses['Gloss_rec_x' ].append(Gloss_cycle_x.tolist())
+        self.losses['Gloss_rec_zd'].append(Gloss_rec_zd.tolist())
+        self.losses['Gloss_rec_zf'].append(Gloss_cycle_zf.tolist())
         
-        self.losses['Gloss_identity_zxy'].append(Gloss_identity_zxy.tolist())
+        self.losses['Gloss_rec_zxy'].append(Gloss_cycle_zxy.tolist())
 
-        self.losses['Gloss_rec_zx'].append(Gloss_rec_zx.tolist())
+        self.losses['Gloss_rec_zx' ].append(Gloss_rec_zx.tolist())
         self.losses['Gloss_rec_zxy'].append(Gloss_rec_zxy.tolist())
-        self.losses['Gloss_rec_x'].append(Gloss_rec_x.tolist())
-        self.losses['Gloss_rec_zf'].append(Gloss_rec_zf.tolist())
+        self.losses['Gloss_rec_x'  ].append(Gloss_rec_x.tolist())
+        self.losses['Gloss_rec_zf' ].append(Gloss_rec_zf.tolist())
 
     def generate_latent_variable(self, batch, nch_zd,nzd, nch_zf = 128,nzf = 128):
         zyy  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
