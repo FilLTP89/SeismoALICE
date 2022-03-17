@@ -139,6 +139,7 @@ class trainer(object):
         else:
             hparams_dir         = f'{self.study_dir}/hparams/'
             self.writer_hparams = SummaryWriter(f'{hparams_dir}')
+            # self.writer_hparams_graph = SummaryWriter(f'{hparams_dir}/graph')
 
         flagT=False
         flagF=False
@@ -288,9 +289,8 @@ class trainer(object):
                 else:
                     flagF=False
 
-        
         # self.writer_debug_encoder.add_graph(next(iter(self.F_.children())),torch.randn(128,6,4096).cuda())
-        # self.writer_debug_decoder.add_graph(next(iter(self.Gy.children())), torch.randn(128,512,256).cuda())
+        # self.writer_hparams_graph.add_graph(next(iter(self.Gy.children())), (torch.randn(10,4,128).cuda(),torch.randn(10,4,128).cuda()))
         self.bce_loss = BCE(reduction='mean')
         # breakpoint()
         print("Parameters of  Encoder/Decoders ")
@@ -383,7 +383,7 @@ class trainer(object):
         y_inp   = zcat(y,wny)
         
         # 2.1 Generate conditional samples
-        y_gen   = self.Gy(zd_inp)
+        y_gen   = self.Gy(zxy,zyy)
         zyy_F,zyx_F,*other = self.F_(y_inp)
         
         #2.2 Concatenate outputs
@@ -397,7 +397,7 @@ class trainer(object):
 
         # 5. Generate reconstructions
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        y_rec       = self.Gy(zd_gen)
+        y_rec       = self.Gy(zyx_F,zyy_F)
 
         y_gen   = zcat(y_gen,wny)
         zyy_gen,zyx_gen,*other = self.F_(y_gen)
@@ -410,7 +410,7 @@ class trainer(object):
         # Dloss_rec_y       = -torch.mean(ln0c(Dreal_y)+ln0c(1.0-Dfake_y))
 
         Dreal_zd,Dfake_zd   = self.discriminate_zzb(zd_inp,zd_rec)
-        Dloss_cycle_zy        = self.bce_loss(Dreal_zd,o1l(Dreal_zd))+\
+        Dloss_cycle_zy      = self.bce_loss(Dreal_zd,o1l(Dreal_zd))+\
                                 self.bce_loss(Dfake_zd,o0l(Dfake_zd))
         # Dloss_rec_zy        = -torch.mean(ln0c(Dreal_zd)+ln0c(1.0-Dfake_zd)
 
@@ -421,7 +421,7 @@ class trainer(object):
         zf_inp  = zcat(zxy,o0l(zyy))
 
         # 7.2 Generate samples
-        _x_gen   = self.Gy(zf_inp)
+        _x_gen   = self.Gy(zxy,o0l(zyy))
         zxx_F, zxy_F, *others = self.F_(x_inp)
         
         # 7.3 Concatenate outputs
@@ -480,24 +480,23 @@ class trainer(object):
         self.losses['Dloss_cycle_y' ].append(Dloss_cycle_y.tolist())
         self.losses['Dloss_cycle_zxy'].append(Dloss_cycle_zxy.tolist())  
 
-        self.losses['Dloss_cycle_x' ].append(Dloss_cycle_x.tolist())
+        # self.losses['Dloss_cycle_x' ].append(Dloss_cycle_x.tolist())
         self.losses['Dloss_cycle_zy'].append(Dloss_cycle_zy.tolist())
               
 
     # @profile
-    def alice_train_generator_adv(self,y,zyy, zxy, x,epoch, trial_writer=None):
+    def alice_train_generator_adv(self,y,zyy, zxy, x, epoch, trial_writer=None):
         # Set-up training
         zerograd(self.optz)
         modalite(self.FGf,   mode ='train')
         modalite(self.Dnets, mode ='train')
-        
         # 1. Concatenate inputs
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         y_inp   = zcat(y,wny)
         zd_inp  = zcat(zxy,zyy)
 
         # 2. Generate conditional samples
-        y_gen   = self.Gy(zd_inp)
+        y_gen   = self.Gy(zxy,zyy)
         zyy_gen,zyx_gen,*others = self.F_(y_inp)
 
         _zyy_gen= zcat(zyx_gen,zyy_gen) 
@@ -508,7 +507,7 @@ class trainer(object):
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
 
         # 4. Generate reconstructions
-        y_rec = self.Gy(_zyy_gen)
+        y_rec = self.Gy(zyx_gen,zyy_gen)
         
         y_gen = zcat(y_gen,wny)
         zyy_rec,zyx_rec,*other = self.F_(y_gen)
@@ -538,8 +537,8 @@ class trainer(object):
         # 7.2 Generate conditional outputs
         zx_gen, zxy_gen, *others = self.F_(x_inp)
         zf_gen      = zcat(zxy_gen, o0l(zx_gen))
-        _x_gen      = self.Gy(zf_inp)
-        _x_gen_fake = self.Gy(zf_fake_inp)
+        _x_gen      = self.Gy(zxy,o0l(zyy))
+        _x_gen_fake = self.Gy(zxy,wn.detach())
 
         # 7.3 Generate reconstructions values
         # x_rec       = self.Gy(zf_gen)
@@ -628,9 +627,9 @@ class trainer(object):
         self.losses['Gloss_cycle_y' ].append(Gloss_cycle_y.tolist())
         self.losses['Gloss_cycle_zd'].append(Gloss_cycle_zd.tolist())
         
-        self.losses['Gloss_cycle_x' ].append(Gloss_cycle_x.tolist())
+        # self.losses['Gloss_cycle_x' ].append(Gloss_cycle_x.tolist())
         
-        self.losses['Gloss_cycle_zf'].append(Gloss_cycle_zf.tolist())
+        # self.losses['Gloss_cycle_zf'].append(Gloss_cycle_zf.tolist())
         
         self.losses['Gloss_cycle_zxy'].append(Gloss_cycle_zxy.tolist())
 
@@ -638,8 +637,8 @@ class trainer(object):
         self.losses['Gloss_rec_zd' ].append(Gloss_rec_zd.tolist())
         self.losses['Gloss_rec_y'  ].append(Gloss_rec_y.tolist())
         self.losses['Gloss_rec_zx' ].append(Gloss_rec_zx.tolist())
-        self.losses['Gloss_rec_x'  ].append(Gloss_rec_x.tolist())
-        self.losses['Gloss_rec_zf' ].append(Gloss_rec_zf.tolist())
+        # self.losses['Gloss_rec_x'  ].append(Gloss_rec_x.tolist())
+        # self.losses['Gloss_rec_zf' ].append(Gloss_rec_zf.tolist())
 
     def generate_latent_variable(self, batch, nch_zd,nzd, nch_zf = 128,nzf = 128):
         zyy  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)

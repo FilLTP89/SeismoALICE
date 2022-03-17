@@ -1,4 +1,3 @@
-from msilib.schema import Class
 from torch.nn.modules import activation
 from core.net.basic_model import BasicModel
 from conv.resnet.residual import DecoderResnet,block_2x2
@@ -39,8 +38,9 @@ class DecoderDataParallele(object):
                         nly = nly, act=act, ndf =ndf, ker = ker, std =std, pad = pad, opd = opd,dconv = dconv,\
                         dil=dil, dpc = dpc,n_extra_layers=n_extra_layers, channel = channel, extra = extra)
             except Exception as e:
-                raise e
                 print("The class ",classname," does not exit")
+                raise e
+                
         else:
             return Decoder(ngpu = ngpu, nz = nz, nch = nch, config=config, limit = limit, bn = bn, path=path,\
         nly = nly, act=act, ndf =ndf, ker = ker, std =std, pad = pad, opd = opd,dconv = dconv,\
@@ -73,7 +73,7 @@ class BasicDecoderDataParallel(BasicModel):
     def forward(self,x):
         pass
 
-    def feed(x,features):
+    def feed(self,x,features):
         for layer, feature in zip(self.cnn1.children(),reverse(features)):
             x =  layer(x)
             if layer.__class__.__name__ == 'ConvTranspose1d' : 
@@ -269,7 +269,6 @@ class Decoder_Unic(BasicDecoderDataParallel):
         opd_bb      = config["broadband"]["outpads"]
         nly_bb      = config["broadband"]["nlayers"]
         dpc_bb      = config["broadband"]["dpc"]
-        extra_bb    = config["broadband"]["extra"]
         acts_bb     = T.activation(config["broadband"]["act"], config["broadband"]["nlayers"])
 
         #common part
@@ -285,7 +284,7 @@ class Decoder_Unic(BasicDecoderDataParallel):
         
         for i in range(1, nly+1):
             _dpc = 0.0 if i ==nly_com else dpc_com
-            _bn =  False if i == nly_com else config["broadband"]["bn"]
+            _bn =  False if i == nly_com else bn
             self.branch_common += cnn1dt(channel_com[i-1],
                         channel_com[i], 
                         acts_com[i-1],
@@ -299,7 +298,7 @@ class Decoder_Unic(BasicDecoderDataParallel):
         
         for i in range(1, nly+1):
             _dpc = 0.0 if i ==nly_bb else dpc_bb
-            _bn =  False if i == nly_bb else config["common"]["bn"]
+            _bn =  False if i == nly_bb else bn
             self.branch_broadband += cnn1dt(channel_bb[i-1],
                         channel_bb[i], 
                         acts_bb[i-1],
@@ -330,9 +329,9 @@ class Decoder_Unic(BasicDecoderDataParallel):
         self.branch_master      = sqn(*self.branch_master)
 
     def forward(self,z_com,z_bb):
-        z_com   = self.branch_common(z_com)
-        z_bb    = self.branch_broadband(z_bb)
-        z   =  zcat(z_com, z_bb)
+        z1  = self.branch_common(z_com)
+        z2  = self.branch_broadband(z_bb)
+        z   =  zcat(z1, z2)
         x   = self.branch_master(z)
 
         if not self.training:
