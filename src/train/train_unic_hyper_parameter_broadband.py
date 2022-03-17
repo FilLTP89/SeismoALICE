@@ -512,8 +512,7 @@ class trainer(object):
         
         y_gen = zcat(y_gen,wny)
         zyy_rec,zyx_rec,*other = self.F_(y_gen)
-
-        zd_rec = zcat(zyx_rec,zyy_rec)
+        zd_rec  = zcat(zyx_rec,zyy_rec)
     
         # 5. Cross-Discriminate YY
         _,Dfake_y = self.discriminate_yy(y,y_rec)
@@ -549,7 +548,7 @@ class trainer(object):
 
         zxx_rec, zxy_rec, *others = self.F_(x_gen)
         zf_rec      = zcat(zxy_rec,zxx_rec)
-
+        
         _, zxy_rec_fake, *others = self.F_(x_gen_fake)
         zxy_fake    =  zxy_rec_fake
 
@@ -563,7 +562,7 @@ class trainer(object):
         # Cross Discimininate for Z from X to be [guassian,0]
         _, Dfake_zf          = self.discriminate_zzf(zf_inp, zf_rec)
         Gloss_cycle_zf       = self.bce_loss(Dfake_zf, o1l(Dfake_zf))
-        Gloss_rec_zf         = torch.mean(torch.abs(zf_inp-zf_rec))
+        Gloss_rec_zf         = torch.mean(torch.abs(zf_inp - zf_rec))
 
         # 7.4 Cross-Discriminate XX
         _, Dfake_x           = self.discriminate_xx(x,x_rec)
@@ -573,7 +572,10 @@ class trainer(object):
         # 7.5 Forcing zxx_rec to be 0
         Gloss_rec_zx         = torch.mean(torch.abs(zxx_rec))
         # 7.6 Forcing zxy to  be gaussian by a cycling and independant to the value of z
-        Gloss_rec_zxy        = torch.mean(torch.abs(zxy-zxy_fake)) +torch.mean(torch.abs(zxy-zxy_rec))
+        Gloss_rec_zxy        = torch.mean(torch.abs(zxy - zxy_fake))+\
+                                torch.mean(torch.abs(zxy - zxy_rec))
+
+        Gloss_rec_zy         = torch.mean(torch.abs(zyy - zyy_rec))
         
         # 8. Total Loss
         Gloss_cycle =(
@@ -586,7 +588,8 @@ class trainer(object):
                         Gloss_rec_zd + 
                         Gloss_cycle_zf +
                         Gloss_cycle_zxy+ 
-                        Gloss_rec_zx + 
+                        Gloss_rec_zx +
+                        Gloss_rec_zy +
                         Gloss_rec_zf +
                         Gloss_rec_x + 
                         Gloss_rec_zxy 
@@ -701,7 +704,7 @@ class trainer(object):
                     x.data = x[index[mask]]
                     zyy.data, zyx.data = zyy[index[mask]],zyx[index[mask]]
                 
-                for _ in range(2):
+                for _ in range(5):
                     self.alice_train_discriminator_adv(y,zyy,zyx,x)                 
                 for _ in range(1):
                     self.alice_train_generator_adv(y,zyy,zyx,x,epoch, self.writer_histo)
