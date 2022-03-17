@@ -214,32 +214,37 @@ class trainer(object):
                     #     weight_decay=0.00001)
                 self.optz.append(self.oGyx)
                 # self.optz.append(self.oGy)
-                self.Dy   = net.DCGAN_Dx( opt.config['Dy'],  opt)
-                self.Dzb  = net.DCGAN_Dz( opt.config['Dzb'], opt)
-                self.Dyz  = net.DCGAN_DXZ(opt.config['Dyz'], opt)
-                self.Dzzb = net.DCGAN_Dz( opt.config['Dzzb'],opt)
-                self.Dyy  = net.DCGAN_Dx( opt.config['Dyy'], opt)
+                self.Dy     = net.DCGAN_Dx( opt.config['Dy'],  opt)
+                self.Dzb    = net.DCGAN_Dz( opt.config['Dzb'], opt)
+                self.Dyz    = net.DCGAN_DXZ(opt.config['Dyz'], opt)
+                self.Dzzb   = net.DCGAN_Dz( opt.config['Dzzb'],opt)
+                self.Dyy    = net.DCGAN_Dx( opt.config['Dyy'], opt)
 
-                self.Dzyx = net.DCGAN_Dz(opt.config['Dzyx'],opt)
+                self.Dzyx   = net.DCGAN_Dz(opt.config['Dzyx'],opt)
                 
-                # self.Dx   = net.DCGAN_Dx(opt.config['Dx'],  opt)
-                # self.Dzf  = net.DCGAN_Dz(opt.config['Dzf'], opt)
-                # self.Dxz  = net.DCGAN_DXZ(opt.config['Dxz'],opt)
-                self.Dzzf = net.DCGAN_Dz(opt.config['Dzzf'],opt)
+                self.Dx     = net.DCGAN_Dx(opt.config['Dx'],  opt)
 
-                self.Dxx  = net.DCGAN_Dx(opt.config['Dxx'], opt)
+                self.Dzf    = net.DCGAN_Dz(opt.config['Dzf'], opt)
+                self.Dxz    = net.DCGAN_DXZ(opt.config['Dxz'],opt)
+                self.Dzzf   = net.DCGAN_Dz(opt.config['Dzzf'],opt)
 
-                self.Dy   = nn.DataParallel(self.Dy  ).cuda()
-                self.Dzb  = nn.DataParallel(self.Dzb ).cuda()
-                self.Dyz  = nn.DataParallel(self.Dyz ).cuda()
-                self.Dzzb = nn.DataParallel(self.Dzzb).cuda()
-                self.Dyy  = nn.DataParallel(self.Dyy ).cuda()
+                self.Dxx    = net.DCGAN_Dx(opt.config['Dxx'], opt)
 
-                self.Dzyx = nn.DataParallel(self.Dzyx ).cuda()
+                self.Dy     = nn.DataParallel(self.Dy  ).cuda()
+                self.Dzb    = nn.DataParallel(self.Dzb ).cuda()
+                self.Dyz    = nn.DataParallel(self.Dyz ).cuda()
+                self.Dzzb   = nn.DataParallel(self.Dzzb).cuda()
+                self.Dyy    = nn.DataParallel(self.Dyy ).cuda()
 
-                self.Dxx  = nn.DataParallel(self.Dxx ).cuda()
+                self.Dzyx   = nn.DataParallel(self.Dzyx ).cuda()
 
-                self.Dzzf = nn.DataParallel(self.Dzzf).cuda()
+                self.Dxx    = nn.DataParallel(self.Dxx ).cuda()
+
+                self.Dzzf   = nn.DataParallel(self.Dzzf).cuda()
+                
+                self.Dzf    = nn.DataParallel(self.Dzf).cuda()
+                self.Dx     = nn.DataParallel(self.Dx).cuda()
+                self.Dxz    = nn.DataParallel(self.Dxz).cuda()
                 
 
                 self.Dnets.append(self.Dy)
@@ -247,9 +252,14 @@ class trainer(object):
                 self.Dnets.append(self.Dyz)
                 self.Dnets.append(self.Dzzb)
                 self.Dnets.append(self.Dyy)
+
                 self.Dnets.append(self.Dzyx)
                 self.Dnets.append(self.Dxx)
                 self.Dnets.append(self.Dzzf)
+
+                self.Dnets.append(self.Dzf)
+                self.Dnets.append(self.Dx)
+                self.Dnets.append(self.Dxz)
 
                 self.oDyxz = reset_net(
                     self.Dnets,
@@ -401,7 +411,6 @@ class trainer(object):
         # Dloss_rec_zy        = -torch.mean(ln0c(Dreal_zd)+ln0c(1.0-Dfake_zd)
 
         # 7. Forcing zxy to equal zyx an zx to equal 0 of the space
-
         # 7.1 Concatenate inputs
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         x_inp   = zcat(x,wnx)
@@ -412,8 +421,7 @@ class trainer(object):
         zxx_F, zxy_F, *others = self.F_(x_inp)
         
         # 7.3 Concatenate outputs
-        zf_gen  = zcat(zxy_F,zxx_F)
-        zxy_gen = zxy_F 
+        zf_gen  = zcat(zxy_F,o0l(zxx_F))
 
         # 7.4 Generate reconstructions
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
@@ -423,8 +431,12 @@ class trainer(object):
         x_rec       = self.Gy(zf_gen)
         zf_rec      = zcat(zxy_rec,zx_rec)
 
-        # 7.5 Forcing Zxy from X to be guassian
-        Dreal_zxy, Dfake_zxy= self.discriminate_zxy(zxy_gen, zyx_gen)
+        # 7.5 Forcing zxy from X to be guassian
+        Dxz,Dzx = self.discriminate_xz(x,x_gen,zf_inp,zf_gen)
+        Dloss_ali_x = -torch.mean(ln0c(Dzx)+ln0c(1.0-Dxz))
+
+
+        Dreal_zxy, Dfake_zxy= self.discriminate_zxy(zxy, zxy_rec)
         Dloss_rec_zxy       = self.bce_loss(Dreal_zxy,o1l(Dreal_zxy))+\
                                 self.bce_loss(Dfake_zxy,o0l(Dfake_zxy))
 
@@ -443,11 +455,11 @@ class trainer(object):
                                 Dloss_rec_y + 
                                 Dloss_rec_zy + 
                                 Dloss_rec_zxy + 
-                                Dloss_rec_zf + 
+                                Dloss_rec_zf+  
                                 Dloss_rec_x 
                             )
-        Dloss_ali           = Dloss_ali_y 
-        Dloss               = Dloss_ali   + Dloss_rec
+        Dloss_ali           = Dloss_ali_y + Dloss_ali_x
+        Dloss               = Dloss_ali + Dloss_rec
 
         Dloss.backward()
         self.oDyxz.step(),
@@ -473,7 +485,7 @@ class trainer(object):
         # 1. Concatenate inputs
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         y_inp   = zcat(y,wny)
-        zd_inp   = zcat(zxy,zyy)
+        zd_inp  = zcat(zxy,zyy)
 
         # 2. Generate conditional samples
         y_gen   = self.Gy(zd_inp)
@@ -481,7 +493,7 @@ class trainer(object):
 
         _zyy_gen= zcat(zyx_gen,zyy_gen) 
         Dyz,Dzy = self.discriminate_yz(y,y_gen,zd_inp,_zyy_gen)
-        Gloss_ali =  torch.mean(-Dyz+Dzy) 
+        Gloss_ali_y =  torch.mean(-Dyz+Dzy) 
         
         # 3. Generate noise
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
@@ -506,43 +518,61 @@ class trainer(object):
 
         #7. Forcing zxy to equal zyx an zx to equal 0 of the space
         # 7.1 Inputs
-        nch,nz  = 4, 128
+        nch,nz      = 4, 128
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        wn      = torch.empty([x.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(dev)
-        x_inp   = zcat(x,wnx)
-        zf_inp  = zcat(zxy,o0l(zyy))
+        wnx_fake,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        wn          = torch.empty([x.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(app.DEVICE)
+
+        x_inp       = zcat(x,wnx)
+        zf_inp      = zcat(zxy,o0l(zyy))
+        zf_fake_inp = zcat(zxy,wn)
 
         # 7.2 Generate conditional outputs
         zx_gen, zxy_gen, *others = self.F_(x_inp)
-        zf_gen  = zcat(zxy_gen, zx_gen)
-        _x_gen  = self.Gy(zf_inp)
+        zf_gen      = zcat(zxy_gen, o0l(zx_gen))
+        _x_gen      = self.Gy(zf_inp)
+        _x_gen_fake = self.Gy(zf_fake_inp)
 
         # 7.3 Generate reconstructions values
-        x_rec   = self.Gy(zf_gen)
-        x_gen   = zcat(_x_gen,wnx)
+        x_rec       = self.Gy(zf_gen)
+        x_gen       = zcat(_x_gen,wnx)
+        x_gen_fake  = zcat(_x_gen_fake,wnx_fake)
 
         zxx_rec, zxy_rec, *others = self.F_(x_gen)
-        zf_rec  = zcat(zxy_rec,zxx_rec)
+        zf_rec      = zcat(zxy_rec,zxx_rec)
 
-        # 7.4 Forcing Zxy from X to be guassian
-        _, Dfake_zf            = self.discriminate_zzf(zf_inp, zf_rec)
-        Gloss_identity_zf     = self.bce_loss(Dfake_zf, o1l(Dfake_zf))
-        Gloss_rec_zf           = torch.mean(torch.abs(zf_gen-zf_rec))
+        _, zxy_rec_fake, *others = self.F_(x_gen_fake)
+        zxy_fake    =  zxy_rec_fake
+
+        Dxz,Dzx     = self.discriminate_xz(x,x_gen,zf_inp,zf_gen)
+        Gloss_ali_x =  torch.mean(-Dxz+Dzx)
+
+        # Cross Discriminate for zxy to ensure it's Gaussian
+        _,Dfake_zxy             = self.discriminate_zxy(zxy, zxy_rec)
+        Gloss_identity_zxy      = self.bce_loss(Dfake_zxy,o1l(Dfake_zxy))
+
+        # Cross Discimininate for Z from X to be [guassian,0]
+        _, Dfake_zf             = self.discriminate_zzf(zf_inp, zf_rec)
+        Gloss_identity_zf       = self.bce_loss(Dfake_zf, o1l(Dfake_zf))
+        Gloss_rec_zf            = torch.mean(torch.abs(zf_inp-zf_rec))
 
         # 7.4 Cross-Discriminate XX
         _, Dfake_x              = self.discriminate_xx(x,x_rec)
         Gloss_identity_x        = self.bce_loss(Dfake_x, o1l(Dfake_x))
         Gloss_rec_x             = torch.mean(torch.abs(x - x_rec))
 
-        # 7.5 Forcig Zx to equal 0
+        # 7.5 Forcing zxx_rec to be 0
         Gloss_rec_zx            = torch.mean(torch.abs(zxx_rec))
-        Gloss_rec_zxy           = torch.mean(torch.abs(zxy_gen-zyx_gen))
-        _,Dfake_zxy             = self.discriminate_zxy(zxy_gen, zyx_gen)
-        Gloss_identity_zxy      = self.bce_loss(Dfake_zxy,o1l(Dfake_zxy))
+        # 7.6 Forcing zxy to  be gaussian by a cycling and independant to the value of z
+        Gloss_rec_zxy           = torch.mean(torch.abs(zxy-zxy_fake))
 
+        
         # 8. Total Loss
-        Gloss_cycle_consistency = Gloss_cycle_consistency_y + Gloss_cycle_consistency_zd 
-        Gloss_identity          = ( 
+        Gloss_cycle_consistency =(
+                                    Gloss_cycle_consistency_y + 
+                                    Gloss_cycle_consistency_zd
+                                )
+        Gloss_identity          =( 
                                     Gloss_identity_y +
                                     Gloss_identity_x +
                                     Gloss_identity_zd + 
@@ -552,6 +582,10 @@ class trainer(object):
                                     Gloss_rec_zf +
                                     Gloss_rec_x + 
                                     Gloss_rec_zxy 
+                                )
+        Gloss_ali               = (
+                                    Gloss_ali_y+
+                                    Gloss_ali_x
                                 )
         Gloss                   = (
                                     Gloss_ali + 
