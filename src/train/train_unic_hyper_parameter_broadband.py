@@ -573,8 +573,7 @@ class trainer(object):
         # 7.5 Forcing zxx_rec to be 0
         Gloss_rec_zx         = torch.mean(torch.abs(zxx_rec))
         # 7.6 Forcing zxy to  be gaussian by a cycling and independant to the value of z
-        Gloss_rec_zxy        = torch.mean(torch.abs(zxy-zxy_fake))
-
+        Gloss_rec_zxy        = torch.mean(torch.abs(zxy-zxy_fake)) +torch.mean(torch.abs(zxy-zxy_rec))
         
         # 8. Total Loss
         Gloss_cycle =(
@@ -702,7 +701,7 @@ class trainer(object):
                     x.data = x[index[mask]]
                     zyy.data, zyx.data = zyy[index[mask]],zyx[index[mask]]
                 
-                for _ in range(5):
+                for _ in range(2):
                     self.alice_train_discriminator_adv(y,zyy,zyx,x)                 
                 for _ in range(1):
                     self.alice_train_generator_adv(y,zyy,zyx,x,epoch, self.writer_histo)
