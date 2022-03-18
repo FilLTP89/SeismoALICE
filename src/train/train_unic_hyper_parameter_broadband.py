@@ -291,8 +291,8 @@ class trainer(object):
                     flagF=False
 
         # self.writer_debug_encoder.add_graph(next(iter(self.F_.children())),torch.randn(128,6,4096).cuda())
-        self.writer_hparams_graph_encoder.add_graph(next(iter(self.F_.children())),torch.randn(10,6,4096).cuda())
-        self.writer_hparams_graph_decoder.add_graph(next(iter(self.Gy.children())), (torch.randn(10,4,128).cuda(),torch.randn(10,4,128).cuda()))
+        # self.writer_hparams_graph_encoder.add_graph(next(iter(self.F_.children())),torch.randn(10,6,4096).cuda())
+        # self.writer_hparams_graph_decoder.add_graph(next(iter(self.Gy.children())), (torch.randn(10,4,128).cuda(),torch.randn(10,4,128).cuda()))
         self.bce_loss = BCE(reduction='mean')
         # breakpoint()
         print("Parameters of  Encoder/Decoders ")
@@ -434,7 +434,7 @@ class trainer(object):
         x_gen       = zcat(_x_gen,wnx)
         zx_rec, zxy_rec,*others = self.F_(x_gen)
 
-        x_rec       = self.Gy(zf_gen)
+        x_rec       = self.Gy(zxy_F,o0l(zxx_F))
         zf_rec      = zcat(zxy_rec,o0l(zx_rec))
 
         # 7.5 Forcing zxy from X to be guassian
@@ -543,7 +543,7 @@ class trainer(object):
         _x_gen_fake = self.Gy(zxy,wn.detach())
 
         # 7.3 Generate reconstructions values
-        x_rec       = self.Gy(zf_gen)
+        x_rec       = self.Gy(zxy_gen, o0l(zx_gen))
         x_gen       = zcat(_x_gen,wnx)
         x_gen_fake  = zcat(_x_gen_fake,wnx_fake)
 
@@ -572,7 +572,7 @@ class trainer(object):
 
         # 7.5 Forcing zxx_rec to be 0
         Gloss_rec_zx         = torch.mean(torch.abs(zxx_rec))
-        
+
         # 7.6 Forcing zxy to  be gaussian by a cycling and independant to the value of z
         Gloss_rec_zxy        = torch.mean(torch.abs(zxy - zxy_fake))+\
                                torch.mean(torch.abs(zxy - zxy_rec))
@@ -758,36 +758,21 @@ class trainer(object):
                 self.writer_val.add_figure('Filtered',figure_fl, epoch)
                 self.writer_val.add_figure('Goodness of Fit Filtered',gof_fl, epoch)
 
-                # figure_hb, gof_hb = plt.plot_generate_classic(
-                #         tag     = 'hybrid',
-                #         Qec     = deepcopy(self.F_),
-                #         Pdc     = deepcopy(self.Gy),
-                #         trn_set = self.vld_loader,
-                #         pfx     ="vld_set_bb_unique",
-                #         opt     = opt,
-                #         outf    = outf, 
-                #         save    = False)
+                figure_hb, gof_hb = plt.plot_generate_classic(
+                        tag     = 'hybrid',
+                        Qec     = deepcopy(self.F_),
+                        Pdc     = deepcopy(self.Gy),
+                        trn_set = self.vld_loader,
+                        pfx     ="vld_set_bb_unique",
+                        opt     = opt,
+                        outf    = outf, 
+                        save    = False)
                 
-                # bar.set_postfix(status = 'writing reconstructed hybrid broadband signals ...')
-                # self.writer_val.add_figure('Hybrid (Broadband)',figure_hb, epoch)
-                # self.writer_val.add_figure('Goodness of Fit Hybrid (Broadband)',gof_hb, epoch)
-                
-                # figure_hf, gof_hf = plt.plot_generate_classic(
-                #         tag     = 'hybrid',
-                #         Qec     = deepcopy(self.F_),
-                #         Pdc     = deepcopy(self.Gy),
-                #         trn_set = self.vld_loader,
-                #         pfx     ="vld_set_bb_unique_hack",
-                #         opt     = opt,
-                #         outf    = outf, 
-                #         save    = False)
+                bar.set_postfix(status = 'writing reconstructed hybrid broadband signals ...')
+                self.writer_val.add_figure('Hybrid (Broadband)',figure_hb, epoch)
+                self.writer_val.add_figure('Goodness of Fit Hybrid (Broadband)',gof_hb, epoch)
 
-                # bar.set_postfix(status = 'writing reconstructed hybrid filtered signals ...')
-                # self.writer_val.add_figure('Hybrid (Filtered)',figure_hf, epoch)
-                # self.writer_val.add_figure('Goodness of Fit Hybrid (Filtered)',gof_hf, epoch)
-
-                # if self.trial == None:
-                #     #in case of real training
+    
                 random.seed(opt.manualSeed)
             
             if epoch%20 == 0:
@@ -934,7 +919,7 @@ class trainer(object):
 
         accuracy_hb = _eval(EG_h,PG_h)
         accuracy_bb = _eval(EG_b,PG_b)
-        accuracy_fl = _eval(EG_h,PG_h)
+        accuracy_fl = _eval(EG_f,PG_f)
 
         # if accuracy == np.nan:
         #     accuracy =10*np.sqrt(2)

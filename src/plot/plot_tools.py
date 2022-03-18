@@ -913,7 +913,7 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
 
         
         nch, nz         = 4,128
-        wnx,wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
+        wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
 
         X_inp = zcat(Xt,wnx)
         zy,zdf_gen,*other =  Qec(X_inp)
@@ -971,20 +971,8 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             wnx,*others = noise_generator(Xf.shape,[Xf.shape[0],nch_zf,nzf],dev,random_args)
             
             X_inp = zcat(Xf,wnx)
-            # ztr = Qec(X_inp)
-            # pdb.set_trace()
-            # breakpoint()
-            # ztr = Qec(X_inp)[1] if 'unique' in pfx else Qec(X_inp)
-            # if 'unique' in pfx:
             zx,zfd_gen,*other = Qec(X_inp)
-                # zff = zff.detach()
-            #     ztr = zcat(zfd_gen)
-            # else:
-            #     ztr = Qec(X_inp)
 
-            # # ztr = latent_resampling(Qec(X_inp),zf.shape[1],wn1)
-            # z_inp = zcat(ztr)
-            # # z_inp = zcat(ztr,torch.zeros_like(wnz).to(dev))
             Xr = Pdc(zfd_gen,o0l(zx))
             Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             Xr_fsa = tfft(Xr,vtm[1]-vtm[0]).cpu().data.numpy().copy()
@@ -1039,43 +1027,22 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             # zt = Variable(zt_data).to(dev, non_blocking=True)
 
         
-        nch, nz         = 4,128
-        # wny,wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
-        # X_inp   = zcat(Xt,wny)
+        nch, nz = 4,128
         wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
         Xf_inp  = zcat(Xf,wnx)
-        
-        # if 'unique' in pfx:
-        # pdb.set_trace()
-
-        # zy,_,*other =  Qec(X_inp)
         _, zdf_gen, *other = Qec(Xf_inp)
         wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(dev)
-        # wn = torch.zeros_like(zt)
-        # ztr = zcat(zdf_gen,wn)
-        # else:
-        #     ztr = Qec(X_inp)
-
-        # z_inp = zcat(ztr)
-        # breakpoint()
-        # z_inp = zcat(ztr,torch.zeros_like(wnz).to(dev))
-        # z_pre = zcat(zt,wnz.to(dev))
         _Xr     = Pdc(zdf_gen,wn)
         wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
         z2, z1  = Qec(zcat(_Xr,wnx))
         Xr      = Pdc(z1,o0l(z2))
 
-        #Xp = Pdc(z_pre)
-        # Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
-        # Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
-        # Xr_fsa = tfft(Xr,vtm[1]-vtm[0]).cpu().data.numpy().copy()
-        #Xp_fsa = tfft(Xp,vtm[1]-vtm[0]).cpu().data.numpy().copy()
         vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
         Xt = Xt.cpu().data.numpy().copy()
         Xr = Xr.cpu().data.numpy().copy()
 
         for (io, ig) in zip(range(Xt.shape[0]),range(Xr.shape[0])):
-            ot,gt  = Xt[io, 1, :]  ,Xr[ig, 1, :]
+            ot,gt  = Xf[io, 1, :]  ,Xr[ig, 1, :]
             # of,gf  = Xt_fsa[io,1,:],Xr_fsa[ig,1,:]
 
             if cnt == 10 and str(pfx).find('investigate')==-1:
@@ -1149,35 +1116,16 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             # zt_shape = [zt.shape[0], 16]
             # zt = torch.randn(*zt_shape).to(dev, non_blocking = True)
 
-            wnx,*others = noise_generator(Xt.shape,zt.shape,dev,rndm_args)
+            nch, nz         = 4,128
+            wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
+
             X_inp = zcat(Xt,wnx)
+            zy,zdf_gen,*other =  Qec(X_inp)
 
-            # ztr = Qec(X_inp).to(dev)
-            # ztr = Qec(X_inp)[0] if 'unique' in pfx else Qec(X_inp)
-            if 'unique' in pfx:
-                # pdb.set_trace()
-                # breakpoint()
-                zy,zdf_gen,*others =  Qec(X_inp)
-                # wn = torch.empty(zt_shape).normal_(**app.RNDM_ARGS).to(dev)
-                # wn = torch.zeros_like(zt)
-                if str(pfx).find("hack") !=-1:
-                    nch_zd, nzd = 4,128
-                    nch_zf, nzf = 4,128
-                    wnx, wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch_zd,nzd],dev,rndm_args)
-                    ztr = zcat(zdf_gen,o0l(zy))
-                else:
-                    ztr = zcat(zdf_gen,zy)
+            if str(pfx).find('hack')!=-1:
+                Xr = Pdc(zdf_gen,o0l(zy))
             else:
-                ztr = Qec(X_inp)
-
-            ztr = ztr.to(dev)
-            # pdb.set_trace()
-             # ztr = latent_resampling(Qec(X_inp),zt.shape[1],wn1)
-            z_inp = zcat(ztr)
-            # breakpoint()
-            # z_inp = zcat(ztr,torch.zeros_like(wnz).to(dev))
-            # z_pre = zcat(zt,wnz.to(dev))
-            Xr = Pdc(z_inp)
+                Xr = Pdc(zdf_gen,zy)
             #Xp = Pdc(z_pre)
             Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
@@ -1305,24 +1253,12 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             if cnt == 3 and not save == False:
                 break
 
-            nch_zf, nzf =  8,128
-            wnx,wnz,*others = noise_generator(Xf.shape,[Xf.shape[0],nch_zf,nzf],dev,rndm_args)
+            nch_zf, nzf     =  8,128
+            wnx,*others = noise_generator(Xf.shape,[Xf.shape[0],nch_zf,nzf],dev,random_args)
             X_inp = zcat(Xf,wnx)
-            # ztr = Qec(X_inp)
-            # pdb.set_trace()
-            # ztr = Qec(X_inp)[1] if 'unique' in pfx else Qec(X_inp)
-            if 'unique' in pfx:
-                zff,zfd_gen,*other = Qec(X_inp)
-                zff = zff.detach()
-                ztr = zcat(zfd_gen)
-            else:
-                ztr = Qec(X_inp)
+            zx,zfd_gen,*other = Qec(X_inp)
+            Xr = Pdc(zfd_gen,o0l(zx))
 
-
-            # ztr = latent_resampling(Qec(X_inp),zf.shape[1],wn1)
-            z_inp = zcat(ztr,wnz)
-            # z_inp = zcat(ztr,torch.zeros_like(wnz).to(dev))
-            Xr = Pdc(z_inp)
             Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             Xr_fsa = tfft(Xr,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
@@ -1416,44 +1352,20 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 xf_data.data = xf_data[index[mask]]
                 # zt_data.data = zt_data[index[mask]]
 
-            Xt = Variable(xt_data).to(dev, non_blocking=True)
+            # Xt = Variable(xt_data).to(dev, non_blocking=True)
             Xf = Variable(xf_data).to(dev, non_blocking=True)
+            Xt = Xf
             # zt = Variable(zt_data).to(dev, non_blocking=True)
-            nch, nz         = 4,128
-            wny,wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
-            X_inp   = zcat(Xt,wny)
-
-            wnx,wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
+            nch, nz = 4,128
+            wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
             Xf_inp  = zcat(Xf,wnx)
-            
-            if 'unique' in pfx:
-                # pdb.set_trace()
-                if str(pfx).find("hack") !=-1:
-                    _,zdf_gen, *others = Qec(X_inp)
-                    # wn,*others = Qec(Xf_inp)
-                    wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(dev)
-                    ztr = zcat(zdf_gen, wn)
-                else: 
-                    # zy,_,*other =  Qec(X_inp)
-                    _,zdf_gen,*other = Qec(Xf_inp)
-                    wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(dev)
-                    # wn = torch.zeros_like(zt)
-                    ztr = zcat(zdf_gen,wn)
-            else:
-                ztr = Qec(X_inp)
+            _, zdf_gen, *other = Qec(Xf_inp)
+            wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(dev)
+            _Xr     = Pdc(zdf_gen,wn)
+            wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
+            z2, z1  = Qec(zcat(_Xr,wnx))
+            Xr      = Pdc(z1,o0l(z2))
 
-            z_inp = zcat(ztr)
-            # breakpoint()
-            # z_inp = zcat(ztr,torch.zeros_like(wnz).to(dev))
-            # z_pre = zcat(zt,wnz.to(dev))
-            Xr = Pdc(z_inp)
-            #Xp = Pdc(z_pre)
-            if str(pfx).find("hack") !=-1:
-                Xt_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
-                Xt = Xf.cpu().data.numpy().copy()
-            else:
-                Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
-                Xt = Xt.cpu().data.numpy().copy()
             Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             Xr_fsa = tfft(Xr,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             #Xp_fsa = tfft(Xp,vtm[1]-vtm[0]).cpu().data.numpy().copy()
@@ -1462,7 +1374,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             Xr = Xr.cpu().data.numpy().copy()
 
             for (io, ig) in zip(range(Xt.shape[0]),range(Xr.shape[0])):
-                ot,gt  = Xt[io, 1, :]  ,Xr[ig, 1, :]
+                ot,gt  = Xf[io, 1, :]  ,Xr[ig, 1, :]
                 of,gf,ff = Xt_fsa[io,1,:],Xr_fsa[ig,1,:],Xf_fsa[io,1,:]
 
                 if io==3 and save == False:
