@@ -916,25 +916,12 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
         wnx,wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
 
         X_inp = zcat(Xt,wnx)
-        
-        if 'unique' in pfx:
-            # pdb.set_trace()
+        zy,zdf_gen,*other =  Qec(X_inp)
 
-            zy,zdf_gen,*other =  Qec(X_inp)
-            if str(pfx).find('hack')!=-1:
-                ztr =  zcat(zdf_gen,o0l(zy))
-                # wn = torch.empty(zt_shape).normal_(**app.RNDM_ARGS).to(dev)
-                # wn = torch.zeros_like(zt)
-            else:
-                ztr = zcat(zdf_gen,zy)
+        if str(pfx).find('hack')!=-1:
+            Xr = Pdc(zdf_gen,o0l(zy))
         else:
-            ztr = Qec(X_inp)
-
-        z_inp = zcat(ztr)
-        # breakpoint()
-        # z_inp = zcat(ztr,torch.zeros_like(wnz).to(dev))
-        # z_pre = zcat(zt,wnz.to(dev))
-        Xr = Pdc(z_inp)
+            Xr = Pdc(zdf_gen,zy)
         #Xp = Pdc(z_pre)
         Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
         # Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
@@ -946,8 +933,6 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
 
         for (io, ig) in zip(range(Xt.shape[0]),range(Xr.shape[0])):
             ot,gt  = Xt[io, 1, :]  ,Xr[ig, 1, :]
-            of,gf  = Xt_fsa[io,1,:],Xr_fsa[ig,1,:]
-
             if cnt == 10 and str(pfx).find('investigate')==-1:
                 break
             EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
@@ -983,24 +968,24 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             # zf = Variable(zf_data).to(dev, non_blocking=True)
             
             nch_zf, nzf     =  8,128
-            wnx,wnz,*others = noise_generator(Xf.shape,[Xf.shape[0],nch_zf,nzf],dev,random_args)
+            wnx,*others = noise_generator(Xf.shape,[Xf.shape[0],nch_zf,nzf],dev,random_args)
             
             X_inp = zcat(Xf,wnx)
             # ztr = Qec(X_inp)
             # pdb.set_trace()
             # breakpoint()
             # ztr = Qec(X_inp)[1] if 'unique' in pfx else Qec(X_inp)
-            if 'unique' in pfx:
-                _,zfd_gen,*other = Qec(X_inp)
+            # if 'unique' in pfx:
+            zx,zfd_gen,*other = Qec(X_inp)
                 # zff = zff.detach()
-                ztr = zcat(zfd_gen)
-            else:
-                ztr = Qec(X_inp)
+            #     ztr = zcat(zfd_gen)
+            # else:
+            #     ztr = Qec(X_inp)
 
-            # ztr = latent_resampling(Qec(X_inp),zf.shape[1],wn1)
-            z_inp = zcat(ztr)
-            # z_inp = zcat(ztr,torch.zeros_like(wnz).to(dev))
-            Xr = Pdc(z_inp)
+            # # ztr = latent_resampling(Qec(X_inp),zf.shape[1],wn1)
+            # z_inp = zcat(ztr)
+            # # z_inp = zcat(ztr,torch.zeros_like(wnz).to(dev))
+            Xr = Pdc(zfd_gen,o0l(zx))
             Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             Xr_fsa = tfft(Xr,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
@@ -1067,18 +1052,18 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
         _, zdf_gen, *other = Qec(Xf_inp)
         wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(dev)
         # wn = torch.zeros_like(zt)
-        ztr = zcat(zdf_gen,wn)
+        # ztr = zcat(zdf_gen,wn)
         # else:
         #     ztr = Qec(X_inp)
 
-        z_inp = zcat(ztr)
+        # z_inp = zcat(ztr)
         # breakpoint()
         # z_inp = zcat(ztr,torch.zeros_like(wnz).to(dev))
         # z_pre = zcat(zt,wnz.to(dev))
-        _Xr     = Pdc(z_inp)
+        _Xr     = Pdc(zdf_gen,wn)
         wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
         z2, z1  = Qec(zcat(_Xr,wnx))
-        Xr      = Pdc(zcat(z1,o0l(z2)))
+        Xr      = Pdc(z1,o0l(z2))
 
         #Xp = Pdc(z_pre)
         # Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()

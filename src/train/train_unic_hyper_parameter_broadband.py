@@ -139,7 +139,7 @@ class trainer(object):
         else:
             hparams_dir         = f'{self.study_dir}/hparams/'
             self.writer_hparams = SummaryWriter(f'{hparams_dir}')
-            # self.writer_hparams_graph = SummaryWriter(f'{hparams_dir}/graph')
+            self.writer_hparams_graph = SummaryWriter(f'{hparams_dir}/graph')
 
         flagT=False
         flagF=False
@@ -290,7 +290,7 @@ class trainer(object):
                     flagF=False
 
         # self.writer_debug_encoder.add_graph(next(iter(self.F_.children())),torch.randn(128,6,4096).cuda())
-        # self.writer_hparams_graph.add_graph(next(iter(self.Gy.children())), (torch.randn(10,4,128).cuda(),torch.randn(10,4,128).cuda()))
+        self.writer_hparams_graph.add_graph(next(iter(self.Gy.children())), (torch.randn(10,4,128).cuda(),torch.randn(10,4,128).cuda()))
         self.bce_loss = BCE(reduction='mean')
         # breakpoint()
         print("Parameters of  Encoder/Decoders ")
@@ -722,7 +722,7 @@ class trainer(object):
             # bar.set_postfix(Gloss = Gloss, Dloss = Dloss)
 
             bar.set_postfix(Gloss = Gloss, Gloss_zxy = Gloss_zxy, Dloss = Dloss, Dloss_zxy = Dloss_zxy) 
-            if epoch%100 == 0 and self.trial == None:
+            if epoch%25 == 0 and self.trial == None:
                 # for k,v in self.losses.items():
                 #     self.writer_train.add_scalar('Loss/{}'.format(k),
                 #         np.mean(np.array(v[-b:-1])),epoch)
@@ -787,7 +787,7 @@ class trainer(object):
                 #     #in case of real training
                 random.seed(opt.manualSeed)
             
-            if (epoch+1)%20 == 0:
+            if epoch%20 == 0:
                 val_accuracy_bb, val_accuracy_fl, val_accuracy_hb = self.accuracy()
                 app.logger.info("val_accuracy broadband = {:>5.3f}".format(val_accuracy_bb))
                 app.logger.info("val_accuracy filtered  = {:>5.3f}".format(val_accuracy_fl))
@@ -896,6 +896,12 @@ class trainer(object):
                     return val_accuracy_hb
 
     def accuracy(self):
+        def _eval(EG,PG): 
+            val = np.sqrt(np.power([10 - eg for eg in EG],2)+\
+                np.power([10 - pg for pg in PG],2))
+            accuracy = val.mean().tolist()
+            return accuracy
+
         EG_h, PG_h  = plt.get_gofs(tag = 'hybrid', 
             Qec = self.F_, 
             Pdc = self.Gy , 
@@ -923,18 +929,9 @@ class trainer(object):
             std = self.std, 
             outf = outf)
 
-        val_h = np.sqrt(np.power([10 - eg for eg in EG_h],2)+\
-                np.power([10 - pg for pg in PG_h],2))
-        accuracy_hb = val_h.mean().tolist()
-
-
-        val_b = np.sqrt(np.power([10 - eg for eg in EG_b],2)+\
-                     np.power([10 - pg for pg in PG_b],2))
-        accuracy_bb = val_b.mean().tolist()
-
-        val_f = np.sqrt(np.power([10 - eg for eg in EG_f],2)+\
-                     np.power([10 - pg for pg in PG_f],2))
-        accuracy_fl = val_f.mean().tolist()
+        accuracy_hb = _eval(EG_h,PG_h)
+        accuracy_bb = _eval(EG_b,PG_b)
+        accuracy_fl = _eval(EG_h,PG_h)
 
         # if accuracy == np.nan:
         #     accuracy =10*np.sqrt(2)
