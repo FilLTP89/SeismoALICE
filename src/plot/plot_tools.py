@@ -1039,6 +1039,7 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
 
         vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
         Xt = Xt.cpu().data.numpy().copy()
+        Xf = Xf.cpu().data.numpy().copy()
         Xr = Xr.cpu().data.numpy().copy()
 
         for (io, ig) in zip(range(Xt.shape[0]),range(Xr.shape[0])):
@@ -1082,7 +1083,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
         vtm = torch.load(os.path.join(opt.dataroot,'vtm.pth'))
 
     if tag=='broadband':
-        rndm_args = {'mean': 0., 'std': 1.0} if std == None else {'mean':0., 'std':std}
+        # rndm_args = {'mean': 0., 'std': 1.0} if std == None else {'mean':0., 'std':std}
         # pass
         if Qed is not None:
             Qed.eval()
@@ -1115,7 +1116,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 break
             # zt_shape = [zt.shape[0], 16]
             # zt = torch.randn(*zt_shape).to(dev, non_blocking = True)
-
+            random_args = {'mean':0.,'std': 1.0}
             nch, nz         = 4,128
             wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
 
@@ -1254,6 +1255,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 break
 
             nch_zf, nzf     =  8,128
+            random_args = {'mean':0.,'std': 1.0}
             wnx,*others = noise_generator(Xf.shape,[Xf.shape[0],nch_zf,nzf],dev,random_args)
             X_inp = zcat(Xf,wnx)
             zx,zfd_gen,*other = Qec(X_inp)
@@ -1352,9 +1354,9 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 xf_data.data = xf_data[index[mask]]
                 # zt_data.data = zt_data[index[mask]]
 
-            # Xt = Variable(xt_data).to(dev, non_blocking=True)
+            Xt = Variable(xf_data).to(dev, non_blocking=True)
             Xf = Variable(xf_data).to(dev, non_blocking=True)
-            Xt = Xf
+            
             # zt = Variable(zt_data).to(dev, non_blocking=True)
             nch, nz = 4,128
             wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
@@ -1366,13 +1368,15 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             z2, z1  = Qec(zcat(_Xr,wnx))
             Xr      = Pdc(z1,o0l(z2))
 
+            Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             Xr_fsa = tfft(Xr,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             #Xp_fsa = tfft(Xp,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
-            # Xt = Xt.cpu().data.numpy().copy()
+            
+            Xt = Xt.cpu().data.numpy().copy()
             Xr = Xr.cpu().data.numpy().copy()
-
+            Xf = Xf.cpu().data.numpy().copy()
             for (io, ig) in zip(range(Xt.shape[0]),range(Xr.shape[0])):
                 ot,gt  = Xf[io, 1, :]  ,Xr[ig, 1, :]
                 of,gf,ff = Xt_fsa[io,1,:],Xr_fsa[ig,1,:],Xf_fsa[io,1,:]
