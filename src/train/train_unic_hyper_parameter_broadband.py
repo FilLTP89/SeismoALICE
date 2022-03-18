@@ -139,7 +139,8 @@ class trainer(object):
         else:
             hparams_dir         = f'{self.study_dir}/hparams/'
             self.writer_hparams = SummaryWriter(f'{hparams_dir}')
-            self.writer_hparams_graph = SummaryWriter(f'{hparams_dir}/graph')
+            # self.writer_hparams_graph_encoder = SummaryWriter(f'{hparams_dir}/graph/encoder')
+            # self.writer_hparams_graph_decoder = SummaryWriter(f'{hparams_dir}/graph/decoder')
 
         flagT=False
         flagF=False
@@ -290,7 +291,8 @@ class trainer(object):
                     flagF=False
 
         # self.writer_debug_encoder.add_graph(next(iter(self.F_.children())),torch.randn(128,6,4096).cuda())
-        self.writer_hparams_graph.add_graph(next(iter(self.Gy.children())), (torch.randn(10,4,128).cuda(),torch.randn(10,4,128).cuda()))
+        self.writer_hparams_graph_encoder.add_graph(next(iter(self.F_.children())),torch.randn(10,6,4096).cuda())
+        self.writer_hparams_graph_decoder.add_graph(next(iter(self.Gy.children())), (torch.randn(10,4,128).cuda(),torch.randn(10,4,128).cuda()))
         self.bce_loss = BCE(reduction='mean')
         # breakpoint()
         print("Parameters of  Encoder/Decoders ")
@@ -430,10 +432,10 @@ class trainer(object):
         # 7.4 Generate reconstructions
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         x_gen       = zcat(_x_gen,wnx)
-        _, zxy_rec,*others = self.F_(x_gen)
+        zx_rec, zxy_rec,*others = self.F_(x_gen)
 
-        # x_rec       = self.Gy(zf_gen)
-        # zf_rec      = zcat(zxy_rec,zx_rec)
+        x_rec       = self.Gy(zf_gen)
+        zf_rec      = zcat(zxy_rec,o0l(zx_rec))
 
         # 7.5 Forcing zxy from X to be guassian
         Dxz,Dzx = self.discriminate_xz(x,_x_gen,zf_inp,zf_gen)
@@ -441,26 +443,26 @@ class trainer(object):
 
 
         Dreal_zxy, Dfake_zxy= self.discriminate_zxy(zxy, zxy_rec)
-        Dloss_cycle_zxy       = self.bce_loss(Dreal_zxy,o1l(Dreal_zxy))+\
+        Dloss_cycle_zxy     = self.bce_loss(Dreal_zxy,o1l(Dreal_zxy))+\
                                 self.bce_loss(Dfake_zxy,o0l(Dfake_zxy))
 
         # 7.6 Forcing Zy from X to be useless for the training
-        # Dreal_x, Dfake_x    = self.discriminate_xx(x,x_rec)
-        # Dloss_cycle_x         = self.bce_loss(Dreal_x,o1l(Dreal_x))+\
-        #                         self.bce_loss(Dfake_x,o0l(Dfake_x))
+        Dreal_x, Dfake_x    = self.discriminate_xx(x,x_rec)
+        Dloss_cycle_x         = self.bce_loss(Dreal_x,o1l(Dreal_x))+\
+                                self.bce_loss(Dfake_x,o0l(Dfake_x))
 
         # 7.7 Discriminate Cross Entropy for zf 
-        # Dreal_zf, Dfake_zf = self.discriminate_zzf(zf_inp,zf_rec)
-        # Dloss_cycle_zf       = self.bce_loss(Dreal_zf,o1l(Dreal_zf))+\
-        #                         self.bce_loss(Dfake_zf,o1l(Dfake_zf))
+        Dreal_zf, Dfake_zf = self.discriminate_zzf(zf_inp,zf_rec)
+        Dloss_cycle_zf       = self.bce_loss(Dreal_zf,o1l(Dreal_zf))+\
+                                self.bce_loss(Dfake_zf,o1l(Dfake_zf))
 
         # 8. Compute all losses
         Dloss_cycle           = (
                                 Dloss_cycle_y + 
                                 Dloss_cycle_zy + 
-                                Dloss_cycle_zxy 
-                                # Dloss_cycle_zf +  
-                                # Dloss_cycle_x 
+                                Dloss_cycle_zxy +
+                                Dloss_cycle_zf +  
+                                Dloss_cycle_x 
                             )
         Dloss_ali           = (
                                 Dloss_ali_y + 
@@ -532,7 +534,7 @@ class trainer(object):
 
         x_inp       = zcat(x,wnx)
         zf_inp      = zcat(zxy,o0l(zyy))
-        zf_fake_inp = zcat(zxy,wn)
+        # zf_fake_inp = zcat(zxy,wn)
 
         # 7.2 Generate conditional outputs
         zx_gen, zxy_gen, *others = self.F_(x_inp)
@@ -541,12 +543,12 @@ class trainer(object):
         _x_gen_fake = self.Gy(zxy,wn.detach())
 
         # 7.3 Generate reconstructions values
-        # x_rec       = self.Gy(zf_gen)
+        x_rec       = self.Gy(zf_gen)
         x_gen       = zcat(_x_gen,wnx)
         x_gen_fake  = zcat(_x_gen_fake,wnx_fake)
 
         zxx_rec, zxy_rec, *others = self.F_(x_gen)
-        # zf_rec      = zcat(zxy_rec,zxx_rec)
+        zf_rec      = zcat(zxy_rec,zxx_rec)
         
         _, zxy_rec_fake, *others = self.F_(x_gen_fake)
         zxy_fake    =  zxy_rec_fake
@@ -559,22 +561,23 @@ class trainer(object):
         Gloss_cycle_zxy      = self.bce_loss(Dfake_zxy,o1l(Dfake_zxy))
 
         # Cross Discimininate for Z from X to be [guassian,0]
-        # _, Dfake_zf          = self.discriminate_zzf(zf_inp, zf_rec)
-        # Gloss_cycle_zf       = self.bce_loss(Dfake_zf, o1l(Dfake_zf))
-        # Gloss_rec_zf         = torch.mean(torch.abs(zf_inp - zf_rec))
+        _, Dfake_zf          = self.discriminate_zzf(zf_inp, zf_rec)
+        Gloss_cycle_zf       = self.bce_loss(Dfake_zf, o1l(Dfake_zf))
+        Gloss_rec_zf         = torch.mean(torch.abs(zf_inp - zf_rec))
 
         # 7.4 Cross-Discriminate XX
-        # _, Dfake_x           = self.discriminate_xx(x,x_rec)
-        # Gloss_cycle_x        = self.bce_loss(Dfake_x, o1l(Dfake_x))
-        # Gloss_rec_x          = torch.mean(torch.abs(x - x_rec))
+        _, Dfake_x           = self.discriminate_xx(x,x_rec)
+        Gloss_cycle_x        = self.bce_loss(Dfake_x, o1l(Dfake_x))
+        Gloss_rec_x          = torch.mean(torch.abs(x - x_rec))
 
         # 7.5 Forcing zxx_rec to be 0
         Gloss_rec_zx         = torch.mean(torch.abs(zxx_rec))
+        
         # 7.6 Forcing zxy to  be gaussian by a cycling and independant to the value of z
         Gloss_rec_zxy        = torch.mean(torch.abs(zxy - zxy_fake))+\
                                torch.mean(torch.abs(zxy - zxy_rec))
 
-        Gloss_rec_zyy        = torch.mean(torch.abs(zyy - zyy_rec))
+        # Gloss_rec_zyy        = torch.mean(torch.abs(zyy - zyy_rec))
         
         # 8. Total Loss
         Gloss_cycle =(
@@ -583,14 +586,14 @@ class trainer(object):
                     )
         Gloss_rec   =( 
                         Gloss_rec_y +
-                        # Gloss_cycle_x +
+                        Gloss_cycle_x +
                         Gloss_rec_zd + 
-                        # Gloss_cycle_zf +
+                        Gloss_cycle_zf +
                         Gloss_cycle_zxy+ 
                         Gloss_rec_zx +
-                        Gloss_rec_zyy +
-                        # Gloss_rec_zf +
-                        # Gloss_rec_x + 
+                        # Gloss_rec_zyy +
+                        Gloss_rec_zf +
+                        Gloss_rec_x + 
                         Gloss_rec_zxy 
                     )
         Gloss_ali   = (
@@ -627,9 +630,9 @@ class trainer(object):
         self.losses['Gloss_cycle_y' ].append(Gloss_cycle_y.tolist())
         self.losses['Gloss_cycle_zd'].append(Gloss_cycle_zd.tolist())
         
-        # self.losses['Gloss_cycle_x' ].append(Gloss_cycle_x.tolist())
+        self.losses['Gloss_cycle_x' ].append(Gloss_cycle_x.tolist())
         
-        # self.losses['Gloss_cycle_zf'].append(Gloss_cycle_zf.tolist())
+        self.losses['Gloss_cycle_zf'].append(Gloss_cycle_zf.tolist())
         
         self.losses['Gloss_cycle_zxy'].append(Gloss_cycle_zxy.tolist())
 
@@ -637,8 +640,8 @@ class trainer(object):
         self.losses['Gloss_rec_zd' ].append(Gloss_rec_zd.tolist())
         self.losses['Gloss_rec_y'  ].append(Gloss_rec_y.tolist())
         self.losses['Gloss_rec_zx' ].append(Gloss_rec_zx.tolist())
-        # self.losses['Gloss_rec_x'  ].append(Gloss_rec_x.tolist())
-        # self.losses['Gloss_rec_zf' ].append(Gloss_rec_zf.tolist())
+        self.losses['Gloss_rec_x'  ].append(Gloss_rec_x.tolist())
+        self.losses['Gloss_rec_zf' ].append(Gloss_rec_zf.tolist())
 
     def generate_latent_variable(self, batch, nch_zd,nzd, nch_zf = 128,nzf = 128):
         zyy  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
