@@ -63,8 +63,8 @@ class trainer(object):
         ngpu_use = torch.cuda.device_count()
 
         if self.trial!=None:
-            self.glr = self.trial.suggest_float("glrx",0.0001, 0.001,log=True)
-            self.rlr = self.trial.suggest_float("rlrx",0.0001, 0.001,log=True)
+            self.glr = self.trial.suggest_float("glrx",0.00001, 0.001,log=True)
+            self.rlr = self.trial.suggest_float("rlrx",0.00001, 0.001,log=True)
             self.weight_decay = 0.00001 #self.trial.suggest_float("weight_decay",1.E-6,1.E-5,log=True)
         else:
             try:
@@ -548,7 +548,7 @@ class trainer(object):
         x_gen_fake  = zcat(_x_gen_fake,wnx_fake)
 
         zxx_rec, zxy_rec, *others = self.F_(x_gen)
-        zf_rec      = zcat(zxy_rec,zxx_rec)
+        zf_rec      = zcat(zxy_rec,o0l(zxx_rec))
         
         _, zxy_rec_fake, *others = self.F_(x_gen_fake)
         zxy_fake    =  zxy_rec_fake
