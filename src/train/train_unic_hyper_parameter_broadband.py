@@ -63,9 +63,9 @@ class trainer(object):
         ngpu_use = torch.cuda.device_count()
 
         if self.trial!=None:
-            self.glr = self.trial.suggest_float("glrx",0.00001, 0.001,log=True)
-            self.rlr = self.trial.suggest_float("rlrx",0.00001, 0.001,log=True)
-            self.weight_decay = 0.00001 #self.trial.suggest_float("weight_decay",1.E-6,1.E-5,log=True)
+            self.glr = self.trial.suggest_float("glrx",0.0001, 0.001)
+            self.rlr = self.trial.suggest_float("rlrx",0.0001, 0.001)
+            self.weight_decay = self.trial.suggest_float("weight_decay",1.E-5,1.E-3,log=True)
         else:
             try:
                 self.glr = float(opt.config["hparams"]['glry'])
@@ -124,7 +124,9 @@ class trainer(object):
             
             'Gloss_rec_zxy':[0],
             'Gloss_rec_x':[0],
-            'Gloss_rec_zf':[0]
+            'Gloss_rec_zf':[0],
+
+            'Gloss_rec_zyy':[0]
         }
 
         # self.writer_train = SummaryWriter('runs_both/filtered/tuning/training')
@@ -482,7 +484,7 @@ class trainer(object):
         self.losses['Dloss_cycle_y' ].append(Dloss_cycle_y.tolist())
         self.losses['Dloss_cycle_zxy'].append(Dloss_cycle_zxy.tolist())  
 
-        # self.losses['Dloss_cycle_x' ].append(Dloss_cycle_x.tolist())
+        self.losses['Dloss_cycle_x' ].append(Dloss_cycle_x.tolist())
         self.losses['Dloss_cycle_zy'].append(Dloss_cycle_zy.tolist())
               
 
@@ -577,7 +579,7 @@ class trainer(object):
         Gloss_rec_zxy        = torch.mean(torch.abs(zxy - zxy_fake))+\
                                torch.mean(torch.abs(zxy - zxy_rec))
 
-        # Gloss_rec_zyy        = torch.mean(torch.abs(zyy - zyy_rec))
+        Gloss_rec_zyy        = torch.mean(torch.abs(zyy - zyy_rec))
         
         # 8. Total Loss
         Gloss_cycle =(
@@ -591,7 +593,7 @@ class trainer(object):
                         Gloss_cycle_zf +
                         Gloss_cycle_zxy+ 
                         Gloss_rec_zx +
-                        # Gloss_rec_zyy +
+                        Gloss_rec_zyy +
                         Gloss_rec_zf +
                         Gloss_rec_x + 
                         Gloss_rec_zxy 
@@ -642,6 +644,8 @@ class trainer(object):
         self.losses['Gloss_rec_zx' ].append(Gloss_rec_zx.tolist())
         self.losses['Gloss_rec_x'  ].append(Gloss_rec_x.tolist())
         self.losses['Gloss_rec_zf' ].append(Gloss_rec_zf.tolist())
+        self.losses['Gloss_rec_zyy'].append(Gloss_rec_zyy.tolist())
+        self.losses['Gloss_rec_zxy'].append(Gloss_rec_zxy.tolist())
 
     def generate_latent_variable(self, batch, nch_zd,nzd, nch_zf = 128,nzf = 128):
         zyy  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
