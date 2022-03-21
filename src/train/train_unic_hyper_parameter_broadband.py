@@ -558,6 +558,7 @@ class trainer(object):
         x_gen_fake  = zcat(_x_gen_fake,wnx_fake)
 
         zxx_rec, zxy_rec, *others = self.F_(x_gen)
+        zxx_rec     = zxx_rec.clone().detach()
         zf_rec      = zcat(zxy_rec,o0l(zxx_rec.clone().detach()))
         
         _, zxy_rec_fake, *others = self.F_(x_gen_fake)
