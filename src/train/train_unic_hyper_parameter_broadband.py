@@ -588,7 +588,6 @@ class trainer(object):
         Gloss_rec_zxy        = torch.mean(torch.abs(zxy - zxy_fake))+\
                                torch.mean(torch.abs(zxy - zxy_rec))
 
-        Gloss_rec_zyy        = torch.mean(torch.abs(zyy - zyy_rec))
         
         # 8. Total Loss
         Gloss_cycle =(
