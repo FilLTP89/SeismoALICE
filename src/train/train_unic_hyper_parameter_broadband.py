@@ -99,6 +99,8 @@ class trainer(object):
         self.losses     = {
             'Dloss':[0],
             'Dloss_ali':[0],
+            'Dloss_ali_y':[0],
+            'Dloss_ali_x':[0],
             'Dloss_rec':[0],
             'Dloss_cycle':[0],
             'Dloss_cycle_y':[0],
@@ -385,6 +387,7 @@ class trainer(object):
         # 1. Concatenate inputs
         zd_inp  = zcat(zxy,zyy)
         y_inp   = zcat(y,wny)
+        breakpoint()
         
         # 2.1 Generate conditional samples
         y_gen   = self.Gy(zxy,zyy)
@@ -479,6 +482,8 @@ class trainer(object):
 
         self.losses['Dloss'].append(Dloss.tolist())
         self.losses['Dloss_ali'].append(Dloss_ali.tolist())
+        self.losses['Dloss_ali_y'].append(Dloss_ali_y.tolist())
+        self.losses['Dloss_ali_x'].append(Dloss_ali_x.tolist())
 
         self.losses['Dloss_cycle'   ].append(Dloss_cycle.tolist()) 
         self.losses['Dloss_cycle_y' ].append(Dloss_cycle_y.tolist())

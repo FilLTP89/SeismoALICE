@@ -68,7 +68,17 @@ class BasicDCGAN_DzDataParallel(BasicModel):
 
     def block_conv(self, channel, kernel, strides, dilation, padding, dpc, activation, *args, **kwargs):
         cnn  = []
-        pack = zip(channel[:-1], channel[1:], kernel, strides, dilation, padding, activation)
+        
+        #For the first layer we will not use Batchnorm
+        cnn += cnn1d(in_channels=channel[0], 
+                        out_channels=channel[0],
+                        ker = kernel[0],
+                        std = strides[0],
+                        pad = padding[0],
+                        act = activation[0],
+                        dil = dilation[0],bn=False)
+
+        pack = zip(channel[1:-1], channel[2:], kernel[1:], strides[1:], dilation[1:], padding[1:], activation[1:])
         for in_channels, out_channels, kernel_size, stride, padding, dilation, acts in pack:
             cnn += cnn1d(in_channels=in_channels, 
                         out_channels=out_channels,
