@@ -367,16 +367,15 @@ class ResNetLayer(Module):
 
 u'''[Zeroed gradient for selected optimizers]'''
 def zerograd(optz):
-    try:
-        for o in optz: 
-            if o is not None:
-                o.zero_grad()
-        # exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
-    except:
-        _optim = [o.optimizer for o in optz]
-        for o in _optim:
-            if o is not None:
-                o.zero_grad()
+    for o in optz: 
+        if o is not None:
+            o.zero_grad()
+    # exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
+    # except:
+    #     _optim = [o.optimizer for o in optz]
+    #     for o in _optim:
+    #         if o is not None:
+    #             o.zero_grad()
 
         
 def penalty(loss,params,typ,lam=1.e-5):
@@ -470,9 +469,9 @@ def reset_net(nets,func=set_weights,lr=0.0002,b1=b1,b2=b2,
         p.append(n.parameters())
     if 'adam' in optim.lower():
         if  weight_decay is None:
-            return scheduler(scheduler_name,Adam(ittc(*p),lr=lr,betas=(b1,b2)),*args,**kwargs)
+            return Adam(ittc(*p),lr=lr,betas=(b1,b2))
         else:
-            return scheduler(scheduler_name,Adam(ittc(*p),lr=lr,betas=(b1,b2),weight_decay=weight_decay),*args,**kwargs)
+            return Adam(ittc(*p),lr=lr,betas=(b1,b2),weight_decay=weight_decay)
     elif 'rmsprop' in optim.lower():
         return RMSprop(ittc(*p),lr=lr)
     elif 'sgd' in optim.lower():

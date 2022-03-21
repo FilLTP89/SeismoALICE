@@ -63,9 +63,9 @@ class trainer(object):
         ngpu_use = torch.cuda.device_count()
 
         if self.trial!=None:
-            self.glr = self.trial.suggest_float("glrx",0.0001, 0.001)
-            self.rlr = self.trial.suggest_float("rlrx",0.0001, 0.001)
-            self.weight_decay = self.trial.suggest_float("weight_decay",1.E-5,1.E-3,log=True)
+            self.glr = self.trial.suggest_float("glrx",0.0001, 0.001,log=True)
+            self.rlr = self.trial.suggest_float("rlrx",0.0001, 0.001,log=True)
+            self.weight_decay = 0.00001 #self.trial.suggest_float("weight_decay",1.E-5,1.E-3,log=True)
         else:
             try:
                 self.glr = float(opt.config["hparams"]['glry'])
@@ -110,6 +110,8 @@ class trainer(object):
 
             'Gloss':[0],
             'Gloss_ali':[0],
+            'Gloss_ali_x':[0],
+            'Gloss_ali_y':[0],
             'Gloss_cycle':[0],
             'Gloss_cycle_x':[0],
             'Gloss_cycle_y':[0],
@@ -387,7 +389,6 @@ class trainer(object):
         # 1. Concatenate inputs
         zd_inp  = zcat(zxy,zyy)
         y_inp   = zcat(y,wny)
-        breakpoint()
         
         # 2.1 Generate conditional samples
         y_gen   = self.Gy(zxy,zyy)
@@ -400,7 +401,8 @@ class trainer(object):
         Dyz,Dzy = self.discriminate_yz(y,y_gen,zd_inp,zd_gen)
 
         # 4. Compute ALI discriminator loss
-        Dloss_ali_y = -torch.mean(ln0c(Dzy)+ln0c(1.0-Dyz))
+        Dloss_ali_y = self.bce_loss(Dyz,o1l(Dyz))+\
+                         self.bce_loss(Dzy,o0l(Dzy))
 
         # 5. Generate reconstructions
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
@@ -425,26 +427,27 @@ class trainer(object):
         # 7.1 Concatenate inputs
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         x_inp   = zcat(x,wnx)
-        zf_inp  = zcat(zxy,o0l(zyy))
+        zf_inp  = zcat(zxy,o0l(zyy.clone().detach()))
 
         # 7.2 Generate samples
-        _x_gen   = self.Gy(zxy,o0l(zyy))
+        _x_gen   = self.Gy(zxy,o0l(zyy.clone().detach()))
         zxx_F, zxy_F, *others = self.F_(x_inp)
         
         # 7.3 Concatenate outputs
-        zf_gen  = zcat(zxy_F,o0l(zxx_F))
+        zf_gen  = zcat(zxy_F,o0l(zxx_F.clone().detach()))
 
         # 7.4 Generate reconstructions
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         x_gen       = zcat(_x_gen,wnx)
         zx_rec, zxy_rec,*others = self.F_(x_gen)
 
-        x_rec       = self.Gy(zxy_F,o0l(zxx_F))
-        zf_rec      = zcat(zxy_rec,o0l(zx_rec))
+        x_rec       = self.Gy(zxy_F,o0l(zxx_F.clone().detach()))
+        zf_rec      = zcat(zxy_rec,o0l(zx_rec.clone().detach()))
 
         # 7.5 Forcing zxy from X to be guassian
         Dxz,Dzx = self.discriminate_xz(x,_x_gen,zf_inp,zf_gen)
-        Dloss_ali_x = -torch.mean(ln0c(Dzx)+ln0c(1.0-Dxz))
+        Dloss_ali_x = self.bce_loss(Dxz,o1l(Dxz))+\
+                         self.bce_loss(Dzx,o0l(Dzx))  
 
 
         Dreal_zxy, Dfake_zxy= self.discriminate_zxy(zxy, zxy_rec)
@@ -540,14 +543,14 @@ class trainer(object):
         wn          = torch.empty([x.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(app.DEVICE)
 
         x_inp       = zcat(x,wnx)
-        zf_inp      = zcat(zxy,o0l(zyy))
+        zf_inp      = zcat(zxy,o0l(zyy.clone().detach()))
         # zf_fake_inp = zcat(zxy,wn)
 
         # 7.2 Generate conditional outputs
         zx_gen, zxy_gen, *others = self.F_(x_inp)
         zf_gen      = zcat(zxy_gen, o0l(zx_gen))
-        _x_gen      = self.Gy(zxy,o0l(zyy))
-        _x_gen_fake = self.Gy(zxy,wn.detach())
+        _x_gen      = self.Gy(zxy,o0l(zyy.clone().detach()))
+        _x_gen_fake = self.Gy(zxy,wn.clone().detach())
 
         # 7.3 Generate reconstructions values
         x_rec       = self.Gy(zxy_gen, o0l(zx_gen))
@@ -555,7 +558,7 @@ class trainer(object):
         x_gen_fake  = zcat(_x_gen_fake,wnx_fake)
 
         zxx_rec, zxy_rec, *others = self.F_(x_gen)
-        zf_rec      = zcat(zxy_rec,o0l(zxx_rec))
+        zf_rec      = zcat(zxy_rec,o0l(zxx_rec.clone().detach()))
         
         _, zxy_rec_fake, *others = self.F_(x_gen_fake)
         zxy_fake    =  zxy_rec_fake
@@ -589,14 +592,14 @@ class trainer(object):
         # 8. Total Loss
         Gloss_cycle =(
                         Gloss_cycle_y + 
-                        Gloss_cycle_zd
+                        Gloss_cycle_zd +
+                        Gloss_cycle_x +
+                        Gloss_cycle_zf +
+                        Gloss_cycle_zxy 
                     )
         Gloss_rec   =( 
                         Gloss_rec_y +
-                        Gloss_cycle_x +
                         Gloss_rec_zd + 
-                        Gloss_cycle_zf +
-                        Gloss_cycle_zxy+ 
                         Gloss_rec_zx +
                         Gloss_rec_zyy +
                         Gloss_rec_zf +
@@ -616,14 +619,14 @@ class trainer(object):
         if epoch%35 == 0: 
             writer = self.writer_debug if trial_writer == None else trial_writer
             for idx in range(opt.batchSize//torch.cuda.device_count()):
-                writer.add_histogram("common/zyx", zyx_rec[idx,:], epoch)
+                writer.add_histogram("common[z2]/zyx", zyx_rec[idx,:], epoch)
             for idx in range(opt.batchSize//torch.cuda.device_count()):
-                writer.add_histogram("common/zxy", zxy_rec[idx,:], epoch)
+                writer.add_histogram("common[z2]/zxy", zxy_rec[idx,:], epoch)
 
             for idx in range(opt.batchSize//torch.cuda.device_count()):
-                writer.add_histogram("specific/zyy", zyy_rec[idx,:], epoch)
+                writer.add_histogram("specific[z1]/zyy", zyy_rec[idx,:], epoch)
             for idx in range(opt.batchSize//torch.cuda.device_count()):
-                writer.add_histogram("specific/zxx", zxx_rec[idx,:], epoch)
+                writer.add_histogram("specific[z1]/zxx", zxx_rec[idx,:], epoch)
 
 
         Gloss.backward()
@@ -632,15 +635,15 @@ class trainer(object):
          
         self.losses['Gloss'].append(Gloss.tolist())
         self.losses['Gloss_ali'].append(Gloss_ali.tolist())
+        self.losses['Gloss_ali_x'].append(Gloss_ali_x.tolist())
+        self.losses['Gloss_ali_y'].append(Gloss_ali_y.tolist())
 
         self.losses['Gloss_cycle'   ].append(Gloss_cycle.tolist())
         self.losses['Gloss_cycle_y' ].append(Gloss_cycle_y.tolist())
         self.losses['Gloss_cycle_zd'].append(Gloss_cycle_zd.tolist())
         
         self.losses['Gloss_cycle_x' ].append(Gloss_cycle_x.tolist())
-        
         self.losses['Gloss_cycle_zf'].append(Gloss_cycle_zf.tolist())
-        
         self.losses['Gloss_cycle_zxy'].append(Gloss_cycle_zxy.tolist())
 
         self.losses['Gloss_rec'    ].append(Gloss_rec.tolist())
