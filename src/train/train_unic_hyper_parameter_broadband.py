@@ -427,22 +427,22 @@ class trainer(object):
         # 7.1 Concatenate inputs
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         x_inp   = zcat(x,wnx)
-        zf_inp  = zcat(zxy,o0l(zyy.clone().detach()))
+        zf_inp  = zcat(zxy,o0l(zyy))
 
         # 7.2 Generate samples
-        _x_gen   = self.Gy(zxy,o0l(zyy.clone().detach()))
+        _x_gen   = self.Gy(zxy,o0l(zyy))
         zxx_F, zxy_F, *others = self.F_(x_inp)
         
         # 7.3 Concatenate outputs
-        zf_gen  = zcat(zxy_F,o0l(zxx_F.clone().detach()))
+        zf_gen  = zcat(zxy_F,o0l(zxx_F))
 
         # 7.4 Generate reconstructions
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         x_gen       = zcat(_x_gen,wnx)
         zx_rec, zxy_rec,*others = self.F_(x_gen)
 
-        x_rec       = self.Gy(zxy_F,o0l(zxx_F.clone().detach()))
-        zf_rec      = zcat(zxy_rec,o0l(zx_rec.clone().detach()))
+        x_rec       = self.Gy(zxy_F,o0l(zxx_F))
+        zf_rec      = zcat(zxy_rec,o0l(zx_rec))
 
         # 7.5 Forcing zxy from X to be guassian
         Dxz,Dzx = self.discriminate_xz(x,_x_gen,zf_inp,zf_gen)
@@ -543,14 +543,14 @@ class trainer(object):
         wn          = torch.empty([x.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(app.DEVICE)
 
         x_inp       = zcat(x,wnx)
-        zf_inp      = zcat(zxy,o0l(zyy.clone().detach()))
+        zf_inp      = zcat(zxy,o0l(zyy))
         # zf_fake_inp = zcat(zxy,wn)
 
         # 7.2 Generate conditional outputs
         zx_gen, zxy_gen, *others = self.F_(x_inp)
         zf_gen      = zcat(zxy_gen, o0l(zx_gen))
-        _x_gen      = self.Gy(zxy,o0l(zyy.clone().detach()))
-        _x_gen_fake = self.Gy(zxy,wn.clone().detach())
+        _x_gen      = self.Gy(zxy,o0l(zyy))
+        _x_gen_fake = self.Gy(zxy,wn)
 
         # 7.3 Generate reconstructions values
         x_rec       = self.Gy(zxy_gen, o0l(zx_gen))
@@ -558,8 +558,7 @@ class trainer(object):
         x_gen_fake  = zcat(_x_gen_fake,wnx_fake)
 
         zxx_rec, zxy_rec, *others = self.F_(x_gen)
-        zxx_rec     = zxx_rec.clone().detach()
-        zf_rec      = zcat(zxy_rec,o0l(zxx_rec.clone().detach()))
+        zf_rec      = zcat(zxy_rec,o0l(zxx_rec))
         
         _, zxy_rec_fake, *others = self.F_(x_gen_fake)
         zxy_fake    =  zxy_rec_fake
@@ -585,8 +584,7 @@ class trainer(object):
         Gloss_rec_zx         = torch.mean(torch.abs(zxx_rec))
 
         # 7.6 Forcing zxy to  be gaussian by a cycling and independant to the value of z
-        Gloss_rec_zxy        = torch.mean(torch.abs(zxy - zxy_fake))+\
-                               torch.mean(torch.abs(zxy - zxy_rec))
+        Gloss_rec_zxy        = torch.mean(torch.abs(zxy - zxy_fake))
 
         
         # 8. Total Loss
@@ -601,7 +599,6 @@ class trainer(object):
                         Gloss_rec_y +
                         Gloss_rec_zd + 
                         Gloss_rec_zx +
-                        Gloss_rec_zyy +
                         Gloss_rec_zf +
                         Gloss_rec_x + 
                         Gloss_rec_zxy 
@@ -652,7 +649,7 @@ class trainer(object):
         self.losses['Gloss_rec_zx' ].append(Gloss_rec_zx.tolist())
         self.losses['Gloss_rec_x'  ].append(Gloss_rec_x.tolist())
         self.losses['Gloss_rec_zf' ].append(Gloss_rec_zf.tolist())
-        self.losses['Gloss_rec_zyy'].append(Gloss_rec_zyy.tolist())
+        # self.losses['Gloss_rec_zyy'].append(Gloss_rec_zyy.tolist())
         self.losses['Gloss_rec_zxy'].append(Gloss_rec_zxy.tolist())
 
     def generate_latent_variable(self, batch, nch_zd,nzd, nch_zf = 128,nzf = 128):
