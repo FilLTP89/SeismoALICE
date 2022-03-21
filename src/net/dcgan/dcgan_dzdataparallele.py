@@ -66,27 +66,23 @@ class BasicDCGAN_DzDataParallel(BasicModel):
             lin = int((lin + 2* pad - dil*(ker-1)-1)/std + 1)
         return lin
 
-    def block_conv(self, channel, kernel, strides, dilation, padding, dpc, activation, *args, **kwargs):
+    def block_conv(self, channel, kernel, strides, dilation, padding, dpc, activation,bn, *args, **kwargs):
         cnn  = []
-        
         #For the first layer we will not use Batchnorm
-        cnn += cnn1d(in_channels=channel[0], 
-                        out_channels=channel[0],
-                        ker = kernel[0],
-                        std = strides[0],
-                        pad = padding[0],
-                        act = activation[0],
-                        dil = dilation[0],bn=False)
+        _bool_bn = [True for _ in range(len(channel))]
+        _bool_bn[0] = False
+        pack = zip(channel[:-1], channel[1:], kernel, strides,dilation, padding, activation,_bool_bn)
 
-        pack = zip(channel[1:-1], channel[2:], kernel[1:], strides[1:], dilation[1:], padding[1:], activation[1:])
-        for in_channels, out_channels, kernel_size, stride, padding, dilation, acts in pack:
+        for in_channels, out_channels, kernel_size, stride, padding, dilation, acts, _bn in pack:
             cnn += cnn1d(in_channels=in_channels, 
                         out_channels=out_channels,
                         ker = kernel_size,
                         std = stride,
                         pad = padding,
                         act = acts,
-                        dil = dilation,*args, **kwargs)
+                        dil = dilation,
+                        bn  = _bn, 
+                        *args, **kwargs)
         return cnn
 
     def block_linear(self, channels, acts, dpc, bn= False):
