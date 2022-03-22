@@ -107,6 +107,7 @@ class trainer(object):
             'Dloss_cycle_x':[0],
             'Dloss_cycle_zy':[0],
             'Dloss_cycle_zxy':[0],
+            'Dloss_cycle_zyy':[0],
 
             'Gloss':[0],
             'Gloss_ali':[0],
@@ -118,6 +119,7 @@ class trainer(object):
             'Gloss_cycle_zd':[0],
             'Gloss_cycle_zf':[0],
             'Gloss_cycle_zxy':[0],
+            'Gloss_cycle_zyy':[0],
 
             'Gloss_rec':[0],
             'Gloss_rec_y':[0],
@@ -233,6 +235,7 @@ class trainer(object):
                 self.Dyy    = net.DCGAN_Dx( opt.config['Dyy'], opt)
 
                 self.Dzyx   = net.DCGAN_Dz(opt.config['Dzyx'],opt)
+                # self.Dzyy   = net.DCGAN_Dz(opt.config['Dzyy'],opt)
                 
                 self.Dx     = net.DCGAN_Dx(opt.config['Dx'],  opt)
 
@@ -249,6 +252,7 @@ class trainer(object):
                 self.Dyy    = nn.DataParallel(self.Dyy ).cuda()
 
                 self.Dzyx   = nn.DataParallel(self.Dzyx ).cuda()
+                # self.Dzyy   = nn.DataParallel(self.Dzyy ).cuda()
 
                 self.Dxx    = nn.DataParallel(self.Dxx ).cuda()
 
@@ -266,6 +270,7 @@ class trainer(object):
                 self.Dnets.append(self.Dyy)
 
                 self.Dnets.append(self.Dzyx)
+                # self.Dnets.append(self.Dzyy)
                 self.Dnets.append(self.Dxx)
                 self.Dnets.append(self.Dzzf)
 
@@ -377,6 +382,10 @@ class trainer(object):
         D_zyx = self.Dzyx(zcat(z_yx,z_yx))
         D_zxy = self.Dzyx(zcat(z_yx,z_xy))
         return D_zyx,D_zxy
+    def discriminate_zyy(self,zyy,zyyr):
+        Dreal = self.Dzyy(zcat(zyy,zyy))
+        Dfake = self.Dzyy(zcat(zyy,zyyr))
+        return Dreal,Dfake
     
     # @profile
     def alice_train_discriminator_adv(self,y,zyy,zxy, x):
@@ -411,6 +420,7 @@ class trainer(object):
         y_gen   = zcat(y_gen,wny)
         zyy_gen,zyx_gen,*other = self.F_(y_gen)
         zd_rec  = zcat(zyx_gen,zyy_gen)
+        zyy_rec = zyy_gen
 
         # 6. Disciminate Cross Entropy  
         Dreal_y,Dfake_y     = self.discriminate_yy(y,y_rec)
@@ -421,28 +431,32 @@ class trainer(object):
         Dreal_zd,Dfake_zd   = self.discriminate_zzb(zd_inp,zd_rec)
         Dloss_cycle_zy      = self.bce_loss(Dreal_zd,o1l(Dreal_zd))+\
                                 self.bce_loss(Dfake_zd,o0l(Dfake_zd))
+        
+        # Dreal_zyy,Dfake_zyy = self.discriminate_zyy(zyy,zyy_rec)
+        # Dloss_cycle_zyy     = self.bce_loss(Dreal_zyy,o1l(Dreal_zyy))+\
+        #                         self.bce_loss(Dfake_zyy,o0l(Dfake_zyy))
         # Dloss_rec_zy        = -torch.mean(ln0c(Dreal_zd)+ln0c(1.0-Dfake_zd)
 
         # 7. Forcing zxy to equal zyx an zx to equal 0 of the space
         # 7.1 Concatenate inputs
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        x_inp   = zcat(x,wnx)
-        zf_inp  = zcat(zxy,o0l(zyy))
+        x_inp       = zcat(x,wnx)
+        zf_inp      = zcat(zxy,o0l(zyy))
 
         # 7.2 Generate samples
         _x_gen   = self.Gy(zxy,o0l(zyy))
         zxx_F, zxy_F, *others = self.F_(x_inp)
         
         # 7.3 Concatenate outputs
-        zf_gen  = zcat(zxy_F,o0l(zxx_F))
+        zf_gen  = zcat(zxy_F,zxx_F)
 
         # 7.4 Generate reconstructions
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         x_gen       = zcat(_x_gen,wnx)
         zx_rec, zxy_rec,*others = self.F_(x_gen)
 
-        x_rec       = self.Gy(zxy_F,o0l(zxx_F))
-        zf_rec      = zcat(zxy_rec,o0l(zx_rec))
+        x_rec       = self.Gy(zxy_F,zxx_F)
+        zf_rec      = zcat(zxy_rec,zx_rec)
 
         # 7.5 Forcing zxy from X to be guassian
         Dxz,Dzx = self.discriminate_xz(x,_x_gen,zf_inp,zf_gen)
@@ -469,6 +483,7 @@ class trainer(object):
                                 Dloss_cycle_y + 
                                 Dloss_cycle_zy + 
                                 Dloss_cycle_zxy +
+                                # Dloss_cycle_zyy+
                                 Dloss_cycle_zf +  
                                 Dloss_cycle_x 
                             )
@@ -490,6 +505,7 @@ class trainer(object):
 
         self.losses['Dloss_cycle'   ].append(Dloss_cycle.tolist()) 
         self.losses['Dloss_cycle_y' ].append(Dloss_cycle_y.tolist())
+        # self.losses['Dloss_cycle_zyy'].append(Dloss_cycle_zyy.tolist()) 
         self.losses['Dloss_cycle_zxy'].append(Dloss_cycle_zxy.tolist())  
 
         self.losses['Dloss_cycle_x' ].append(Dloss_cycle_x.tolist())
@@ -526,14 +542,18 @@ class trainer(object):
         zd_rec  = zcat(zyx_rec,zyy_rec)
     
         # 5. Cross-Discriminate YY
-        _,Dfake_y = self.discriminate_yy(y,y_rec)
+        _,Dfake_y       = self.discriminate_yy(y,y_rec)
         Gloss_cycle_y   = self.bce_loss(Dfake_y,o1l(Dfake_y))
-        Gloss_rec_y            = torch.mean(torch.abs(y-y_rec)) 
+        Gloss_rec_y     = torch.mean(torch.abs(y-y_rec)) 
         
         # 6. Cross-Discriminate ZZ
-        _,Dfake_zd = self.discriminate_zzb(zd_inp,zd_rec)
+        _,Dfake_zd      = self.discriminate_zzb(zd_inp,zd_rec)
         Gloss_cycle_zd  = self.bce_loss(Dfake_zd,o1l(Dfake_zd))
-        Gloss_rec_zd           = torch.mean(torch.abs(zd_inp-zd_rec))
+        Gloss_rec_zd    = torch.mean(torch.abs(zd_inp-zd_rec))
+
+        # _ ,Dfake_zyy    = self.discriminate_zyy(zyy,zyy_rec)
+        # Gloss_cycle_zyy = self.bce_loss(Dfake_zyy,o1l(Dfake_zyy))
+        # Gloss_rec_zyy   = torch.mean(torch.abs(zyy - zyy_rec))
 
         #7. Forcing zxy to equal zyx an zx to equal 0 of the space
         # 7.1 Inputs
@@ -550,7 +570,7 @@ class trainer(object):
         zx_gen, zxy_gen, *others = self.F_(x_inp)
         zf_gen      = zcat(zxy_gen, o0l(zx_gen))
         _x_gen      = self.Gy(zxy,o0l(zyy))
-        _x_gen_fake = self.Gy(zxy,wn)
+        _x_gen_fake = self.Gy(zxy,wn.detach())
 
         # 7.3 Generate reconstructions values
         x_rec       = self.Gy(zxy_gen, o0l(zx_gen))
@@ -593,7 +613,8 @@ class trainer(object):
                         Gloss_cycle_zd +
                         Gloss_cycle_x +
                         Gloss_cycle_zf +
-                        Gloss_cycle_zxy 
+                        # Gloss_cycle_zyy+
+                        Gloss_cycle_zxy
                     )
         Gloss_rec   =( 
                         Gloss_rec_y +
@@ -601,7 +622,8 @@ class trainer(object):
                         Gloss_rec_zx +
                         Gloss_rec_zf +
                         Gloss_rec_x + 
-                        Gloss_rec_zxy 
+                        Gloss_rec_zxy +
+                        # Gloss_rec_zyy
                     )
         Gloss_ali   = (
                         Gloss_ali_y+
@@ -630,18 +652,19 @@ class trainer(object):
         self.oGyx.step()
         zerograd(self.optz)
          
-        self.losses['Gloss'].append(Gloss.tolist())
-        self.losses['Gloss_ali'].append(Gloss_ali.tolist())
+        self.losses['Gloss'      ].append(Gloss.tolist())
+        self.losses['Gloss_ali'  ].append(Gloss_ali.tolist())
         self.losses['Gloss_ali_x'].append(Gloss_ali_x.tolist())
         self.losses['Gloss_ali_y'].append(Gloss_ali_y.tolist())
 
-        self.losses['Gloss_cycle'   ].append(Gloss_cycle.tolist())
-        self.losses['Gloss_cycle_y' ].append(Gloss_cycle_y.tolist())
-        self.losses['Gloss_cycle_zd'].append(Gloss_cycle_zd.tolist())
+        self.losses['Gloss_cycle'    ].append(Gloss_cycle.tolist())
+        self.losses['Gloss_cycle_y'  ].append(Gloss_cycle_y.tolist())
+        self.losses['Gloss_cycle_zd' ].append(Gloss_cycle_zd.tolist())
         
-        self.losses['Gloss_cycle_x' ].append(Gloss_cycle_x.tolist())
-        self.losses['Gloss_cycle_zf'].append(Gloss_cycle_zf.tolist())
+        self.losses['Gloss_cycle_x'  ].append(Gloss_cycle_x.tolist())
+        self.losses['Gloss_cycle_zf' ].append(Gloss_cycle_zf.tolist())
         self.losses['Gloss_cycle_zxy'].append(Gloss_cycle_zxy.tolist())
+        # self.losses['Gloss_cycle_zyy'].append(Gloss_cycle_zyy.tolist())
 
         self.losses['Gloss_rec'    ].append(Gloss_rec.tolist())
         self.losses['Gloss_rec_zd' ].append(Gloss_rec_zd.tolist())
@@ -649,7 +672,6 @@ class trainer(object):
         self.losses['Gloss_rec_zx' ].append(Gloss_rec_zx.tolist())
         self.losses['Gloss_rec_x'  ].append(Gloss_rec_x.tolist())
         self.losses['Gloss_rec_zf' ].append(Gloss_rec_zf.tolist())
-        # self.losses['Gloss_rec_zyy'].append(Gloss_rec_zyy.tolist())
         self.losses['Gloss_rec_zxy'].append(Gloss_rec_zxy.tolist())
 
     def generate_latent_variable(self, batch, nch_zd,nzd, nch_zf = 128,nzf = 128):
