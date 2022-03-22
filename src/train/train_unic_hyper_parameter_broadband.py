@@ -404,7 +404,7 @@ class trainer(object):
         zyy_F,zyx_F,*other = self.F_(y_inp)
         
         #2.2 Concatenate outputs
-        zd_gen= zcat(zyx_F,zyy_F)
+        zd_gen  = zcat(zyx_F,zyy_F)
 
         # 3. Cross-Discriminate YZ
         Dyz,Dzy = self.discriminate_yz(y,y_gen,zd_inp,zd_gen)
@@ -420,7 +420,7 @@ class trainer(object):
         y_gen   = zcat(y_gen,wny)
         zyy_gen,zyx_gen,*other = self.F_(y_gen)
         zd_rec  = zcat(zyx_gen,zyy_gen)
-        zyy_rec = zyy_gen
+        # zyy_rec = zyy_gen
 
         # 6. Disciminate Cross Entropy  
         Dreal_y,Dfake_y     = self.discriminate_yy(y,y_rec)
@@ -459,7 +459,7 @@ class trainer(object):
         zf_rec      = zcat(zxy_rec,zx_rec)
 
         # 7.5 Forcing zxy from X to be guassian
-        Dxz,Dzx = self.discriminate_xz(x,_x_gen,zf_inp,zf_gen)
+        Dxz,Dzx     = self.discriminate_xz(x,_x_gen,zf_inp,zf_gen)
         Dloss_ali_x = self.bce_loss(Dxz,o1l(Dxz))+\
                          self.bce_loss(Dzx,o0l(Dzx))  
 
@@ -470,12 +470,12 @@ class trainer(object):
 
         # 7.6 Forcing Zy from X to be useless for the training
         Dreal_x, Dfake_x    = self.discriminate_xx(x,x_rec)
-        Dloss_cycle_x         = self.bce_loss(Dreal_x,o1l(Dreal_x))+\
+        Dloss_cycle_x       = self.bce_loss(Dreal_x,o1l(Dreal_x))+\
                                 self.bce_loss(Dfake_x,o0l(Dfake_x))
 
         # 7.7 Discriminate Cross Entropy for zf 
-        Dreal_zf, Dfake_zf = self.discriminate_zzf(zf_inp,zf_rec)
-        Dloss_cycle_zf       = self.bce_loss(Dreal_zf,o1l(Dreal_zf))+\
+        Dreal_zf, Dfake_zf  = self.discriminate_zzf(zf_inp,zf_rec)
+        Dloss_cycle_zf      = self.bce_loss(Dreal_zf,o1l(Dreal_zf))+\
                                 self.bce_loss(Dfake_zf,o1l(Dfake_zf))
 
         # 8. Compute all losses
@@ -568,17 +568,17 @@ class trainer(object):
 
         # 7.2 Generate conditional outputs
         zx_gen, zxy_gen, *others = self.F_(x_inp)
-        zf_gen      = zcat(zxy_gen, o0l(zx_gen))
+        zf_gen      = zcat(zxy_gen, zx_gen)
         _x_gen      = self.Gy(zxy,o0l(zyy))
         _x_gen_fake = self.Gy(zxy,wn.detach())
 
         # 7.3 Generate reconstructions values
-        x_rec       = self.Gy(zxy_gen, o0l(zx_gen))
+        x_rec       = self.Gy(zxy_gen, zx_gen)
         x_gen       = zcat(_x_gen,wnx)
         x_gen_fake  = zcat(_x_gen_fake,wnx_fake)
 
         zxx_rec, zxy_rec, *others = self.F_(x_gen)
-        zf_rec      = zcat(zxy_rec,o0l(zxx_rec))
+        zf_rec      = zcat(zxy_rec,zxx_rec)
         
         _, zxy_rec_fake, *others = self.F_(x_gen_fake)
         zxy_fake    =  zxy_rec_fake
@@ -622,7 +622,7 @@ class trainer(object):
                         Gloss_rec_zx +
                         Gloss_rec_zf +
                         Gloss_rec_x + 
-                        Gloss_rec_zxy +
+                        Gloss_rec_zxy 
                         # Gloss_rec_zyy
                     )
         Gloss_ali   = (
@@ -635,17 +635,25 @@ class trainer(object):
                         Gloss_rec*app.LAMBDA_IDENTITY
                     )
 
-        if epoch%35 == 0: 
+        if epoch%25 == 0: 
             writer = self.writer_debug if trial_writer == None else trial_writer
             for idx in range(opt.batchSize//torch.cuda.device_count()):
                 writer.add_histogram("common[z2]/zyx", zyx_rec[idx,:], epoch)
+                if idx== 20: 
+                    break
             for idx in range(opt.batchSize//torch.cuda.device_count()):
                 writer.add_histogram("common[z2]/zxy", zxy_rec[idx,:], epoch)
+                if idx== 20: 
+                    break
 
             for idx in range(opt.batchSize//torch.cuda.device_count()):
                 writer.add_histogram("specific[z1]/zyy", zyy_rec[idx,:], epoch)
+                if idx== 20: 
+                    break
             for idx in range(opt.batchSize//torch.cuda.device_count()):
                 writer.add_histogram("specific[z1]/zxx", zxx_rec[idx,:], epoch)
+                if idx== 20: 
+                    break
 
 
         Gloss.backward()
@@ -814,6 +822,20 @@ class trainer(object):
                 bar.set_postfix(**{'val_accuracy_bb':val_accuracy_bb,
                                 'val_accuracy_fl':val_accuracy_fl,
                                 'val_accuracy_hb':val_accuracy_hb})
+                bar.set_postfix(status='tracking weight ...')
+                self.track_weight_change(
+                            writer  = self.writer_debug,
+                            tag     ='Gy[branch_common]',
+                            model   = self.Gy.module.branch_common, 
+                            epoch   = epoch
+                        )
+                
+                self.track_weight_change(
+                            writer  = self.writer_debug,
+                            tag     ='Gy[branch_broadband]',
+                            model   = self.Gy.module.branch_broadband, 
+                            epoch   = epoch
+                        )
        
                 if self.study_dir == None:
                     self.writer_debug.add_scalar('Accuracy/Broadband',val_accuracy_bb, epoch)
@@ -914,6 +936,13 @@ class trainer(object):
                     app.logger.info('Evaluating ...')
                     return val_accuracy_hb
 
+
+    def track_weight_change(self, writer, tag, model,epoch):
+        for idx in range(len(model)):
+            classname = model[idx].__class__.__name__
+            if classname.find('Conv1d')!= -1 or classname.find('ConvTranspose1d')!= -1:
+                writer.add_histogram(f'{tag}/{idx}', model[idx].weight, epoch)
+        
     def accuracy(self):
         def _eval(EG,PG): 
             val = np.sqrt(np.power([10 - eg for eg in EG],2)+\
