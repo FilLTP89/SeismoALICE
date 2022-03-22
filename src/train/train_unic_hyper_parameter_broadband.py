@@ -548,12 +548,12 @@ class trainer(object):
     
         # 5. Cross-Discriminate YY
         _,Dfake_y       = self.discriminate_yy(y,y_rec)
-        Gloss_cycle_y   = -self.bce_loss(Dfake_y,o0l(Dfake_y)) 
+        Gloss_cycle_y   = -self.bce_loss(Dfake_y,o1l(Dfake_y)) 
         Gloss_rec_y     = torch.mean(torch.abs(y-y_rec))
         
         # 6. Cross-Discriminate ZZ
         _,Dfake_zd      = self.discriminate_zzb(zd_inp,zd_rec)
-        Gloss_cycle_zd  = -self.bce_loss(Dfake_zd,o0l(Dfake_zd))
+        Gloss_cycle_zd  = -self.bce_loss(Dfake_zd,o1l(Dfake_zd))
         Gloss_rec_zd    = torch.mean(torch.abs(zd_inp-zd_rec))
 
         # _ ,Dfake_zyy    = self.discriminate_zyy(zyy,zyy_rec)
@@ -594,16 +594,16 @@ class trainer(object):
 
         # Cross Discriminate for zxy to ensure it's Gaussian
         _,Dfake_zxy          = self.discriminate_zxy(zxy, zxy_rec)
-        Gloss_cycle_zxy      = -self.bce_loss(Dfake_zxy,o0l(Dfake_zxy))
+        Gloss_cycle_zxy      = -self.bce_loss(Dfake_zxy,o1l(Dfake_zxy))
 
         # Cross Discimininate for Z from X to be [guassian,0]
         _, Dfake_zf          = self.discriminate_zzf(zf_inp, zf_rec)
-        Gloss_cycle_zf       = -self.bce_loss(Dfake_zf, o0l(Dfake_zf))
+        Gloss_cycle_zf       = -self.bce_loss(Dfake_zf, o1l(Dfake_zf))
         Gloss_rec_zf         = torch.mean(torch.abs(zf_inp - zf_rec))
 
         # 7.4 Cross-Discriminate XX
         _, Dfake_x           = self.discriminate_xx(x,x_rec)
-        Gloss_cycle_x        = -self.bce_loss(Dfake_x, o0l(Dfake_x))
+        Gloss_cycle_x        = -self.bce_loss(Dfake_x, o1l(Dfake_x))
         Gloss_rec_x          = torch.mean(torch.abs(x - x_rec))
 
         # 7.5 Forcing zxx_rec to be 0
