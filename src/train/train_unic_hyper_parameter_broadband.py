@@ -237,7 +237,9 @@ class trainer(object):
                 self.optz.append(self.oGyx)
                 # self.optz.append(self.oGy)
                 self.Dy     = net.DCGAN_Dx( opt.config['Dy'],  opt)
+                self.Dsy    = net.DCGAN_Dx( opt.config['Dsy'],  opt)
                 self.Dzb    = net.DCGAN_Dz( opt.config['Dzb'], opt)
+                self.Dszb   = net.DCGAN_Dz( opt.config['Dszb'], opt)
                 self.Dyz    = net.DCGAN_DXZ(opt.config['Dyz'], opt)
                 self.Dzzb   = net.DCGAN_Dz( opt.config['Dzzb'],opt)
                 self.Dyy    = net.DCGAN_Dx( opt.config['Dyy'], opt)
@@ -246,33 +248,35 @@ class trainer(object):
                 # self.Dzyy   = net.DCGAN_Dz(opt.config['Dzyy'],opt)
                 
                 self.Dx     = net.DCGAN_Dx(opt.config['Dx'],  opt)
-
+                self.Dsx    = net.DCGAN_Dx(opt.config['Dsx'],opt)
                 self.Dzf    = net.DCGAN_Dz(opt.config['Dzf'], opt)
+                self.Dszf   = net.DCGAN_Dz(opt.config['Dszf'], opt)
                 self.Dxz    = net.DCGAN_DXZ(opt.config['Dxz'],opt)
                 self.Dzzf   = net.DCGAN_Dz(opt.config['Dzzf'],opt)
 
                 self.Dxx    = net.DCGAN_Dx(opt.config['Dxx'], opt)
-
                 self.Dy     = nn.DataParallel(self.Dy  ).cuda()
+                self.Dsy    = nn.DataParallel(self.Dsy  ).cuda()
                 self.Dzb    = nn.DataParallel(self.Dzb ).cuda()
+                self.Dszb   = nn.DataParallel(self.Dszb ).cuda()
                 self.Dyz    = nn.DataParallel(self.Dyz ).cuda()
                 self.Dzzb   = nn.DataParallel(self.Dzzb).cuda()
                 self.Dyy    = nn.DataParallel(self.Dyy ).cuda()
-
                 self.Dzyx   = nn.DataParallel(self.Dzyx ).cuda()
                 # self.Dzyy   = nn.DataParallel(self.Dzyy ).cuda()
-
                 self.Dxx    = nn.DataParallel(self.Dxx ).cuda()
-
                 self.Dzzf   = nn.DataParallel(self.Dzzf).cuda()
-                
                 self.Dzf    = nn.DataParallel(self.Dzf).cuda()
+                self.Dszf   = nn.DataParallel(self.Dszf).cuda()
                 self.Dx     = nn.DataParallel(self.Dx).cuda()
+                self.Dsx    = nn.DataParallel(self.Dsx).cuda()
                 self.Dxz    = nn.DataParallel(self.Dxz).cuda()
                 
 
                 self.Dnets.append(self.Dy)
+                self.Dnets.append(self.Dsy)
                 self.Dnets.append(self.Dzb)
+                self.Dnets.append(self.Dszb)
                 self.Dnets.append(self.Dyz)
                 self.Dnets.append(self.Dzzb)
                 self.Dnets.append(self.Dyy)
@@ -283,7 +287,9 @@ class trainer(object):
                 self.Dnets.append(self.Dzzf)
 
                 self.Dnets.append(self.Dzf)
+                self.Dnets.append(self.Dszf)
                 self.Dnets.append(self.Dx)
+                self.Dnets.append(self.Dsx)
                 self.Dnets.append(self.Dxz)
 
                 self.oDyxz = reset_net(
@@ -347,7 +353,6 @@ class trainer(object):
 
         return Dxz,Dzx #,ftr,ftf
     
-
     def discriminate_yz(self,y,yr,z,zr):
         # Discriminate real
         
@@ -365,6 +370,7 @@ class trainer(object):
         Dzx  = ftzx
 
         return Dxz,Dzx 
+
 
     def discriminate_xx(self,x,xr):
         # x and xr should have the same distribution !
@@ -398,106 +404,149 @@ class trainer(object):
     
     # @profile
     def alice_train_discriminator_adv(self,y,zyy,zxy, x):
-        """
-            This functions is training the discriminators.
-            We calculate the ALICE + marginal for y and x
-            The loss ALICE is the sum of the loss ALI and CE loss
-        """       
+        # This functions is training the discriminators.
+        # We calculate the ALICE + marginal for y and x
+        # The loss ALICE is the sum of the loss ALI and CE loss
+
+        # y     : broadband signal size [batch, 3, 4096]
+        # x     : low frequency signal size [batch, 3, 4096]
+        # zxy   : latent variable that should catching the low frequency. 
+        #         It pdf is gaussian
+        # zy    : guassian latent variable that should catching the high frequency part
+         
+        # Preparing for the training. first we put the gradient to zero. Also we put the 
+        # auto-encoder (Encoder + Decoder) in eval, based from the ALICE paper. Then we put 
+        # all the discriminators in trainig mode.
+    
         zerograd(self.optz)
         modalite(self.FGf,  mode = 'eval')
         modalite(self.Dnets,mode = 'train')
-        # 0. Generate noise
+
+        # The First part compute Discriminator losses for the input Y called as broadband 
+        # We try to extract form the signal what is the distribution of LF, [0 -1]Hz.
+        # We try also to extrac form the signal what is the distributiion of HF [0 -30]Hz. 
+        # So in a gaussian space hidden variable zxy is related to LF 
+        # and zy is related to HF part
+
+        # Part I.- Training of the Broadband signal
+      
+        # Before training the noise is added to the input signal. The latent variable is 
+        # also concatenated for the training of z. 
+        # So What we plan to do is
+        # y     -> F(y)     -> G(F(y))
+        # zxy,zy-> F(zxy,zy)-> G(F(zxy,zy))
+        # So a ALI will evaluate the joint distribution, i.e (y, F(y))~(G(z),z)
+        # The cycle consistency will enforce that the y (resp. z) match the correct one,
+        # bijectivity.
+        # More than that, to make sure that distribution is correct we do the same with
+        # the marginal distribution
+
+        # 1.1 We Generate conditional samples
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        # 1. Concatenate inputs
-        zd_inp  = zcat(zxy,zyy)
-        y_inp   = zcat(y,wny)
-        
-        # 2.1 Generate conditional samples
-        y_gen   = self.Gy(zxy,zyy)
+        zd_inp      = zcat(zxy,zyy)
+        y_inp       = zcat(y,wny) 
+        # First we generate the yr = G(z) and the zr = F(y) the z represents the concatenation
+        # of zxy and zy. 
+        y_gen       = self.Gy(zxy,zyy)
         zyy_F,zyx_F,*other = self.F_(y_inp)
-        
-        #2.2 Concatenate outputs
-        zd_gen  = zcat(zyx_F,zyy_F)
+        zd_gen      = zcat(zyx_F,zyy_F)
 
-        # 3. Cross-Discriminate YZ
-        #Dyz  = Dyz(Dy(y),Dzb(F(y))) 
-        #Dzy  = Dyz(Dy(G(z)),Dzb(z)) 
+        # 1.2 Let's match the proper joint distributions
+        # The real part is Dreal_yz  = Dyz(Dy(y),Dzb(F(y))) 
+        # The fake part is Dfake_zy  = Dyz(Dy(G(z)),Dzb(z)) 
         Dreal_yz,Dfake_yz = self.discriminate_yz(y,y_gen,zd_inp,zd_gen)
-        # 4. Compute ALI discriminator loss
-        Dloss_ali_y = self.bce_loss(Dreal_yz,o1l(Dreal_yz))+self.bce_loss(Dfake_yz,o0l(Dfake_yz))
-        #bce(xn,yn) =  -wn*(yn.log(xn) + (1-yn)log(1-xn))
-                                    # 1.log(Dyz(y,F(y))) +  log(1-Dyx(G(z),z))
-        Dreal_y,Dfake_y  = self.Dy(y), self.Dy(y_gen)
-        Dloss_marginal_y = self.bce_loss(Dreal_y,o1l(Dreal_y)) + self.bce_loss(Dfake_y,o0l(Dfake_y))
+        # Matching of the joint probability distribution (x,F(x)) and (G(z),z)
+        # The equation to be satisfied is :
+        #       max -(E[log(Dyz(y,F(y)))] + E[log(1 - Dyz(G(z),z))])
+        #       REM : BCE(xn,yn) =  -wn*(yn.log(xn) + (1-yn)log(1-xn))
+        Dloss_ali_y     = self.bce_loss(Dreal_yz,o1l(Dreal_yz))+\
+                        self.bce_loss(Dfake_yz,o0l(Dfake_yz))
 
-        Dreal_zd,Dfake_zd= self.Dzb(zd_inp), self.Dzb(zd_gen)
-        Dloss_marginal_zd= self.bce_loss(Dreal_zd,o0l(Dreal_zd)) + self.bce_loss(Dfake_zd,o0l(Dfake_zd))
+        # 1.3. We comput the marginal probability distributions
+        # The objectif of this part is the calculation of the marginal probability 
+        # distribution to enforce loss reconstruction.
+        # So we do the evaluation the marginal probability distribution to match 
+        # probabilit distribution of y. 
+        # The equation to be statisfied is :
+        #     -(E[log(Dreal_y)] + E[log(1 - Dfake_y)]_  
+        Dreal_y,Dfake_y  = self.Dsy(y), self.Dsy(y_gen)
+        Dloss_marginal_y = self.bce_loss(Dreal_y,o1l(Dreal_y))+\
+                             self.bce_loss(Dfake_y,o0l(Dfake_y))
+        # And also, we do the evaluation the marginal probabiliti distribution of 
+        # z (ensure it's guassian). 
+        # The equation to be satisfied is :
+        #   -(E[log(Dreal_zd)] + E[log(1 - Dfake_zd)])
+        Dreal_zd,Dfake_zd= self.Dszb(zd_inp), self.Dszb(zd_gen)
+        Dloss_marginal_zd= self.bce_loss(Dreal_zd,o0l(Dreal_zd))+\
+                         self.bce_loss(Dfake_zd,o0l(Dfake_zd))
 
-        # 5. Generate reconstructions
+        # 2. Let's Generate reconstructions, i.e G(F(y)) and F(G(z)). Whe need this 
+        # part because of we want to do the cycle consistency to make sur 
+        # We generate the same values.
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         y_rec       = self.Gy(zyx_F,zyy_F)
-
-        y_gen   = zcat(y_gen,wny)
+        y_gen       = zcat(y_gen,wny)
+        # We Generate the reconstruction of z (F(G(z))) and the reconstruction of y (G(F(z)))
         zyy_gen,zyx_gen,*other = self.F_(y_gen)
-        zd_rec  = zcat(zyx_gen,zyy_gen)
-        # zyy_rec = zyy_gen
-
-        # 6. Disciminate Cross Entropy  
+        zd_rec      = zcat(zyx_gen,zyy_gen)
+        
+        # First we calculate the cycle consistency for y and the reconstruction of y.
+        # The equation to be satisfied is :
+        #   -(E[log(Dxx(x,x))] +  E[log(1 - Dxx(x,G(F(x))))])
         Dreal_yy,Dfake_yy   = self.discriminate_yy(y,y_rec)
         Dloss_cycle_y       = self.bce_loss(Dreal_yy,o1l(Dreal_yy))+\
                                 self.bce_loss(Dfake_yy,o0l(Dfake_yy))
-        # Dloss_rec_y       = -torch.mean(ln0c(Dreal_y)+ln0c(1.0-Dfake_y))
-
-        Dreal_zzd,Dfake_zzd   = self.discriminate_zzb(zd_inp,zd_rec)
+        # In a second time, we calculate the cycle consistency for z and the 
+        # reconstruction of z.
+        # The equation to be satisfied is: 
+        #   -(E[log(Dzz(y,y))] +  E[log(1-Dzyy(y, G(F(y))))])
+        Dreal_zzd,Dfake_zzd = self.discriminate_zzb(zd_inp,zd_rec)
         Dloss_cycle_zy      = self.bce_loss(Dreal_zzd,o1l(Dreal_zzd))+\
                                 self.bce_loss(Dfake_zzd,o0l(Dfake_zzd))
-        
-        # Dreal_zyy,Dfake_zyy = self.discriminate_zyy(zyy,zyy_rec)
-        # Dloss_cycle_zyy     = self.bce_loss(Dreal_zyy,o1l(Dreal_zyy))+\
-        #                         self.bce_loss(Dfake_zyy,o0l(Dfake_zyy))
-        # Dloss_rec_zy        = -torch.mean(ln0c(Dreal_zd)+ln0c(1.0-Dfake_zd)
 
-        # 7. Forcing zxy to equal zyx an zx to equal 0 of the space
-        # 7.1 Concatenate inputs
+        # Part II.- Training the Filtered signal
+        # As before, we prepare the input for the traing. But here, We only pay attention to zxy
+        # because we want to force it to capture the low frequency informations that we needed. 
+        # So here we do a little change:
+        # x         ->  (F|(x)_zxy, 0)  -> G(F|(x)_zxy,0)
+        # (zxy, 0)  ->  G(zxy, 0)       -> F(G(zxy, 0))
+
+        # 1.1 Let's compute the Generate samples
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         x_inp       = zcat(x,wnx)
-        zf_inp      = zcat(zxy,o0l(zyy))
-
-        # 7.2 Generate samples
         _x_gen   = self.Gy(zxy,o0l(zyy))
         zxx_F, zxy_F, *others = self.F_(x_inp)
-        
-        # 7.3 Concatenate outputs
-        # zf_gen  = zcat(zxy_F,zxx_F)
 
-        # 7.4 Generate reconstructions
-        wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        x_gen       = zcat(_x_gen,wnx)
-        zx_rec, zxy_rec,*others = self.F_(x_gen)
-
-        x_rec       = self.Gy(zxy_F,o0l(zxx_F))
-        zf_rec      = zcat(zxy_rec,zx_rec)
-
-        # 7.5 Forcing zxy from X to be guassian
-        # D(Dx(x),Dzf(F(x))
-        Dreal_xz,Dfake_xz     = self.discriminate_xz(x,_x_gen,zxy,zxy_F)
-        Dloss_ali_x           = self.bce_loss(Dreal_xz,o1l(Dreal_xz))+\
+        # 1.2 Now, we match the probability distribution of (x,F|(x)_zxy) ~ (G(zxy,0), zxy)
+        # Because it's easy for the discriminator to view that a distribution is not  a 
+        # zero space for zy so we only Discriminate on zxy. 
+        # Then the equation we evaluate is :
+        #   -(E[log(Dxz(x,F|(x)_zxy))] +  E[log(1 - Dxz(G(zxy,0),zxy))])
+        Dreal_xz,Dfake_xz    = self.discriminate_xz(x,_x_gen,zxy,zxy_F)
+        Dloss_ali_x          = self.bce_loss(Dreal_xz,o1l(Dreal_xz))+\
                                 self.bce_loss(Dfake_xz,o0l(Dfake_xz)) 
 
-        Dreal_x,Dfake_x       = self.Dx(x), self.Dx(x_gen)
-        Dloss_marginal_x      = self.bce_loss(Dreal_x,o1l(Dreal_x))+\
+        # 1.3 It is important to evaluate the marginal probability distribution. 
+        # For x we should satisfy this equation :
+        #   -(E[log(Dx(x,x))] + E[log(Dx(x,G(F|(x)_zxy,0)))])
+        Dreal_x,Dfake_x      = self.Dsx(x), self.Dsx(x_gen)
+        Dloss_marginal_x     = self.bce_loss(Dreal_x,o1l(Dreal_x))+\
                                 self.bce_loss(Dfake_x,o0l(Dfake_x))
+        # For zxy, we should satisfy this equation : 
+        #   -(E[log(Dzxy(zxy, zxy))] +  E[log(Dzxy(zxy,F(G(zxy,0))))])
+        Dreal_zf,Dfake_zf   = self.Dszf(zxy), self.Dszf(zxy_F)
+        Dloss_marginal_zf   = self.bce_loss(Dreal_zf,o1l(Dreal_zf))+\
+                                self.bce_loss(Dfake_x,o0l(Dfake_zf))
+        
+        # 2. This time, we make sure that the generate reconstructions is as clos as 
+        # possible to the input. As before we add noise to the x values.
+        wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        x_gen       = zcat(_x_gen,wnx)
+        _ , zxy_rec,*others = self.F_(x_gen)
+        x_rec       = self.Gy(zxy_F,o0l(zxx_F))
 
-        Dreal_zf,Dfake_zf= self.Dzf(zf_inp), self.Dzf(zxy_F)
-        Dloss_marginal_zf= self.bce_loss(Dreal_zf,o1l(Dreal_zf))+\
-                        self.bce_loss(Dfake_x,o0l(Dfake_zf))
-
-        # Dreal_zxy, Dfake_zxy= self.discriminate_zxy(zxy, zxy_rec)
-        # Dloss_cycle_zxy     = self.bce_loss(Dreal_zxy,o1l(Dreal_zxy))+\
-        #                         self.bce_loss(Dfake_zxy,o0l(Dfake_zxy))
-
-        # 7.6 Forcing Zy from X to be useless for the training
-        #D(x,x)
+        # Now it's to make sure pdf of G(F(x)) match to x. 
+        # The equation to be satisfied
         Dreal_x, Dfake_x    = self.discriminate_xx(x,x_rec)
         Dloss_cycle_x       = self.bce_loss(Dreal_x,o1l(Dreal_x))+\
                                 self.bce_loss(Dfake_x,o0l(Dfake_x))
@@ -511,8 +560,6 @@ class trainer(object):
         Dloss_cycle         = (
                                 Dloss_cycle_y + 
                                 Dloss_cycle_zy + 
-                                # Dloss_cycle_zxy +
-                                # Dloss_cycle_zyy+
                                 Dloss_cycle_zf +  
                                 Dloss_cycle_x 
                             )
@@ -574,10 +621,10 @@ class trainer(object):
         Gloss_ali_y =  -(self.bce_loss(Dyz,o1l(Dyz))+self.bce_loss(Dzy,o0l(Dzy)))
 
         #Loss marginal on y 
-        Dfake_y = self.Dy(y_gen)
+        Dfake_y = self.Dsy(y_gen)
         Gloss_marginal_y = -(self.bce_loss(Dfake_y,o0l(Dfake_y)))
         #Loss marginal on zd
-        Dfake_zd = self.Dzb(_zyy_gen)
+        Dfake_zd = self.Dszb(_zyy_gen)
         Gloss_marginal_zd= -(self.bce_loss(Dfake_zd,o0l(Dfake_zd)))
 
         
@@ -634,10 +681,10 @@ class trainer(object):
         Gloss_ali_x = -(self.bce_loss(Dxz,o1l(Dxz))+self.bce_loss(Dzx,o0l(Dzx)))
 
         #Loss marginal on y 
-        Dfake_x = self.Dy(x_gen)
+        Dfake_x = self.Dsx(x_gen)
         Gloss_marginal_x = -(self.bce_loss(Dfake_x,o0l(Dfake_x)))
         #Loss marginal on zd
-        Dfake_zf = self.Dzb(zxy_gen)
+        Dfake_zf = self.Dszf(zxy_gen)
         Gloss_marginal_zf= -(self.bce_loss(Dfake_zf,o0l(Dfake_zf)))
 
         # Cross Discimininate for Z from X to be [guassian,0]
