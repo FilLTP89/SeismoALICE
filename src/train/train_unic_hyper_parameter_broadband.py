@@ -237,9 +237,9 @@ class trainer(object):
                 self.optz.append(self.oGyx)
                 # self.optz.append(self.oGy)
                 self.Dy     = net.DCGAN_Dx( opt.config['Dy'],  opt)
-                self.Dsy    = net.DCGAN_Dx( opt.config['Dsy'],  opt)
+                self.Dsy    = net.DCGAN_DXZ( opt.config['Dsy'],  opt)
                 self.Dzb    = net.DCGAN_Dz( opt.config['Dzb'], opt)
-                self.Dszb   = net.DCGAN_Dz( opt.config['Dszb'], opt)
+                self.Dszb   = net.DCGAN_DXZ( opt.config['Dszb'], opt)
                 self.Dyz    = net.DCGAN_DXZ(opt.config['Dyz'], opt)
                 self.Dzzb   = net.DCGAN_Dz( opt.config['Dzzb'],opt)
                 self.Dyy    = net.DCGAN_Dx( opt.config['Dyy'], opt)
@@ -248,9 +248,9 @@ class trainer(object):
                 # self.Dzyy   = net.DCGAN_Dz(opt.config['Dzyy'],opt)
                 
                 self.Dx     = net.DCGAN_Dx(opt.config['Dx'],  opt)
-                self.Dsx    = net.DCGAN_Dx(opt.config['Dsx'],opt)
+                self.Dsx    = net.DCGAN_DXZ(opt.config['Dsx'],opt)
                 self.Dzf    = net.DCGAN_Dz(opt.config['Dzf'], opt)
-                self.Dszf   = net.DCGAN_Dz(opt.config['Dszf'], opt)
+                self.Dszf   = net.DCGAN_DXZ(opt.config['Dszf'], opt)
                 self.Dxz    = net.DCGAN_DXZ(opt.config['Dxz'],opt)
                 self.Dzzf   = net.DCGAN_Dz(opt.config['Dzzf'],opt)
 
@@ -371,6 +371,50 @@ class trainer(object):
 
         return Dxz,Dzx 
 
+    def discriminate_marginal_y(self,y,yr):
+        # We apply in frist convolution from the y signal ...
+        # the we flatten thaf values, a dense layer is added 
+        # and a tanh before the output of the signal. This 
+        # insure that we have a probability distribution.  
+        fty     = self.Dy(y)       
+        Dreal   = self.Dsy(fty)
+        # Futher more, we do the same but for the reconstruction of the 
+        # broadband signals
+        ftyr    = self.Dy(yr)
+        Dfake   = self.Dsy(ftyr) 
+        return Dreal, Dfake
+    
+    def discriminate_marginal_zd(self,z,zr):
+        # We apply in first the same neurol network used to extract the z information
+        # from the adversarial losses. Then, we extract the sigmoïd afther 
+        # the application of flatten layer,  dense layer
+        ftz     = self.Dzb(z)
+        Dreal   = self.Dszb(ftz)
+        # we do the same for reconstructed or generated z
+        ftzr    = self.Dzb(zr)
+        Dfake   = self.Dszb(zr)
+        return Dreal, Dfake
+
+    def discriminate_marginal_x(self,x,xr):
+        # We apply a the same neural netowrk used to match the joint distribution
+        # and we extract the probability distribution of the signals
+        ftx     = self.Dx(x)
+        Dreal   = self.Dsx(ftx)
+        # Doing the same for reconstruction/generation of x
+        ftxr    = self.Dx(xr)
+        Dfake   = self.Dx(ftxr)
+        return Dreal, Dfake
+    
+    def discriminate_marginal_zxy(self,zxy,zxyr):
+        # This function extract the probability of the marginal
+        # It's reuse the neural network in the joint probability distribution
+        # On one hand, we extract the real values. 
+        ftzxy   = self.Dzf(zxy)
+        Dreal   = self.Dszf(ftzxy)
+        # On the other hand, we extract the probability of the fake values
+        ftzxyr   = self.Dzf(zxyr)
+        Dfake   = self.Dszf(ftzxyr)
+        return Dreal, Dfake
 
     def discriminate_xx(self,x,xr):
         # x and xr should have the same distribution !
@@ -393,14 +437,7 @@ class trainer(object):
         Dfake = self.Dzzf(zcat(z,zr))
         return Dreal,Dfake
 
-    def discriminate_zxy(self,z_yx,z_xy):
-        D_zyx = self.Dzyx(zcat(z_yx,z_yx))
-        D_zxy = self.Dzyx(zcat(z_yx,z_xy))
-        return D_zyx,D_zxy
-    def discriminate_zyy(self,zyy,zyyr):
-        Dreal = self.Dzyy(zcat(zyy,zyy))
-        Dfake = self.Dzyy(zcat(zyy,zyyr))
-        return Dreal,Dfake
+    
     
     # @profile
     def alice_train_discriminator_adv(self,y,zyy,zxy, x):
@@ -560,22 +597,26 @@ class trainer(object):
                                 self.bce_loss(Dfake_zf,o0l(Dfake_zf))
 
         # III.- Computation of the all losses
+        # cycle consistency losses
         Dloss_cycle         = (
                                 Dloss_cycle_y + 
                                 Dloss_cycle_zy + 
                                 Dloss_cycle_zf +  
                                 Dloss_cycle_x 
                             )
+        # marginal losses
         Dloss_marginal      = (
                                 Dloss_marginal_y+
                                 Dloss_marginal_zd+
                                 Dloss_marginal_x+
                                 Dloss_marginal_zf
         )
+        # ALI losses
         Dloss_ali           = (
                                 Dloss_ali_y + 
                                 Dloss_ali_x 
                             )
+        # Total losses
         Dloss               = Dloss_ali + Dloss_cycle + Dloss_marginal
 
         Dloss.backward()
