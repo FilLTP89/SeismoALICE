@@ -355,7 +355,6 @@ class trainer(object):
     
     def discriminate_yz(self,y,yr,z,zr):
         # Discriminate real
-        
         ftz = self.Dzb(zr) #OK : no batchNorm
         ftx = self.Dy(y) #OK : with batchNorm
         zrc = zcat(ftx,ftz)
@@ -388,27 +387,30 @@ class trainer(object):
         # We apply in first the same neurol network used to extract the z information
         # from the adversarial losses. Then, we extract the sigmoïd afther 
         # the application of flatten layer,  dense layer
+        
         ftz     = self.Dzb(z)
         Dreal   = self.Dszb(ftz)
         # we do the same for reconstructed or generated z
         ftzr    = self.Dzb(zr)
-        Dfake   = self.Dszb(zr)
+        Dfake   = self.Dszb(ftzr)
         return Dreal, Dfake
 
     def discriminate_marginal_x(self,x,xr):
         # We apply a the same neural netowrk used to match the joint distribution
         # and we extract the probability distribution of the signals
+        
         ftx     = self.Dx(x)
         Dreal   = self.Dsx(ftx)
         # Doing the same for reconstruction/generation of x
         ftxr    = self.Dx(xr)
-        Dfake   = self.Dx(ftxr)
+        Dfake   = self.Dsx(ftxr)
         return Dreal, Dfake
     
     def discriminate_marginal_zxy(self,zxy,zxyr):
         # This function extract the probability of the marginal
         # It's reuse the neural network in the joint probability distribution
         # On one hand, we extract the real values. 
+        
         ftzxy   = self.Dzf(zxy)
         Dreal   = self.Dszf(ftzxy)
         # On the other hand, we extract the probability of the fake values
@@ -566,7 +568,7 @@ class trainer(object):
         # 1.3 It is important to evaluate the marginal probability distribution. 
         # For x we should satisfy this equation :
         #   -(E[log(Dx(x,x))] + E[log(Dx(x,G(F|(x)_zxy,0)))])
-        Dreal_x,Dfake_x      = self.discriminate_marginal_x(x,x_gen)
+        Dreal_x,Dfake_x      = self.discriminate_marginal_x(x,_x_gen)
         Dloss_marginal_x     = self.bce_loss(Dreal_x,o1l(Dreal_x))+\
                                 self.bce_loss(Dfake_x,o0l(Dfake_x))
         # For zxy, we should satisfy this equation : 
@@ -672,6 +674,7 @@ class trainer(object):
         # 1.1 We generate conditional samples.
         # The values G(zxy, zy) and F(y) will be computed. Thoses values will be useful
         # to match joint distributions, and also marginal distribuitions.  
+
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         y_inp   = zcat(y,wny)
         zd_inp  = zcat(zxy,zyy)
@@ -764,7 +767,6 @@ class trainer(object):
         #       min (E[log(Dxz(x,F|(x)_zxy))] + E[log(1 - Dxz(G(zxy),zxy))])
         Dxz,Dzx     = self.discriminate_xz(x,_x_gen,zxy,zxy_gen)
         Gloss_ali_x = -(self.bce_loss(Dxz,o1l(Dxz))+self.bce_loss(Dzx,o0l(Dzx)))
-
         # Now we compute the loss on the marginal of x. What we want is to satisfy:
         #       min E[log(Dx(x,G(F|(x)_zxy,0)))]
         _ , Dfake_x = self.discriminate_marginal_x(x,_x_gen)
@@ -782,7 +784,6 @@ class trainer(object):
         x_gen_fake  = zcat(_x_gen_fake,wnx_fake)
 
         zxx_rec, zxy_rec, *others = self.F_(x_gen)
-        
         _, zxy_rec_fake, *others = self.F_(x_gen_fake)
         zxy_fake    =  zxy_rec_fake
 
@@ -802,7 +803,6 @@ class trainer(object):
         _, Dfake_x           = self.discriminate_xx(x,x_rec)
         Gloss_cycle_x        = -self.bce_loss(Dfake_x, o0l(Dfake_x))
         Gloss_rec_x          = torch.mean(torch.abs(x - x_rec))
-
         # This loss is 0 of HF of x signal
         Gloss_rec_zx         = torch.mean(torch.abs(zxx_rec))
         
@@ -885,7 +885,7 @@ class trainer(object):
         self.losses['Gloss_rec_y'  ].append(Gloss_rec_y.tolist())
         self.losses['Gloss_rec_zx' ].append(Gloss_rec_zx.tolist())
         self.losses['Gloss_rec_x'  ].append(Gloss_rec_x.tolist())
-        self.losses['Gloss_rec_zf' ].append(Gloss_rec_zf.tolist())
+        # self.losses['Gloss_rec_zf' ].append(Gloss_rec_zf.tolist())
         self.losses['Gloss_rec_zxy'].append(Gloss_rec_zxy.tolist())
 
     def generate_latent_variable(self, batch, nch_zd,nzd, nch_zf = 128,nzf = 128):
