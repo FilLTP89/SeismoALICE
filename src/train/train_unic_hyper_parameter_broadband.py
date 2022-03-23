@@ -402,7 +402,7 @@ class trainer(object):
         y_inp   = zcat(y,wny)
         
         # 2.1 Generate conditional samples
-        y_gen   = self.Gy(zxy,zyy)
+        y_gen   = self.Gy(zd_inp)
         zyy_F,zyx_F,*other = self.F_(y_inp)
         
         #2.2 Concatenate outputs
@@ -420,7 +420,7 @@ class trainer(object):
 
         # 5. Generate reconstructions
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        y_rec       = self.Gy(zyx_F,zyy_F)
+        y_rec       = self.Gy(zd_gen)
 
         y_gen   = zcat(y_gen,wny)
         zyy_gen,zyx_gen,*other = self.F_(y_gen)
@@ -449,7 +449,7 @@ class trainer(object):
         zf_inp      = zcat(zxy,o0l(zyy))
 
         # 7.2 Generate samples
-        _x_gen   = self.Gy(zxy,o0l(zyy))
+        _x_gen   = self.Gy(zf_inp)
         zxx_F, zxy_F, *others = self.F_(x_inp)
         
         # 7.3 Concatenate outputs
@@ -460,7 +460,7 @@ class trainer(object):
         x_gen       = zcat(_x_gen,wnx)
         zx_rec, zxy_rec,*others = self.F_(x_gen)
 
-        x_rec       = self.Gy(zxy_F,zxx_F)
+        x_rec       = self.Gy(zf_gen)
         zf_rec      = zcat(zxy_rec,zx_rec)
 
         # 7.5 Forcing zxy from X to be guassian
@@ -528,7 +528,7 @@ class trainer(object):
         zd_inp  = zcat(zxy,zyy)
 
         # 2. Generate conditional samples
-        y_gen   = self.Gy(zxy,zyy)
+        y_gen   = self.Gy(zd_inp)
         zyy_gen,zyx_gen,*others = self.F_(y_inp)
 
         _zyy_gen= zcat(zyx_gen,zyy_gen) 
@@ -541,7 +541,7 @@ class trainer(object):
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
 
         # 4. Generate reconstructions
-        y_rec = self.Gy(zyx_gen,zyy_gen)
+        y_rec = self.Gy(_zyy_gen)
         
         y_gen = zcat(y_gen,wny)
         zyy_rec,zyx_rec,*other = self.F_(y_gen)
@@ -549,12 +549,12 @@ class trainer(object):
     
         # 5. Cross-Discriminate YY
         _,Dfake_y       = self.discriminate_yy(y,y_rec)
-        Gloss_cycle_y   = -self.bce_loss(Dfake_y,o1l(Dfake_y)) 
+        Gloss_cycle_y   = self.bce_loss(Dfake_y,o1l(Dfake_y)) 
         Gloss_rec_y     = torch.mean(torch.abs(y-y_rec))
         
         # 6. Cross-Discriminate ZZ
         _,Dfake_zd      = self.discriminate_zzb(zd_inp,zd_rec)
-        Gloss_cycle_zd  = -self.bce_loss(Dfake_zd,o1l(Dfake_zd))
+        Gloss_cycle_zd  = self.bce_loss(Dfake_zd,o1l(Dfake_zd))
         Gloss_rec_zd    = torch.mean(torch.abs(zd_inp-zd_rec))
 
         # _ ,Dfake_zyy    = self.discriminate_zyy(zyy,zyy_rec)
@@ -570,16 +570,17 @@ class trainer(object):
 
         x_inp       = zcat(x,wnx)
         zf_inp      = zcat(zxy,o0l(zyy))
+        _zf_inp_fake= zcat(zxy,wn)
         # zf_fake_inp = zcat(zxy,wn)
 
         # 7.2 Generate conditional outputs
         zx_gen, zxy_gen, *others = self.F_(x_inp)
         zf_gen      = zcat(zxy_gen, zx_gen)
-        _x_gen      = self.Gy(zxy,o0l(zyy))
-        _x_gen_fake = self.Gy(zxy,wn.detach())
+        _x_gen      = self.Gy(zf_inp)
+        _x_gen_fake = self.Gy(_zf_inp_fake)
 
         # 7.3 Generate reconstructions values
-        x_rec       = self.Gy(zxy_gen, zx_gen)
+        x_rec       = self.Gy(zf_gen)
         x_gen       = zcat(_x_gen,wnx)
         x_gen_fake  = zcat(_x_gen_fake,wnx_fake)
 
@@ -595,16 +596,16 @@ class trainer(object):
 
         # Cross Discriminate for zxy to ensure it's Gaussian
         _,Dfake_zxy          = self.discriminate_zxy(zxy, zxy_rec)
-        Gloss_cycle_zxy      = -self.bce_loss(Dfake_zxy,o1l(Dfake_zxy))
+        Gloss_cycle_zxy      = self.bce_loss(Dfake_zxy,o1l(Dfake_zxy))
 
         # Cross Discimininate for Z from X to be [guassian,0]
         _, Dfake_zf          = self.discriminate_zzf(zf_inp, zf_rec)
-        Gloss_cycle_zf       = -self.bce_loss(Dfake_zf, o1l(Dfake_zf))
+        Gloss_cycle_zf       = self.bce_loss(Dfake_zf, o1l(Dfake_zf))
         Gloss_rec_zf         = torch.mean(torch.abs(zf_inp - zf_rec))
 
         # 7.4 Cross-Discriminate XX
         _, Dfake_x           = self.discriminate_xx(x,x_rec)
-        Gloss_cycle_x        = -self.bce_loss(Dfake_x, o1l(Dfake_x))
+        Gloss_cycle_x        = self.bce_loss(Dfake_x, o1l(Dfake_x))
         Gloss_rec_x          = torch.mean(torch.abs(x - x_rec))
 
         # 7.5 Forcing zxx_rec to be 0
