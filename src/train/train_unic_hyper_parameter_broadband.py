@@ -395,6 +395,7 @@ class trainer(object):
         modalite(self.FGf,  mode = 'eval')
         modalite(self.Dnets,mode = 'train')
         # 0. Generate noise
+        
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         # 1. Concatenate inputs
         zd_inp  = zcat(zxy,zyy)
@@ -533,8 +534,8 @@ class trainer(object):
         _zyy_gen= zcat(zyx_gen,zyy_gen) 
         Dyz,Dzy = self.discriminate_yz(y,y_gen,zd_inp,_zyy_gen)
         # -(E[D(y,F(y))] -  E[D(G(z),z)]) sup a -1
-        #Gloss_ali_y =  app.LAMBDA_1*torch.mean(-Dyz+Dzy)
-        Gloss_ali_y =  -(self.bce_loss(Dyz,o1l(Dyz))+self.bce_loss(Dzy,o0l(Dzy)))
+        Gloss_ali_y =  torch.mean(-Dyz+Dzy)
+        # Gloss_ali_y =  -(self.bce_loss(Dyz,o1l(Dyz))+self.bce_loss(Dzy,o0l(Dzy)))
         
         # 3. Generate noise
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
@@ -589,8 +590,8 @@ class trainer(object):
         zxy_fake    =  zxy_rec_fake
 
         Dxz,Dzx     = self.discriminate_xz(x,_x_gen,zf_inp,zf_gen)
-        # Gloss_ali_x =  app.LAMBDA_2*torch.mean(-Dxz+Dzx)
-        Gloss_ali_x = -(self.bce_loss(Dxz,o1l(Dxz))+self.bce_loss(Dzx,o0l(Dzx)))
+        Gloss_ali_x =  torch.mean(-Dxz+Dzx)
+        # Gloss_ali_x = -(self.bce_loss(Dxz,o1l(Dxz))+self.bce_loss(Dzx,o0l(Dzx)))
 
         # Cross Discriminate for zxy to ensure it's Gaussian
         _,Dfake_zxy          = self.discriminate_zxy(zxy, zxy_rec)
@@ -635,7 +636,7 @@ class trainer(object):
                         Gloss_ali_x
                     )
         Gloss       = (
-                        Gloss_ali*app.LAMBDA_ALI+ 
+                        Gloss_ali+ 
                         Gloss_cycle*app.LAMBDA_CONSISTENCY + 
                         Gloss_rec*app.LAMBDA_IDENTITY
                     )
@@ -660,6 +661,7 @@ class trainer(object):
                 if idx== 20: 
                     break
         Gloss.backward()
+        clipweights(self.FGf)
         self.oGyx.step()
         zerograd(self.optz)
          

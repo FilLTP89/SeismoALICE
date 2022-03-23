@@ -331,7 +331,7 @@ class Decoder_Unic(BasicDecoderDataParallel):
     def forward(self,z_com,z_bb):
         z1  = self.branch_common(z_com)
         z2  = self.branch_broadband(z_bb)
-        z   =  zcat(z1, z2)
+        z   =  z1+z2
         x   = self.branch_master(z)
 
         if not self.training:
