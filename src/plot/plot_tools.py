@@ -1027,10 +1027,10 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
         Xf_inp  = zcat(Xf,wnx)
         _, zdf_gen, *other = Qec(Xf_inp)
         wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(dev)
-        _Xr     = Pdc(zdf_gen,wn)
+        _Xr     = Pdc(zcat(zdf_gen,wn))
         wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
         z2, z1  = Qec(zcat(_Xr,wnx))
-        Xr      = Pdc(z1,o0l(z2))
+        Xr      = Pdc(zcat(z1,o0l(z2)))
 
         vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
         Xt = Xt.cpu().data.numpy().copy()
