@@ -339,6 +339,7 @@ class trainer(object):
         Dzx  = ftzx
 
         return Dxz,Dzx #,ftr,ftf
+    
 
     def discriminate_yz(self,y,yr,z,zr):
         # Discriminate real
@@ -363,7 +364,7 @@ class trainer(object):
         Dreal = self.Dxx(zcat(x,x))#with batchNorm
         Dfake = self.Dxx(zcat(x,xr))
         return Dreal,Dfake
-
+    
     def discriminate_yy(self,y,yr):
         Dreal = self.Dyy(zcat(y,y )) #with batchNorm
         Dfake = self.Dyy(zcat(y,yr))
@@ -395,32 +396,35 @@ class trainer(object):
         modalite(self.FGf,  mode = 'eval')
         modalite(self.Dnets,mode = 'train')
         # 0. Generate noise
-        
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         # 1. Concatenate inputs
         zd_inp  = zcat(zxy,zyy)
         y_inp   = zcat(y,wny)
         
         # 2.1 Generate conditional samples
-        y_gen   = self.Gy(zd_inp)
+        y_gen   = self.Gy(zxy,zyy)
         zyy_F,zyx_F,*other = self.F_(y_inp)
         
         #2.2 Concatenate outputs
         zd_gen  = zcat(zyx_F,zyy_F)
 
         # 3. Cross-Discriminate YZ
-        #Dyz  = Dyz(y,F(y)) 
-        #Dzy  = Dyz(G(z),z) 
-        Dyz,Dzy = self.discriminate_yz(y,y_gen,zd_inp,zd_gen)
-
+        #Dyz  = Dyz(Dy(y),Dzb(F(y))) 
+        #Dzy  = Dyz(Dy(G(z)),Dzb(z)) 
+        Dreal_yz,Dfake_yz = self.discriminate_yz(y,y_gen,zd_inp,zd_gen)
         # 4. Compute ALI discriminator loss
-        Dloss_ali_y = self.bce_loss(Dyz,o1l(Dyz))+self.bce_loss(Dzy,o0l(Dzy))
+        Dloss_ali_y = self.bce_loss(Dreal_yz,o1l(Dreal_yz))+self.bce_loss(Dfake_yz,o0l(Dfake_yz))
         #bce(xn,yn) =  -wn*(yn.log(xn) + (1-yn)log(1-xn))
                                     # 1.log(Dyz(y,F(y))) +  log(1-Dyx(G(z),z))
+        Dreal_y,Dfake_y  = self.Dy(y), self.Dy(y_gen)
+        Dloss_marginal_y = self.bce_loss(Dreal_y,o1l(Dreal_y)) + self.bce_loss(Dfake_y,o0l(Dfake_y))
+
+        Dreal_zd,Dfake_zd= self.Dzb(zd_inp), self.Dzb(zd_gen)
+        Dloss_marginal_zd= self.bce_loss(Dreal_zd,o0l(Dreal_zd)) + self.bce_loss(Dfake_zd,o0l(Dfake_zd))
 
         # 5. Generate reconstructions
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        y_rec       = self.Gy(zd_gen)
+        y_rec       = self.Gy(zyx_F,zyy_F)
 
         y_gen   = zcat(y_gen,wny)
         zyy_gen,zyx_gen,*other = self.F_(y_gen)
@@ -428,14 +432,14 @@ class trainer(object):
         # zyy_rec = zyy_gen
 
         # 6. Disciminate Cross Entropy  
-        Dreal_y,Dfake_y     = self.discriminate_yy(y,y_rec)
-        Dloss_cycle_y       = self.bce_loss(Dreal_y,o1l(Dreal_y))+\
-                                self.bce_loss(Dfake_y,o0l(Dfake_y))
+        Dreal_yy,Dfake_yy   = self.discriminate_yy(y,y_rec)
+        Dloss_cycle_y       = self.bce_loss(Dreal_yy,o1l(Dreal_yy))+\
+                                self.bce_loss(Dfake_yy,o0l(Dfake_yy))
         # Dloss_rec_y       = -torch.mean(ln0c(Dreal_y)+ln0c(1.0-Dfake_y))
 
-        Dreal_zd,Dfake_zd   = self.discriminate_zzb(zd_inp,zd_rec)
-        Dloss_cycle_zy      = self.bce_loss(Dreal_zd,o1l(Dreal_zd))+\
-                                self.bce_loss(Dfake_zd,o0l(Dfake_zd))
+        Dreal_zzd,Dfake_zzd   = self.discriminate_zzb(zd_inp,zd_rec)
+        Dloss_cycle_zy      = self.bce_loss(Dreal_zzd,o1l(Dreal_zzd))+\
+                                self.bce_loss(Dfake_zzd,o0l(Dfake_zzd))
         
         # Dreal_zyy,Dfake_zyy = self.discriminate_zyy(zyy,zyy_rec)
         # Dloss_cycle_zyy     = self.bce_loss(Dreal_zyy,o1l(Dreal_zyy))+\
@@ -449,7 +453,7 @@ class trainer(object):
         zf_inp      = zcat(zxy,o0l(zyy))
 
         # 7.2 Generate samples
-        _x_gen   = self.Gy(zf_inp)
+        _x_gen   = self.Gy(zxy,o0l(zyy))
         zxx_F, zxy_F, *others = self.F_(x_inp)
         
         # 7.3 Concatenate outputs
@@ -460,17 +464,25 @@ class trainer(object):
         x_gen       = zcat(_x_gen,wnx)
         zx_rec, zxy_rec,*others = self.F_(x_gen)
 
-        x_rec       = self.Gy(zf_gen)
+        x_rec       = self.Gy(zxy_F,zxx_F)
         zf_rec      = zcat(zxy_rec,zx_rec)
 
         # 7.5 Forcing zxy from X to be guassian
-        Dxz,Dzx     = self.discriminate_xz(x,_x_gen,zf_inp,zf_gen)
-        Dloss_ali_x = self.bce_loss(Dxz,o1l(Dxz))+self.bce_loss(Dzx,o0l(Dzx))  
+        Dreal_xz,Dfake_xz     = self.discriminate_xz(x,_x_gen,zf_inp,zf_gen)
+        Dloss_ali_x = self.bce_loss(Dreal_xz,o1l(Dreal_xz))+\
+                        self.bce_loss(Dfake_xz,o0l(Dfake_xz)) 
 
+        Dreal_x,Dfake_x = self.Dx(x), self.Dx(x_gen)
+        Dloss_marginal_x = self.bce_loss(Dreal_x,o1l(Dreal_x))+\
+                        self.bce_loss(Dfake_x,o0l(Dfake_x))
 
-        Dreal_zxy, Dfake_zxy= self.discriminate_zxy(zxy, zxy_rec)
-        Dloss_cycle_zxy     = self.bce_loss(Dreal_zxy,o1l(Dreal_zxy))+\
-                                self.bce_loss(Dfake_zxy,o0l(Dfake_zxy))
+        Dreal_zf,Dfake_zf= self.Dzf(zf_inp), self.Dzf(zf_gen)
+        Dloss_marginal_zf= self.bce_loss(Dreal_zf,o1l(Dreal_zf))+\
+                        self.bce_loss(Dfake_x,o0l(Dfake_zf))
+
+        # Dreal_zxy, Dfake_zxy= self.discriminate_zxy(zxy, zxy_rec)
+        # Dloss_cycle_zxy     = self.bce_loss(Dreal_zxy,o1l(Dreal_zxy))+\
+        #                         self.bce_loss(Dfake_zxy,o0l(Dfake_zxy))
 
         # 7.6 Forcing Zy from X to be useless for the training
         Dreal_x, Dfake_x    = self.discriminate_xx(x,x_rec)
@@ -480,22 +492,28 @@ class trainer(object):
         # 7.7 Discriminate Cross Entropy for zf 
         Dreal_zf, Dfake_zf  = self.discriminate_zzf(zf_inp,zf_rec)
         Dloss_cycle_zf      = self.bce_loss(Dreal_zf,o1l(Dreal_zf))+\
-                                self.bce_loss(Dfake_zf,o1l(Dfake_zf))
+                                self.bce_loss(Dfake_zf,o0l(Dfake_zf))
 
         # 8. Compute all losses
         Dloss_cycle         = (
                                 Dloss_cycle_y + 
                                 Dloss_cycle_zy + 
-                                Dloss_cycle_zxy +
+                                # Dloss_cycle_zxy +
                                 # Dloss_cycle_zyy+
                                 Dloss_cycle_zf +  
                                 Dloss_cycle_x 
                             )
+        Dloss_marginal      = (
+                                Dloss_marginal_y+
+                                Dloss_marginal_zd+
+                                Dloss_marginal_x+
+                                Dloss_marginal_zf
+        )
         Dloss_ali           = (
                                 Dloss_ali_y + 
                                 Dloss_ali_x 
                             )
-        Dloss               = Dloss_ali + Dloss_cycle # converge à 7*(2log2)
+        Dloss               = Dloss_ali + Dloss_cycle + Dloss_marginal
 
         Dloss.backward()
         self.oDyxz.step(),
@@ -510,7 +528,7 @@ class trainer(object):
         self.losses['Dloss_cycle'   ].append(Dloss_cycle.tolist()) 
         self.losses['Dloss_cycle_y' ].append(Dloss_cycle_y.tolist())
         # self.losses['Dloss_cycle_zyy'].append(Dloss_cycle_zyy.tolist()) 
-        self.losses['Dloss_cycle_zxy'].append(Dloss_cycle_zxy.tolist())  
+        # self.losses['Dloss_cycle_zxy'].append(Dloss_cycle_zxy.tolist())  
 
         self.losses['Dloss_cycle_x' ].append(Dloss_cycle_x.tolist())
         self.losses['Dloss_cycle_zy'].append(Dloss_cycle_zy.tolist())
@@ -528,33 +546,42 @@ class trainer(object):
         zd_inp  = zcat(zxy,zyy)
 
         # 2. Generate conditional samples
-        y_gen   = self.Gy(zd_inp)
+        y_gen   = self.Gy(zxy,zyy)
         zyy_gen,zyx_gen,*others = self.F_(y_inp)
 
         _zyy_gen= zcat(zyx_gen,zyy_gen) 
         Dyz,Dzy = self.discriminate_yz(y,y_gen,zd_inp,_zyy_gen)
+        
+        #Loss ALI 
         # -(E[D(y,F(y))] -  E[D(G(z),z)]) sup a -1
-        Gloss_ali_y =  torch.mean(-Dyz+Dzy)
-        # Gloss_ali_y =  -(self.bce_loss(Dyz,o1l(Dyz))+self.bce_loss(Dzy,o0l(Dzy)))
+        #Gloss_ali_y =  app.LAMBDA_1*torch.mean(-Dyz+Dzy)
+        Gloss_ali_y =  -(self.bce_loss(Dyz,o1l(Dyz))+self.bce_loss(Dzy,o0l(Dzy)))
+        #Loss marginal on y 
+        Dfake_y = self.Dy(y_gen)
+        Gloss_marginal_y = -(self.bce_loss(Dfake_y,o0l(Dfake_y)))
+        #Loss marginal on zd
+        Dfake_zd = self.Dzb(_zyy_gen)
+        Gloss_marginal_zd= -(self.bce_loss(Dfake_zd,o0l(Dfake_zd)))
+
         
         # 3. Generate noise
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
 
         # 4. Generate reconstructions
-        y_rec = self.Gy(_zyy_gen)
+        y_rec = self.Gy(zyx_gen,zyy_gen)
         
         y_gen = zcat(y_gen,wny)
         zyy_rec,zyx_rec,*other = self.F_(y_gen)
         zd_rec  = zcat(zyx_rec,zyy_rec)
     
         # 5. Cross-Discriminate YY
-        _,Dfake_y       = self.discriminate_yy(y,y_rec)
-        Gloss_cycle_y   = self.bce_loss(Dfake_y,o1l(Dfake_y)) 
+        _,Dfake_yy       = self.discriminate_yy(y,y_rec)
+        Gloss_cycle_y   = -self.bce_loss(Dfake_yy,o0l(Dfake_yy)) 
         Gloss_rec_y     = torch.mean(torch.abs(y-y_rec))
         
         # 6. Cross-Discriminate ZZ
-        _,Dfake_zd      = self.discriminate_zzb(zd_inp,zd_rec)
-        Gloss_cycle_zd  = self.bce_loss(Dfake_zd,o1l(Dfake_zd))
+        _,Dfake_zzd      = self.discriminate_zzb(zd_inp,zd_rec)
+        Gloss_cycle_zd  = -self.bce_loss(Dfake_zzd,o0l(Dfake_zzd))
         Gloss_rec_zd    = torch.mean(torch.abs(zd_inp-zd_rec))
 
         # _ ,Dfake_zyy    = self.discriminate_zyy(zyy,zyy_rec)
@@ -570,17 +597,16 @@ class trainer(object):
 
         x_inp       = zcat(x,wnx)
         zf_inp      = zcat(zxy,o0l(zyy))
-        _zf_inp_fake= zcat(zxy,wn)
         # zf_fake_inp = zcat(zxy,wn)
 
         # 7.2 Generate conditional outputs
         zx_gen, zxy_gen, *others = self.F_(x_inp)
         zf_gen      = zcat(zxy_gen, zx_gen)
-        _x_gen      = self.Gy(zf_inp)
-        _x_gen_fake = self.Gy(_zf_inp_fake)
+        _x_gen      = self.Gy(zxy,o0l(zyy))
+        _x_gen_fake = self.Gy(zxy,wn.detach())
 
         # 7.3 Generate reconstructions values
-        x_rec       = self.Gy(zf_gen)
+        x_rec       = self.Gy(zxy_gen, zx_gen)
         x_gen       = zcat(_x_gen,wnx)
         x_gen_fake  = zcat(_x_gen_fake,wnx_fake)
 
@@ -591,21 +617,28 @@ class trainer(object):
         zxy_fake    =  zxy_rec_fake
 
         Dxz,Dzx     = self.discriminate_xz(x,_x_gen,zf_inp,zf_gen)
-        Gloss_ali_x =  torch.mean(-Dxz+Dzx)
-        # Gloss_ali_x = -(self.bce_loss(Dxz,o1l(Dxz))+self.bce_loss(Dzx,o0l(Dzx)))
+        # Gloss_ali_x =  app.LAMBDA_2*torch.mean(-Dxz+Dzx)
+        Gloss_ali_x = -(self.bce_loss(Dxz,o1l(Dxz))+self.bce_loss(Dzx,o0l(Dzx)))
+
+        #Loss marginal on y 
+        Dfake_x = self.Dy(x_gen)
+        Gloss_marginal_x = -(self.bce_loss(Dfake_x,o0l(Dfake_x)))
+        #Loss marginal on zd
+        Dfake_zf = self.Dzb(zf_gen)
+        Gloss_marginal_zf= -(self.bce_loss(Dfake_zf,o0l(Dfake_zf)))
 
         # Cross Discriminate for zxy to ensure it's Gaussian
         _,Dfake_zxy          = self.discriminate_zxy(zxy, zxy_rec)
-        Gloss_cycle_zxy      = self.bce_loss(Dfake_zxy,o1l(Dfake_zxy))
+        Gloss_cycle_zxy      = -self.bce_loss(Dfake_zxy,o0l(Dfake_zxy))
 
         # Cross Discimininate for Z from X to be [guassian,0]
         _, Dfake_zf          = self.discriminate_zzf(zf_inp, zf_rec)
-        Gloss_cycle_zf       = self.bce_loss(Dfake_zf, o1l(Dfake_zf))
+        Gloss_cycle_zf       = -self.bce_loss(Dfake_zf, o0l(Dfake_zf))
         Gloss_rec_zf         = torch.mean(torch.abs(zf_inp - zf_rec))
 
         # 7.4 Cross-Discriminate XX
         _, Dfake_x           = self.discriminate_xx(x,x_rec)
-        Gloss_cycle_x        = self.bce_loss(Dfake_x, o1l(Dfake_x))
+        Gloss_cycle_x        = -self.bce_loss(Dfake_x, o0l(Dfake_x))
         Gloss_rec_x          = torch.mean(torch.abs(x - x_rec))
 
         # 7.5 Forcing zxx_rec to be 0
@@ -623,6 +656,13 @@ class trainer(object):
                         # Gloss_cycle_zyy+
                         Gloss_cycle_zxy
                     )
+        
+        Gloss_marginal = (
+                        Gloss_marginal_y+
+                        Gloss_marginal_zd+
+                        Gloss_marginal_x+
+                        Gloss_marginal_zf
+        )
         Gloss_rec   =( 
                         Gloss_rec_y +
                         Gloss_rec_zd + 
@@ -637,10 +677,11 @@ class trainer(object):
                         Gloss_ali_x
                     )
         Gloss       = (
-                        Gloss_ali+ 
+                        Gloss_ali*app.LAMBDA_ALI+ 
+                        Gloss_marginal+
                         Gloss_cycle*app.LAMBDA_CONSISTENCY + 
                         Gloss_rec*app.LAMBDA_IDENTITY
-                    )
+                    )   
 
         if epoch%25 == 0: 
             writer = self.writer_debug if trial_writer == None else trial_writer
@@ -662,7 +703,6 @@ class trainer(object):
                 if idx== 20: 
                     break
         Gloss.backward()
-        clipweights(self.FGf)
         self.oGyx.step()
         zerograd(self.optz)
          
@@ -843,19 +883,19 @@ class trainer(object):
                             epoch   = epoch
                         )
 
-                # self.track_weight_change(
-                #             writer  = self.writer_debug,
-                #             tag     ='Gy[branch_common]',
-                #             model   = self.Gy.module.branch_common.eval(), 
-                #             epoch   = epoch
-                #         )
+                self.track_weight_change(
+                            writer  = self.writer_debug,
+                            tag     ='Gy[branch_common]',
+                            model   = self.Gy.module.branch_common.eval(), 
+                            epoch   = epoch
+                        )
                 
-                # self.track_weight_change(
-                #             writer  = self.writer_debug,
-                #             tag     ='Gy[branch_broadband]',
-                #             model   = self.Gy.module.branch_broadband.eval(), 
-                #             epoch   = epoch
-                #         )
+                self.track_weight_change(
+                            writer  = self.writer_debug,
+                            tag     ='Gy[branch_broadband]',
+                            model   = self.Gy.module.branch_broadband.eval(), 
+                            epoch   = epoch
+                        )
        
                 if self.study_dir == None:
                     self.writer_debug.add_scalar('Accuracy/Broadband',val_accuracy_bb, epoch)
