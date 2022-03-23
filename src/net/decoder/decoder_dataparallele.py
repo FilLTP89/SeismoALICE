@@ -83,7 +83,7 @@ class BasicDecoderDataParallel(BasicModel):
 
 class Decoder(BasicDecoderDataParallel):
     """docstring for Decoder"""
-    def __init__(self,ngpu,nz,nch,ndf,nly,channel,act, extra, dconv = "",\
+    def __init__(self,ngpu,nz,nch,ndf,nly,channel,act, config, extra, dconv = "",\
                  ker=7,std=4,pad=0,opd=0,dil=1,grp=1,dpc=0.10,limit = 256, bn=True, path='',n_extra_layers=0):
         super(Decoder, self).__init__()
         self.ngpu = ngpu
@@ -139,7 +139,7 @@ class Decoder(BasicDecoderDataParallel):
 
 class Decoder_Lite(BasicDecoderDataParallel):
     """docstring for Decoder"""
-    def __init__(self,ngpu,nz,nch,ndf,nly,channel,act, extra, dconv = "",\
+    def __init__(self,ngpu,nz,nch,ndf,nly,channel,act, config,extra, dconv = "",\
                  ker=7,std=4,pad=0,opd=0,dil=1,grp=1,dpc=0.10,limit = 256, bn=True, path='',n_extra_layers=0):
         super(Decoder_Lite, self).__init__()
         self.ngpu = ngpu
@@ -179,7 +179,7 @@ class Decoder_Lite(BasicDecoderDataParallel):
         
 class Decoder_Resnet(BasicDecoderDataParallel):
     """docstring for Decoder_Resnet"""
-    def __init__(self, ngpu,nz,nch,ndf,nly,channel,act, extra,dconv = "",\
+    def __init__(self, ngpu,nz,nch,ndf,nly,config,channel,act, extra,dconv = "",\
                  ker=7,std=4,pad=0,opd=0,dil=1,grp=1,dpc=0.10,limit = 256,\
                  bn=True, path='',n_extra_layers=0):
         super(Decoder_Resnet, self).__init__()
@@ -197,7 +197,7 @@ class Decoder_Resnet(BasicDecoderDataParallel):
 
 class Decoder_Octave(BasicDecoderDataParallel):
     """docstring for Decoder_Octave"""
-    def __init__(self,ngpu,nz,nch,ndf,nly,channel,act, extra,dconv = "",\
+    def __init__(self,ngpu,nz,nch,ndf,nly, config, channel,act, extra,dconv = "",\
                  ker=7,std=4,pad=0,opd=0,dil=1,grp=1,dpc=0.10,limit = 256,\
                  bn=True, path='',n_extra_layers=0):
         super(Decoder_Octave, self).__init__()
