@@ -843,19 +843,19 @@ class trainer(object):
                             epoch   = epoch
                         )
 
-                self.track_weight_change(
-                            writer  = self.writer_debug,
-                            tag     ='Gy[branch_common]',
-                            model   = self.Gy.module.branch_common.eval(), 
-                            epoch   = epoch
-                        )
+                # self.track_weight_change(
+                #             writer  = self.writer_debug,
+                #             tag     ='Gy[branch_common]',
+                #             model   = self.Gy.module.branch_common.eval(), 
+                #             epoch   = epoch
+                #         )
                 
-                self.track_weight_change(
-                            writer  = self.writer_debug,
-                            tag     ='Gy[branch_broadband]',
-                            model   = self.Gy.module.branch_broadband.eval(), 
-                            epoch   = epoch
-                        )
+                # self.track_weight_change(
+                #             writer  = self.writer_debug,
+                #             tag     ='Gy[branch_broadband]',
+                #             model   = self.Gy.module.branch_broadband.eval(), 
+                #             epoch   = epoch
+                #         )
        
                 if self.study_dir == None:
                     self.writer_debug.add_scalar('Accuracy/Broadband',val_accuracy_bb, epoch)
