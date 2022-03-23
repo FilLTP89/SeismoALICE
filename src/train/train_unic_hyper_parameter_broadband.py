@@ -106,6 +106,7 @@ class trainer(object):
             'Dloss_cycle_y':[0],
             'Dloss_cycle_x':[0],
             'Dloss_cycle_zy':[0],
+            'Dloss_cycle_zf':[0],
             'Dloss_marginal':[0],
             'Dloss_marginal_y':[0],
             'Dloss_marginal_zd':[0],
@@ -641,6 +642,7 @@ class trainer(object):
 
         self.losses['Dloss_cycle_x' ].append(Dloss_cycle_x.tolist())
         self.losses['Dloss_cycle_zy'].append(Dloss_cycle_zy.tolist())
+        self.losses['Dloss_cycle_zf'].append(Dloss_cycle_zf.tolist())
               
 
     # @profile
@@ -964,8 +966,8 @@ class trainer(object):
 
             Gloss = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss'][-b:-1])))
             Dloss = '{:>5.3f}'.format(np.mean(np.array(self.losses['Dloss'][-b:-1])))
-            Gloss_zxy = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss_cycle_zxy'][-b:-1])))
-            Dloss_zxy = '{:>5.3f}'.format(np.mean(np.array(self.losses['Dloss_cycle_zxy'][-b:-1])))
+            Gloss_zxy = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss_cycle_zf'][-b:-1])))
+            Dloss_zxy = '{:>5.3f}'.format(np.mean(np.array(self.losses['Dloss_cycle_zf'][-b:-1])))
 
             # bar.set_postfix(Gloss = Gloss, Dloss = Dloss)
 
