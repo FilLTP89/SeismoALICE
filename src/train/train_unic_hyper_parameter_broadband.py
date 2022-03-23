@@ -505,15 +505,15 @@ class trainer(object):
         # So we do the evaluation the marginal probability distribution to match 
         # probabilit distribution of y. 
         # The equation to be statisfied is :
-        #     -(E[log(Dreal_y)] + E[log(1 - Dfake_y)]_  
-        Dreal_y,Dfake_y  = self.Dsy(y), self.Dsy(y_gen)
+        #     -(E[log(Dy(y))] + E[log(1 - Dy(G(z)))])  
+        Dreal_y,Dfake_y  = self.discriminate_marginal_y(y,y_gen)
         Dloss_marginal_y = self.bce_loss(Dreal_y,o1l(Dreal_y))+\
                              self.bce_loss(Dfake_y,o0l(Dfake_y))
         # And also, we do the evaluation the marginal probabiliti distribution of 
         # z (ensure it's guassian). 
         # The equation to be satisfied is :
-        #   -(E[log(Dreal_zd)] + E[log(1 - Dfake_zd)])
-        Dreal_zd,Dfake_zd= self.Dszb(zd_inp), self.Dszb(zd_gen)
+        #   -(E[log(Dzd(zd)] + E[log(1 - Dzd(F(x)])
+        Dreal_zd,Dfake_zd= self.discriminate_marginal_zd(zd_inp,zd_gen)
         Dloss_marginal_zd= self.bce_loss(Dreal_zd,o0l(Dreal_zd))+\
                          self.bce_loss(Dfake_zd,o0l(Dfake_zd))
 
@@ -551,27 +551,27 @@ class trainer(object):
         # 1.1 Let's compute the Generate samples
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         x_inp       = zcat(x,wnx)
-        _x_gen   = self.Gy(zxy,o0l(zyy))
-        zxx_F, zxy_F, *others = self.F_(x_inp)
+        _x_gen      = self.Gy(zxy,o0l(zyy))
+        zxx_gen, zxy_gen, *others = self.F_(x_inp)
 
         # 1.2 Now, we match the probability distribution of (x,F|(x)_zxy) ~ (G(zxy,0), zxy)
         # Because it's easy for the discriminator to view that a distribution is not  a 
         # zero space for zy so we only Discriminate on zxy. 
         # Then the equation we evaluate is :
         #   -(E[log(Dxz(x,F|(x)_zxy))] +  E[log(1 - Dxz(G(zxy,0),zxy))])
-        Dreal_xz,Dfake_xz    = self.discriminate_xz(x,_x_gen,zxy,zxy_F)
+        Dreal_xz,Dfake_xz    = self.discriminate_xz(x,_x_gen,zxy,zxy_gen)
         Dloss_ali_x          = self.bce_loss(Dreal_xz,o1l(Dreal_xz))+\
                                 self.bce_loss(Dfake_xz,o0l(Dfake_xz)) 
 
         # 1.3 It is important to evaluate the marginal probability distribution. 
         # For x we should satisfy this equation :
         #   -(E[log(Dx(x,x))] + E[log(Dx(x,G(F|(x)_zxy,0)))])
-        Dreal_x,Dfake_x      = self.Dsx(x), self.Dsx(x_gen)
+        Dreal_x,Dfake_x      = self.discriminate_marginal_x(x,x_gen)
         Dloss_marginal_x     = self.bce_loss(Dreal_x,o1l(Dreal_x))+\
                                 self.bce_loss(Dfake_x,o0l(Dfake_x))
         # For zxy, we should satisfy this equation : 
         #   -(E[log(Dzxy(zxy, zxy))] +  E[log(Dzxy(zxy,F(G(zxy,0))))])
-        Dreal_zf,Dfake_zf   = self.Dszf(zxy), self.Dszf(zxy_F)
+        Dreal_zf,Dfake_zf   = self.discriminate_marginal_zxy(zxy,zxy_gen)
         Dloss_marginal_zf   = self.bce_loss(Dreal_zf,o1l(Dreal_zf))+\
                                 self.bce_loss(Dfake_x,o0l(Dfake_zf))
         
@@ -580,7 +580,7 @@ class trainer(object):
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         x_gen       = zcat(_x_gen,wnx)
         _ , zxy_rec,*others = self.F_(x_gen)
-        x_rec       = self.Gy(zxy_F,o0l(zxx_F))
+        x_rec       = self.Gy(zxy_gen,o0l(zxx_gen))
 
         # Now it's to make sure pdf of G(F(x)) match to x. 
         # The equation to be satisfied is :
@@ -643,36 +643,74 @@ class trainer(object):
 
     # @profile
     def alice_train_generator_adv(self,y,zyy, zxy, x, epoch, trial_writer=None):
-        # Set-up training
+        # This functions is training the auto-encoder (encoder + decoder). But, we continue
+        # to train the discriminators for the traing, according the ALICE algorithe. As 
+        # we do in the alice_train_discriminator, we will aslo calculate the marginals. 
+
+        # y     : broadband signal size [batch, 3, 4096]
+        # x     : low frequency signal size [batch, 3, 4096]
+        # zxy   : latent variable that should catching the low frequency. 
+        #         It pdf is gaussian
+        # zy    : guassian latent variable that should catching the high frequency part
+        # epoch : we pass the epoch, this is needed for tensorboard
+        # trial_writer  : as the previous variable we get the distribution values of zxy, zy
+
+        # To prepare the the training. First all gradient is set as zero. The auto-encoder 
+        # is setted at training mode. The discriminator is aslo at training mode
         zerograd(self.optz)
         modalite(self.FGf,   mode ='train')
         modalite(self.Dnets, mode ='train')
-        # 1. Concatenate inputs
+        
+        # As we said before the Goal of this function is to compute the loss of Y and the 
+        # loss of X. We want to make sure the generator are able to create fake signal as good 
+        # as possible to fool the discriminators. This part is a bit different of the 
+        # discriminators traing because it's not take some of the equation, according to ALICE paper
+
+        # Part I.- Training of the Broadband signal
+        # We add noise to broadband signal. we concatenate z.
+
+        # 1.1 We generate conditional samples.
+        # The values G(zxy, zy) and F(y) will be computed. Thoses values will be useful
+        # to match joint distributions, and also marginal distribuitions.  
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         y_inp   = zcat(y,wny)
         zd_inp  = zcat(zxy,zyy)
-
-        # 2. Generate conditional samples
         y_gen   = self.Gy(zxy,zyy)
         zyy_gen,zyx_gen,*others = self.F_(y_inp)
+        zd_gen= zcat(zyx_gen,zyy_gen) 
 
-        _zyy_gen= zcat(zyx_gen,zyy_gen) 
-        Dyz,Dzy = self.discriminate_yz(y,y_gen,zd_inp,_zyy_gen)
-        
-        #Loss ALI 
-        # -(E[D(y,F(y))] -  E[D(G(z),z)]) sup a -1
-        #Gloss_ali_y =  app.LAMBDA_1*torch.mean(-Dyz+Dzy)
-        Gloss_ali_y =  -(self.bce_loss(Dyz,o1l(Dyz))+self.bce_loss(Dzy,o0l(Dzy)))
+        # So, let's evaluate the loss of ALI 
+        Dreal_yz,Dfake_yz = self.discriminate_yz(y,y_gen,zd_inp,zd_gen)  
+        # There are to way to compute that loss. 
+        # On the one hand, The first way is to use the WGAN.
+        # The equation is as fallow :   
+        #       -(E[D(y,F(y))] -  E[D(G(z),z)]) >= -1
+        # Since pytorch are only able to minimize function. A treaky tranformation of 
+        # that equation is made But make sure to use clipweight, to avoid gradient 
+        # explosure.
+        # On the other hand,  we could use ALICE, but we change the sign of that equation, 
+        # because we want to minimize the autoencoder. The equation is as follow :
+        #       min (E[log(Dyz(y,F(y)))] + E[log(1 - Dyz(G(z),z))])
+        #       REM : the BCE loss function  has already added the " - " in the calculation.
+        Gloss_ali_y =  -(self.bce_loss(Dreal_yz,o1l(Dreal_yz))+\
+                            self.bce_loss(Dfake_yz,o0l(Dfake_yz)))
 
-        #Loss marginal on y 
-        Dfake_y = self.Dsy(y_gen)
+        # Since, it's hard for the marginal distribution to get good saddle piont and a high 
+        # complexe place, the ALI loss will hardly find the good solution. To help in this case, 
+        # we compute the marginal on y and z.
+        # The marginal loss on y is as follow :  
+        #       min (E[log(1 - Dy(G(z)))])
+        _ , Dfake_y = self.discriminate_marginal_y(y,y_gen)
         Gloss_marginal_y = -(self.bce_loss(Dfake_y,o0l(Dfake_y)))
-        #Loss marginal on zd
-        Dfake_zd = self.Dszb(_zyy_gen)
+        # The marginal loss on zd is as follow : 
+        #       min (E[log(1 - Dzd(F(x)])
+        _, Dfake_zd = self.discriminate_marginal_zd(zd_inp,zd_gen)
         Gloss_marginal_zd= -(self.bce_loss(Dfake_zd,o0l(Dfake_zd)))
 
-        
-        # 3. Generate noise
+        # 2. Let's generate the reconstructions, i.e G(F(y)) and F(G(z)). This calulation will 
+        # be necessary to cycle consistency loss and also here for the reconstruction losses.
+        # By doing this we will ensore that input match to the correcto output and also that 
+        # values are as close as possible. 
         wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
 
         # 4. Generate reconstructions
