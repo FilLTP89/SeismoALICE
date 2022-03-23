@@ -556,6 +556,7 @@ class trainer(object):
         # -(E[D(y,F(y))] -  E[D(G(z),z)]) sup a -1
         #Gloss_ali_y =  app.LAMBDA_1*torch.mean(-Dyz+Dzy)
         Gloss_ali_y =  -(self.bce_loss(Dyz,o1l(Dyz))+self.bce_loss(Dzy,o0l(Dzy)))
+
         #Loss marginal on y 
         Dfake_y = self.Dy(y_gen)
         Gloss_marginal_y = -(self.bce_loss(Dfake_y,o0l(Dfake_y)))
@@ -583,10 +584,6 @@ class trainer(object):
         _,Dfake_zzd      = self.discriminate_zzb(zd_inp,zd_rec)
         Gloss_cycle_zd  = -self.bce_loss(Dfake_zzd,o0l(Dfake_zzd))
         Gloss_rec_zd    = torch.mean(torch.abs(zd_inp-zd_rec))
-
-        # _ ,Dfake_zyy    = self.discriminate_zyy(zyy,zyy_rec)
-        # Gloss_cycle_zyy = self.bce_loss(Dfake_zyy,o1l(Dfake_zyy))
-        # Gloss_rec_zyy   = torch.mean(torch.abs(zyy - zyy_rec))
 
         #7. Forcing zxy to equal zyx an zx to equal 0 of the space
         # 7.1 Inputs
@@ -627,10 +624,6 @@ class trainer(object):
         Dfake_zf = self.Dzb(zf_gen)
         Gloss_marginal_zf= -(self.bce_loss(Dfake_zf,o0l(Dfake_zf)))
 
-        # Cross Discriminate for zxy to ensure it's Gaussian
-        _,Dfake_zxy          = self.discriminate_zxy(zxy, zxy_rec)
-        Gloss_cycle_zxy      = -self.bce_loss(Dfake_zxy,o0l(Dfake_zxy))
-
         # Cross Discimininate for Z from X to be [guassian,0]
         _, Dfake_zf          = self.discriminate_zzf(zf_inp, zf_rec)
         Gloss_cycle_zf       = -self.bce_loss(Dfake_zf, o0l(Dfake_zf))
@@ -652,9 +645,9 @@ class trainer(object):
                         Gloss_cycle_y + 
                         Gloss_cycle_zd +
                         Gloss_cycle_x +
-                        Gloss_cycle_zf +
+                        Gloss_cycle_zf
                         # Gloss_cycle_zyy+
-                        Gloss_cycle_zxy
+                        # Gloss_cycle_zxy
                     )
         
         Gloss_marginal = (
@@ -717,7 +710,7 @@ class trainer(object):
         
         self.losses['Gloss_cycle_x'  ].append(Gloss_cycle_x.tolist())
         self.losses['Gloss_cycle_zf' ].append(Gloss_cycle_zf.tolist())
-        self.losses['Gloss_cycle_zxy'].append(Gloss_cycle_zxy.tolist())
+        # self.losses['Gloss_cycle_zxy'].append(Gloss_cycle_zxy.tolist())
         # self.losses['Gloss_cycle_zyy'].append(Gloss_cycle_zyy.tolist())
 
         self.losses['Gloss_rec'    ].append(Gloss_rec.tolist())
