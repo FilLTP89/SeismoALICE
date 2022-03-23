@@ -546,17 +546,20 @@ class trainer(object):
         x_rec       = self.Gy(zxy_F,o0l(zxx_F))
 
         # Now it's to make sure pdf of G(F(x)) match to x. 
-        # The equation to be satisfied
+        # The equation to be satisfied is :
+        #   -(E[log(Dxx(x,x)) +  log(1-Dxx(x,G(F|(x)_zxy,0)))]) 
         Dreal_x, Dfake_x    = self.discriminate_xx(x,x_rec)
         Dloss_cycle_x       = self.bce_loss(Dreal_x,o1l(Dreal_x))+\
                                 self.bce_loss(Dfake_x,o0l(Dfake_x))
 
-        # 7.7 Discriminate Cross Entropy for zf 
+        # Also we want to match zxy and F(G(zxy,0)) for the training. So the equqtion to be
+        # satisfied is : 
+        #   -(E[log(Dzzf(zxy,zxy))] + E[log(1 - Dzzf(zxy,F(G(zxy,0))))]) 
         Dreal_zf, Dfake_zf  = self.discriminate_zzf(zxy,zxy_rec)
         Dloss_cycle_zf      = self.bce_loss(Dreal_zf,o1l(Dreal_zf))+\
                                 self.bce_loss(Dfake_zf,o0l(Dfake_zf))
 
-        # 8. Compute all losses
+        # III.- Computation of the all losses
         Dloss_cycle         = (
                                 Dloss_cycle_y + 
                                 Dloss_cycle_zy + 
