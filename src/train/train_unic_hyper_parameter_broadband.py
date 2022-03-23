@@ -106,8 +106,11 @@ class trainer(object):
             'Dloss_cycle_y':[0],
             'Dloss_cycle_x':[0],
             'Dloss_cycle_zy':[0],
-            'Dloss_cycle_zxy':[0],
-            'Dloss_cycle_zyy':[0],
+            'Dloss_marginal':[0],
+            'Dloss_marginal_y':[0],
+            'Dloss_marginal_zd':[0],
+            'Dloss_marginal_x':[0],
+            'Dloss_marginal_zf':[0],
 
             'Gloss':[0],
             'Gloss_ali':[0],
@@ -118,8 +121,12 @@ class trainer(object):
             'Gloss_cycle_y':[0],
             'Gloss_cycle_zd':[0],
             'Gloss_cycle_zf':[0],
-            'Gloss_cycle_zxy':[0],
-            'Gloss_cycle_zyy':[0],
+
+            'Gloss_marginal':[0],
+            'Gloss_marginal_y':[0],
+            'Gloss_marginal_zd':[0],
+            'Gloss_marginal_x':[0],
+            'Gloss_marginal_zf':[0],
 
             'Gloss_rec':[0],
             'Gloss_rec_y':[0],
@@ -391,7 +398,11 @@ class trainer(object):
     
     # @profile
     def alice_train_discriminator_adv(self,y,zyy,zxy, x):
-         # Set-up training        
+        """
+            This functions is training the discriminators.
+            We calculate the ALICE + marginal for y and x
+            The loss ALICE is the sum of the loss ALI and CE loss
+        """       
         zerograd(self.optz)
         modalite(self.FGf,  mode = 'eval')
         modalite(self.Dnets,mode = 'train')
@@ -457,26 +468,27 @@ class trainer(object):
         zxx_F, zxy_F, *others = self.F_(x_inp)
         
         # 7.3 Concatenate outputs
-        zf_gen  = zcat(zxy_F,zxx_F)
+        # zf_gen  = zcat(zxy_F,zxx_F)
 
         # 7.4 Generate reconstructions
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         x_gen       = zcat(_x_gen,wnx)
         zx_rec, zxy_rec,*others = self.F_(x_gen)
 
-        x_rec       = self.Gy(zxy_F,zxx_F)
+        x_rec       = self.Gy(zxy_F,o0l(zxx_F))
         zf_rec      = zcat(zxy_rec,zx_rec)
 
         # 7.5 Forcing zxy from X to be guassian
-        Dreal_xz,Dfake_xz     = self.discriminate_xz(x,_x_gen,zf_inp,zf_gen)
-        Dloss_ali_x = self.bce_loss(Dreal_xz,o1l(Dreal_xz))+\
-                        self.bce_loss(Dfake_xz,o0l(Dfake_xz)) 
+        # D(Dx(x),Dzf(F(x))
+        Dreal_xz,Dfake_xz     = self.discriminate_xz(x,_x_gen,zxy,zxy_F)
+        Dloss_ali_x           = self.bce_loss(Dreal_xz,o1l(Dreal_xz))+\
+                                self.bce_loss(Dfake_xz,o0l(Dfake_xz)) 
 
-        Dreal_x,Dfake_x = self.Dx(x), self.Dx(x_gen)
-        Dloss_marginal_x = self.bce_loss(Dreal_x,o1l(Dreal_x))+\
-                        self.bce_loss(Dfake_x,o0l(Dfake_x))
+        Dreal_x,Dfake_x       = self.Dx(x), self.Dx(x_gen)
+        Dloss_marginal_x      = self.bce_loss(Dreal_x,o1l(Dreal_x))+\
+                                self.bce_loss(Dfake_x,o0l(Dfake_x))
 
-        Dreal_zf,Dfake_zf= self.Dzf(zf_inp), self.Dzf(zf_gen)
+        Dreal_zf,Dfake_zf= self.Dzf(zf_inp), self.Dzf(zxy_F)
         Dloss_marginal_zf= self.bce_loss(Dreal_zf,o1l(Dreal_zf))+\
                         self.bce_loss(Dfake_x,o0l(Dfake_zf))
 
@@ -485,12 +497,13 @@ class trainer(object):
         #                         self.bce_loss(Dfake_zxy,o0l(Dfake_zxy))
 
         # 7.6 Forcing Zy from X to be useless for the training
+        #D(x,x)
         Dreal_x, Dfake_x    = self.discriminate_xx(x,x_rec)
         Dloss_cycle_x       = self.bce_loss(Dreal_x,o1l(Dreal_x))+\
                                 self.bce_loss(Dfake_x,o0l(Dfake_x))
 
         # 7.7 Discriminate Cross Entropy for zf 
-        Dreal_zf, Dfake_zf  = self.discriminate_zzf(zf_inp,zf_rec)
+        Dreal_zf, Dfake_zf  = self.discriminate_zzf(zxy,zxy_rec)
         Dloss_cycle_zf      = self.bce_loss(Dreal_zf,o1l(Dreal_zf))+\
                                 self.bce_loss(Dfake_zf,o0l(Dfake_zf))
 
@@ -520,15 +533,18 @@ class trainer(object):
         clipweights(self.Dnets), 
         zerograd(self.optz)
 
-        self.losses['Dloss'].append(Dloss.tolist())
-        self.losses['Dloss_ali'].append(Dloss_ali.tolist())
-        self.losses['Dloss_ali_y'].append(Dloss_ali_y.tolist())
-        self.losses['Dloss_ali_x'].append(Dloss_ali_x.tolist())
+        self.losses['Dloss'         ].append(Dloss.tolist())
+        self.losses['Dloss_ali'     ].append(Dloss_ali.tolist())
+        self.losses['Dloss_ali_y'   ].append(Dloss_ali_y.tolist())
+        self.losses['Dloss_ali_x'   ].append(Dloss_ali_x.tolist())
 
-        self.losses['Dloss_cycle'   ].append(Dloss_cycle.tolist()) 
-        self.losses['Dloss_cycle_y' ].append(Dloss_cycle_y.tolist())
-        # self.losses['Dloss_cycle_zyy'].append(Dloss_cycle_zyy.tolist()) 
-        # self.losses['Dloss_cycle_zxy'].append(Dloss_cycle_zxy.tolist())  
+        self.losses['Dloss_cycle'       ].append(Dloss_cycle.tolist()) 
+        self.losses['Dloss_cycle_y'     ].append(Dloss_cycle_y.tolist())
+        self.losses['Dloss_marginal'    ].append(Dloss_marginal.tolist())
+        self.losses['Dloss_marginal_y'  ].append(Dloss_marginal_y.tolist())
+        self.losses['Dloss_marginal_zd' ].append(Dloss_marginal_zd.tolist())
+        self.losses['Dloss_marginal_x'  ].append(Dloss_marginal_x.tolist())
+        self.losses['Dloss_marginal_zf' ].append(Dloss_marginal_zf.tolist())
 
         self.losses['Dloss_cycle_x' ].append(Dloss_cycle_x.tolist())
         self.losses['Dloss_cycle_zy'].append(Dloss_cycle_zy.tolist())
@@ -603,7 +619,7 @@ class trainer(object):
         _x_gen_fake = self.Gy(zxy,wn.detach())
 
         # 7.3 Generate reconstructions values
-        x_rec       = self.Gy(zxy_gen, zx_gen)
+        x_rec       = self.Gy(zxy_gen, o0l(zx_gen))
         x_gen       = zcat(_x_gen,wnx)
         x_gen_fake  = zcat(_x_gen_fake,wnx_fake)
 
@@ -621,13 +637,13 @@ class trainer(object):
         Dfake_x = self.Dy(x_gen)
         Gloss_marginal_x = -(self.bce_loss(Dfake_x,o0l(Dfake_x)))
         #Loss marginal on zd
-        Dfake_zf = self.Dzb(zf_gen)
+        Dfake_zf = self.Dzb(zxy_gen)
         Gloss_marginal_zf= -(self.bce_loss(Dfake_zf,o0l(Dfake_zf)))
 
         # Cross Discimininate for Z from X to be [guassian,0]
-        _, Dfake_zf          = self.discriminate_zzf(zf_inp, zf_rec)
+        _, Dfake_zf          = self.discriminate_zzf(zxy, zxy_rec)
         Gloss_cycle_zf       = -self.bce_loss(Dfake_zf, o0l(Dfake_zf))
-        Gloss_rec_zf         = torch.mean(torch.abs(zf_inp - zf_rec))
+        # Gloss_rec_zf         = torch.mean(torch.abs(zxy - zxy_rec))
 
         # 7.4 Cross-Discriminate XX
         _, Dfake_x           = self.discriminate_xx(x,x_rec)
@@ -638,6 +654,7 @@ class trainer(object):
         Gloss_rec_zx         = torch.mean(torch.abs(zxx_rec))
 
         # 7.6 Forcing zxy to  be gaussian by a cycling and independant to the value of z
+        # |z1 - FoG(z1,N(0,I))|
         Gloss_rec_zxy        = torch.mean(torch.abs(zxy - zxy_fake))
 
         # 8. Total Loss
@@ -661,7 +678,7 @@ class trainer(object):
                         Gloss_rec_zd + 
                         Gloss_rec_zx +
                         Gloss_rec_zf +
-                        Gloss_rec_x + 
+                        Gloss_rec_x +
                         Gloss_rec_zxy 
                         # Gloss_rec_zyy
                     )
@@ -670,7 +687,7 @@ class trainer(object):
                         Gloss_ali_x
                     )
         Gloss       = (
-                        Gloss_ali*app.LAMBDA_ALI+ 
+                        Gloss_ali+
                         Gloss_marginal+
                         Gloss_cycle*app.LAMBDA_CONSISTENCY + 
                         Gloss_rec*app.LAMBDA_IDENTITY
@@ -704,14 +721,18 @@ class trainer(object):
         self.losses['Gloss_ali_x'].append(Gloss_ali_x.tolist())
         self.losses['Gloss_ali_y'].append(Gloss_ali_y.tolist())
 
+        self.losses['Gloss_marginal'    ].append(Gloss_marginal.tolist())
+        self.losses['Gloss_marginal_y'  ].append(Gloss_marginal_y.tolist())
+        self.losses['Gloss_marginal_zd' ].append(Gloss_marginal_zd.tolist())
+        self.losses['Gloss_marginal_x'  ].append(Gloss_marginal_x.tolist())
+        self.losses['Gloss_marginal_zf' ].append(Gloss_marginal_zf.tolist())
+
         self.losses['Gloss_cycle'    ].append(Gloss_cycle.tolist())
         self.losses['Gloss_cycle_y'  ].append(Gloss_cycle_y.tolist())
         self.losses['Gloss_cycle_zd' ].append(Gloss_cycle_zd.tolist())
         
         self.losses['Gloss_cycle_x'  ].append(Gloss_cycle_x.tolist())
         self.losses['Gloss_cycle_zf' ].append(Gloss_cycle_zf.tolist())
-        # self.losses['Gloss_cycle_zxy'].append(Gloss_cycle_zxy.tolist())
-        # self.losses['Gloss_cycle_zyy'].append(Gloss_cycle_zyy.tolist())
 
         self.losses['Gloss_rec'    ].append(Gloss_rec.tolist())
         self.losses['Gloss_rec_zd' ].append(Gloss_rec_zd.tolist())
