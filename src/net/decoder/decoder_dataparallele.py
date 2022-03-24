@@ -122,16 +122,15 @@ class Decoder(BasicDecoderDataParallel):
             self.cnn1[-1] = self.model
         # self.cnn1.to(self.device)
 
-    def forward(self,zxn, features = None):
-        if features is None:
-            Xr = self.cnn1(zxn)
-            app.logger.debug("In Model: input size {} - {}  output size {} - {}".
-                format(zxn.size(),zxn.device,Xr.size(),Xr.device))
-        else:
-            Xr = feed(zxn,features)
+    def forward(self,z_common, z_broadband, features = None):
+       # if features is None:
+        Xr = self.cnn1(zcat(z_common,z_broadband))
+        app.logger.debug("In Model: input size {} - {}  output size {} - {}".
+                format(z_common.size(),z_common.device,Xr.size(),Xr.device))
+        # else:
+        #     Xr = feed(zxn,features)
         if not self.training:
             result = Xr.detach() + 0.
-
             return result
         return Xr
 

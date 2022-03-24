@@ -70,12 +70,18 @@ class trainer(object):
         # code the more different values are passed. 
 
         # When trial is not none ...
-        # we tune the learning weigh for autp-encoder and discriminators
+        # we tune the learning weigh for autp-encoder and discriminators. Values are
+        # between [0.0001; 0.001]. Increasing the learning rate help in case of a huge 
+        # batch size.
+        # We could also extract the weight decay. but make sure you make a grid search. Some 
+        # papers say to make small change of that values. decreasing the weight decay help
+        # for stability and convergence.
         if self.trial!=None:
             self.glr = self.trial.suggest_float("glrx",0.0001, 0.001,log=True)
             self.rlr = self.trial.suggest_float("rlrx",0.0001, 0.001,log=True)
             self.weight_decay = 0.00001 #self.trial.suggest_float("weight_decay",1.E-5,1.E-3,log=True)
-        # Else We extract those parameters from the config file or 
+        # Else We extract those parameters from the config file. So make sure you get in 
+        # the ./config/ folder.  
         else:
             try:
                 self.glr = float(opt.config["hparams"]['glry'])
@@ -97,7 +103,8 @@ class trainer(object):
 
         nzd = opt.nzd
         ndf = opt.ndf
-        ngpu_use = torch.cuda.device_count()
+
+        # ngpu_use = torch.cuda.device_count()
         # To make sure that all operation are deterministic in that GPU for reproductibility
         # torch.backends.cudnn.deterministic  = True
         # torch.backends.cudnn.benchmark      = False
@@ -105,33 +112,35 @@ class trainer(object):
         self.Dnets      = []
         self.optz       = []
         self.oGyx       = None
+
+        # Some intermediate lossse are stocked here. This values help use see if the program 
+        # converges or not.
         self.losses     = {
+            # Dloss for ALI and cycle consistency
             'Dloss':[0],'Dloss_ali':[0],'Dloss_ali_y':[0],'Dloss_ali_x':[0],'Dloss_rec':[0],
             'Dloss_cycle':[0],'Dloss_cycle_y':[0],'Dloss_cycle_x':[0],'Dloss_cycle_zy':[0],
-            'Dloss_cycle_zf':[0],'Dloss_marginal':[0],'Dloss_marginal_y':[0],
+            'Dloss_cycle_zf':[0],
+            # Dloss for marginals
+            'Dloss_marginal':[0],'Dloss_marginal_y':[0],
             'Dloss_marginal_zd':[0],'Dloss_marginal_x':[0],'Dloss_marginal_zf':[0],
 
+            # Gloss for ALI and cycle consistency
             'Gloss':[0],'Gloss_ali':[0],'Gloss_ali_x':[0],'Gloss_ali_y':[0],
             'Gloss_cycle':[0],'Gloss_cycle_x':[0],'Gloss_cycle_y':[0],
-            'Gloss_cycle_zd':[0],'Gloss_cycle_zf':[0],
+            'Gloss_cycle_zd':[0],'Gloss_cycle_zxy':[0],
 
+            #Gloss for marginalss
             'Gloss_marginal':[0],'Gloss_marginal_y':[0],'Gloss_marginal_zd':[0],
             'Gloss_marginal_x':[0],'Gloss_marginal_zf':[0],
 
+            #Gloss for 
             'Gloss_rec':[0],'Gloss_rec_y':[0],'Gloss_rec_x':[0],'Gloss_rec_zd':[0],
-            'Gloss_rec_zf':[0],'Gloss_rec_zx':[0],
+            'Gloss_rec_zx':[0],
             
-            'Gloss_rec_zxy':[0],'Gloss_rec_x':[0],'Gloss_rec_zf':[0],
-
-            'Gloss_rec_zyy':[0]
+            'Gloss_rec_zxy':[0],'Gloss_rec_x':[0]
         }
-
-
-        # self.writer_train = SummaryWriter('runs_both/filtered/tuning/training')
-        # self.writer_val   = SummaryWriter('runs_both/filtered/tuning/validation')
-        # self.writer_debug = SummaryWriter('runs_both/filtered/tuning/debug')
-        # self.writer_debug_encoder = SummaryWriter('runs_both/filtered/tuning/debug/encoder')
         
+        # In case of tensorboard we want to see the intermediate inputs.
         if self.trial == None:
             self.writer_train = SummaryWriter(f'{opt.summary_dir}/training')
             self.writer_val   = SummaryWriter(f'{opt.summary_dir}/validation')
@@ -155,16 +164,16 @@ class trainer(object):
             # act = acts[self.style]
             n = self.strategy['unique']
 
-            self.F_  = net.Encoder(opt.config['F'],  opt)
+            self.Fxy  = net.Encoder(opt.config['F'],  opt)
             self.Gy  = net.Decoder(opt.config['Gy'], opt)
             # self.Gx  = net.Decoder(opt.config['Gx'], opt)
-            self.F_  = nn.DataParallel(self.F_).cuda()
+            self.Fxy  = nn.DataParallel(self.Fxy).cuda()
             self.Gy  = nn.DataParallel(self.Gy).cuda()
             # self.Gx  = nn.DataParallel(self.Gx).cuda()
 
             if  self.strategy['tract']['unique']:
                 if None in n:       
-                    self.FGf  = [self.F_,self.Gy]
+                    self.FGf  = [self.Fxy,self.Gy]
                     self.oGyx = reset_net(
                         self.FGf,
                         func=set_weights,
@@ -184,19 +193,19 @@ class trainer(object):
                     #     weight_decay=0.00001)
                 else: 
                     # breakpoint()
-                    self.F_.load_state_dict(tload(n[0])['model_state_dict'])
+                    self.Fxy.load_state_dict(tload(n[0])['model_state_dict'])
                     # self.Gy.load_state_dict(tload(n[1])['model_state_dict'])
                     # self.Gx.load_state_dict(tload(n[2])['model_state_dict'])
 
                     app.logger.info("considering master part as pretrained : no grad required")
-                    for param in self.F_.module.master.parameters():
+                    for param in self.Fxy.module.master.parameters():
                         param.requires_grad = False
 
                     app.logger.info("considering common part as pretrained : no grad required")
-                    for param in self.F_.module.cnn_common.parameters():
+                    for param in self.Fxy.module.cnn_common.parameters():
                         param.requires_grad = False
 
-                    self.oGyx = MultiStepLR(Adam(ittc(self.F_.parameters()),
+                    self.oGyx = MultiStepLR(Adam(ittc(self.Fxy.parameters()),
                         lr=self.glr,betas=(b1,b2),
                         weight_decay=self.weight_decay))
                     
@@ -206,9 +215,9 @@ class trainer(object):
                     #     lr=ngpu_use*glr,betas=(b1,b2),
                     #     weight_decay=0.00001)
                     
-                    self.FGf  = [self.F_,self.Gy]
+                    self.FGf  = [self.Fxy,self.Gy]
                     app.logger.info("intialization of Gy and the broadband branch for the broadband training ...")
-                    self.oGyx = reset_net([self.Gy,self.F_.module.cnn_broadband],
+                    self.oGyx = reset_net([self.Gy,self.Fxy.module.cnn_broadband],
                         func=set_weights,lr=self.glr,b1=b1,b2=b2,
                         weight_decay=self.weight_decay)
                     # self.g_scheduler = MultiStepLR(self.oGyx,milestones=[30,80], gamma=0.1)
@@ -292,9 +301,9 @@ class trainer(object):
                     checkpoint          = tload(n[0])
                     self.start_epoch    = checkpoint['epoch']
                     self.losses         = checkpoint['loss']
-                    self.F_.load_state_dict(tload(n[0])['model_state_dict'])
+                    self.Fxy.load_state_dict(tload(n[0])['model_state_dict'])
                     self.Gy.load_state_dict(tload(n[1])['model_state_dict'])
-                    self.FGf  = [self.F_,self.Gy]
+                    self.FGf  = [self.Fxy,self.Gy]
                     # self.Gx.load_state_dict(tload(n[2])['model_state_dict'])  
                 else:
                     flagF=False
@@ -371,7 +380,6 @@ class trainer(object):
         # We apply in first the same neurol network used to extract the z information
         # from the adversarial losses. Then, we extract the sigmoïd afther 
         # the application of flatten layer,  dense layer
-        
         ftz     = self.Dzb(z)
         Dreal   = self.Dszb(ftz)
         # we do the same for reconstructed or generated z
@@ -382,7 +390,6 @@ class trainer(object):
     def discriminate_marginal_x(self,x,xr):
         # We apply a the same neural netowrk used to match the joint distribution
         # and we extract the probability distribution of the signals
-        
         ftx     = self.Dx(x)
         Dreal   = self.Dsx(ftx)
         # Doing the same for reconstruction/generation of x
@@ -394,7 +401,6 @@ class trainer(object):
         # This function extract the probability of the marginal
         # It's reuse the neural network in the joint probability distribution
         # On one hand, we extract the real values. 
-        
         ftzxy   = self.Dzf(zxy)
         Dreal   = self.Dszf(ftzxy)
         # On the other hand, we extract the probability of the fake values
@@ -423,8 +429,6 @@ class trainer(object):
         Dfake = self.Dzzf(zcat(z,zr))
         return Dreal,Dfake
 
-    
-    
     # @profile
     def alice_train_discriminator_adv(self,y,zyy,zxy, x):
         # This functions is training the discriminators.
@@ -471,7 +475,7 @@ class trainer(object):
         # First we generate the yr = G(z) and the zr = F(y) the z represents the concatenation
         # of zxy and zy. 
         y_gen       = self.Gy(zxy,zyy)
-        zyy_F,zyx_F,*other = self.F_(y_inp)
+        zyy_F,zyx_F,*other = self.Fxy(y_inp)
         zd_gen      = zcat(zyx_F,zyy_F)
 
         # 1.2 Let's match the proper joint distributions
@@ -491,14 +495,14 @@ class trainer(object):
         # So we do the evaluation the marginal probability distribution to match 
         # probabilit distribution of y. 
         # The equation to be statisfied is :
-        #     -(E[log(Dy(y))] + E[log(1 - Dy(G(z)))])  
+        #       -(E[log(Dy(y))] + E[log(1 - Dy(G(z)))])  
         Dreal_y,Dfake_y  = self.discriminate_marginal_y(y,y_gen)
         Dloss_marginal_y = self.bce_loss(Dreal_y,o1l(Dreal_y))+\
                              self.bce_loss(Dfake_y,o0l(Dfake_y))
         # And also, we do the evaluation the marginal probabiliti distribution of 
         # z (ensure it's guassian). 
         # The equation to be satisfied is :
-        #   -(E[log(Dzd(zd)] + E[log(1 - Dzd(F(x)])
+        #       -(E[log(Dzd(zd)] + E[log(1 - Dzd(F(x)])
         Dreal_zd,Dfake_zd= self.discriminate_marginal_zd(zd_inp,zd_gen)
         Dloss_marginal_zd= self.bce_loss(Dreal_zd,o0l(Dreal_zd))+\
                          self.bce_loss(Dfake_zd,o0l(Dfake_zd))
@@ -510,19 +514,19 @@ class trainer(object):
         y_rec       = self.Gy(zyx_F,zyy_F)
         y_gen       = zcat(y_gen,wny)
         # We Generate the reconstruction of z (F(G(z))) and the reconstruction of y (G(F(z)))
-        zyy_gen,zyx_gen,*other = self.F_(y_gen)
+        zyy_gen,zyx_gen,*other = self.Fxy(y_gen)
         zd_rec      = zcat(zyx_gen,zyy_gen)
         
         # First we calculate the cycle consistency for y and the reconstruction of y.
         # The equation to be satisfied is :
-        #   -(E[log(Dxx(y,y))] +  E[log(1 - Dxx(y,G(F(y))))])
+        #       -(E[log(Dxx(y,y))] +  E[log(1 - Dxx(y,G(F(y))))])
         Dreal_yy,Dfake_yy   = self.discriminate_yy(y,y_rec)
         Dloss_cycle_y       = self.bce_loss(Dreal_yy,o1l(Dreal_yy))+\
                                 self.bce_loss(Dfake_yy,o0l(Dfake_yy))
         # In a second time, we calculate the cycle consistency for z and the 
         # reconstruction of z.
         # The equation to be satisfied is: 
-        #   -(E[log(Dzz(y,y))] +  E[log(1-Dzyy(y, G(F(y))))])
+        #       -(E[log(Dzz(y,y))] +  E[log(1-Dzyy(y, G(F(y))))])
         Dreal_zzd,Dfake_zzd = self.discriminate_zzb(zd_inp,zd_rec)
         Dloss_cycle_zy      = self.bce_loss(Dreal_zzd,o1l(Dreal_zzd))+\
                                 self.bce_loss(Dfake_zzd,o0l(Dfake_zzd))
@@ -538,7 +542,7 @@ class trainer(object):
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         x_inp       = zcat(x,wnx)
         _x_gen      = self.Gy(zxy,o0l(zyy))
-        zxx_gen, zxy_gen, *others = self.F_(x_inp)
+        zxx_gen, zxy_gen, *others = self.Fxy(x_inp)
 
         # 1.2 Now, we match the probability distribution of (x,F|(x)_zxy) ~ (G(zxy,0), zxy)
         # Because it's easy for the discriminator to view that a distribution is not  a 
@@ -565,7 +569,7 @@ class trainer(object):
         # possible to the input. As before we add noise to the x values.
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         x_gen       = zcat(_x_gen,wnx)
-        _ , zxy_rec,*others = self.F_(x_gen)
+        _ , zxy_rec,*others = self.Fxy(x_gen)
         x_rec       = self.Gy(zxy_gen,o0l(zxx_gen))
 
         # Now it's to make sure pdf of G(F(x)) match to x. 
@@ -664,7 +668,7 @@ class trainer(object):
         y_inp   = zcat(y,wny)
         zd_inp  = zcat(zxy,zyy)
         y_gen   = self.Gy(zxy,zyy)
-        zyy_gen,zyx_gen,*others = self.F_(y_inp)
+        zyy_gen,zyx_gen,*others = self.Fxy(y_inp)
         zd_gen= zcat(zyx_gen,zyy_gen) 
 
         # So, let's evaluate the loss of ALI 
@@ -705,20 +709,20 @@ class trainer(object):
         # Then we generate reconstructions ...
         y_rec = self.Gy(zyx_gen,zyy_gen)
         y_gen = zcat(y_gen,wny)
-        zyy_rec,zyx_rec,*other = self.F_(y_gen)
+        zyy_rec,zyx_rec,*other = self.Fxy(y_gen)
         zd_rec  = zcat(zyx_rec,zyy_rec)
     
         # Let's compute now the cycle consistency losses. The couple (y,y) will be close
         # to (y,G(F(z))), if the following equation is satisfied
         #       E[log(1 - Dxx(y,G(F(y))))]
         # A L1 norm is help full; so is computed by:
-        #       || x - G(F(z))||
+        #       || x - G(F(z))      ||
         _,Dfake_yy       = self.discriminate_yy(y,y_rec)
         Gloss_cycle_y   = -self.bce_loss(Dfake_yy,o0l(Dfake_yy)) 
         Gloss_rec_y     = torch.mean(torch.abs(y-y_rec))
         # In for the z we have tpo satisfy : 
         #       E[log(1-Dzyy(y, G(F(y))))]
-        #       || z - F(G(y))||
+        #       || z - F(G(y))      ||
         _,Dfake_zzd      = self.discriminate_zzb(zd_inp,zd_rec)
         Gloss_cycle_zd  = -self.bce_loss(Dfake_zzd,o0l(Dfake_zzd))
         Gloss_rec_zd    = torch.mean(torch.abs(zd_inp-zd_rec))
@@ -740,7 +744,7 @@ class trainer(object):
         wn          = torch.empty([x.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(app.DEVICE)
 
         x_inp       = zcat(x,wnx)
-        zx_gen, zxy_gen, *others = self.F_(x_inp)
+        zx_gen, zxy_gen, *others = self.Fxy(x_inp)
 
         _x_gen      = self.Gy(zxy,o0l(zyy))
         _x_gen_fake = self.Gy(zxy,wn.detach())
@@ -768,8 +772,8 @@ class trainer(object):
         x_gen       = zcat(_x_gen,wnx)
         x_gen_fake  = zcat(_x_gen_fake,wnx_fake)
 
-        zxx_rec, zxy_rec, *others = self.F_(x_gen)
-        _, zxy_rec_fake, *others = self.F_(x_gen_fake)
+        zxx_rec, zxy_rec, *others = self.Fxy(x_gen)
+        _, zxy_rec_fake, *others = self.Fxy(x_gen_fake)
         zxy_fake    =  zxy_rec_fake
 
         # Now we wille be able te compute the cycle consistency losses we needed for the training 
@@ -779,7 +783,7 @@ class trainer(object):
         _, Dfake_zf          = self.discriminate_zzf(zxy, zxy_rec)
         Gloss_cycle_zxy      = -self.bce_loss(Dfake_zf, o0l(Dfake_zf))
         # To insure indepenace of zxy fro zy we do that in the L1 loss. 
-        #       || zxy  - F(G(zxy,N(0,I))) ||
+        #       || zxy  - F(G(zxy,N(0,I)))  ||
         Gloss_rec_zxy        = torch.mean(torch.abs(zxy - zxy_fake))
         # Secondly, for to match (x,x) and (x, G(F|(x)_zxy,0)) . So the equation that we need to 
         # compute is :
@@ -789,6 +793,7 @@ class trainer(object):
         Gloss_cycle_x        = -self.bce_loss(Dfake_x, o0l(Dfake_x))
         Gloss_rec_x          = torch.mean(torch.abs(x - x_rec))
         # This loss is 0 of HF of x signal
+        #       || F|(G(zxy,0))_zxx         ||
         Gloss_rec_zx         = torch.mean(torch.abs(zxx_rec))
         
 
@@ -863,7 +868,7 @@ class trainer(object):
         self.losses['Gloss_cycle_zd' ].append(Gloss_cycle_zd.tolist())
         
         self.losses['Gloss_cycle_x'  ].append(Gloss_cycle_x.tolist())
-        self.losses['Gloss_cycle_zf' ].append(Gloss_cycle_zxy.tolist())
+        self.losses['Gloss_cycle_zxy' ].append(Gloss_cycle_zxy.tolist())
 
         self.losses['Gloss_rec'    ].append(Gloss_rec.tolist())
         self.losses['Gloss_rec_zd' ].append(Gloss_rec_zd.tolist())
@@ -962,7 +967,7 @@ class trainer(object):
                 torch.manual_seed(100)
                 figure_bb, gof_bb = plt.plot_generate_classic(
                         tag     = 'broadband',
-                        Qec     = deepcopy(self.F_),
+                        Qec     = deepcopy(self.Fxy),
                         Pdc     = deepcopy(self.Gy),
                         trn_set = self.vld_loader,
                         pfx     ="vld_set_bb_unique",
@@ -973,36 +978,31 @@ class trainer(object):
                 bar.set_postfix(status = 'writing reconstructed broadband signals ...')
                 self.writer_val.add_figure('Broadband',figure_bb, epoch)
                 self.writer_val.add_figure('Goodness of Fit Broadband',gof_bb, epoch)
-
                 figure_fl, gof_fl = plt.plot_generate_classic(
                         tag     = 'broadband',
-                        Qec     = deepcopy(self.F_),
+                        Qec     = deepcopy(self.Fxy),
                         Pdc     = deepcopy(self.Gy),
                         trn_set = self.vld_loader,
                         pfx     ="vld_set_bb_unique_hack",
                         opt     = opt,
                         outf    = outf, 
                         save    = False)
-
                 bar.set_postfix(status = 'writing reconstructed filtered signals ...')
                 self.writer_val.add_figure('Filtered',figure_fl, epoch)
                 self.writer_val.add_figure('Goodness of Fit Filtered',gof_fl, epoch)
 
                 figure_hb, gof_hb = plt.plot_generate_classic(
                         tag     = 'hybrid',
-                        Qec     = deepcopy(self.F_),
+                        Qec     = deepcopy(self.Fxy),
                         Pdc     = deepcopy(self.Gy),
                         trn_set = self.vld_loader,
                         pfx     ="vld_set_bb_unique",
                         opt     = opt,
                         outf    = outf, 
                         save    = False)
-                
                 bar.set_postfix(status = 'writing reconstructed hybrid broadband signals ...')
                 self.writer_val.add_figure('Hybrid (Broadband)',figure_hb, epoch)
                 self.writer_val.add_figure('Goodness of Fit Hybrid (Broadband)',gof_hb, epoch)
-
-    
                 random.seed(opt.manualSeed)
             
             if epoch%20 == 0:
@@ -1013,35 +1013,28 @@ class trainer(object):
                 bar.set_postfix(**{'val_accuracy_bb':val_accuracy_bb,
                                 'val_accuracy_fl':val_accuracy_fl,
                                 'val_accuracy_hb':val_accuracy_hb})
-                bar.set_postfix(status='tracking weight ...')
-
-                self.track_weight_change(
-                            writer  = self.writer_debug,
-                            tag     ='F[cnn_common]',
-                            model   = self.F_.module.cnn_common.eval(), 
-                            epoch   = epoch
-                        )
-                self.track_weight_change(
-                            writer  = self.writer_debug,
-                            tag     ='F[cnn_broadband]',
-                            model   = self.F_.module.cnn_broadband.eval(), 
-                            epoch   = epoch
-                        )
-
-                self.track_weight_change(
-                            writer  = self.writer_debug,
-                            tag     ='Gy[branch_common]',
-                            model   = self.Gy.module.branch_common.eval(), 
-                            epoch   = epoch
-                        )
                 
-                self.track_weight_change(
-                            writer  = self.writer_debug,
-                            tag     ='Gy[branch_broadband]',
-                            model   = self.Gy.module.branch_broadband.eval(), 
-                            epoch   = epoch
-                        )
-       
+                if self.trial == None:
+                    bar.set_postfix(status='tracking weight ...')
+                    self.track_weight_change(
+                                writer  = self.writer_debug,
+                                tag     ='F[cnn_common]',
+                                model   = self.Fxy.module.cnn_common.eval(), 
+                                epoch   = epoch
+                    )
+                    self.track_weight_change(
+                                writer  = self.writer_debug,
+                                tag     ='F[cnn_broadband]',
+                                model   = self.Fxy.module.cnn_broadband.eval(), 
+                                epoch   = epoch
+                    )
+                    self.track_weight_change(
+                                writer  = self.writer_debug,
+                                tag     ='Gy',
+                                model   = self.Gy.module.cnn1.eval(), 
+                                epoch   = epoch
+                    )
+        
                 if self.study_dir == None:
                     self.writer_debug.add_scalar('Accuracy/Broadband',val_accuracy_bb, epoch)
                     self.writer_debug.add_scalar('Accuracy/Filtered',val_accuracy_fl, epoch)
@@ -1080,7 +1073,7 @@ class trainer(object):
                 app.logger.info(f"saving model at this checkpoint :{epoch}")
                 
                 tsave({ 'epoch'                 : epoch,
-                        'model_state_dict'      : self.F_.state_dict(),
+                        'model_state_dict'      : self.Fxy.state_dict(),
                         'optimizer_state_dict'  : self.oGyx.state_dict(),
                         'loss'                  : self.losses,},
                         root_checkpoint+'/Fyx.pth')
@@ -1156,7 +1149,7 @@ class trainer(object):
             return accuracy
 
         EG_h, PG_h  = plt.get_gofs(tag = 'hybrid', 
-            Qec = self.F_, 
+            Qec = self.Fxy, 
             Pdc = self.Gy , 
             trn_set = self.vld_loader, 
             pfx="vld_set_bb_unique",
@@ -1165,7 +1158,7 @@ class trainer(object):
             outf = outf)
 
         EG_b, PG_b  = plt.get_gofs(tag = 'broadband', 
-            Qec = self.F_, 
+            Qec = self.Fxy, 
             Pdc = self.Gy , 
             trn_set = self.vld_loader, 
             pfx="vld_set_bb_unique",
@@ -1174,7 +1167,7 @@ class trainer(object):
             outf = outf)
 
         EG_f, PG_f  = plt.get_gofs(tag = 'broadband', 
-            Qec = self.F_, 
+            Qec = self.Fxy, 
             Pdc = self.Gy , 
             trn_set = self.vld_loader, 
             pfx="vld_set_bb_unique_hack",
@@ -1209,7 +1202,7 @@ class trainer(object):
         t = [y.lower() for y in list(self.strategy.keys())]
         if 'unique' in t and self.strategy['trplt']['unique']:
             plt.plot_generate_classic(tag = 'broadband',
-                Qec     = self.F_,
+                Qec     = self.Fxy,
                 Pdc     = self.Gy,
                 trn_set = self.vld_loader,
                 pfx="vld_set_fl_unique",
