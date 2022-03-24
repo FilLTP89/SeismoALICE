@@ -43,14 +43,17 @@ __status__ = "Beta"
 
 # coder en dure dans le programme 
 class trainer(object):
-    '''Initialize neural network'''
+    
     def __init__(self,cv, trial=None, study_dir=None):
+        # In this constructor we setup the convolutional neural network for auto-encoder 
+        # and for the discriminators. 
+        # cv        : [dict] contains the global variable we need for the training 
+        # trail     : variable from optuna, this help for hyper parameter tuning of the code
+        # study_dir : help for tensorboard catching informations
 
-        """
-        Args
-        cv  [object] :  content all parsing paramaters from the flag when lauch the python instructions
-        """
         super(trainer, self).__init__()
+
+        # attribut we need for the programs
 
         self.cv         = cv
         self.gr_norm    = []
@@ -58,14 +61,21 @@ class trainer(object):
         self.trial      = trial
         self.study_dir  = study_dir
         
+        # passing the global variables for the whole program
         globals().update(cv)
         globals().update(opt.__dict__)
-        ngpu_use = torch.cuda.device_count()
+        
+        # If we need to fine the best hyper parameter for tuning we could use set up thoses 
+        # as follow. A distribution value is catch in the memory and the more we launch the 
+        # code the more different values are passed. 
 
+        # When trial is not none ...
+        # we tune the learning weigh for autp-encoder and discriminators
         if self.trial!=None:
             self.glr = self.trial.suggest_float("glrx",0.0001, 0.001,log=True)
             self.rlr = self.trial.suggest_float("rlrx",0.0001, 0.001,log=True)
             self.weight_decay = 0.00001 #self.trial.suggest_float("weight_decay",1.E-5,1.E-3,log=True)
+        # Else We extract those parameters from the config file or 
         else:
             try:
                 self.glr = float(opt.config["hparams"]['glry'])
@@ -95,50 +105,23 @@ class trainer(object):
         self.Dnets      = []
         self.optz       = []
         self.oGyx       = None
-        # self.dp_mode    = True
         self.losses     = {
-            'Dloss':[0],
-            'Dloss_ali':[0],
-            'Dloss_ali_y':[0],
-            'Dloss_ali_x':[0],
-            'Dloss_rec':[0],
-            'Dloss_cycle':[0],
-            'Dloss_cycle_y':[0],
-            'Dloss_cycle_x':[0],
-            'Dloss_cycle_zy':[0],
-            'Dloss_cycle_zf':[0],
-            'Dloss_marginal':[0],
-            'Dloss_marginal_y':[0],
-            'Dloss_marginal_zd':[0],
-            'Dloss_marginal_x':[0],
-            'Dloss_marginal_zf':[0],
+            'Dloss':[0],'Dloss_ali':[0],'Dloss_ali_y':[0],'Dloss_ali_x':[0],'Dloss_rec':[0],
+            'Dloss_cycle':[0],'Dloss_cycle_y':[0],'Dloss_cycle_x':[0],'Dloss_cycle_zy':[0],
+            'Dloss_cycle_zf':[0],'Dloss_marginal':[0],'Dloss_marginal_y':[0],
+            'Dloss_marginal_zd':[0],'Dloss_marginal_x':[0],'Dloss_marginal_zf':[0],
 
-            'Gloss':[0],
-            'Gloss_ali':[0],
-            'Gloss_ali_x':[0],
-            'Gloss_ali_y':[0],
-            'Gloss_cycle':[0],
-            'Gloss_cycle_x':[0],
-            'Gloss_cycle_y':[0],
-            'Gloss_cycle_zd':[0],
-            'Gloss_cycle_zf':[0],
+            'Gloss':[0],'Gloss_ali':[0],'Gloss_ali_x':[0],'Gloss_ali_y':[0],
+            'Gloss_cycle':[0],'Gloss_cycle_x':[0],'Gloss_cycle_y':[0],
+            'Gloss_cycle_zd':[0],'Gloss_cycle_zf':[0],
 
-            'Gloss_marginal':[0],
-            'Gloss_marginal_y':[0],
-            'Gloss_marginal_zd':[0],
-            'Gloss_marginal_x':[0],
-            'Gloss_marginal_zf':[0],
+            'Gloss_marginal':[0],'Gloss_marginal_y':[0],'Gloss_marginal_zd':[0],
+            'Gloss_marginal_x':[0],'Gloss_marginal_zf':[0],
 
-            'Gloss_rec':[0],
-            'Gloss_rec_y':[0],
-            'Gloss_rec_x':[0],
-            'Gloss_rec_zd':[0],
-            'Gloss_rec_zf':[0],
-            'Gloss_rec_zx':[0],
+            'Gloss_rec':[0],'Gloss_rec_y':[0],'Gloss_rec_x':[0],'Gloss_rec_zd':[0],
+            'Gloss_rec_zf':[0],'Gloss_rec_zx':[0],
             
-            'Gloss_rec_zxy':[0],
-            'Gloss_rec_x':[0],
-            'Gloss_rec_zf':[0],
+            'Gloss_rec_zxy':[0],'Gloss_rec_x':[0],'Gloss_rec_zf':[0],
 
             'Gloss_rec_zyy':[0]
         }
@@ -925,7 +908,7 @@ class trainer(object):
 
         nch_zd, nzd = 4,128
         nch_zf, nzf = 4,128
-        bar = trange(1, opt.niter)
+        bar = trange(opt.niter)
 
         # if self.trial != None:
         #     #forcing the same seed to increase the research of good hyper parameter
