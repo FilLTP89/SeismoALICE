@@ -118,6 +118,7 @@ class trainer(object):
             'Dloss_marginal_zd':[0],'Dloss_marginal_x':[0],'Dloss_marginal_zf':[0],
             # Gloss for ALI and cycle consistency
             #Gloss for marginalss
+            'Gloss':[0],'Gloss_ali':[0],'Gloss_ali_x':[0],'Gloss_ali_y':[0],
             'Gloss_marginal':[0],'Gloss_marginal_y':[0],'Gloss_marginal_zd':[0],
             'Gloss_marginal_x':[0],'Gloss_marginal_zf':[0],
             #Gloss for 
@@ -217,7 +218,7 @@ class trainer(object):
                 # self.optz.append(self.oGy)
                 self.Dy     = net.DCGAN_Dx( opt.config['Dy'],  opt)
                 self.Dsy    = net.DCGAN_DXZ( opt.config['Dsy'],  opt)
-                # self.Dzb    = net.DCGAN_Dz( opt.config['Dzb'], opt)
+                self.Dzb    = net.DCGAN_Dz( opt.config['Dzb'], opt)
                 self.Dszb   = net.DCGAN_DXZ( opt.config['Dszb'], opt)
                 self.Dyz    = net.DCGAN_DXZ(opt.config['Dyz'], opt)
                 # self.Dzzb   = net.DCGAN_Dz( opt.config['Dzzb'],opt)
@@ -574,7 +575,7 @@ class trainer(object):
         # is setted at training mode. The discriminator is aslo at training mode
         zerograd(self.optz)
         modalite(self.FGf,   mode ='train')
-        modalite(self.Dnets, mode ='train')
+        modalite(self.Dnets, mode ='eval')
         
         # As we said before the Goal of this function is to compute the loss of Y and the 
         # loss of X. We want to make sure the generator are able to create fake signal as good 
@@ -608,8 +609,8 @@ class trainer(object):
         # because we want to minimize the autoencoder. The equation is as follow :
         #       min (E[log(Dyz(y,F(y)))] + E[log(1 - Dyz(G(z),z))])
         #       REM : the BCE loss function  has already added the " - " in the calculation.
-        Gloss_ali_y =  -(self.bce_loss(Dreal_yz,o1l(Dreal_yz))+\
-                            self.bce_loss(Dfake_yz,o0l(Dfake_yz)))
+        Gloss_ali_y =  (self.bce_loss(Dreal_yz,o0l(Dreal_yz))+\
+                            self.bce_loss(Dfake_yz,o1l(Dfake_yz)))
 
         # Since, it's hard for the marginal distribution to get good saddle piont and a high 
         # complexe place, the ALI loss will hardly find the good solution. To help in this case, 
@@ -617,11 +618,11 @@ class trainer(object):
         # The marginal loss on y is as follow :  
         #       min (E[log(1 - Dy(G(z)))])
         _ , Dfake_y = self.discriminate_marginal_y(y,y_gen)
-        Gloss_marginal_y = -(self.bce_loss(Dfake_y,o0l(Dfake_y)))
+        Gloss_marginal_y = (self.bce_loss(Dfake_y,o1l(Dfake_y)))
         # The marginal loss on zd is as follow : 
         #       min (E[log(1 - Dzd(F(x)])
         _, Dfake_zd = self.discriminate_marginal_zd(zd_inp,zd_gen)
-        Gloss_marginal_zd= -(self.bce_loss(Dfake_zd,o0l(Dfake_zd)))
+        Gloss_marginal_zd= (self.bce_loss(Dfake_zd,o1l(Dfake_zd)))
 
         # 2. Let's generate the reconstructions, i.e G(F(y)) and F(G(z)). This calulation will 
         # be necessary to cycle consistency loss and also here for the reconstruction losses.
@@ -679,15 +680,15 @@ class trainer(object):
         # So the equations that we need to satisfy :
         #       min (E[log(Dxz(x,F|(x)_zxy))] + E[log(1 - Dxz(G(zxy),zxy))])
         Dxz,Dzx     = self.discriminate_xz(x,_x_gen,zxy,zxy_gen)
-        Gloss_ali_x = -(self.bce_loss(Dxz,o1l(Dxz))+self.bce_loss(Dzx,o0l(Dzx)))
+        Gloss_ali_x = (self.bce_loss(Dxz,o0l(Dxz))+self.bce_loss(Dzx,o1l(Dzx)))
         # Now we compute the loss on the marginal of x. What we want is to satisfy:
         #       min E[log(Dx(x,G(F|(x)_zxy,0)))]
         _ , Dfake_x = self.discriminate_marginal_x(x,_x_gen)
-        Gloss_marginal_x = -(self.bce_loss(Dfake_x,o0l(Dfake_x)))
+        Gloss_marginal_x = (self.bce_loss(Dfake_x,o1l(Dfake_x)))
         # We compute the loss on the marginal of zxy. The equation to be satisfied is: 
         #       min E[log(Dzxy(zxy,F(G(zxy,0))))
         _ ,Dfake_zf = self.discriminate_marginal_zxy(zxy, zxy_gen)
-        Gloss_marginal_zf= -(self.bce_loss(Dfake_zf,o0l(Dfake_zf)))
+        Gloss_marginal_zf= (self.bce_loss(Dfake_zf,o1l(Dfake_zf)))
 
         # 2. This second time we generate the reconstuction G(F|(x)_zxy,0) and F|(G(x))_zxy
         # We add noise to x and we concatenate z as cat(zxy,0), because we dont want x to 
@@ -697,7 +698,7 @@ class trainer(object):
         x_gen_fake  = zcat(_x_gen_fake,wnx_fake)
 
         zxx_rec, zxy_rec, *others = self.Fxy(x_gen)
-        _, zxy_rec_fake, *others = self.Fxy(x_gen_fake)
+        _, zxy_rec_fake, *others  = self.Fxy(x_gen_fake)
         zxy_fake    =  zxy_rec_fake
         # Now we wille be able te compute the cycle consistency losses we needed for the training 
         # First,  between te couple (zxy, zxy) and (zxy, F(G(zxy,0)). The equation to be satisfied 
@@ -783,7 +784,6 @@ class trainer(object):
         self.losses['Gloss_marginal_x'  ].append(Gloss_marginal_x.tolist())
         self.losses['Gloss_marginal_zf' ].append(Gloss_marginal_zf.tolist())
 
-
         self.losses['Gloss_rec'    ].append(Gloss_rec.tolist())
         self.losses['Gloss_rec_zd' ].append(Gloss_rec_zd.tolist())
         self.losses['Gloss_rec_y'  ].append(Gloss_rec_y.tolist())
@@ -826,7 +826,7 @@ class trainer(object):
 
         nch_zd, nzd = 4,128
         nch_zf, nzf = 4,128
-        bar = trange(opt.niter)
+        bar = trange(1,opt.niter)
 
         # if self.trial != None:
         #     #forcing the same seed to increase the research of good hyper parameter
@@ -915,6 +915,7 @@ class trainer(object):
                 bar.set_postfix(status = 'writing reconstructed hybrid broadband signals ...')
                 self.writer_val.add_figure('Hybrid (Broadband)',figure_hb, epoch)
                 self.writer_val.add_figure('Goodness of Fit Hybrid (Broadband)',gof_hb, epoch)
+                
                 random.seed(opt.manualSeed)
             
             if epoch%20 == 0:
@@ -958,7 +959,7 @@ class trainer(object):
                     self.writer_accuracy.add_scalar('Accuracy/Hybrid',val_accuracy_hb,epoch)
                     
                     self.writer_loss.add_scalar('Loss/Dloss',    float(Dloss),    epoch)
-                    self.writer_loss.add_scalar('Loss/Dloss_zxy',float(Dloss_zxy),epoch)
+                    # self.writer_loss.add_scalar('Loss/Dloss_zxy',float(Dloss_zxy),epoch)
                     self.writer_loss.add_scalar('Loss/Gloss',    float(Gloss),    epoch)
                     self.writer_loss.add_scalar('Loss/Gloss_zxy',float(Gloss_zxy),epoch)
                     # bar.set_postfix(accuracy_fl = val_accuracy_fl)

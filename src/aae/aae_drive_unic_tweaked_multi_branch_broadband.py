@@ -8,7 +8,7 @@ warnings.filterwarnings("ignore")
 import common.ex_common_setup as cs
 import profiling.profile_support
 # import train.train_unic_test as aat
-import train.train_unic_hyper_parameter_broadband as aat
+import train.train_unic_hyper_parameter_broadband_v2 as aat
 
 u'''General informations'''
 __author__ = "Filippo Gatti & Didier Clouteau"
@@ -36,7 +36,7 @@ def main():
     u'''[GENERATE] samples'''
     DCA.generate()
     # # # u'''[TEST] discrimination'''
-    DCA.discriminate()
-    # # # u'''[STAT] spanning prob distribution'''
-    DCA.compare()
+    # DCA.discriminate()
+    # # # # u'''[STAT] spanning prob distribution'''
+    # DCA.compare()
 main()
