@@ -607,7 +607,6 @@ class trainer(object):
 
         Dloss.backward()
         self.oDyxz.step(),
-        clipweights(self.Dnets), 
         zerograd(self.optz)
 
         self.losses['Dloss'         ].append(Dloss.tolist())
@@ -1227,52 +1226,49 @@ class trainer(object):
             plt.plot_generate_hybrid(Fef,Gy,Ghz,app.DEVICE,vtm,\
                                       vld_loader,pfx="vld_set_hb",outf=outf)
 
-    # @profile            
-    def compare(self):
-        globals().update(self.cv)
-        globals().update(opt.__dict__)
+    # # @profile            
+    # def compare(self):
+    #     globals().update(self.cv)
+    #     globals().update(opt.__dict__)
         
-        t = [y.lower() for y in list(self.strategy.keys())]
-        if 'hybrid' in t and self.strategy['trcmp']['hybrid']:
-            n = self.strategy['hybrid']
-            if None not in n:
-                print("Loading models {} {} {}".format(n[0],n[1],n[2]))
-                self.Fef.load_state_dict(tload(n[0])['model_state_dict'])
-                self.Gy.load_state_dict(tload(n[1])['model_state_dict'])
-                self.Ghz.load_state_dict(tload(n[2])['model_state_dict'])
-            plt.plot_compare_ann2bb(self.Fef,self.Gy,self.Ghz,app.DEVICE,vtm,\
-                                    trn_loader,pfx="trn_set_ann2bb",outf=outf)
-    # @profile            
-    def discriminate(self):
-        globals().update(self.cv)
-        globals().update(opt.__dict__)
+    #     t = [y.lower() for y in list(self.strategy.keys())]
+    #     if 'hybrid' in t and self.strategy['trcmp']['hybrid']:
+    #         n = self.strategy['hybrid']
+    #         if None not in n:
+    #             print("Loading models {} {} {}".format(n[0],n[1],n[2]))
+    #             self.Fef.load_state_dict(tload(n[0])['model_state_dict'])
+    #             self.Gy.load_state_dict(tload(n[1])['model_state_dict'])
+    #             self.Ghz.load_state_dict(tload(n[2])['model_state_dict'])
+    #         plt.plot_compare_ann2bb(self.Fef,self.Gy,self.Ghz,app.DEVICE,vtm,\
+    #                                 trn_loader,pfx="trn_set_ann2bb",outf=outf)
+    # # @profile            
+    # def discriminate(self):
+    #     globals().update(self.cv)
+    #     globals().update(opt.__dict__)
         
-        t = [y.lower() for y in list(self.strategy.keys())]
-        if 'hybrid' in t and self.strategy['trdis']['hybrid']:
-            n = self.strategy['hybrid']
-            if None not in n:
-                print("Loading models {} {} {}".format(n[0],n[1],n[2]))
-                self.Fef.load_state_dict(tload(n[0])['model_state_dict'])
-                self.Gy.load_state_dict(tload(n[1])['model_state_dict'])
-                self.Ghz.load_state_dict(tload(n[2])['model_state_dict'])
-                self.Ddxz.load_state_dict(tload(n[3])['model_state_dict'])
-                self.Dy.load_state_dict(tload(n[4])['model_state_dict'])
-                self.Dzd.load_state_dict(tload(n[5])['model_state_dict'])
-                # import pdb
-                #pdb.set_trace()
-                DsXz = load_state_dict(tload(n[6])['model_state_dict'])
-            # Set-up training
-            self.Fef.eval(),self.Gy.eval()
-            self.Dy.eval(),self.Dzd.eval(),self.Ddxz.eval()
+    #     t = [y.lower() for y in list(self.strategy.keys())]
+    #     if 'hybrid' in t and self.strategy['trdis']['hybrid']:
+    #         n = self.strategy['hybrid']
+    #         if None not in n:
+    #             print("Loading models {} {} {}".format(n[0],n[1],n[2]))
+    #             self.Fef.load_state_dict(tload(n[0])['model_state_dict'])
+    #             self.Gy.load_state_dict(tload(n[1])['model_state_dict'])
+    #             self.Ghz.load_state_dict(tload(n[2])['model_state_dict'])
+    #             self.Ddxz.load_state_dict(tload(n[3])['model_state_dict'])
+    #             self.Dy.load_state_dict(tload(n[4])['model_state_dict'])
+    #             self.Dzd.load_state_dict(tload(n[5])['model_state_dict'])
+    #             # import pdb
+    #             #pdb.set_trace()
+    #             DsXz = load_state_dict(tload(n[6])['model_state_dict'])
+    #         # Set-up training
+    #         self.Fef.eval(),self.Gy.eval()
+    #         self.Dy.eval(),self.Dzd.eval(),self.Ddxz.eval()
             
-            for epoch in range(niter):
-                for b,batch in enumerate(trn_loader):
-                    # Load batch
-                    xd_data,xf_data,zd_data,zf_data,_,_,_,*other = batch
-                    Xd = Variable(xd_data).to(app.DEVICE) # BB-signal
-                    Xf = Variable(xf_data).to(app.DEVICE) # LF-signal
-                    zd = Variable(zd_data).to(app.DEVICE)
-                    zf = Variable(zf_data).to(app.DEVICE)
-
-
-
+    #         for epoch in range(niter):
+    #             for b,batch in enumerate(trn_loader):
+    #                 # Load batch
+    #                 xd_data,xf_data,zd_data,zf_data,_,_,_,*other = batch
+    #                 Xd = Variable(xd_data).to(app.DEVICE) # BB-signal
+    #                 Xf = Variable(xf_data).to(app.DEVICE) # LF-signal
+    #                 zd = Variable(zd_data).to(app.DEVICE)
+    #                 zf = Variable(zf_data).to(app.DEVICE)
