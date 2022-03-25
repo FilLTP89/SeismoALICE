@@ -77,8 +77,8 @@ class trainer(object):
         # papers say to make small change of that values. decreasing the weight decay help
         # for stability and convergence.
         if self.trial!=None:
-            self.glr = self.trial.suggest_float("glrx",0.0001, 0.001,log=True)
-            self.rlr = self.trial.suggest_float("rlrx",0.0001, 0.001,log=True)
+            self.glr = self.trial.suggest_float("glrx",0.0004, 0.0005,log=True)
+            self.rlr = self.trial.suggest_float("rlrx",0.0001, 0.0002,log=True)
             self.weight_decay = 0.00001 #self.trial.suggest_float("weight_decay",1.E-5,1.E-3,log=True)
         # Else We extract those parameters from the config file. So make sure you get in 
         # the ./config/ folder.  
