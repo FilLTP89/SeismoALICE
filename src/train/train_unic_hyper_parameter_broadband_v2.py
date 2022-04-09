@@ -492,7 +492,7 @@ class trainer(object):
         # The equation to be satisfied is :
         #       -(E[log(Dzd(zd)] + E[log(1 - Dzd(F(x)])
         Dreal_zd,Dfake_zd= self.discriminate_marginal_zd(zd_inp,zd_gen)
-        Dloss_marginal_zd= self.bce_loss(Dreal_zd,o0l(Dreal_zd))+\
+        Dloss_marginal_zd= self.bce_loss(Dreal_zd,o1l(Dreal_zd))+\
                          self.bce_loss(Dfake_zd,o0l(Dfake_zd))
 
         # Part II.- Training the Filtered signal
