@@ -545,6 +545,7 @@ class trainer(object):
         Dloss.backward()
         self.oDyxz.step(),
         zerograd(self.optz)
+        # clipweights(self.Dnets)
 
         self.losses['Dloss'         ].append(Dloss.tolist())
         self.losses['Dloss_ali'     ].append(Dloss_ali.tolist())
@@ -854,9 +855,9 @@ class trainer(object):
                     x.data = x[index[mask]]
                     zyy.data, zyx.data = zyy[index[mask]],zyx[index[mask]]
                 
-                for _ in range(5):
-                    self.alice_train_discriminator_adv(y,zyy,zyx,x)                 
                 for _ in range(1):
+                    self.alice_train_discriminator_adv(y,zyy,zyx,x)                 
+                for _ in range(5):
                     self.alice_train_generator_adv(y,zyy,zyx,x,epoch, self.writer_histo)
                 app.logger.debug(f'Epoch [{epoch}/{opt.niter}]\tStep [{b}/{total_step-1}]')
                 
@@ -916,7 +917,7 @@ class trainer(object):
                 self.writer_val.add_figure('Hybrid (Broadband)',figure_hb, epoch)
                 self.writer_val.add_figure('Goodness of Fit Hybrid (Broadband)',gof_hb, epoch)
                 
-                random.seed(opt.manualSeed)
+                # random.seed(opt.manualSeed)
             
             if epoch%20 == 0:
                 val_accuracy_bb, val_accuracy_fl, val_accuracy_hb = self.accuracy()
@@ -1000,16 +1001,16 @@ class trainer(object):
                         'optimizer_state_dict'  : self.oDyxz.state_dict(),
                         'loss'                  :self.losses,},
                         root_checkpoint +'/Dy.pth')
-                tsave({ 'epoch'                 : epoch,
-                        'model_state_dict'      : self.Dyy.state_dict(),
-                        'optimizer_state_dict'  : self.oDyxz.state_dict(),
-                        'loss'                  :self.losses,},
-                        root_checkpoint +'/Dyy.pth')
-                tsave({ 'epoch'                 : epoch,
-                        'model_state_dict'      : self.Dzzb.state_dict(),
-                        'optimizer_state_dict'  : self.oDyxz.state_dict(),
-                        'loss'                  :self.losses,},
-                        root_checkpoint +'/Dzzb.pth')
+                # tsave({ 'epoch'                 : epoch,
+                #         'model_state_dict'      : self.Dyy.state_dict(),
+                #         'optimizer_state_dict'  : self.oDyxz.state_dict(),
+                #         'loss'                  :self.losses,},
+                #         root_checkpoint +'/Dyy.pth')
+                # tsave({ 'epoch'                 : epoch,
+                #         'model_state_dict'      : self.Dzzb.state_dict(),
+                #         'optimizer_state_dict'  : self.oDyxz.state_dict(),
+                #         'loss'                  :self.losses,},
+                #         root_checkpoint +'/Dzzb.pth')
                 tsave({ 'epoch'                 : epoch,
                         'model_state_dict'      : self.Dzb.state_dict(),
                         'optimizer_state_dict'  : self.oDyxz.state_dict(),

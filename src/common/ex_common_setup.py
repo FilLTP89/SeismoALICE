@@ -117,7 +117,8 @@ def setup():
     random.seed(opt.manualSeed)
     mseed(opt.manualSeed)
     
-    cudnn.benchmark = True
+    cudnn.benchmark = False
+    cudnn.deterministic = True
     
     if tcuda.is_available() and not opt.cuda:
         print("WARNING: You have a CUDA device, so you should probably run with --cuda")
