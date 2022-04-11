@@ -1,5 +1,6 @@
+from abc import abstractmethod
 from tqdm import tqdm, trange
-
+import torch
 class BasicTrainer:
     """
     BasicTrainer for all trainer
@@ -18,10 +19,10 @@ class BasicTrainer:
         self.save_epoch     = self.config.save_epoch
         
         self.start_epoch = 1
-            if not None in self.actions: 
-                self._resume_checkpoint()
-            else:
-                self.logger.info("No resumed models")
+        if not None in self.actions: 
+            self._resume_checkpoint()
+        else:
+            self.logger.info("No resumed models")
 
     @abstractmethod
     def _train_epoch(self, epoch):
@@ -35,24 +36,30 @@ class BasicTrainer:
     def train(self):
         for epoch in trange(self.start_epoch, self.epochs +1):
             self._train_epoch(epoch)
-
-        if epoch%self.save_epoch == 0:
-            self.logger.info('saving models')
+            self._validate_epoch(epoch)
             self._save_checkpoint(epoch)
 
+    @abstractmethod
+    def _validate_epoch(self, epoch):
+        """ Validation of the training network
+        :param epoch: Current epoch number
+        """
+        raise NotImplementedError
 
     def _save_checkpoint(self, epoch):
-        for model in self.models:
-            state = {
-                'epoch'                 :epoch,
-                'model_state_dict'      :model.state_dict(),
-                'optimizer_state_dict'  :self.optmizer.state_dict(),
-                'loss'                  :self.losses
-            }
+        if epoch%self.save_epoch == 0:
+            self.logger.info('saving models ...')
+            for model in self.models:
+                state = {
+                    'epoch'                 :epoch,
+                    'model_state_dict'      :model.state_dict(),
+                    'optimizer_state_dict'  :self.optmizer.state_dict(),
+                    'loss'                  :self.losses
+                }
 
-            filename = str(self.checkpoint_dir /'checkpoint-epoch{}-{}'.format(model.name, epoch))
-            torch.save(state, filename)
-            self.logger.info("saving checkpoint-epoch : {}".format(filename))
+                filename = str(self.checkpoint_dir /'checkpoint-epoch{}-{}'.format(model.name, epoch))
+                torch.save(state, filename)
+                self.logger.info("saving checkpoint-epoch : {}".format(filename))
 
     def _resume_checkpoint(self):
         for model, path in zip(self.models, self.strategy) :
