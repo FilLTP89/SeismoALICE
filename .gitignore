@@ -3,7 +3,6 @@ log/*
 tuner/*
 runs_both/*
 dataset/*.npy
-database/*
 *.csv
 *.txt
 shell/*

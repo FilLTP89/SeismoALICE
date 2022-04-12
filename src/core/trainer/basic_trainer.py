@@ -5,15 +5,15 @@ class BasicTrainer:
     """
     BasicTrainer for all trainer
     """
-    def __init__(self, config, logger, models, strategy, actions):
+    def __init__(self, config, logger, models,optimizer, loss,strategy, actions):
         super(BasicTrainer, self).__init__()
         self.config     = config 
         self.logger     = logger
         self.models     = models
         self.strategy   = strategy
         self.actions    = actions
-        self.losses     = []
-        self.optimizer  = []
+        self.losses     = loss
+        self.optimizer  = optimizer
 
         self.checkpoint_dir = self.config.checkpoint_dir
         self.save_epoch     = self.config.save_epoch
@@ -57,7 +57,7 @@ class BasicTrainer:
                     'loss'                  :self.losses
                 }
 
-                filename = str(self.checkpoint_dir /'checkpoint-epoch{}-{}'.format(model.name, epoch))
+                filename = str(self.checkpoint_dir /'checkpoint-epoch{}-{}'.format(model.variable_name, epoch))
                 torch.save(state, filename)
                 self.logger.info("saving checkpoint-epoch : {}".format(filename))
 
@@ -66,6 +66,6 @@ class BasicTrainer:
             self.logger.info("Loading checkpoint-epoch : {}".format(path))
             checkpoint = torch.load(path)
             self.start_epoch = checkpoint['epoch']+1
-            self.model.load_state_dict(checkpoint['state_dict'])
+            model.load_state_dict(checkpoint['state_dict'])
             self.optimizer.load_state_dict(checkpoint['optmizer'])
         self.logger.info("Checkpoint loaded. Resume training from epoch {}".format(self.start_epoch))
