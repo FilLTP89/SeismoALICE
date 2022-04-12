@@ -88,8 +88,8 @@ class investigator(object):
         print(" Parameters of  Decoders/Decoders ")
         count_parameters(self.FGf)
 
-        Xf, Xr = self.calculation_of_filtered_broadband_signal()
-        self.plot_signal(Xf,Xr,self.opt.outf)
+        Xf, Xr,Xd = self.calculation_of_filtered_broadband_signal()
+        self.plot_signal(Xf,Xr,Xd,self.opt.outf)
     
     # @profile            
     # def investigate_signal(self, plotting=False):
@@ -163,8 +163,9 @@ class investigator(object):
 
     def calculation_of_filtered_broadband_signal(self):
         with torch.no_grad():
-            _, Xf = self.fetch_data()
-            Xf =  Xf.to(app.DEVICE)
+            Xd, Xf = self.fetch_data()
+            Xf = Xf.to(app.DEVICE)
+            Xd = Xd.to(app.DEVICE)
             # Extraction of low frequency signal
             wnx,*others = noise_generator(Xf.shape,Xf.shape,app.DEVICE,{'mean':0., 'std':self.std})
             Xf_inp = zcat(Xf,wnx)
@@ -172,10 +173,10 @@ class investigator(object):
             nch, nz = 4,128
             wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(app.DEVICE)
             Xr = self.Gy(zLF,wn)
-        return Xf, Xr
+        return Xf, Xr, Xd 
 
 
-    def plot_signal(self,Xf, Xr, outf,*args,**kwargs):
+    def plot_signal(self,Xf, Xr,Xd, outf,*args,**kwargs):
         cnt = 0
         clr = ['black', 'blue','red', 'red']
         sns.set(style="whitegrid")
@@ -184,21 +185,26 @@ class investigator(object):
     
         Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
         Xr_fsa = tfft(Xr,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+        Xd_fsa = tfft(Xd,vtm[1]-vtm[0]).cpu().data.numpy().copy()
         Xf  = Xf.cpu().data.numpy().copy()
         Xr  = Xr.cpu().data.numpy().copy()
+        Xd  = Xd.cpu().data.numpy().copy()
         vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
 
         for (io, ig) in zip(range(Xf.shape[0]),range(Xr.shape[0])):
             cnt +=1
-            ot,gt = Xf[io, 1, :]  ,Xr[ig, 1, :]
-            of,gf = Xf_fsa[ig,1,:],Xr_fsa[io,1,:]
+            ot,gt,bt = Xf[io, 1, :]  ,Xr[ig, 1, :], Xd[ig,1,:]
+            of,gf,bf = Xf_fsa[ig,1,:],Xr_fsa[io,1,:],Xd_fsa[ig,1,:]
             _,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
             
             hax0.plot(vtm,gt,color=clr[3],label=r'$G(F(\mathbf{x},N(0,I))$',linewidth=1.2)
             hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{x}$',linewidth=1.2, alpha=0.70)
-           
+            hax0.plot(vtm,bt,color=clr[0],label=r'$\mathbf{x}$',linewidth=1.2, alpha=0.70)
+
             hax1.loglog(vfr,of,color=clr[1],label=r'$\mathbf{x}$',linewidth=2)
-            hax1.loglog(vfr,gf,color=clr[3],label=r'$G(F_t(\mathbf{y}))$',linewidth=2)
+            hax1.loglog(vfr,gf,color=clr[3],label=r'$G(F(\mathbf{x},N(0,I))$',linewidth=2)
+            hax1.loglog(vfr,bf,color=clr[3],label=r'$G(F(\mathbf{y})$',linewidth=2)
+            
             hax0.set_xlim(0.0,int(vtm[-1]))
             hax0.set_xticks(np.arange(0.0,int(vtm[-1])*11./10.,int(vtm[-1])/10.))
             hax0.set_ylim(-1.0,1.0)
