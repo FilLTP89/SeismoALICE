@@ -2,7 +2,6 @@ hinfo.txt
 log/*
 tuner/*
 runs_both/*
-dataset/*.npy
 *.csv
 *.txt
 shell/*
