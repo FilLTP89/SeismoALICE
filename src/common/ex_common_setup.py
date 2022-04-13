@@ -28,7 +28,7 @@ from torch import LongTensor as tLT
 from torch import manual_seed as mseed
 import torch.distributed as dist
 from torch.utils.data import DataLoader as tud_dload
-from database.fastloader import FastTensorDataLoader
+# from database.fastloader import FastTensorDataLoader
 from torch.utils.data import BatchSampler as tud_bsmp
 from torch.utils.data import RandomSampler as tud_rsmp
 from torch.utils.data import ConcatDataset as tdu_cat

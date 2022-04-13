@@ -169,7 +169,9 @@ class investigator(object):
             # Extraction of low frequency signal
             wnx,*others = noise_generator(Xf.shape,Xf.shape,app.DEVICE,{'mean':0., 'std':self.std})
             Xf_inp = zcat(Xf,wnx)
+            breakpoint()
             _, zLF = self.Fyx(Xf_inp)
+            zHLb,zLHb = self.Fyx(zcat(Xd,wnx))
             nch, nz = 4,128
             wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(app.DEVICE)
             Xr = self.Gy(zLF,wn)

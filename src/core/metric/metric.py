@@ -16,7 +16,9 @@ class MetricTracker:
         So the expected form of the table sould be : 
 
         index   |Dloss_ali  |Dloss_ali_x    |... | Gloss_ali_x |...|epochs|
-                ### 
+                 ###           ###                   ###             ###
+                 ###           ###                   ###             ###
+
     """
     def __init__(self, columns, writer=None):
         # On Initialisation, 
@@ -35,6 +37,7 @@ class MetricTracker:
         self.index += 1 
 
     def write(self,key,epoch):
+        # make the mean of the loss and pass it to the writer
         if self.writer is not None:
             value = self._data[self._data.epochs == epoch][key].mean()
             self.writer.add_scalar(key, value, epoch)
