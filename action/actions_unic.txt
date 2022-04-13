@@ -1,0 +1,2 @@
+tract,trplt,trcmp,trdis
+unique,True,True,False,False

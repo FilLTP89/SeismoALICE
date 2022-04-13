@@ -1,0 +1,2 @@
+encoder,decoder,extra
+broadband,./network/bb_ls64_nf8_nzd32/Fed_5000.pth,./network/bb_ls64_nf8_nzd32/Gdd_5000.pth,-

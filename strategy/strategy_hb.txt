@@ -1,0 +1,4 @@
+encoder,decoder,hybrid,Dxz,Dx,Dz,Dh
+broadband,./network/bb_ls128_nf8_nzd32/Fed_5000.pth,./network/bb_ls128_nf8_nzd32/Gdd_5000.pth,-,-,-,-,-
+filtered,./network/fl_ls128_nf8_nzd8/Fef_6000.pth,./network/fl_ls128_nf8_nzd8/Gdf_6000.pth,-,-,-,-,-
+hybrid,None,None,-,-,-,-,-

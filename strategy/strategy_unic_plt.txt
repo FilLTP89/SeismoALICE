@@ -1,0 +1,2 @@
+encoder,decoder,extra
+unique,./network/bb/zyy24/nsy1280/hack/dummy/Fyx.pth,./network/bb/zyy24/nsy1280/hack/dummy/Gy.pth,-

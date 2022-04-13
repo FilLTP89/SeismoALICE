@@ -1,0 +1,2 @@
+encoder,decoder,extra
+unique,./network/bb_ls64_nf8_nzd32/unic/config_27/ter/broadband/classic/zyy24/nsy1280/Fyx.pth,./network/bb_ls64_nf8_nzd32/unic/config_27/ter/broadband/classic/zyy24/nsy1280/Gy.pth,-

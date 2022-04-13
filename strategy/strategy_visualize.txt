@@ -1,0 +1,2 @@
+encoder,decoder,extra
+unique,./network/unic/zyy24/Fyx.pth,./network/bb/zyy24/nsy1280/Gy.pth,./network/unic/zyy24/Gx.pth

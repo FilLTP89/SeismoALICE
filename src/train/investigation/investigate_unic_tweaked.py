@@ -48,7 +48,7 @@ class investigator(object):
             Setting up here the dataset and AutoEncoders needed for the trainigs. 
         """
 
-        self.std = 1.0
+        self.std = 0.763
         self.strategy = strategy
 
         # STEAD dataset 
@@ -169,9 +169,8 @@ class investigator(object):
             # Extraction of low frequency signal
             wnx,*others = noise_generator(Xf.shape,Xf.shape,app.DEVICE,{'mean':0., 'std':self.std})
             Xf_inp = zcat(Xf,wnx)
-            breakpoint()
             _, zLF = self.Fyx(Xf_inp)
-            zHLb,zLHb = self.Fyx(zcat(Xd,wnx))
+            # zHLb,zLHb = self.Fyx(zcat(Xd,wnx))
             nch, nz = 4,128
             wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(app.DEVICE)
             Xr = self.Gy(zLF,wn)
@@ -201,11 +200,11 @@ class investigator(object):
             
             hax0.plot(vtm,gt,color=clr[3],label=r'$G(F(\mathbf{x},N(0,I))$',linewidth=1.2)
             hax0.plot(vtm,ot,color=clr[0],label=r'$\mathbf{x}$',linewidth=1.2, alpha=0.70)
-            hax0.plot(vtm,bt,color=clr[0],label=r'$\mathbf{x}$',linewidth=1.2, alpha=0.70)
+            hax0.plot(vtm,bt,color=clr[2],label=r'$\mathbf{y}$',linewidth=1.2, alpha=0.70)
 
             hax1.loglog(vfr,of,color=clr[1],label=r'$\mathbf{x}$',linewidth=2)
             hax1.loglog(vfr,gf,color=clr[3],label=r'$G(F(\mathbf{x},N(0,I))$',linewidth=2)
-            hax1.loglog(vfr,bf,color=clr[3],label=r'$G(F(\mathbf{y})$',linewidth=2)
+            hax1.loglog(vfr,bf,color=clr[2],label=r'$G(F(\mathbf{y})$',linewidth=2)
             
             hax0.set_xlim(0.0,int(vtm[-1]))
             hax0.set_xticks(np.arange(0.0,int(vtm[-1])*11./10.,int(vtm[-1])/10.))

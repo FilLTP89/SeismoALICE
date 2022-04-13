@@ -1,0 +1,3 @@
+encoder,decoder,extra
+filtered,./network/bb_ls64_nf8_nzd32/classic/Fef_1000.pth,./network/bb_ls64_nf8_nzd32/classic/Gdf_1000.pth,-
+

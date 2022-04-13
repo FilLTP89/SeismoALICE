@@ -1,0 +1,3 @@
+encoder,decoder,extra
+broadband,./network/bb_ls128_nf8_nzd8/Fef_1000.pth,./network/bb_ls128_nf8_nzd8/Gdf_1000.pth,-
+

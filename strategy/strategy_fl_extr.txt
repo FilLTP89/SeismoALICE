@@ -1,0 +1,2 @@
+encoder,decoder,DsXd,Dszd,Ddxz,extra
+filtered,./network/fl_ls128_nf8_nzd8/Fef_6000.pth,./network/fl_ls128_nf8_nzd8/Gdf_6000.pth,./network/fl_ls128_nf8_nzd8/DsXd_fl_6000.pth, ./network/fl_ls128_nf8_nzd8/Dszd_fl_6000.pth, ./network/fl_ls128_nf8_nzd8/Ddxz_fl_6000.pth,-
