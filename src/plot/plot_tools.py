@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #!/usr/bin/env python3
+from tkinter import W
 from matplotlib.pyplot import yscale
 u'''Plot tools for nn'''
 
@@ -906,34 +907,34 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             Xt = Variable(xt_data).to(dev, non_blocking=True)
             # Xf = Variable(xf_data).to(dev, non_blocking=True)
             # zt = Variable(zt_data).to(dev, non_blocking=True)        
-        nch, nz         = 4,128
-        wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
+            nch, nz         = 4,128
+            wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
 
-        X_inp = zcat(Xt,wnx)
-        zy,zdf_gen,*other =  Qec(X_inp)
+            X_inp = zcat(Xt,wnx)
+            zy,zdf_gen,*other =  Qec(X_inp)
 
-        if str(pfx).find('hack')!=-1:
-            Xr  = Pdc(zdf_gen,o0l(zy))
-        else:
-            Xr = Pdc(zdf_gen,zy)
-        #Xp = Pdc(z_pre)
-        # Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
-        # Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
-        # Xr_fsa = tfft(Xr,vtm[1]-vtm[0]).cpu().data.numpy().copy()
-        #Xp_fsa = tfft(Xp,vtm[1]-vtm[0]).cpu().data.numpy().copy()
-        vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
-        Xt = Xt.cpu().data.numpy().copy()
-        Xr = Xr.cpu().data.numpy().copy()
+            if str(pfx).find('hack')!=-1:
+                Xr  = Pdc(zdf_gen,o0l(zy))
+            else:
+                Xr = Pdc(zdf_gen,zy)
+            #Xp = Pdc(z_pre)
+            # Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+            # Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+            # Xr_fsa = tfft(Xr,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+            #Xp_fsa = tfft(Xp,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+            vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
+            Xt = Xt.cpu().data.numpy().copy()
+            Xr = Xr.cpu().data.numpy().copy()
 
-        for (io, ig) in zip(range(Xt.shape[0]),range(Xr.shape[0])):
-            ot,gt  = Xt[io, 1, :]  ,Xr[ig, 1, :]
-            if cnt == 10 and str(pfx).find('investigate')==-1:
-                break
-            EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
-                    st2_isref=True,a=10.,k=1))
-            PG.append(pg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
-                    st2_isref=True,a=10.,k=1))
-            cnt+=1
+            for (io, ig) in zip(range(Xt.shape[0]),range(Xr.shape[0])):
+                ot,gt  = Xt[io, 1, :]  ,Xr[ig, 1, :]
+                if cnt == 10 and str(pfx).find('investigate')==-1:
+                    break
+                EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
+                        st2_isref=True,a=10.,k=1))
+                PG.append(pg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
+                        st2_isref=True,a=10.,k=1))
+                cnt+=1
 
     elif 'filtered' in tag:
         if std is None:
@@ -965,9 +966,9 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             wnx,*others = noise_generator(Xf.shape,[Xf.shape[0],nch_zf,nzf],dev,random_args)
             
             X_inp = zcat(Xf,wnx)
-            zx,zfd_gen,*other = Qec(X_inp)
+            _,zfd_gen,*other = Qec(X_inp)
 
-            Xr = Pdc(zfd_gen,o0l(zx))
+            Xr = Pdc(zfd_gen,o0l(zfd_gen))
             Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             Xr_fsa = tfft(Xr,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
@@ -1019,36 +1020,119 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             Xf = Variable(xf_data).to(dev, non_blocking=True)
             # zt = Variable(zt_data).to(dev, non_blocking=True)
 
-        
-        nch, nz = 4,128
-        wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
-        Xf_inp  = zcat(Xf,wnx)
-        _, zdf_gen, *other = Qec(Xf_inp)
-        wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(dev)
-        _Xr     = Pdc(zdf_gen,wn)
-        wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
-        z2, z1  = Qec(zcat(_Xr,wnx))
-        Xr      = Pdc(z1,o0l(z2))
+            nch, nz = 4,128
+            wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
+            # encoder filtered signals
+            Xf_inp  = zcat(Xf,wnx)
+            _, zdf_gen, *other = Qec(Xf_inp)
+            # decoder passing guassian noise as hf 
+            wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(dev)
+            _Xr     = Pdc(zdf_gen,wn)
+            # encoder 
+            wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
+            z2, z1  = Qec(zcat(_Xr,wnx))
+            # decode and extracting signals
+            Xr      = Pdc(z1,o0l(z2))
 
-        vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
-        Xt = Xt.cpu().data.numpy().copy()
-        Xf = Xf.cpu().data.numpy().copy()
-        Xr = Xr.cpu().data.numpy().copy()
+            vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
+            Xt = Xt.cpu().data.numpy().copy()
+            Xf = Xf.cpu().data.numpy().copy()
+            Xr = Xr.cpu().data.numpy().copy()
 
-        for (io, ig) in zip(range(Xt.shape[0]),range(Xr.shape[0])):
-            ot,gt  = Xf[io, 1, :]  ,Xr[ig, 1, :]
-            # of,gf  = Xt_fsa[io,1,:],Xr_fsa[ig,1,:]
+            for (io, ig) in zip(range(Xt.shape[0]),range(Xr.shape[0])):
+                ot,gt  = Xf[io, 1, :]  ,Xr[ig, 1, :]
+                # of,gf  = Xt_fsa[io,1,:],Xr_fsa[ig,1,:]
 
-            if cnt == 10 and str(pfx).find('investigate')==-1:
-                break
-            EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
-                    st2_isref=True,a=10.,k=1))
-            PG.append(pg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
-                    st2_isref=True,a=10.,k=1))
-            cnt+=1
+                if cnt == 10 and str(pfx).find('investigate')==-1:
+                    break
+                EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
+                        st2_isref=True,a=10.,k=1))
+                PG.append(pg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
+                        st2_isref=True,a=10.,k=1))
+                cnt+=1
 
     return EG, PG
 
+
+def plot_of_fake_broadband_signal(Fyx,Gy,vld_loader,dataroot):
+    with torch.no_grad():
+        figure = []
+        Fyx = Fyx.eval()
+        Gy  = Gy.eval()
+        # extracting one batch for thest
+        vtm = torch.load(os.path.join(dataroot,'vtm.pth'))
+        batch = next(iter(vld_loader))
+        _, xf_data,*others = batch
+        if torch.isnan(torch.max(xf_data)):
+                app.logger.debug("your model contain nan value "
+                    "this signals will be withdrawn from the training "
+                    "but style be present in the dataset. \n"
+                    "Then, remember to correct your dataset")
+                mask   = [not torch.isnan(torch.max(xf_data[e,:])).tolist() for e in range(len(xf_data))]
+                index  = np.array(range(len(xf_data)))
+                # xt_data.data = xt_data[index[mask]]
+                xf_data.data = xf_data[index[mask]]
+        Xf = xf_data.to(app.DEVICE)
+        # Xd = Xd.to(app.DEVICE)
+        # Extraction of low frequency signal
+        wnx,*others = noise_generator(Xf.shape,Xf.shape,app.DEVICE,{'mean':0., 'std':1.0})
+        Xf_inp = zcat(Xf,wnx)
+        _, zLF = Fyx(Xf_inp)
+        # zHF,_ = self.Fyx(zcat(Xd,wnx))
+        nch, nz = 4,128
+        wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**{'mean':0., 'std':1.0}).to(app.DEVICE)
+        Xr = Gy(zLF,wn)
+
+        cnt = 0
+        clr = ['black', 'blue','red', 'orange']
+        sns.set(style="whitegrid")
+        pfx = "from_filtered_to_broadband"
+        vtm = vtm
+    
+        Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+        Xr_fsa = tfft(Xr,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+        # Xd_fsa = tfft(Xd,vtm[1]-vtm[0]).cpu().data.numpy().copy()
+        Xf  = Xf.cpu().data.numpy().copy()
+        Xr  = Xr.cpu().data.numpy().copy()
+        # Xd  = Xd.cpu().data.numpy().copy()
+        vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
+
+        for (io, ig) in zip(range(Xf.shape[0]),range(Xr.shape[0])):
+            cnt +=1
+            ot,gt= Xf[io, 1, :]  ,Xr[ig, 1, :]
+            of,gf= Xf_fsa[ig,1,:],Xr_fsa[io,1,:]
+            fig,(hax0,hax1) = plt.subplots(2,1,figsize=(6,8))
+            
+            hax0.plot(vtm,gt,color='red',label=r'$G(F(\mathbf{x},N(0,I))$',linewidth=1.2)
+            # hax0.plot(vtm,bt,color='blue',label=r'$\mathbf{y}$',linewidth=1.2, alpha=0.70)
+            hax0.plot(vtm,ot,color='black',label=r'$\mathbf{x}$',linewidth=1.2, alpha=0.70)
+
+            hax1.loglog(vfr,of,color='black',label=r'$\mathbf{x}$',linewidth=2)
+            # hax1.loglog(vfr,bf,color='blue',label=r'$\mathbf{y}$',linewidth=2)
+            hax1.loglog(vfr,gf,color='red',label=r'$G(F(\mathbf{x},N(0,I))$',linewidth=2)
+            
+            hax0.set_xlim(0.0,int(vtm[-1]))
+            hax0.set_xticks(np.arange(0.0,int(vtm[-1])*11./10.,int(vtm[-1])/10.))
+            hax0.set_ylim(-1.0,1.0)
+            hax0.set_yticks(np.arange(-1.0,1.25,0.25))
+            hax0.set_xlabel('t [s]',fontsize=15,fontweight='bold')
+            hax0.set_ylabel('a(t) [1]',fontsize=15,fontweight='bold')
+            hax0.set_title('ALICE',fontsize=20,fontweight='bold')
+            hax1.set_xlim(0.1,51.), hax1.set_xticks(np.array([0.1,1.0,10.,50.]))
+            hax1.set_ylim(10.**-6,10.**0), hax1.set_yticks(10.**np.arange(-6,1))
+            hax1.set_xlabel('f [Hz]',fontsize=15,fontweight='bold')
+            hax1.set_ylabel('A(f) [1]',fontsize=15,fontweight='bold')
+            hax0.legend(loc = "lower right",frameon=False)
+            hax1.legend(loc = "lower right",frameon=False)
+        
+            # plt.savefig(os.path.join(outf,"res_bb_aae_%s_%u_%u.png"%(pfx,cnt,io)),\
+            #                 bbox_inches='tight',dpi = 500)
+            plt.close()
+            figure.append(fig)
+            if cnt == 3:
+                break
+            # app.logger.info("saving %sres_bb_aae_%s_%u_%u ... "%(outf,pfx,cnt,io))
+    return figure
 
 
 

@@ -126,6 +126,12 @@ class trainer(object):
             'Gloss_rec_zx':[0],
             'Gloss_rec_zxy':[0],'Gloss_rec_x':[0]
         }
+
+        self.gradients = {
+            'Fxy':[0],'Gy':[0],
+            'Dy':[0],'Dx':[0],'Dsy':[0],'Dsx':[0],'Dzb':[0], 'Dszb':[0],
+            'Dyz':[0],'Dzf':[0],'Dszf':[0]
+        }
         
         # In case of tensorboard we want to see the intermediate inputs.
         if self.trial == None:
@@ -217,9 +223,9 @@ class trainer(object):
                 self.optz.append(self.oGyx)
                 # self.optz.append(self.oGy)
                 self.Dy     = net.DCGAN_Dx( opt.config['Dy'],  opt)
-                self.Dsy    = net.DCGAN_DXZ( opt.config['Dsy'],  opt)
+                self.Dsy    = net.DCGAN_DXZ(opt.config['Dsy'],  opt)
                 self.Dzb    = net.DCGAN_Dz( opt.config['Dzb'], opt)
-                self.Dszb   = net.DCGAN_DXZ( opt.config['Dszb'], opt)
+                self.Dszb   = net.DCGAN_DXZ(opt.config['Dszb'], opt)
                 self.Dyz    = net.DCGAN_DXZ(opt.config['Dyz'], opt)
                 # self.Dzzb   = net.DCGAN_Dz( opt.config['Dzzb'],opt)
                 # self.Dyy    = net.DCGAN_Dx( opt.config['Dyy'], opt)
@@ -543,10 +549,18 @@ class trainer(object):
         Dloss               = Dloss_ali+Dloss_marginal
 
         Dloss.backward()
-        self.oDyxz.step(),
+        self.oDyxz.step()
+        self.gradients['Dy'].append(self.track_gradient_change(self.Dy))
+        self.gradients['Dsy'].append(self.track_gradient_change(self.Dsy))
+        self.gradients['Dzb'].append(self.track_gradient_change(self.Dzb))
+        self.gradients['Dszb'].append(self.track_gradient_change(self.Dszb))
+        self.gradients['Dx'].append(self.track_gradient_change(self.Dx))
+        self.gradients['Dsx'].append(self.track_gradient_change(self.Dsx))
+        self.gradients['Dszf'].append(self.track_gradient_change(self.Dszf))
+
         zerograd(self.optz)
         # clipweights(self.Dnets)
-
+        
         self.losses['Dloss'         ].append(Dloss.tolist())
         self.losses['Dloss_ali'     ].append(Dloss_ali.tolist())
         self.losses['Dloss_ali_y'   ].append(Dloss_ali_y.tolist())
@@ -772,6 +786,8 @@ class trainer(object):
                     break
         Gloss.backward()
         self.oGyx.step()
+        self.gradients['Fxy'].append(self.track_gradient_change(self.Fxy.module))
+        self.gradients['Gy'].append(self.track_gradient_change(self.Gy.module))
         zerograd(self.optz)
          
         self.losses['Gloss'      ].append(Gloss.tolist())
@@ -864,6 +880,10 @@ class trainer(object):
                 if epoch%20 == 0 and self.trial== None:
                     for k,v in self.losses.items():
                         self.writer_train.add_scalar('Loss/{}'.format(k),
+                            np.mean(np.array(v[-b:-1])),epoch)
+
+                    for k, v in self.gradients.items():
+                        self.writer_debug.add_scalar('Gradient/{}'.format(k),
                             np.mean(np.array(v[-b:-1])),epoch)
 
             Gloss = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss'][-b:-1])))
@@ -1054,6 +1074,14 @@ class trainer(object):
             classname = model[idx].__class__.__name__
             if classname.find('Conv1d')!= -1 or classname.find('ConvTranspose1d')!= -1:
                 writer.add_histogram(f'{tag}/{idx}', model[idx].weight, epoch)
+    
+    def track_gradient_change(self, model):
+        total_norm = 0
+        for p in model.parameters():
+            param_norm = p.grad.data.norm(2)
+            total_norm += param_norm.item() ** 2
+        total_norm = total_norm ** (1. / 2)
+        return total_norm
         
     def accuracy(self):
         def _eval(EG,PG): 
