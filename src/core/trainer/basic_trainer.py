@@ -5,14 +5,15 @@ class BasicTrainer:
     """
     BasicTrainer for all trainer
     """
-    def __init__(self, config, logger, models,optimizer, loss,strategy, actions):
+    def __init__(self, config, logger, models,optimizer, losses,strategy, 
+                    actions=None,*args, **kwargs):
         super(BasicTrainer, self).__init__()
         self.config     = config 
         self.logger     = logger
         self.models     = models
         self.strategy   = strategy
         self.actions    = actions
-        self.losses     = loss
+        self.losses     = losses
         self.optimizer  = optimizer
 
         self.checkpoint_dir = self.config.checkpoint_dir
@@ -20,12 +21,12 @@ class BasicTrainer:
         
         self.start_epoch = 1
         if not None in self.actions: 
-            self._resume_checkpoint()
+            self.on_resuming_checkpoint()
         else:
             self.logger.info("No resumed models")
 
     @abstractmethod
-    def _train_epoch(self, epoch):
+    def on_training_epoch(self, epoch):
         """
         Training logic for an epoch
         :param epoch: Current epoch number
@@ -35,18 +36,18 @@ class BasicTrainer:
 
     def train(self):
         for epoch in trange(self.start_epoch, self.epochs +1):
-            self._train_epoch(epoch)
-            self._validate_epoch(epoch)
-            self._save_checkpoint(epoch)
+            self.on_training_epoch(epoch)
+            self.on_validation_epoch(epoch)
+            self.on_saving_checkpoint(epoch)
 
     @abstractmethod
-    def _validate_epoch(self, epoch):
+    def on_validation_epoch(self, epoch):
         """ Validation of the training network
         :param epoch: Current epoch number
         """
         raise NotImplementedError
 
-    def _save_checkpoint(self, epoch):
+    def on_saving_checkpoint(self, epoch):
         if epoch%self.save_epoch == 0:
             self.logger.info('saving models ...')
             for model in self.models:
@@ -57,11 +58,11 @@ class BasicTrainer:
                     'loss'                  :self.losses
                 }
 
-                filename = str(self.checkpoint_dir /'checkpoint-epoch{}-{}'.format(model.variable_name, epoch))
+                filename = str(self.checkpoint_dir /'checkpoint-epoch{}-{}'.format(model.name, epoch))
                 torch.save(state, filename)
                 self.logger.info("saving checkpoint-epoch : {}".format(filename))
 
-    def _resume_checkpoint(self):
+    def on_resuming_checkpoint(self):
         for model, path in zip(self.models, self.strategy) :
             self.logger.info("Loading checkpoint-epoch : {}".format(path))
             checkpoint = torch.load(path)

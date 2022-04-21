@@ -130,7 +130,7 @@ class trainer(object):
         self.gradients = {
             'Fxy':[0],'Gy':[0],
             'Dy':[0],'Dx':[0],'Dsy':[0],'Dsx':[0],'Dzb':[0], 'Dszb':[0],
-            'Dyz':[0],'Dzf':[0],'Dszf':[0]
+            'Dyz':[0],'Dxz':[0],'Dzf':[0],'Dszf':[0]
         }
         
         # In case of tensorboard we want to see the intermediate inputs.
@@ -325,15 +325,17 @@ class trainer(object):
        
     def discriminate_xz(self,x,xr,z,zr):
         # Discriminate real
-        ftz = self.Dzf(zr) #OK: no batchNorm
-        ftx = self.Dx(x) #with batchNorm
+        wnx,wnz,*others = noise_generator(x.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        ftz = self.Dzf(zcat(zr,wnz)) #--OK: no batchNorm
+        ftx = self.Dx(zcat(x,wnx)) #--with batchNorm
         zrc = zcat(ftx,ftz)
         ftxz = self.Dxz(zrc) #no batchNorm
         Dxz = ftxz
 
         # Discriminate fake
-        ftz = self.Dzf(z)
-        ftx = self.Dx(xr)
+        wnx,wnz,*others = noise_generator(x.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        ftz = self.Dzf(zcat(z,wnz))
+        ftx = self.Dx(zcat(xr,wnx))
         zrc = zcat(ftx,ftz)
         ftzx = self.Dxz(zrc)
         Dzx  = ftzx
@@ -342,15 +344,17 @@ class trainer(object):
     
     def discriminate_yz(self,y,yr,z,zr):
         # Discriminate real
-        ftz = self.Dzb(zr) #OK : no batchNorm
-        ftx = self.Dy(y) #OK : with batchNorm
+        wny,wnz,*others = noise_generator(y.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        ftz = self.Dzb(zcat(zr,wnz)) #--OK : no batchNorm
+        ftx = self.Dy(zcat(y,wny)) # --OK : with batchNorm
         zrc = zcat(ftx,ftz)
         ftxz = self.Dyz(zrc)
         Dxz  = ftxz
         
         # Discriminate fake
-        ftz = self.Dzb(z)
-        ftx = self.Dy(yr)
+        wny,wnz,*others = noise_generator(y.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        ftz = self.Dzb(zcat(z,wnz))
+        ftx = self.Dy(zcat(yr,wny))
         zrc = zcat(ftx,ftz)
         ftzx = self.Dyz(zrc)
         Dzx  = ftzx
@@ -362,11 +366,13 @@ class trainer(object):
         # the we flatten thaf values, a dense layer is added 
         # and a tanh before the output of the signal. This 
         # insure that we have a probability distribution.  
-        fty     = self.Dy(y)       
+        wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        fty     = self.Dy(zcat(y,wny))       
         Dreal   = self.Dsy(fty)
         # Futher more, we do the same but for the reconstruction of the 
         # broadband signals
-        ftyr    = self.Dy(yr)
+        wny,*others = noise_generator(y.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        ftyr    = self.Dy(zcat(yr,wny))
         Dfake   = self.Dsy(ftyr) 
         return Dreal, Dfake
     
@@ -374,31 +380,39 @@ class trainer(object):
         # We apply in first the same neurol network used to extract the z information
         # from the adversarial losses. Then, we extract the sigmoïd afther 
         # the application of flatten layer,  dense layer
-        ftz     = self.Dzb(z)
+        wnz,*others = noise_generator(z.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        ftz     = self.Dzb(zcat(z,wnz))
         Dreal   = self.Dszb(ftz)
         # we do the same for reconstructed or generated z
-        ftzr    = self.Dzb(zr)
+        wnz,*others = noise_generator(z.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        ftzr    = self.Dzb(zcat(zr,wnz))
         Dfake   = self.Dszb(ftzr)
         return Dreal, Dfake
 
     def discriminate_marginal_x(self,x,xr):
         # We apply a the same neural netowrk used to match the joint distribution
         # and we extract the probability distribution of the signals
-        ftx     = self.Dx(x)
+        wnx,*others = noise_generator(x.shape,x.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        ftx     = self.Dx(zcat(x,wnx))
         Dreal   = self.Dsx(ftx)
+
         # Doing the same for reconstruction/generation of x
-        ftxr    = self.Dx(xr)
+        wnx,*others = noise_generator(x.shape,x.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        ftxr    = self.Dx(zcat(xr,wnx))
         Dfake   = self.Dsx(ftxr)
         return Dreal, Dfake
     
     def discriminate_marginal_zxy(self,zxy,zxyr):
         # This function extract the probability of the marginal
         # It's reuse the neural network in the joint probability distribution
-        # On one hand, we extract the real values. 
-        ftzxy   = self.Dzf(zxy)
+        # On one hand, we extract the real values.
+        wnz,*others = noise_generator(zxy.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std}) 
+        ftzxy   = self.Dzf(zcat(zxy,wnz))
         Dreal   = self.Dszf(ftzxy)
+
         # On the other hand, we extract the probability of the fake values
-        ftzxyr   = self.Dzf(zxyr)
+        wnz,*others = noise_generator(zxy.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        ftzxyr   = self.Dzfzcat((zxyr,wnz))
         Dfake   = self.Dszf(ftzxyr)
         return Dreal, Dfake
 
@@ -546,17 +560,21 @@ class trainer(object):
                                 Dloss_ali_x 
                             )
         # Total losses
-        Dloss               = Dloss_ali+Dloss_marginal
+        Dloss               = Dloss_ali + Dloss_marginal
 
         Dloss.backward()
         self.oDyxz.step()
         self.gradients['Dy'].append(self.track_gradient_change(self.Dy))
         self.gradients['Dsy'].append(self.track_gradient_change(self.Dsy))
         self.gradients['Dzb'].append(self.track_gradient_change(self.Dzb))
+        self.gradients['Dyz'].append(self.track_gradient_change(self.Dyz))
+
         self.gradients['Dszb'].append(self.track_gradient_change(self.Dszb))
         self.gradients['Dx'].append(self.track_gradient_change(self.Dx))
+        self.gradients['Dxz'].append(self.track_gradient_change(self.Dxz))
         self.gradients['Dsx'].append(self.track_gradient_change(self.Dsx))
         self.gradients['Dszf'].append(self.track_gradient_change(self.Dszf))
+        self.gradients['Dzf'].append(self.track_gradient_change(self.Dzf))
 
         zerograd(self.optz)
         # clipweights(self.Dnets)
@@ -590,7 +608,7 @@ class trainer(object):
         # is setted at training mode. The discriminator is aslo at training mode
         zerograd(self.optz)
         modalite(self.FGf,   mode ='train')
-        modalite(self.Dnets, mode ='eval')
+        modalite(self.Dnets, mode ='train')
         
         # As we said before the Goal of this function is to compute the loss of Y and the 
         # loss of X. We want to make sure the generator are able to create fake signal as good 
@@ -624,8 +642,8 @@ class trainer(object):
         # because we want to minimize the autoencoder. The equation is as follow :
         #       min (E[log(Dyz(y,F(y)))] + E[log(1 - Dyz(G(z),z))])
         #       REM : the BCE loss function  has already added the " - " in the calculation.
-        Gloss_ali_y =  (self.bce_loss(Dreal_yz,o0l(Dreal_yz))+\
-                            self.bce_loss(Dfake_yz,o1l(Dfake_yz)))
+        Gloss_ali_y =  -(torch.mean(Dreal_yz)+\
+                            torch.mean(Dfake_yz))
 
         # Since, it's hard for the marginal distribution to get good saddle piont and a high 
         # complexe place, the ALI loss will hardly find the good solution. To help in this case, 
@@ -694,8 +712,8 @@ class trainer(object):
         # change in the equation for adapt it pytorch.
         # So the equations that we need to satisfy :
         #       min (E[log(Dxz(x,F|(x)_zxy))] + E[log(1 - Dxz(G(zxy),zxy))])
-        Dxz,Dzx     = self.discriminate_xz(x,_x_gen,zxy,zxy_gen)
-        Gloss_ali_x = (self.bce_loss(Dxz,o0l(Dxz))+self.bce_loss(Dzx,o1l(Dzx)))
+        Dreal_xz,Dfake_xz     = self.discriminate_xz(x,_x_gen,zxy,zxy_gen)
+        Gloss_ali_x = -(torch.mean(Dreal_xz)+torch.mean(Dfake_xz))
         # Now we compute the loss on the marginal of x. What we want is to satisfy:
         #       min E[log(Dx(x,G(F|(x)_zxy,0)))]
         _ , Dfake_x = self.discriminate_marginal_x(x,_x_gen)
