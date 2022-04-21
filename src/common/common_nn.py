@@ -5,7 +5,7 @@ from curses import noecho
 import optparse
 import re
 import warnings
-
+from scipy.stats import kstest
 from matplotlib.pyplot import sca
 warnings.filterwarnings("ignore")
 # COMMON
@@ -427,6 +427,12 @@ ALI = ALILoss
 
 def zcat(*args):
     return tcat(args,1)
+
+def is_gaussian(distribution):
+    _distribution = distribution.cpu().data.numpy()
+    stat, pvalue = kstest(_distribution.reshape(-1),'norm')
+    return stat, pvalue
+
 
 # custom weights initialization called on netG and netD¬                 
 def set_weights(m):                                 

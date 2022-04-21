@@ -1441,9 +1441,13 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             _, zdf_gen, *other = Qec(Xf_inp)
             wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(dev)
             _Xr     = Pdc(zdf_gen,wn)
-            wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
+            wnx,wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
             z2, z1  = Qec(zcat(_Xr,wnx))
-            Xr      = Pdc(z1,o0l(z2))
+            if 'hack' in pfx:
+                zhf = wnz
+            else:
+                zhf = o0l(z2)
+            Xr      = Pdc(z1,zhf)
 
             Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()

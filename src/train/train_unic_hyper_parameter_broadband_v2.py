@@ -783,7 +783,9 @@ class trainer(object):
                         Gloss_rec*app.LAMBDA_IDENTITY
                     )   
 
-        if epoch%25 == 0: 
+        if epoch%25 == 0:
+            _, pvalue = is_gaussian(zyy_rec)
+            app.logger.info("Probability to be gaussian {}".format(pvalue))
             writer = self.writer_debug if trial_writer == None else trial_writer
             for idx in range(opt.batchSize//torch.cuda.device_count()):
                 writer.add_histogram("common[z2]/zyx", zyx_rec[idx,:], epoch)
@@ -801,6 +803,7 @@ class trainer(object):
                 writer.add_histogram("specific[z1]/zxx", zxx_rec[idx,:], epoch)
                 if idx== 20: 
                     break
+        
         Gloss.backward()
         self.oGyx.step()
         self.gradients['Fxy'].append(self.track_gradient_change(self.Fxy.module))
@@ -860,7 +863,7 @@ class trainer(object):
 
         nch_zd, nzd = 4,128
         nch_zf, nzf = 4,128
-        bar = trange(1,opt.niter)
+        bar = trange(0,self.opt.niter)
 
         # if self.trial != None:
         #     #forcing the same seed to increase the research of good hyper parameter
@@ -906,7 +909,7 @@ class trainer(object):
             Gloss = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss'][-b:-1])))
             Dloss = '{:>5.3f}'.format(np.mean(np.array(self.losses['Dloss'][-b:-1])))
             Gloss_zxy = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss_rec_zxy'][-b:-1])))
-
+            # self.writer_debug.add_scalars('Loss/Main',{'Dloss':Dloss,'Gloss':Gloss},epoch)
             # bar.set_postfix(Gloss = Gloss, Dloss = Dloss)
 
             bar.set_postfix(Gloss = Gloss, Gloss_zxy = Gloss_zxy, Dloss = Dloss) 
@@ -941,12 +944,25 @@ class trainer(object):
                 self.writer_val.add_figure('Filtered',figure_fl, epoch)
                 self.writer_val.add_figure('Goodness of Fit Filtered',gof_fl, epoch)
 
-                figure_hb, gof_hb = plt.plot_generate_classic(
+                figure_hf, gof_hf = plt.plot_generate_classic(
                         tag     = 'hybrid',
                         Qec     = deepcopy(self.Fxy),
                         Pdc     = deepcopy(self.Gy),
                         trn_set = self.vld_loader,
                         pfx     ="vld_set_bb_unique",
+                        opt     = opt,
+                        outf    = outf, 
+                        save    = False)
+                bar.set_postfix(status = 'writing reconstructed hybrid broadband signals ...')
+                self.writer_val.add_figure('Hybrid (Filtered)',figure_hf, epoch)
+                self.writer_val.add_figure('Goodness of Fit Hybrid (Filtered)',gof_hf, epoch)
+
+                figure_hb, gof_hb = plt.plot_generate_classic(
+                        tag     = 'hybrid',
+                        Qec     = deepcopy(self.Fxy),
+                        Pdc     = deepcopy(self.Gy),
+                        trn_set = self.vld_loader,
+                        pfx     ="vld_set_bb_unique_hack",
                         opt     = opt,
                         outf    = outf, 
                         save    = False)
