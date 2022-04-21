@@ -371,7 +371,7 @@ class trainer(object):
         Dreal   = self.Dsy(fty)
         # Futher more, we do the same but for the reconstruction of the 
         # broadband signals
-        wny,*others = noise_generator(y.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std':self.std})
         ftyr    = self.Dy(zcat(yr,wny))
         Dfake   = self.Dsy(ftyr) 
         return Dreal, Dfake
@@ -412,7 +412,7 @@ class trainer(object):
 
         # On the other hand, we extract the probability of the fake values
         wnz,*others = noise_generator(zxy.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        ftzxyr   = self.Dzfzcat((zxyr,wnz))
+        ftzxyr   = self.Dzf(zcat(zxyr,wnz))
         Dfake   = self.Dszf(ftzxyr)
         return Dreal, Dfake
 
