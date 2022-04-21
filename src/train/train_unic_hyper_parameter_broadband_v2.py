@@ -642,8 +642,7 @@ class trainer(object):
         # because we want to minimize the autoencoder. The equation is as follow :
         #       min (E[log(Dyz(y,F(y)))] + E[log(1 - Dyz(G(z),z))])
         #       REM : the BCE loss function  has already added the " - " in the calculation.
-        Gloss_ali_y =  -(torch.mean(Dreal_yz)+\
-                            torch.mean(Dfake_yz))
+        Gloss_ali_y =  -(torch.mean(Dreal_yz)-torch.mean(Dfake_yz))
 
         # Since, it's hard for the marginal distribution to get good saddle piont and a high 
         # complexe place, the ALI loss will hardly find the good solution. To help in this case, 
@@ -713,7 +712,7 @@ class trainer(object):
         # So the equations that we need to satisfy :
         #       min (E[log(Dxz(x,F|(x)_zxy))] + E[log(1 - Dxz(G(zxy),zxy))])
         Dreal_xz,Dfake_xz     = self.discriminate_xz(x,_x_gen,zxy,zxy_gen)
-        Gloss_ali_x = -(torch.mean(Dreal_xz)+torch.mean(Dfake_xz))
+        Gloss_ali_x = -(torch.mean(Dreal_xz)-torch.mean(Dfake_xz))
         # Now we compute the loss on the marginal of x. What we want is to satisfy:
         #       min E[log(Dx(x,G(F|(x)_zxy,0)))]
         _ , Dfake_x = self.discriminate_marginal_x(x,_x_gen)
