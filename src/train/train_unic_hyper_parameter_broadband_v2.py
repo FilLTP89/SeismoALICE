@@ -171,7 +171,7 @@ class trainer(object):
                         self.FGf,
                         func=set_weights,
                         lr=self.glr,b1=b1,b2=b2,
-                        weight_decay=self.weight_decay
+                        weight_decay=0.00001
                     )
 
                     # self.g_scheduler = MultiStepLR(self.oGyx,milestones=[30,80], gamma=0.1) 
@@ -282,8 +282,8 @@ class trainer(object):
                 self.oDyxz = reset_net(
                     self.Dnets,
                     func=set_weights,lr = self.rlr,
-                    optim='Adam', b1 = b1, b2 = b2,
-                    weight_decay=self.weight_decay
+                    optim='rmsprop', b1 = b1, b2 = b2,
+                    weight_decay=0.00001
                 )
                 
                 # self.d_scheduler = MultiStepLR(self.oDyxz,milestones=[30,80], gamma=0.1)
@@ -574,13 +574,13 @@ class trainer(object):
 
         Dloss.backward()
         self.oDyxz.step()
-        self.gradients['Dy'].append(self.track_gradient_change(self.Dy))
+        self.gradients['Dy' ].append(self.track_gradient_change(self.Dy))
         self.gradients['Dsy'].append(self.track_gradient_change(self.Dsy))
         self.gradients['Dzb'].append(self.track_gradient_change(self.Dzb))
         self.gradients['Dyz'].append(self.track_gradient_change(self.Dyz))
 
         self.gradients['Dszb'].append(self.track_gradient_change(self.Dszb))
-        self.gradients['Dx'].append(self.track_gradient_change(self.Dx))
+        self.gradients['Dx' ].append(self.track_gradient_change(self.Dx))
         self.gradients['Dxz'].append(self.track_gradient_change(self.Dxz))
         self.gradients['Dsx'].append(self.track_gradient_change(self.Dsx))
         self.gradients['Dszf'].append(self.track_gradient_change(self.Dszf))
@@ -792,7 +792,7 @@ class trainer(object):
         Gloss       = (
                         Gloss_ali+
                         Gloss_marginal+ 
-                        Gloss_rec
+                        Gloss_rec*app.LAMBDA_IDENTITY
                     )   
 
         if epoch%25 == 0:
