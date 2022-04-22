@@ -124,7 +124,7 @@ class trainer(object):
             #Gloss for 
             'Gloss_rec':[0],'Gloss_rec_y':[0],'Gloss_rec_x':[0],'Gloss_rec_zd':[0],
             'Gloss_rec_zx':[0],
-            'Gloss_rec_zxy':[0],'Gloss_rec_x':[0]
+            'Gloss_rec_zxy':[0],'Gloss_rec_x':[0],'kstestz':[0],
         }
 
         self.gradients = {
@@ -326,38 +326,42 @@ class trainer(object):
     def discriminate_xz(self,x,xr,z,zr):
         # Discriminate real
         wnx,wnz,*others = noise_generator(x.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        ftz = self.Dzf(zcat(zr,wnz)) #--OK: no batchNorm
-        ftx = self.Dx(zcat(x,wnx)) #--with batchNorm
-        zrc = zcat(ftx,ftz)
-        ftxz = self.Dxz(zrc) #no batchNorm
-        Dxz = ftxz
+        ftz         = self.Dzf(zcat(zr,wnz)) #--OK: no batchNorm
+        ftx         = self.Dx(zcat(x,wnx)) #--with batchNorm
+        zrc         = zcat(ftx,ftz)
+        wnx,*others = noise_generator(zrc.shape,zrc.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        ftxz        = self.Dxz(zcat(zrc,wnx))   #no batchNorm
+        Dxz         = ftxz
 
         # Discriminate fake
         wnx,wnz,*others = noise_generator(x.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        ftz = self.Dzf(zcat(z,wnz))
-        ftx = self.Dx(zcat(xr,wnx))
-        zrc = zcat(ftx,ftz)
-        ftzx = self.Dxz(zrc)
-        Dzx  = ftzx
+        ftz         = self.Dzf(zcat(z,wnz))
+        ftx         = self.Dx(zcat(xr,wnx))
+        zrc         = zcat(ftx,ftz)
+        wnz,*others = noise_generator(zrc.shape,zrc.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        ftzx        = self.Dxz(zcat(zrc,wnz))
+        Dzx         = ftzx
 
         return Dxz,Dzx #,ftr,ftf
     
     def discriminate_yz(self,y,yr,z,zr):
         # Discriminate real
         wny,wnz,*others = noise_generator(y.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        ftz = self.Dzb(zcat(zr,wnz)) #--OK : no batchNorm
-        ftx = self.Dy(zcat(y,wny)) # --OK : with batchNorm
-        zrc = zcat(ftx,ftz)
-        ftxz = self.Dyz(zrc)
-        Dxz  = ftxz
+        ftz         = self.Dzb(zcat(zr,wnz)) #--OK : no batchNorm
+        ftx         = self.Dy(zcat(y,wny)) # --OK : with batchNorm
+        zrc         = zcat(ftx,ftz)
+        wnz,*others = noise_generator(zrc.shape,zrc.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        ftxz        = self.Dyz(zcat(zrc,wnz))
+        Dxz         = ftxz
         
         # Discriminate fake
         wny,wnz,*others = noise_generator(y.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        ftz = self.Dzb(zcat(z,wnz))
-        ftx = self.Dy(zcat(yr,wny))
-        zrc = zcat(ftx,ftz)
-        ftzx = self.Dyz(zrc)
-        Dzx  = ftzx
+        ftz         = self.Dzb(zcat(z,wnz))
+        ftx         = self.Dy(zcat(yr,wny))
+        zrc         = zcat(ftx,ftz)
+        wnz,*others = noise_generator(zrc.shape,zrc.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        ftzx        = self.Dyz(zcat(zrc,wnz))
+        Dzx         = ftzx
 
         return Dxz,Dzx 
 
@@ -367,13 +371,13 @@ class trainer(object):
         # and a tanh before the output of the signal. This 
         # insure that we have a probability distribution.  
         wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        fty     = self.Dy(zcat(y,wny))       
-        Dreal   = self.Dsy(fty)
+        fty         = self.Dy(zcat(y,wny))       
+        Dreal       = self.Dsy(fty)
         # Futher more, we do the same but for the reconstruction of the 
         # broadband signals
         wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        ftyr    = self.Dy(zcat(yr,wny))
-        Dfake   = self.Dsy(ftyr) 
+        ftyr        = self.Dy(zcat(yr,wny))
+        Dfake       = self.Dsy(ftyr) 
         return Dreal, Dfake
     
     def discriminate_marginal_zd(self,z,zr):
@@ -381,25 +385,29 @@ class trainer(object):
         # from the adversarial losses. Then, we extract the sigmoïd afther 
         # the application of flatten layer,  dense layer
         wnz,*others = noise_generator(z.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        ftz     = self.Dzb(zcat(z,wnz))
-        Dreal   = self.Dszb(ftz)
+        ftz         = self.Dzb(zcat(z,wnz))
+        wnz,*others = noise_generator(ftz.shape,ftz.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        Dreal       = self.Dszb(zcat(ftz,wnz))
         # we do the same for reconstructed or generated z
         wnz,*others = noise_generator(z.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        ftzr    = self.Dzb(zcat(zr,wnz))
-        Dfake   = self.Dszb(ftzr)
+        ftzr        = self.Dzb(zcat(zr,wnz))
+        wnz,*others = noise_generator(ftz.shape,ftz.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        Dfake       = self.Dszb(zcat(ftzr,wnz))
         return Dreal, Dfake
 
     def discriminate_marginal_x(self,x,xr):
         # We apply a the same neural netowrk used to match the joint distribution
         # and we extract the probability distribution of the signals
         wnx,*others = noise_generator(x.shape,x.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        ftx     = self.Dx(zcat(x,wnx))
-        Dreal   = self.Dsx(ftx)
+        ftx         = self.Dx(zcat(x,wnx))
+        wnz,*others = noise_generator(ftx.shape,ftx.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        Dreal       = self.Dsx(zcat(ftx,wnz))
 
         # Doing the same for reconstruction/generation of x
         wnx,*others = noise_generator(x.shape,x.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        ftxr    = self.Dx(zcat(xr,wnx))
-        Dfake   = self.Dsx(ftxr)
+        ftxr        = self.Dx(zcat(xr,wnx))
+        wnz,*others = noise_generator(ftx.shape,ftx.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        Dfake       = self.Dsx(zcat(ftxr,wnz))
         return Dreal, Dfake
     
     def discriminate_marginal_zxy(self,zxy,zxyr):
@@ -407,13 +415,15 @@ class trainer(object):
         # It's reuse the neural network in the joint probability distribution
         # On one hand, we extract the real values.
         wnz,*others = noise_generator(zxy.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std}) 
-        ftzxy   = self.Dzf(zcat(zxy,wnz))
-        Dreal   = self.Dszf(ftzxy)
+        ftzxy       = self.Dzf(zcat(zxy,wnz))
+        wnz,*others = noise_generator(ftzxy.shape,ftzxy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        Dreal       = self.Dszf(zcat(ftzxy,wnz))
 
         # On the other hand, we extract the probability of the fake values
         wnz,*others = noise_generator(zxy.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        ftzxyr   = self.Dzf(zcat(zxyr,wnz))
-        Dfake   = self.Dszf(ftzxyr)
+        ftzxyr      = self.Dzf(zcat(zxyr,wnz))
+        wnz,*others = noise_generator(ftzxy.shape,ftzxy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        Dfake       = self.Dszf(zcat(ftzxyr,wnz))
         return Dreal, Dfake
 
     # def discriminate_xx(self,x,xr):
@@ -642,7 +652,8 @@ class trainer(object):
         # because we want to minimize the autoencoder. The equation is as follow :
         #       min (E[log(Dyz(y,F(y)))] + E[log(1 - Dyz(G(z),z))])
         #       REM : the BCE loss function  has already added the " - " in the calculation.
-        Gloss_ali_y =  -(torch.mean(Dreal_yz)-torch.mean(Dfake_yz))
+        Gloss_ali_y =  self.bce_loss(Dreal_yz,o0l(Dreal_yz))+\
+                        self.bce_loss(Dfake_yz,o1l(Dfake_yz))
 
         # Since, it's hard for the marginal distribution to get good saddle piont and a high 
         # complexe place, the ALI loss will hardly find the good solution. To help in this case, 
@@ -712,7 +723,8 @@ class trainer(object):
         # So the equations that we need to satisfy :
         #       min (E[log(Dxz(x,F|(x)_zxy))] + E[log(1 - Dxz(G(zxy),zxy))])
         Dreal_xz,Dfake_xz     = self.discriminate_xz(x,_x_gen,zxy,zxy_gen)
-        Gloss_ali_x = -(torch.mean(Dreal_xz)-torch.mean(Dfake_xz))
+        Gloss_ali_x = self.bce_loss(Dreal_xz,o0l(Dreal_xz))+\
+                                self.bce_loss(Dfake_xz,o1l(Dfake_xz)) 
         # Now we compute the loss on the marginal of x. What we want is to satisfy:
         #       min E[log(Dx(x,G(F|(x)_zxy,0)))]
         _ , Dfake_x = self.discriminate_marginal_x(x,_x_gen)
@@ -780,12 +792,13 @@ class trainer(object):
         Gloss       = (
                         Gloss_ali+
                         Gloss_marginal+ 
-                        Gloss_rec*app.LAMBDA_IDENTITY
+                        Gloss_rec
                     )   
 
         if epoch%25 == 0:
             _, pvalue = is_gaussian(zyy_rec)
-            app.logger.info("Probability to be gaussian {}".format(pvalue))
+            app.logger.debug("Probability to be gaussian {}".format(pvalue))
+            self.losses['kstestz'].append(pvalue)
             writer = self.writer_debug if trial_writer == None else trial_writer
             for idx in range(opt.batchSize//torch.cuda.device_count()):
                 writer.add_histogram("common[z2]/zyx", zyx_rec[idx,:], epoch)
@@ -893,7 +906,7 @@ class trainer(object):
                 
                 for _ in range(1):
                     self.alice_train_discriminator_adv(y,zyy,zyx,x)                 
-                for _ in range(5):
+                for _ in range(2):
                     self.alice_train_generator_adv(y,zyy,zyx,x,epoch, self.writer_histo)
                 app.logger.debug(f'Epoch [{epoch}/{opt.niter}]\tStep [{b}/{total_step-1}]')
                 
