@@ -28,7 +28,8 @@ class MetricTracker:
         self.writer = writer
         self.index = 0
         columns.appends('epochs')
-        self._data = pd.DataFrame(colums=columns)
+        self.columns = columns
+        self._data = pd.DataFrame(colums=self.columns)
     
     def update(self,keys, values):
         # this function should save values in a row
@@ -36,11 +37,12 @@ class MetricTracker:
             self._data[self.index, key] = value
         self.index += 1 
 
-    def write(self,key,epoch):
+    def write(self,epoch):
         # make the mean of the loss and pass it to the writer
         if self.writer is not None:
-            value = self._data[self._data.epochs == epoch][key].mean()
-            self.writer.add_scalar(key, value, epoch)
+            for column in self.columns:
+                value = self._data[self._data.epochs == epoch][column].mean()
+                self.writer.add_scalar(key, value, epoch)
     
     def save_metric(self,dir_name):
         return self._data.to_excel(f'{dir_name}/losses',

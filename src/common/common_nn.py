@@ -455,6 +455,12 @@ def tie_weights(m):
         except: 
             pass
 
+def generate_latent_variable(batch, nch_zd=4,nzd=4, nch_zf = 128,nzf = 128,std=1):
+        zyy  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
+        zxx  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
+        zyx  = torch.zeros([batch,nch_zf,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
+        zxy  = torch.zeros([batch,nch_zf,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
+        return zyy, zyx, zxx, zxy
 def scheduler(scheduler_name,optimizer,*args,**kwargs):
     scale_fn = None
     if scheduler_name == 'CyclicLR':

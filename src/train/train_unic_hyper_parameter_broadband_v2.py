@@ -230,7 +230,7 @@ class trainer(object):
                 # self.Dzzb   = net.DCGAN_Dz( opt.config['Dzzb'],opt)
                 # self.Dyy    = net.DCGAN_Dx( opt.config['Dyy'], opt)
 
-                self.Dzyx   = net.DCGAN_Dz(opt.config['Dzyx'],opt)
+                # self.Dzyx   = net.DCGAN_Dz(opt.config['Dzyx'],opt)
                 # self.Dzyy   = net.DCGAN_Dz(opt.config['Dzyy'],opt)
                 
                 self.Dx     = net.DCGAN_Dx(opt.config['Dx'],  opt)
@@ -249,7 +249,7 @@ class trainer(object):
                 self.Dyz    = nn.DataParallel(self.Dyz ).cuda()
                 # self.Dzzb   = nn.DataParallel(self.Dzzb).cuda()
                 # self.Dyy    = nn.DataParallel(self.Dyy ).cuda()
-                self.Dzyx   = nn.DataParallel(self.Dzyx ).cuda()
+                # self.Dzyx   = nn.DataParallel(self.Dzyx ).cuda()
                 # self.Dzyy   = nn.DataParallel(self.Dzyy ).cuda()
                 # self.Dxx    = nn.DataParallel(self.Dxx ).cuda()
                 # self.Dzzf   = nn.DataParallel(self.Dzzf).cuda()
@@ -282,7 +282,7 @@ class trainer(object):
                 self.oDyxz = reset_net(
                     self.Dnets,
                     func=set_weights,lr = self.rlr,
-                    optim='rmsprop', b1 = b1, b2 = b2,
+                    optim='Adam', b1 = b1, b2 = b2,
                     weight_decay=0.00001
                 )
                 
@@ -536,7 +536,7 @@ class trainer(object):
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
         x_inp       = zcat(x,wnx)
         _x_gen      = self.Gy(zxy,o0l(zyy))
-        zxx_gen, zxy_gen, *others = self.Fxy(x_inp)
+        _, zxy_gen, *others = self.Fxy(x_inp)
 
         # 1.2 Now, we match the probability distribution of (x,F|(x)_zxy) ~ (G(zxy,0), zxy)
         # Because it's easy for the discriminator to view that a distribution is not  a 
@@ -708,14 +708,15 @@ class trainer(object):
         # generating the F|(x)_zxy and G(x).
         nch,nz      = 4, 128
         wnx,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        wnx_fake,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        wn          = torch.empty([x.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(app.DEVICE)
+        # wnx_fake,*others = noise_generator(x.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        # wn          = torch.empty([x.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(app.DEVICE)
 
         x_inp       = zcat(x,wnx)
         zx_gen, zxy_gen, *others = self.Fxy(x_inp)
 
         _x_gen      = self.Gy(zxy,o0l(zyy))
-        _x_gen_fake = self.Gy(zxy,wn.detach())
+        #<<<< Test no fake generations to see ...
+        #<<<< _x_gen_fake = self.Gy(zxy,wn.detach())
 
         # We are able to match joint probability distribution and compute losses of marginal
         # probabilities that we need. As we have done in the first part, we should make some 
@@ -739,11 +740,14 @@ class trainer(object):
         # get "high frequency" information on it
         x_rec       = self.Gy(zxy_gen, o0l(zx_gen))
         x_gen       = zcat(_x_gen,wnx)
-        x_gen_fake  = zcat(_x_gen_fake,wnx_fake)
+
+        #<<<< Test to see what happens ...
+        #<<<< x_gen_fake  = zcat(_x_gen_fake,wnx_fake)
 
         zxx_rec, zxy_rec, *others = self.Fxy(x_gen)
-        _, zxy_rec_fake, *others  = self.Fxy(x_gen_fake)
-        zxy_fake    =  zxy_rec_fake
+        #<<<< Test
+        #<<<< _, zxy_rec_fake, *others  = self.Fxy(x_gen_fake)
+        # zxy_fake    =  zxy_rec_fake
         # Now we wille be able te compute the cycle consistency losses we needed for the training 
         # First,  between te couple (zxy, zxy) and (zxy, F(G(zxy,0)). The equation to be satisfied 
         # is, as follow : 
@@ -752,7 +756,7 @@ class trainer(object):
         # Gloss_cycle_zxy      = -self.bce_loss(Dfake_zf, o0l(Dfake_zf))
         # To insure indepenace of zxy fro zy we do that in the L1 loss. 
         #       || zxy  - F(G(zxy,N(0,I)))  ||
-        Gloss_rec_zxy        = torch.mean(torch.abs(zxy - zxy_fake))
+        Gloss_rec_zxy        = torch.mean(torch.abs(zxy - zxy_rec))
         # Secondly, for to match (x,x) and (x, G(F|(x)_zxy,0)) . So the equation that we need to 
         # compute is :
         #       E[log(1-Dxx(x,G(F|(x)_zxy,0)))]
@@ -1087,11 +1091,11 @@ class trainer(object):
                         'optimizer_state_dict'  : self.oDyxz.state_dict(),
                         'loss'                  :self.losses,},
                         root_checkpoint +'/Dyz.pth')
-                tsave({ 'epoch'                 : epoch,
-                        'model_state_dict'      : self.Dzyx.state_dict(),
-                        'optimizer_state_dict'  : self.oDyxz.state_dict(),
-                        'loss'                  :self.losses,},
-                        root_checkpoint +'/Dzyx.pth')
+                # tsave({ 'epoch'                 : epoch,
+                #         'model_state_dict'      : self.Dzyx.state_dict(),
+                #         'optimizer_state_dict'  : self.oDyxz.state_dict(),
+                #         'loss'                  :self.losses,},
+                #         root_checkpoint +'/Dzyx.pth')
 
             if (epoch +1) == opt.niter:
                 if self.trial == None:

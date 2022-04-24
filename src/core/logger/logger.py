@@ -5,10 +5,10 @@ from utils import read_json
 
 
 
-def setup_logging( log_config      = 'logger/logger_config.log',
-    logging_level   = logging.INFO, 
-    default_level   = logging.DEBUG, 
-    logging_format  = '%(levelname)s:%(message)s'):
+def setup_logging( log_config = 'logger/logger_config.log',
+        logging_level   = logging.INFO, 
+        default_level   = logging.DEBUG, 
+        logging_format  = '%(levelname)s:%(message)s'):
     
     logger  = logging.getLogger(__name__)
     logger.setLevel(default_level)
