@@ -251,3 +251,30 @@ class DCGAN_DXZ_Flatten(BasicDCGAN_DXZDataParallele):
         if not self.training:
             z = z.detach()
         return z
+    
+class DCGAN_DXZ_Flatten_Lite(BasicDCGAN_DXZDataParallele):
+    """docstring for    DCGAN_Dx"""
+    def __init__(self,ngpu, nly, channel, act, nc=1024,\
+        ker=2,std=2,pad=0, dil=1,grp=1, path='',extra=128,batch_size = 128,\
+        bn=True,wf=False, dpc=0.25, limit =1024, prob = False,\
+        n_extra_layers= 1, bias=False, *args, **kwargs):
+        super(DCGAN_DXZ_Flatten_Lite, self).__init__()
+
+        activation = T.activation(act, nly)
+        self.cnn  = []
+        
+        if prob:
+            self.cnn +=[
+                nn.Flatten(start_dim = 1, end_dim=2),
+                # Shallow(shape=(batch_size,lout*channel[-1])),
+                Linear(limit*channel[-2],channel[-1]),
+                nn.Sigmoid()
+            ]
+
+        self.cnn = nn.Sequential(*self.cnn)
+
+    def forward(self,x):
+        z = self.cnn(x)
+        if not self.training:
+            z = z.detach()
+        return z

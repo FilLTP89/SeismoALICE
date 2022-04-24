@@ -222,6 +222,7 @@ class trainer(object):
                     #     weight_decay=0.00001)
                 self.optz.append(self.oGyx)
                 # self.optz.append(self.oGy)
+                breakpoint()
                 self.Dy     = net.DCGAN_Dx( opt.config['Dy'],  opt)
                 self.Dsy    = net.DCGAN_DXZ(opt.config['Dsy'],  opt)
                 self.Dzb    = net.DCGAN_Dz( opt.config['Dzb'], opt)
@@ -236,7 +237,7 @@ class trainer(object):
                 self.Dx     = net.DCGAN_Dx(opt.config['Dx'],  opt)
                 self.Dsx    = net.DCGAN_DXZ(opt.config['Dsx'],opt)
                 self.Dzf    = net.DCGAN_Dz(opt.config['Dzf'], opt)
-                self.Dszf   = net.DCGAN_DXZ(opt.config['Dszf'], opt)
+                self.Dszf   = net.DCGAN_DXZ(opt.config['Dszf'],opt)
                 self.Dxz    = net.DCGAN_DXZ(opt.config['Dxz'],opt)
                 # self.Dzzf   = net.DCGAN_Dz(opt.config['Dzzf'],opt)
                 # self.Dxx    = net.DCGAN_Dx(opt.config['Dxx'], opt)
@@ -268,7 +269,7 @@ class trainer(object):
                 # self.Dnets.append(self.Dzzb)
                 # self.Dnets.append(self.Dyy)
 
-                self.Dnets.append(self.Dzyx)
+                # self.Dnets.append(self.Dzyx)
                 # self.Dnets.append(self.Dzyy)
                 # self.Dnets.append(self.Dxx)
                 # self.Dnets.append(self.Dzzf)
@@ -283,7 +284,7 @@ class trainer(object):
                     self.Dnets,
                     func=set_weights,lr = self.rlr,
                     optim='Adam', b1 = b1, b2 = b2,
-                    weight_decay=0.00001
+                    weight_decay=0.
                 )
                 
                 # self.d_scheduler = MultiStepLR(self.oDyxz,milestones=[30,80], gamma=0.1)
@@ -325,6 +326,7 @@ class trainer(object):
        
     def discriminate_xz(self,x,xr,z,zr):
         # Discriminate real
+        
         wnx,wnz,*others = noise_generator(x.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
         ftz         = self.Dzf(zcat(zr,wnz)) #--OK: no batchNorm
         ftx         = self.Dx(zcat(x,wnx)) #--with batchNorm
@@ -346,6 +348,7 @@ class trainer(object):
     
     def discriminate_yz(self,y,yr,z,zr):
         # Discriminate real
+        
         wny,wnz,*others = noise_generator(y.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
         ftz         = self.Dzb(zcat(zr,wnz)) #--OK : no batchNorm
         ftx         = self.Dy(zcat(y,wny)) # --OK : with batchNorm
@@ -369,21 +372,25 @@ class trainer(object):
         # We apply in frist convolution from the y signal ...
         # the we flatten thaf values, a dense layer is added 
         # and a tanh before the output of the signal. This 
-        # insure that we have a probability distribution.  
+        # insure that we have a probability distribution.
+       
         wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std':self.std})
-        fty         = self.Dy(zcat(y,wny))       
-        Dreal       = self.Dsy(fty)
+        fty         = self.Dy(zcat(y,wny))
+        wny,*others = noise_generator(fty.shape,fty.shape,app.DEVICE,{'mean':0., 'std':self.std})       
+        Dreal       = self.Dsy(zcat(fty,wny))
         # Futher more, we do the same but for the reconstruction of the 
         # broadband signals
         wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std':self.std})
         ftyr        = self.Dy(zcat(yr,wny))
-        Dfake       = self.Dsy(ftyr) 
+        wny,*others = noise_generator(fty.shape,fty.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        Dfake       = self.Dsy(zcat(ftyr,wny)) 
         return Dreal, Dfake
     
     def discriminate_marginal_zd(self,z,zr):
         # We apply in first the same neurol network used to extract the z information
         # from the adversarial losses. Then, we extract the sigmoïd afther 
         # the application of flatten layer,  dense layer
+        
         wnz,*others = noise_generator(z.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
         ftz         = self.Dzb(zcat(z,wnz))
         wnz,*others = noise_generator(ftz.shape,ftz.shape,app.DEVICE,{'mean':0., 'std':self.std})
@@ -398,6 +405,7 @@ class trainer(object):
     def discriminate_marginal_x(self,x,xr):
         # We apply a the same neural netowrk used to match the joint distribution
         # and we extract the probability distribution of the signals
+        
         wnx,*others = noise_generator(x.shape,x.shape,app.DEVICE,{'mean':0., 'std':self.std})
         ftx         = self.Dx(zcat(x,wnx))
         wnz,*others = noise_generator(ftx.shape,ftx.shape,app.DEVICE,{'mean':0., 'std':self.std})
@@ -414,6 +422,7 @@ class trainer(object):
         # This function extract the probability of the marginal
         # It's reuse the neural network in the joint probability distribution
         # On one hand, we extract the real values.
+        
         wnz,*others = noise_generator(zxy.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std}) 
         ftzxy       = self.Dzf(zcat(zxy,wnz))
         wnz,*others = noise_generator(ftzxy.shape,ftzxy.shape,app.DEVICE,{'mean':0., 'std':self.std})
@@ -555,6 +564,7 @@ class trainer(object):
                                 self.bce_loss(Dfake_x,o0l(Dfake_x))
         # For zxy, we should satisfy this equation : 
         #   -(E[log(Dzxy(zxy, zxy))] +  E[log(Dzxy(zxy,F(G(zxy,0))))])
+        # [TODO] Issues in this marginal to solve. the value decrease too much
         Dreal_zf,Dfake_zf   = self.discriminate_marginal_zxy(zxy,zxy_gen)
         Dloss_marginal_zf   = self.bce_loss(Dreal_zf,o1l(Dreal_zf))+\
                                 self.bce_loss(Dfake_x,o0l(Dfake_zf))
@@ -637,7 +647,7 @@ class trainer(object):
         zd_inp  = zcat(zxy,zyy)
         y_gen   = self.Gy(zxy,zyy)
         zyy_gen,zyx_gen,*others = self.Fxy(y_inp)
-        zd_gen= zcat(zyx_gen,zyy_gen) 
+        zd_gen= zcat(zyx_gen,zyy_gen)
 
         # So, let's evaluate the loss of ALI 
         Dreal_yz,Dfake_yz = self.discriminate_yz(y,y_gen,zd_inp,zd_gen)  
@@ -728,10 +738,14 @@ class trainer(object):
                                 self.bce_loss(Dfake_xz,o1l(Dfake_xz)) 
         # Now we compute the loss on the marginal of x. What we want is to satisfy:
         #       min E[log(Dx(x,G(F|(x)_zxy,0)))]
+        
+        # [TODO] Issues in this marginal to solve. the value decrease too much
         _ , Dfake_x = self.discriminate_marginal_x(x,_x_gen)
         Gloss_marginal_x = (self.bce_loss(Dfake_x,o1l(Dfake_x)))
         # We compute the loss on the marginal of zxy. The equation to be satisfied is: 
         #       min E[log(Dzxy(zxy,F(G(zxy,0))))
+
+        # [TODO] Issues in this marginal to solve. the value decrease too much
         _ ,Dfake_zf = self.discriminate_marginal_zxy(zxy, zxy_gen)
         Gloss_marginal_zf= (self.bce_loss(Dfake_zf,o1l(Dfake_zf)))
 
@@ -796,7 +810,7 @@ class trainer(object):
         Gloss       = (
                         Gloss_ali+
                         Gloss_marginal+ 
-                        Gloss_rec*app.LAMBDA_IDENTITY
+                        Gloss_rec
                     )   
 
         if epoch%25 == 0:
