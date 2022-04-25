@@ -511,8 +511,8 @@ class trainer(object):
         # The equation to be satisfied is :
         #       max -(E[log(Dyz(y,F(y)))] + E[log(1 - Dyz(G(z),z))])
         #       REM : BCE(xn,yn) =  -wn*(yn.log(xn) + (1-yn)log(1-xn))
-        Dloss_ali_y = self.bce_loss(Dreal_yz,o1l(Dreal_yz))+\
-                        self.bce_loss(Dfake_yz,o0l(Dfake_yz))
+        Dloss_ali_y = 0.8*self.bce_loss(Dreal_yz,o1l(Dreal_yz))+\
+                        0.2*self.bce_loss(Dfake_yz,o0l(Dfake_yz))
 
         # 1.3. We comput the marginal probability distributions
         # The objectif of this part is the calculation of the marginal probability 
@@ -522,15 +522,15 @@ class trainer(object):
         # The equation to be statisfied is :
         #       -(E[log(Dy(y))] + E[log(1 - Dy(G(z)))])  
         Dreal_y,Dfake_y  = self.discriminate_marginal_y(y,y_gen)
-        Dloss_marginal_y = self.bce_loss(Dreal_y,o1l(Dreal_y))+\
-                             self.bce_loss(Dfake_y,o0l(Dfake_y))
+        Dloss_marginal_y = 0.8*self.bce_loss(Dreal_y,o1l(Dreal_y))+\
+                             0.2*self.bce_loss(Dfake_y,o0l(Dfake_y))
         # And also, we do the evaluation the marginal probabiliti distribution of 
         # z (ensure it's guassian). 
         # The equation to be satisfied is :
         #       -(E[log(Dzd(zd)] + E[log(1 - Dzd(F(x)])
         Dreal_zd,Dfake_zd= self.discriminate_marginal_zd(zd_inp,zd_gen)
-        Dloss_marginal_zd= self.bce_loss(Dreal_zd,o1l(Dreal_zd))+\
-                         self.bce_loss(Dfake_zd,o0l(Dfake_zd))
+        Dloss_marginal_zd= 0.8*self.bce_loss(Dreal_zd,o1l(Dreal_zd))+\
+                         0.2*self.bce_loss(Dfake_zd,o0l(Dfake_zd))
 
         # Part II.- Training the Filtered signal
         # As before, we prepare the input for the traing. But here, We only pay attention to zxy
@@ -551,21 +551,21 @@ class trainer(object):
         # Then the equation we evaluate is :
         #   -(E[log(Dxz(x,F|(x)_zxy))] +  E[log(1 - Dxz(G(zxy,0),zxy))])
         Dreal_xz,Dfake_xz    = self.discriminate_xz(x,_x_gen,zxy,zxy_gen)
-        Dloss_ali_x          = self.bce_loss(Dreal_xz,o1l(Dreal_xz))+\
-                                self.bce_loss(Dfake_xz,o0l(Dfake_xz)) 
+        Dloss_ali_x          = 0.8*self.bce_loss(Dreal_xz,o1l(Dreal_xz))+\
+                                0.2*self.bce_loss(Dfake_xz,o0l(Dfake_xz)) 
 
         # 1.3 It is important to evaluate the marginal probability distribution. 
         # For x we should satisfy this equation :
         #   -(E[log(Dx(x,x))] + E[log(Dx(x,G(F|(x)_zxy,0)))])
         Dreal_x,Dfake_x      = self.discriminate_marginal_x(x,_x_gen)
-        Dloss_marginal_x     = self.bce_loss(Dreal_x,o1l(Dreal_x))+\
-                                self.bce_loss(Dfake_x,o0l(Dfake_x))
+        Dloss_marginal_x     = 0.8*self.bce_loss(Dreal_x,o1l(Dreal_x))+\
+                                0.2*self.bce_loss(Dfake_x,o0l(Dfake_x))
         # For zxy, we should satisfy this equation : 
         #   -(E[log(Dzxy(zxy, zxy))] +  E[log(Dzxy(zxy,F(G(zxy,0))))])
         # [TODO] Issues in this marginal to solve. the value decrease too much
         Dreal_zf,Dfake_zf   = self.discriminate_marginal_zxy(zxy,zxy_gen)
-        Dloss_marginal_zf   = self.bce_loss(Dreal_zf,o1l(Dreal_zf))+\
-                                self.bce_loss(Dfake_x,o0l(Dfake_zf))
+        Dloss_marginal_zf   = 0.8*self.bce_loss(Dreal_zf,o1l(Dreal_zf))+\
+                                0.2*self.bce_loss(Dfake_x,o0l(Dfake_zf))
         Dloss_marginal      = (
                                 Dloss_marginal_y+
                                 Dloss_marginal_zd+
@@ -660,8 +660,8 @@ class trainer(object):
         # because we want to minimize the autoencoder. The equation is as follow :
         #       min (E[log(Dyz(y,F(y)))] + E[log(1 - Dyz(G(z),z))])
         #       REM : the BCE loss function  has already added the " - " in the calculation.
-        Gloss_ali_y =  self.bce_loss(Dreal_yz,o0l(Dreal_yz))+\
-                        self.bce_loss(Dfake_yz,o1l(Dfake_yz))
+        Gloss_ali_y =  0.8*self.bce_loss(Dreal_yz,o0l(Dreal_yz))+\
+                        0.2*self.bce_loss(Dfake_yz,o1l(Dfake_yz))
 
         # Since, it's hard for the marginal distribution to get good saddle piont and a high 
         # complexe place, the ALI loss will hardly find the good solution. To help in this case, 
@@ -669,11 +669,11 @@ class trainer(object):
         # The marginal loss on y is as follow :  
         #       min (E[log(1 - Dy(G(z)))])
         _ , Dfake_y = self.discriminate_marginal_y(y,y_gen)
-        Gloss_marginal_y = (self.bce_loss(Dfake_y,o1l(Dfake_y)))
+        Gloss_marginal_y = 0.8*(self.bce_loss(Dfake_y,o1l(Dfake_y)))
         # The marginal loss on zd is as follow : 
         #       min (E[log(1 - Dzd(F(x)])
         _, Dfake_zd = self.discriminate_marginal_zd(zd_inp,zd_gen)
-        Gloss_marginal_zd= (self.bce_loss(Dfake_zd,o1l(Dfake_zd)))
+        Gloss_marginal_zd= 0.8*(self.bce_loss(Dfake_zd,o1l(Dfake_zd)))
 
         # 2. Let's generate the reconstructions, i.e G(F(y)) and F(G(z)). This calulation will 
         # be necessary to cycle consistency loss and also here for the reconstruction losses.
@@ -732,20 +732,20 @@ class trainer(object):
         # So the equations that we need to satisfy :
         #       min (E[log(Dxz(x,F|(x)_zxy))] + E[log(1 - Dxz(G(zxy),zxy))])
         Dreal_xz,Dfake_xz     = self.discriminate_xz(x,_x_gen,zxy,zxy_gen)
-        Gloss_ali_x = self.bce_loss(Dreal_xz,o0l(Dreal_xz))+\
-                                self.bce_loss(Dfake_xz,o1l(Dfake_xz)) 
+        Gloss_ali_x = 0.8*self.bce_loss(Dreal_xz,o0l(Dreal_xz))+\
+                        0.2*self.bce_loss(Dfake_xz,o1l(Dfake_xz)) 
         # Now we compute the loss on the marginal of x. What we want is to satisfy:
         #       min E[log(Dx(x,G(F|(x)_zxy,0)))]
         
         # [TODO] Issues in this marginal to solve. the value decrease too much
         _ , Dfake_x = self.discriminate_marginal_x(x,_x_gen)
-        Gloss_marginal_x = (self.bce_loss(Dfake_x,o1l(Dfake_x)))
+        Gloss_marginal_x = 0.8*(self.bce_loss(Dfake_x,o1l(Dfake_x)))
         # We compute the loss on the marginal of zxy. The equation to be satisfied is: 
         #       min E[log(Dzxy(zxy,F(G(zxy,0))))
 
         # [TODO] Issues in this marginal to solve. the value decrease too much
         _ ,Dfake_zf = self.discriminate_marginal_zxy(zxy, zxy_gen)
-        Gloss_marginal_zf= (self.bce_loss(Dfake_zf,o1l(Dfake_zf)))
+        Gloss_marginal_zf= 0.8*(self.bce_loss(Dfake_zf,o1l(Dfake_zf)))
 
         # 2. This second time we generate the reconstuction G(F|(x)_zxy,0) and F|(G(x))_zxy
         # We add noise to x and we concatenate z as cat(zxy,0), because we dont want x to 
@@ -922,7 +922,7 @@ class trainer(object):
                 
                 for _ in range(1):
                     self.alice_train_discriminator_adv(y,zyy,zyx,x)                 
-                for _ in range(5):
+                for _ in range(1):
                     self.alice_train_generator_adv(y,zyy,zyx,x,epoch, self.writer_histo)
                 app.logger.debug(f'Epoch [{epoch}/{opt.niter}]\tStep [{b}/{total_step-1}]')
                 
