@@ -461,6 +461,22 @@ def generate_latent_variable(batch, nch_zd=4,nzd=4, nch_zf = 128,nzf = 128,std=1
         zyx  = torch.zeros([batch,nch_zf,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
         zxy  = torch.zeros([batch,nch_zf,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
         return zyy, zyx, zxx, zxy
+
+def get_accuracy(tag, plot_function,encoder, decoder, vld_loader,*args, **kwargs):
+    with torch.no_grad():
+        def _eval(EG,PG): 
+            val = np.sqrt(np.power([10 - eg for eg in EG],2)+\
+                np.power([10 - pg for pg in PG],2))
+            accuracy = val.mean().tolist()
+            return accuracy
+
+        EG_h, PG_h  = plot_function(tag = tag, 
+            Qec     = encoder, Pdc = decoder, 
+            trn_set = vld_loader, 
+            *args, **kwargs)
+
+        return _eval(EG_h,PG_h)
+
 def scheduler(scheduler_name,optimizer,*args,**kwargs):
     scale_fn = None
     if scheduler_name == 'CyclicLR':

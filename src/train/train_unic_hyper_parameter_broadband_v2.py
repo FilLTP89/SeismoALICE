@@ -187,20 +187,20 @@ class trainer(object):
                 else: 
                     # breakpoint()
                     self.Fxy.load_state_dict(tload(n[0])['model_state_dict'])
-                    # self.Gy.load_state_dict(tload(n[1])['model_state_dict'])
+                    self.Gy.load_state_dict(tload(n[1])['model_state_dict'])
                     # self.Gx.load_state_dict(tload(n[2])['model_state_dict'])
 
-                    app.logger.info("considering master part as pretrained : no grad required")
-                    for param in self.Fxy.module.master.parameters():
-                        param.requires_grad = False
+                    # app.logger.info("considering master part as pretrained : no grad required")
+                    # for param in self.Fxy.module.master.parameters():
+                    #     param.requires_grad = False
 
-                    app.logger.info("considering common part as pretrained : no grad required")
-                    for param in self.Fxy.module.cnn_common.parameters():
-                        param.requires_grad = False
+                    # app.logger.info("considering common part as pretrained : no grad required")
+                    # for param in self.Fxy.module.cnn_common.parameters():
+                    #     param.requires_grad = False
 
-                    self.oGyx = MultiStepLR(Adam(ittc(self.Fxy.parameters()),
-                        lr=self.glr,betas=(b1,b2),
-                        weight_decay=self.weight_decay))
+                    # self.oGyx = MultiStepLR(Adam(ittc(self.Fxy.parameters()),
+                    #     lr=self.glr,betas=(b1,b2),
+                    #     weight_decay=self.weight_decay))
                     
                     # self.g_scheduler = MultiStepLR(self.oGyx,milestones=[30,80], gamma=0.1)
                     # self.oGy = Adam(ittc(self.F_.branch_broadband.parameters(),
