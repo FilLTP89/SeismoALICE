@@ -222,7 +222,6 @@ class trainer(object):
                     #     weight_decay=0.00001)
                 self.optz.append(self.oGyx)
                 # self.optz.append(self.oGy)
-                breakpoint()
                 self.Dy     = net.DCGAN_Dx( opt.config['Dy'],  opt)
                 self.Dsy    = net.DCGAN_DXZ(opt.config['Dsy'],  opt)
                 self.Dzb    = net.DCGAN_Dz( opt.config['Dzb'], opt)
@@ -283,8 +282,8 @@ class trainer(object):
                 self.oDyxz = reset_net(
                     self.Dnets,
                     func=set_weights,lr = self.rlr,
-                    optim='Adam', b1 = b1, b2 = b2,
-                    weight_decay=0.
+                    optim='sgd', b1 = b1, b2 = b2,
+                    weight_decay=0.00001
                 )
                 
                 # self.d_scheduler = MultiStepLR(self.oDyxz,milestones=[30,80], gamma=0.1)
@@ -326,7 +325,6 @@ class trainer(object):
        
     def discriminate_xz(self,x,xr,z,zr):
         # Discriminate real
-        
         wnx,wnz,*others = noise_generator(x.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
         ftz         = self.Dzf(zcat(zr,wnz)) #--OK: no batchNorm
         ftx         = self.Dx(zcat(x,wnx)) #--with batchNorm
@@ -924,7 +922,7 @@ class trainer(object):
                 
                 for _ in range(1):
                     self.alice_train_discriminator_adv(y,zyy,zyx,x)                 
-                for _ in range(2):
+                for _ in range(5):
                     self.alice_train_generator_adv(y,zyy,zyx,x,epoch, self.writer_histo)
                 app.logger.debug(f'Epoch [{epoch}/{opt.niter}]\tStep [{b}/{total_step-1}]')
                 
