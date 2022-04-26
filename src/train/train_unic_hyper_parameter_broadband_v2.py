@@ -808,7 +808,7 @@ class trainer(object):
         Gloss       = (
                         Gloss_ali+
                         Gloss_marginal+ 
-                        Gloss_rec
+                        Gloss_rec*10.
                     )   
 
         if epoch%25 == 0:
