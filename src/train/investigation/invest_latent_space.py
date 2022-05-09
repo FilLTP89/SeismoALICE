@@ -67,7 +67,6 @@ class investigator(object):
 
         self.F_  = nn.DataParallel(self.F_).cuda()
         self.Gy  = nn.DataParallel(self.Gy).cuda()
-        self.Dzxy = 
 
         # loading saved weight of the network
         self.F_.load_state_dict(tload(n[0])['model_state_dict'])

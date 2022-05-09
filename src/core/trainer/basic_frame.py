@@ -1,4 +1,4 @@
-
+from common.common_model import track_gradient_change
 
 class Actors:
     """ 
@@ -10,4 +10,23 @@ class Actors:
         self.config = config
         self.logger = logger
         self.accelerator  = accelerator
+    
+    def track_gradient_change(self,gradient_values,nets):
+        for net in nets:
+            gradient_values[net.name] = track_gradient_change(net)
+    
+    def track_weight_change(self, writer, tag, model,epoch):
+        for idx in range(len(model)):
+            classname = model[idx].__class__.__name__
+            if (classname.find('Conv1d')!= -1 
+                    or 
+                classname.find('ConvTranspose1d')!= -1) and writer != None:
+                writer.add_histogram(f'{tag}/{idx}', model[idx].weight, epoch)
+            else:
+                self.logger.info("weights are not tracked ... ")
         
+    def track_gradient(self,*args,**kwargs):
+        raise NotImplementedError
+    
+    def track_weight(self, *args, **kwargs):
+        raise NotImplementedError

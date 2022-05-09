@@ -32,6 +32,13 @@ def get_truncated_normal(mean=0, sd=1, low=0, upp=10, log=False):
 def zcat(*args):
     return torch.cat(args,1)
 
+def track_gradient_change(model):
+        total_norm = 0
+        for p in model.parameters():
+            param_norm = p.grad.data.norm(2)
+            total_norm += param_norm.item() ** 2
+        total_norm = total_norm ** (1. / 2)
+        return total_norm
 
 def gradient_penalty(critic, real, fake, device):
     _real = real
