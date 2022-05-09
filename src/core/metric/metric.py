@@ -25,10 +25,11 @@ class MetricTracker:
         # columns   :the columns name should be passed, 
         #            by default the "epochs" column is created.
         # writer    : this is a writer like Tensorboard.
-        self.writer = writer
-        self.index = 0
-        self.columns = columns
-        self._data = pd.DataFrame(colums=self.columns)
+        
+        self.writer     = writer
+        self.index      = 0
+        self.columns    = columns
+        self._data      = pd.DataFrame(columns=self.columns)
     
     def update(self):
         # this function should save values in a row
