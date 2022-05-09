@@ -249,7 +249,7 @@ class DataParalleleFactory(ConvNetFactory):
             wf      = wf,\
             dpc     = dpc,
             batch_size = opt.batchSize,\
-            n_extra_layers=0)
+            n_extra_layers=0, *args, **kwargs)
          
 
     def createDCGAN_Dz(self, config_dcgan_dz, opt, *args, **kwargs):
@@ -279,7 +279,7 @@ class DataParalleleFactory(ConvNetFactory):
             prob    = prob,\
             extra   = extra,
             batch_size = opt.batchSize,\
-            n_extra_layers=0)
+            n_extra_layers=0, *args, **kwargs)
 
     def createDCGAN_DXZ(self, config_dcgan_dxz,opt, *args, **kwargs):
         #DCGAN_DXZ class is called here
@@ -306,7 +306,7 @@ class DataParalleleFactory(ConvNetFactory):
             prob    = prob,\
             bias    = bias,\
             extra   = extra,\
-            n_extra_layers=0,batch_size = opt.batchSize)
+            n_extra_layers=0,batch_size = opt.batchSize,*args, **kwargs)
 
     
 class Network(object):

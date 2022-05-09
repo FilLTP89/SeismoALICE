@@ -25,7 +25,8 @@ class DecoderDataParallele(object):
     
     @staticmethod
     def getDecoder(name, ngpu, nz, nch, nly, ndf, config, ker, std, pad, dil,dconv,\
-                     channel,n_extra_layers,act, opd, bn, dpc,path, limit, extra):
+                     channel,n_extra_layers,act, opd, bn, dpc,path, limit,
+                      extra,*args, **kwargs):
 
         # pdb.set_trace()
         if name  is not None:
@@ -36,21 +37,23 @@ class DecoderDataParallele(object):
             try:
                 return class_(ngpu = ngpu, nz = nz, nch = nch, config= config, limit = limit, bn = bn, path=path,\
                         nly = nly, act=act, ndf =ndf, ker = ker, std =std, pad = pad, opd = opd,dconv = dconv,\
-                        dil=dil, dpc = dpc,n_extra_layers=n_extra_layers, channel = channel, extra = extra)
+                        dil=dil, dpc = dpc,n_extra_layers=n_extra_layers, channel = channel,
+                         extra = extra, *args, **kwargs)
             except Exception as e:
                 print("The class ",classname," does not exit")
                 raise e
                 
         else:
             return Decoder(ngpu = ngpu, nz = nz, nch = nch, config=config, limit = limit, bn = bn, path=path,\
-        nly = nly, act=act, ndf =ndf, ker = ker, std =std, pad = pad, opd = opd,dconv = dconv,\
-        dil=dil, dpc = dpc,n_extra_layers=n_extra_layers, channel = channel, extra = extra)
+                nly = nly, act=act, ndf =ndf, ker = ker, std =std, pad = pad, opd = opd,dconv = dconv,\
+                dil=dil, dpc = dpc,n_extra_layers=n_extra_layers, channel = channel, 
+                extra = extra, *args, **kwargs)
 
 
 class BasicDecoderDataParallel(BasicModel):
     """docstring for BasicDecoderDataParallel"""
-    def __init__(self):
-        super(BasicDecoderDataParallel, self).__init__()
+    def __init__(self,*args, **kwargs):
+        super(BasicDecoderDataParallel, self).__init__(*args, **kwargs)
         self.training = True
         self.model    = None
         self.cnn1     = []
@@ -84,8 +87,9 @@ class BasicDecoderDataParallel(BasicModel):
 class Decoder(BasicDecoderDataParallel):
     """docstring for Decoder"""
     def __init__(self,ngpu,nz,nch,ndf,nly,channel,act, config, extra, dconv = "",\
-                 ker=7,std=4,pad=0,opd=0,dil=1,grp=1,dpc=0.10,limit = 256, bn=True, path='',n_extra_layers=0):
-        super(Decoder, self).__init__()
+                 ker=7,std=4,pad=0,opd=0,dil=1,grp=1,dpc=0.10,limit = 256, bn=True, path='',
+                 n_extra_layers=0,*args, **kwargs):
+        super(Decoder, self).__init__(*args, **kwargs)
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
         acts      = T.activation(act, nly)
@@ -139,8 +143,9 @@ class Decoder(BasicDecoderDataParallel):
 class Decoder_Lite(BasicDecoderDataParallel):
     """docstring for Decoder"""
     def __init__(self,ngpu,nz,nch,ndf,nly,channel,act, config,extra, dconv = "",\
-                 ker=7,std=4,pad=0,opd=0,dil=1,grp=1,dpc=0.10,limit = 256, bn=True, path='',n_extra_layers=0):
-        super(Decoder_Lite, self).__init__()
+                 ker=7,std=4,pad=0,opd=0,dil=1,grp=1,dpc=0.10,limit = 256, bn=True, path='',
+                 n_extra_layers=0,*args, **kwargs):
+        super(Decoder_Lite, self).__init__(*args, **kwargs)
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
         acts      = T.activation(act, nly)
@@ -180,8 +185,8 @@ class Decoder_Resnet(BasicDecoderDataParallel):
     """docstring for Decoder_Resnet"""
     def __init__(self, ngpu,nz,nch,ndf,nly,config,channel,act, extra,dconv = "",\
                  ker=7,std=4,pad=0,opd=0,dil=1,grp=1,dpc=0.10,limit = 256,\
-                 bn=True, path='',n_extra_layers=0):
-        super(Decoder_Resnet, self).__init__()
+                 bn=True, path='',n_extra_layers=0,*args, **kwargs):
+        super(Decoder_Resnet, self).__init__(*args, **kwargs)
         
         _net = DecoderResnet(in_signals_channels = channel[0],
                 out_signals_channels=3,
@@ -198,8 +203,8 @@ class Decoder_Octave(BasicDecoderDataParallel):
     """docstring for Decoder_Octave"""
     def __init__(self,ngpu,nz,nch,ndf,nly, config, channel,act, extra,dconv = "",\
                  ker=7,std=4,pad=0,opd=0,dil=1,grp=1,dpc=0.10,limit = 256,\
-                 bn=True, path='',n_extra_layers=0):
-        super(Decoder_Octave, self).__init__()
+                 bn=True, path='',n_extra_layers=0,*args, **kwargs):
+        super(Decoder_Octave, self).__init__(*args, **kwargs)
         
         self.device = tdev("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -250,8 +255,9 @@ class Decoder_Octave(BasicDecoderDataParallel):
 class Decoder_Unic(BasicDecoderDataParallel):
     """docstring for Decoder_Unic"""
     def __init__(self,ngpu,nz,nch,ndf,nly,config,channel,act, extra, dconv = "",\
-                 ker=7,std=4,pad=0,opd=0,dil=1,grp=1,dpc=0.10,limit = 256, bn=True, path='',n_extra_layers=0):
-        super(Decoder_Unic, self).__init__()
+                 ker=7,std=4,pad=0,opd=0,dil=1,grp=1,dpc=0.10,limit = 256, bn=True, 
+                 path='',n_extra_layers=0,*args, **kwargs):
+        super(Decoder_Unic, self).__init__(*args, **kwargs)
 
         acts      = T.activation(act, nly)
         self.branch_common      = []
@@ -336,6 +342,3 @@ class Decoder_Unic(BasicDecoderDataParallel):
         if not self.training:
             x = x.detach()
         return x
-        
-
-        

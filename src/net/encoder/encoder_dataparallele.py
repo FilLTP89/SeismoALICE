@@ -56,8 +56,8 @@ class BasicEncoderDataParallele(BasicModel):
     """This class get the basic structure of the Encoders object. 
         in this class we define generic method used in the whole program. 
     """
-    def __init__(self):
-        super(BasicEncoderDataParallele, self).__init__()
+    def __init__(self,*args, **kwargs):
+        super(BasicEncoderDataParallele, self).__init__(*args, **kwargs)
         self.training = True
         self.model    = None
         self.resnet   = []
@@ -116,8 +116,8 @@ class Encoder(BasicEncoderDataParallele):
     def __init__(self, ngpu,dev,nz,nch,ndf,act,channel,\
                  nly, config,ker=7,std=4,pad=0,dil=1,grp=1,bn=True,
                  dpc=0.0,limit = 256, path='',dconv = "",wf = False,\
-                 with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2):
-        super(Encoder, self).__init__()
+                 with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2,*args, **kwargs):
+        super(Encoder, self).__init__(*args, **kwargs)
         
         self.ngpu= ngpu
         self.gang = range(ngpu)
@@ -185,7 +185,7 @@ class Encoder_Unic(BasicEncoderDataParallele):
                  dpc=0.0,limit = 256, path='',dconv = "",\
                  with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2, wf = False, *args, **kwargs):
         # pdb.set_trace()
-        super(Encoder_Unic, self).__init__()
+        super(Encoder_Unic, self).__init__(*args, **kwargs)
         self.ngpu= ngpu
         self.gang = range(ngpu)
         self.wf = wf
@@ -336,7 +336,7 @@ class Encoder_Unic_Resnet(BasicEncoderDataParallele):
                  dpc=0.0,limit = 256, path='',dconv = "",\
                  with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2, wf = False, *args, **kwargs):
         # pdb.set_trace()
-        super(Encoder_Unic_Resnet, self).__init__()
+        super(Encoder_Unic_Resnet, self).__init__(*args, **kwargs)
         self.ngpu= ngpu
         self.gang = range(ngpu)
         self.wf = wf
@@ -457,7 +457,7 @@ class Encoder_Octave(BasicEncoderDataParallele):
         dpc=0.0,limit = 256, path='',dconv = "",\
         with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2,wf = False, *args, **kwargs):
         
-        super(Encoder_Octave, self).__init__()
+        super(Encoder_Octave, self).__init__(*args, **kwargs)
         self.device = tdev("cuda" if torch.cuda.is_available() else "cpu")
         self.leaky_relu = nn.LeakyReLU(1.0,inplace=True)
 
@@ -508,7 +508,7 @@ class Encoder_ResNet(BasicEncoderDataParallele):
                  dpc=0.0,limit = 256, path='',dconv = "",\
                  with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2,
                  wf = False, *args, **kwargs):
-        super(Encoder_ResNet, self).__init__()
+        super(Encoder_ResNet, self).__init__(*args, **kwargs)
         self.ngpu= ngpu
         self.gang = range(ngpu)
         self.wf = wf

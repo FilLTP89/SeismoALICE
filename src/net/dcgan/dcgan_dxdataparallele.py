@@ -32,20 +32,22 @@ class DCGAN_DxDataParallele(object):
                 module = importlib.import_module(module_name)
                 class_ = getattr(module,classname)
                 return class_(ngpu=ngpu, isize=isize, nc=nc, ncl=ncl, ndf=ndf,  channel = channel, fpd=fpd, act=act, nly=nly,\
-                 ker=ker,std=std,pad=pad, dil=dil,grp=grp,bn=bn,wf=wf, dpc=dpc, limit = limit,extra=extra, batch_size = batch_size,\
-                 n_extra_layers=n_extra_layers, path=path, prob=prob, *args,**kwargs)
+                    ker=ker,std=std,pad=pad, dil=dil,grp=grp,bn=bn,wf=wf, dpc=dpc, limit = limit,extra=extra, batch_size = batch_size,\
+                    n_extra_layers=n_extra_layers, path=path, prob=prob, *args,**kwargs)
             except Exception as e:
-                raise e
                 print("The class ",classname, " does not exit")
+                raise e
+                
         else:
             return DCGAN_Dx(ngpu = ngpu, isize = isize, extra=extra, nc = nc, ncl = ncl, ndf = ndf, fpd = fpd,channel = channel,\
-                        nly = nly, ker=ker ,std=std, pad=pad, dil=dil, grp=grp, bn=bn, wf = wf, dpc=dpc, batch_size = batch_size,\
-                        n_extra_layers = n_extra_layers,limit = limit,path = path, act = act, prob = prob, *args,**kwargs)
+                nly = nly, ker=ker ,std=std, pad=pad, dil=dil, grp=grp, bn=bn, wf = wf, dpc=dpc, batch_size = batch_size,\
+                n_extra_layers = n_extra_layers,limit = limit,path = path, act = act, 
+                prob = prob, *args,**kwargs)
 
 class BasicDCGAN_DxDataParallel(BasicModel):
     """docstring for BasicDCGAN_DxDataParallel"""
-    def __init__(self):
-        super(BasicDCGAN_DxDataParallel, self).__init__()
+    def __init__(self,*args, **kwargs):
+        super(BasicDCGAN_DxDataParallel, self).__init__(*args, **kwargs)
         self.training = True
         self.wf       = True
         self.prc      = []
@@ -212,7 +214,7 @@ class DCGAN_Dx_Lite(BasicDCGAN_DxDataParallel):
     def __init__(self, ngpu, nc, ncl, ndf, nly,act, channel, fpd=1, isize=256, limit = 256,\
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.0, path = '',\
                  prob = False,batch_size =128,n_extra_layers=0, extra = 128, *args,**kwargs):
-        super(DCGAN_Dx_Lite, self).__init__()
+        super(DCGAN_Dx_Lite, self).__init__(*args, **kwargs)
         activation = T.activation(act, nly)
 
         self.cnn = self.block_conv( channel = channel,kernel = ker,\
@@ -240,7 +242,7 @@ class DCGAN_Dx_Resnet(BasicDCGAN_DxDataParallel):
     def __init__(self, ngpu, nc, ncl, ndf, nly,act, channel, fpd=1, isize=256, limit = 256,\
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.0, path = '',\
                  prob = False,batch_size =128,n_extra_layers=0, extra = 128, *args,**kwargs):
-        super(DCGAN_Dx_Resnet, self).__init__()
+        super(DCGAN_Dx_Resnet, self).__init__(*args, **kwargs)
         
         self.cnn = EncoderResnet(in_signals_channels = 6, out_signals_channels=8,
             channels = [6,8,16,32], layers = [2,2,2,2], block = block_2x2
@@ -260,7 +262,7 @@ class DCGAN_Dx_Flatten(BasicDCGAN_DxDataParallel):
     def __init__(self, ngpu, nc, ncl, ndf, nly,act, channel, fpd=1, isize=256, limit = 256,\
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.0, batch_size =128,\
                  path = '', prob = False,n_extra_layers=0, *args,**kwargs):
-        super(DCGAN_Dx_Flatten,self).__init__()
+        super(DCGAN_Dx_Flatten,self).__init__(*args, **kwargs)
 
         activation = T.activation(act, nly)
         self.cnn  = []

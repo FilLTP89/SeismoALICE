@@ -27,7 +27,6 @@ class MetricTracker:
         # writer    : this is a writer like Tensorboard.
         self.writer = writer
         self.index = 0
-        columns.appends('epochs')
         self.columns = columns
         self._data = pd.DataFrame(colums=self.columns)
     

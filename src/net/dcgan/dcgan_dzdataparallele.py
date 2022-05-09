@@ -18,7 +18,7 @@ import copy
 class DCGAN_DzDataParallele(object):
     """docstring for DCGAN_DzDataParallele"""
     def __init__(self,*args, **kwargs):
-        super(DCGAN_DzDataParallele, self).__init__()
+        super(DCGAN_DzDataParallele, self).__init__(*args, **kwargs)
         pass
 
     @staticmethod
@@ -47,12 +47,12 @@ class DCGAN_DzDataParallele(object):
 
 class BasicDCGAN_DzDataParallel(BasicModel):
     """docstring for BasicDCGAN_DzDataParallel"""
-    def __init__(self):
-        super(BasicDCGAN_DzDataParallel, self).__init__()
+    def __init__(self,*args, **kwargs):
+        super(BasicDCGAN_DzDataParallel, self).__init__(*args, **kwargs)
         self.training =  True
-        self.prc = []
-        self.exf = []
-        self.final = []
+        self.prc    = []
+        self.exf    = []
+        self.final  = []
 
     def lout(self,nch,padding, dilation, kernel_size, stride):
         """
@@ -103,7 +103,7 @@ class DCGAN_Dz(BasicDCGAN_DzDataParallel):
                  ker=2,std=2,pad=0, dil=1,grp=1,wf=False, dpc=0.250, bias = False, prob=False, batch_size=128,\
                  n_extra_layers=0, path='',*args,**kwargs):
 
-        super(DCGAN_Dz, self).__init__()
+        super(DCGAN_Dz, self).__init__(*args, **kwargs)
 
         device = tdev("cuda" if torch.cuda.is_available() else "cpu")
         #activation functions
@@ -199,7 +199,7 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
     def __init__(self,ngpu, nc, ndf, nz, nly, act, channel, bn, fpd=0,ncl = 512,limit = 512,extra = 128,\
                  ker=2,std=2,pad=0, dil=1,grp=1,wf=False, dpc=0.250, bias = False, prob=False,batch_size=128,\
                  n_extra_layers=0, path='',*args,**kwargs):
-        super(DCGAN_Dz_Lite, self).__init__()
+        super(DCGAN_Dz_Lite, self).__init__(*args, **kwargs)
         
         acts      = T.activation(act, nly)
         self.cnn1 = []
@@ -254,12 +254,12 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
             xr = xr.detach()
         return xr
 
-class DCGAN_Dz_Resnet(object):
+class DCGAN_Dz_Resnet(BasicDCGAN_DzDataParallel):
     """docstring for DCGAN_Dz_Resnet"""
-    def __init__(elf,ngpu, nc, ndf, nz, nly, act, channel, bn, fpd=0,ncl = 512,limit = 512,extra = 128,\
+    def __init__(self,ngpu, nc, ndf, nz, nly, act, channel, bn, fpd=0,ncl = 512,limit = 512,extra = 128,\
                  ker=2,std=2,pad=0, dil=1,grp=1,wf=False, dpc=0.250, bias = False, prob=False,batch_size=128,\
                  n_extra_layers=0, path='',*args,**kwargs):
-        super(DCGAN_Dz_Resnet, self).__init__()
+        super(DCGAN_Dz_Resnet, self).__init__(*args, **kwargs)
 
         self.cnn = DecoderResnet(in_signals_channels = 16, 
                 out_signals_channels=32,
@@ -281,7 +281,7 @@ class DCGAN_Dz_Flatten(BasicDCGAN_DzDataParallel):
     def __init__(self,ngpu, nc, ndf, nz, nly, act, channel, bn, fpd=0,ncl = 512,limit = 512,extra = 128,\
                  ker=2,std=2,pad=0, dil=1,grp=1,wf=False, dpc=0.250, bias = False, prob=False,batch_size=128,\
                  n_extra_layers=0, path='',*args,**kwargs):
-        super(DCGAN_Dz_Flatten, self).__init__()
+        super(DCGAN_Dz_Flatten, self).__init__(*args, **kwargs)
         acts      = T.activation(act, nly)
         self.cnn1 = []
         self.cnn1 += [UnSqueeze()]

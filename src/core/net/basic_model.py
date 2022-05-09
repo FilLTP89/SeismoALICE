@@ -3,8 +3,9 @@ import torch.nn as nn
 
 
 class BasicModel(nn.Module):  
-    def __init__(self):
+    def __init__(self, model_name=None, *args, **kwargs):
         super(BasicModel, self).__init__()
+        self.model_name = model_name
         
 
     @property

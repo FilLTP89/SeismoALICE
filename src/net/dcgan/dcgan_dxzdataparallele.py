@@ -48,8 +48,8 @@ class DCGAN_DXZDataParallele(object):
 
 class BasicDCGAN_DXZDataParallele(BasicModel):
     """docstring for BasicDCGAN_DXZDataParallele"""
-    def __init__(self):
-        super(BasicDCGAN_DXZDataParallele, self).__init__()
+    def __init__(self,*args, **kwargs):
+        super(BasicDCGAN_DXZDataParallele, self).__init__(*args, **kwargs)
         self.training = True
         self.net   = []
         self.final = []
@@ -95,7 +95,7 @@ class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
         ker=2,std=2,pad=0, dil=1,grp=1, path='', extra=128,batch_size = 128,\
         bn=True,wf=False, dpc=0.25, limit =1024, prob = False,\
         n_extra_layers= 1, bias=False, *args, **kwargs):
-        super(DCGAN_DXZ, self).__init__()
+        super(DCGAN_DXZ, self).__init__(*args, **kwargs)
         self.ngpu =  ngpu
         self.gang = range(self.ngpu)
         self.wf = wf
@@ -214,7 +214,7 @@ class DCGAN_DXZ_Flatten(BasicDCGAN_DXZDataParallele):
         ker=2,std=2,pad=0, dil=1,grp=1, path='',extra=128,batch_size = 128,\
         bn=True,wf=False, dpc=0.25, limit =1024, prob = False,\
         n_extra_layers= 1, bias=False, *args, **kwargs):
-        super(DCGAN_DXZ_Flatten, self).__init__()
+        super(DCGAN_DXZ_Flatten, self).__init__(*args, **kwargs)
 
         activation = T.activation(act, nly)
         self.cnn  = []
@@ -258,7 +258,7 @@ class DCGAN_DXZ_Flatten_Lite(BasicDCGAN_DXZDataParallele):
         ker=2,std=2,pad=0, dil=1,grp=1, path='',extra=128,batch_size = 128,\
         bn=True,wf=False, dpc=0.25, limit =1024, prob = False,\
         n_extra_layers= 1, bias=False, *args, **kwargs):
-        super(DCGAN_DXZ_Flatten_Lite, self).__init__()
+        super(DCGAN_DXZ_Flatten_Lite, self).__init__(*args, **kwargs)
 
         activation = T.activation(act, nly)
         self.cnn  = []
