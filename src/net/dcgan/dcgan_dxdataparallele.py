@@ -101,7 +101,7 @@ class DCGAN_Dx(BasicDCGAN_DxDataParallel):
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.0, path = '', prob = False,
                  n_extra_layers=0, extra = 128, *args,**kwargs):
 
-        super(DCGAN_Dx, self).__init__()
+        super(DCGAN_Dx, self).__init__(*args, **kwargs)
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
         self.cnn  = []

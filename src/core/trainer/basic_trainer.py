@@ -16,11 +16,11 @@ class BasicTrainer:
         self.losses     = losses
         self.optimizer  = optimizer
 
-        self.checkpoint_dir = self.config.checkpoint_dir
-        self.save_epoch     = self.config.save_epoch
+        self.root_checkpoint = self.config.root_checkpoint
+        self.save_checkpoint = self.config.save_checkpoint
         
         self.start_epoch = 1
-        if not None in self.actions: 
+        if self.actions is not None: 
             self.on_resuming_checkpoint()
         else:
             self.logger.info("No resumed models")
@@ -35,7 +35,7 @@ class BasicTrainer:
 
 
     def train(self):
-        for epoch in trange(self.start_epoch, self.epochs +1):
+        for epoch in trange(self.start_epoch, self.config.niter +1):
             self.on_training_epoch(epoch)
             self.on_validation_epoch(epoch)
             self.on_saving_checkpoint(epoch)
@@ -48,7 +48,7 @@ class BasicTrainer:
         raise NotImplementedError
 
     def on_saving_checkpoint(self, epoch):
-        if epoch%self.save_epoch == 0:
+        if epoch%self.save_checkpoint == 0:
             self.logger.info('saving models ...')
             for model in self.models:
                 state = {
@@ -58,7 +58,7 @@ class BasicTrainer:
                     'loss'                  :self.losses
                 }
 
-                filename = str(self.checkpoint_dir /'checkpoint-epoch{}-{}'.format(model.name, epoch))
+                filename = str(self.root_checkpoint /'checkpoint-epoch{}-{}'.format(model.name, epoch))
                 torch.save(state, filename)
                 self.logger.info("saving checkpoint-epoch : {}".format(filename))
 

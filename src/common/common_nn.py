@@ -455,7 +455,7 @@ def tie_weights(m):
         except: 
             pass
 
-def generate_latent_variable(batch, nch_zd=4,nzd=4, nch_zf = 128,nzf = 128,std=1):
+def generate_latent_variable(batch, nch_zd=4, nch_zf = 4, nzd=128, nzf = 128,std=1):
         zyy  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
         zxx  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
         zyx  = torch.zeros([batch,nch_zf,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
@@ -507,17 +507,19 @@ def reset_net(nets,func=set_weights,lr=0.0002,b1=b1,b2=b2,
 
 def count_parameters(models):
     from prettytable import PrettyTable
-    table = PrettyTable(["Modules", "Parameters"])
+    table = PrettyTable(["Modules", "Parameters","Network Names"])
     table.int_format = '6'
     total_params = 0
     for model in models:
         try:
             param = model.module.number_parameter
-            name  = model.module.__class__.__name__
+            module_name  = model.module.__class__.__name__
+            network_name = model.module.model_name
         except:
             param = model.number_parameter
-            name  = model.__class__.__name__
-        table.add_row([name, param])
+            module_name  = model.__class__.__name__
+            network_name = model.model_name
+        table.add_row([module_name, param,network_name])
         total_params+=param
     print(table)
     print("Total Trainable Params: {:,}".format(total_params))
