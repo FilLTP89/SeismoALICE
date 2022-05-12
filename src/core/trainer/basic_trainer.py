@@ -49,6 +49,7 @@ class BasicTrainer:
 
     def on_saving_checkpoint(self, epoch):
         if epoch%self.save_checkpoint == 0:
+            breakpoint()
             self.logger.info('saving models ...')
             for model in self.models:
                 state = {

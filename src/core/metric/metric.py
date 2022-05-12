@@ -1,5 +1,5 @@
-import re
 import pandas as pd
+import numpy as np
 
 class MetricTracker:
     """
@@ -27,32 +27,33 @@ class MetricTracker:
         # writer    : this is a writer like Tensorboard.
         
         self.writer     = writer
-        self.index      = 0
         self.columns    = columns
         self.keys       = {columns_keys for columns_keys in columns.keys()}
-        self._data      = pd.DataFrame(columns=self.keys)
+        self._data      = pd.DataFrame(columns=self.keys, dtype=np.float32)
     
     def set(self, _values):
         #add values to columns
         self.columns = _values
+    
+    def get(self,column,epoch):
+        #get a specific column and average value for a specified epochs 
+        return self._data.loc[self._data['epochs'] == epoch][column].mean()
 
     def update(self):
         # this function should save values in a row
-        for key, value in self.columns.items():
-            self._data[self.index, key] = value
-        self.index += 1 
+        self._data = self._data.append({key:value for key, value in self.columns.items()}, ignore_index=True)
+        
 
     def write(self,epoch):
         # make the mean of the loss and pass it to the writer
         if self.writer is not None:
             for column in self.keys:
-                value = self._data[self._data.epochs == epoch][column].mean()
+                value = self._data.loc[self._data['epochs'] == epoch][column].mean()
                 self.writer.add_scalar(column, value, epoch)
     
-    def save_metric(self,dir_name):
-        return self._data.to_excel(f'{dir_name}/losses',
-                sheet_name='losses',index=True)
+    def save_metric(self,dir_name, filename):
+        return self._data.to_excel(f'{dir_name}/{filename}',
+                sheet_name=filename, index=True)
 
     def resume_metric(self,file_path):
         self._data = pd.read_excel(file_path)
-        self.index = self._data.index[-1]
