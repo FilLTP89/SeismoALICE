@@ -38,12 +38,12 @@ __email__ = "filippo.gatti@centralesupelec.fr"
 __status__ = "Beta"
 
 # coder en dure dans le programme 
-class investigator(object):
+class Investigator(object):
     """
         This class have de responsability to invesitigate the neural networks.
     """
     def __init__(self,cv):
-        super(investigator, self).__init__()
+        super(Investigator, self).__init__()
         globals().update(cv)
         globals().update(opt.__dict__)
         """
@@ -84,7 +84,8 @@ class investigator(object):
         self.Gy  = net.Decoder(self.opt.config['Gy'], self.opt)
 
         self.Dy  = net.DCGAN_Dx( self.opt.config['Dy' ], self.opt)
-        # self.Dsy = net.DCGAN_DXZ(self.opt.config['Dsy'], self.opt)
+        self.Dsy = net.DCGAN_DXZ(self.opt.config['Dsy'], self.opt)
+        
         breakpoint()
         # loading saved weight of the network
         app.logger.info(f'loading data from {network_path["encoder"]} ...')
@@ -96,8 +97,8 @@ class investigator(object):
         app.logger.info(f'loading data from {network_path["Dy"]} ...')
         self.Dy.load_state_dict(tload(network_path["Dy"])['model_state_dict'])
 
-        # app.logger.info(f'loading data from {network_path["Dsy"]} ...')
-        # self.Dsy.load_state_dict(tload(network_path["Dsy"])['model_state_dict'])
+        app.logger.info(f'loading data from {network_path["Dsy"]} ...')
+        self.Dsy.load_state_dict(tload(network_path["Dsy"])['model_state_dict'])
 
         self.FGf = [self.Fyx, self.Gy,self.Dy, self.Dsy]
         # breakpoint()

@@ -32,16 +32,20 @@ class MetricTracker:
         self.keys       = {columns_keys for columns_keys in columns.keys()}
         self._data      = pd.DataFrame(columns=self.keys)
     
+    def set(self, _values):
+        #add values to columns
+        self.columns = _values
+
     def update(self):
         # this function should save values in a row
-        for key, value in self.columns:
+        for key, value in self.columns.items():
             self._data[self.index, key] = value
         self.index += 1 
 
     def write(self,epoch):
         # make the mean of the loss and pass it to the writer
         if self.writer is not None:
-            for column, _ in self.keys:
+            for column in self.keys:
                 value = self._data[self._data.epochs == epoch][column].mean()
                 self.writer.add_scalar(column, value, epoch)
     

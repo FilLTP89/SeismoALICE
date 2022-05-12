@@ -66,7 +66,7 @@ class BasicTrainer:
         for model, path in zip(self.models, self.strategy) :
             self.logger.info("Loading checkpoint-epoch : {}".format(path))
             checkpoint = torch.load(path)
-            self.start_epoch = checkpoint['epoch']+1
             model.load_state_dict(checkpoint['state_dict'])
             self.optimizer.load_state_dict(checkpoint['optmizer'])
+        self.start_epoch = checkpoint['epoch']+1
         self.logger.info("Checkpoint loaded. Resume training from epoch {}".format(self.start_epoch))

@@ -12,9 +12,9 @@ class Agent:
         self.accelerator  = accelerator
     
     def track_gradient_change(self,gradient_values,nets):
-        breakpoint()
-        for net in nets:
-            gradient_values[net.module.model_name] = track_gradient_change(net)
+        _values = {net.module.model_name : track_gradient_change(net) for net in nets}
+        gradient_values.set(_values)
+        gradient_values.update()
     
     def track_weight_change(self, writer, tag, model,epoch):
         for idx in range(len(model)):
