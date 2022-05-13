@@ -26,7 +26,7 @@ class BasicTrainer:
             self.logger.info("No resumed models")
 
     @abstractmethod
-    def on_training_epoch(self, epoch):
+    def on_training_epoch(self, epoch, *args, **kwargs):
         """
         Training logic for an epoch
         :param epoch: Current epoch number
@@ -35,22 +35,22 @@ class BasicTrainer:
 
 
     def train(self):
-        for epoch in trange(self.start_epoch, self.config.niter +1):
-            self.on_training_epoch(epoch)
-            self.on_validation_epoch(epoch)
-            self.on_saving_checkpoint(epoch)
+        bar = trange(self.start_epoch, self.config.niter +1)
+        for epoch in bar:
+            self.on_training_epoch(epoch,bar)
+            self.on_validation_epoch(epoch, bar)
+            self.on_saving_checkpoint(epoch, bar)
 
     @abstractmethod
-    def on_validation_epoch(self, epoch):
+    def on_validation_epoch(self, epoch,*args, **kwargs):
         """ Validation of the training network
         :param epoch: Current epoch number
         """
         raise NotImplementedError
 
-    def on_saving_checkpoint(self, epoch):
+    def on_saving_checkpoint(self, epoch, bar,*args, **kwargs):
         if epoch%self.save_checkpoint == 0:
-            breakpoint()
-            self.logger.info('saving models ...')
+            bar.set_postfix(satus = f'saving models at {epoch}...')
             for model in self.models:
                 state = {
                     'epoch'                 :epoch,
@@ -58,7 +58,6 @@ class BasicTrainer:
                     'optimizer_state_dict'  :self.optmizer.state_dict(),
                     'loss'                  :self.losses
                 }
-
                 filename = str(self.root_checkpoint /'checkpoint-epoch{}-{}'.format(model.name, epoch))
                 torch.save(state, filename)
                 self.logger.info("saving checkpoint-epoch : {}".format(filename))
