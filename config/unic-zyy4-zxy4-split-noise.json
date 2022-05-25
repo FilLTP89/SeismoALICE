@@ -84,7 +84,7 @@
         "nlayers"   :2, 
         "channel"   :[1,64,128],
         "kernel"    :[3,3],
-        "strides"   :[1,1],
+        "strides"   :[2,2],
         "dilation"  :[1,1],
         "outpads"   :[0,0],
         "padding"   :[1,1],

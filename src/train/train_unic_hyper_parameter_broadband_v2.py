@@ -326,6 +326,7 @@ class trainer(object):
        
     def discriminate_xz(self,x,xr,z,zr):
         # Discriminate real
+        breakpoint()
         wnx,wnz,*others = noise_generator(x.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
         ftz         = self.Dzf(zcat(zr,wnz)) #--OK: no batchNorm
         ftx         = self.Dx(zcat(x,wnx)) #--with batchNorm
@@ -347,7 +348,7 @@ class trainer(object):
     
     def discriminate_yz(self,y,yr,z,zr):
         # Discriminate real
-        
+        breakpoint()
         wny,wnz,*others = noise_generator(y.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
         ftz         = self.Dzb(zcat(zr,wnz)) #--OK : no batchNorm
         ftx         = self.Dy(zcat(y,wny)) # --OK : with batchNorm
@@ -921,9 +922,9 @@ class trainer(object):
                     zyy.data, zyx.data = zyy[index[mask]],zyx[index[mask]]
             # In the training dataset    
                 for _ in range(1):
-                    self.alice_train_discriminator_adv(y,zyy,zyx,x,epoch, is_trainig=True)                 
+                    self.alice_train_discriminator_adv(y,zyy,zyx,x,epoch, is_training=True)                 
                 for _ in range(1):
-                    self.alice_train_generator_adv(y,zyy,zyx,x,epoch, self.writer_histo, is_trainig=True)
+                    self.alice_train_generator_adv(y,zyy,zyx,x,epoch, self.writer_histo, is_training=True)
                 app.logger.debug(f'Epoch [{epoch}/{self.opt.niter}]\tStep [{b}/{total_step-1}]')
                 
                 if epoch%20 == 0 and self.trial== None:
@@ -944,9 +945,9 @@ class trainer(object):
             # In validation dataset
             for b, batch in enumerate(self.vld_loader):
                 for _ in range(1):
-                    self.alice_train_discriminator_adv(y,zyy,zyx,x,epoch, is_trainig=False)                 
+                    self.alice_train_discriminator_adv(y,zyy,zyx,x,epoch, is_training=False)                 
                 for _ in range(1):
-                    self.alice_train_generator_adv(y,zyy,zyx,x,epoch, self.writer_histo, is_trainig=False)
+                    self.alice_train_generator_adv(y,zyy,zyx,x,epoch, self.writer_histo, is_training=False)
 
             bar.set_postfix(Gloss = Gloss, Gloss_zxy = Gloss_zxy, Dloss = Dloss) 
             if epoch%250 == 0 and self.trial == None:
