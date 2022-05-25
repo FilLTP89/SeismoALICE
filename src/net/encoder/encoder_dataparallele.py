@@ -282,13 +282,13 @@ class Encoder_Unic(BasicEncoderDataParallele):
 
         self.branch_common +=[
             nn.Flatten(start_dim = 1, end_dim=2),
-            Linear(lout_zyx*channel[-1],128),
+            Linear(lout_zyx*channel_com[-1],128),
             nn.LeakyReLU(1.0,inplace=True)
         ]
 
         self.branch_broadband +=[
             nn.Flatten(start_dim = 1, end_dim=2),
-            Linear(lout_zy*channel[-1],384),
+            Linear(lout_zy*channel_bb[-1],384),
             nn.LeakyReLU(1.0,inplace=True)
         ]
         # self.branch_broadband.append(Squeeze())

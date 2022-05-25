@@ -16,6 +16,7 @@ from tools.generate_noise import noise_generator
 from torch.optim.lr_scheduler import MultiStepLR
 import torch.nn as nn
 import random
+import copy
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 from factory.conv_factory import *
@@ -110,7 +111,7 @@ class trainer(object):
 
         # Some intermediate lossse are stocked here. This values help use see if the program 
         # converges or not.
-        self.losses     = {
+        self.losses_train     = {
             # Dloss for ALI and cycle consistency
             'Dloss':[0],'Dloss_ali':[0],'Dloss_ali_y':[0],'Dloss_ali_x':[0],
             # Dloss for marginals
@@ -126,7 +127,7 @@ class trainer(object):
             'Gloss_rec_zx':[0],
             'Gloss_rec_zxy':[0],'Gloss_rec_x':[0],'kstestz':[0],
         }
-
+        self.losses_val = copy.deepcopy(self.losses_train)
         self.gradients = {
             'Fxy':[0],'Gy':[0],
             'Dy':[0],'Dx':[0],'Dsy':[0],'Dsx':[0],'Dzb':[0], 'Dszb':[0],
@@ -156,7 +157,7 @@ class trainer(object):
             self.style='ALICE'
             # act = acts[self.style]
             n = self.strategy['unique']
-
+            breakpoint()
             self.Fxy  = net.Encoder(opt.config['F'],  opt)
             self.Gy  = net.Decoder(opt.config['Gy'], opt)
             # self.Gx  = net.Decoder(opt.config['Gx'], opt)
@@ -455,7 +456,7 @@ class trainer(object):
     #     return Dreal,Dfake
 
     # @profile
-    def alice_train_discriminator_adv(self,y,zyy,zxy, x):
+    def alice_train_discriminator_adv(self,y,zyy,zxy, x,epoch, is_training=True):
         # This functions is training the discriminators.
         # We calculate the ALICE + marginal for y and x
         # The loss ALICE is the sum of the loss ALI and CE loss
@@ -580,37 +581,39 @@ class trainer(object):
         # Total losses
         Dloss               = Dloss_ali + Dloss_marginal
 
-        Dloss.backward()
-        self.oDyxz.step()
-        # breakpoint()
-        self.gradients['Dy' ].append(self.track_gradient_change(self.Dy))
-        self.gradients['Dsy'].append(self.track_gradient_change(self.Dsy))
-        self.gradients['Dzb'].append(self.track_gradient_change(self.Dzb))
-        self.gradients['Dyz'].append(self.track_gradient_change(self.Dyz))
+        losses = self.losses_val
+        if is_training:
+            losses =  self.losses_train
+            Dloss.backward()
+            self.oDyxz.step()
+            # breakpoint()
+            self.gradients['Dy' ].append(self.track_gradient_change(self.Dy))
+            self.gradients['Dsy'].append(self.track_gradient_change(self.Dsy))
+            self.gradients['Dzb'].append(self.track_gradient_change(self.Dzb))
+            self.gradients['Dyz'].append(self.track_gradient_change(self.Dyz))
 
-        self.gradients['Dszb'].append(self.track_gradient_change(self.Dszb))
-        self.gradients['Dx' ].append(self.track_gradient_change(self.Dx))
-        self.gradients['Dxz'].append(self.track_gradient_change(self.Dxz))
-        self.gradients['Dsx'].append(self.track_gradient_change(self.Dsx))
-        self.gradients['Dszf'].append(self.track_gradient_change(self.Dszf))
-        self.gradients['Dzf'].append(self.track_gradient_change(self.Dzf))
-
-        zerograd(self.optz)
+            self.gradients['Dszb'].append(self.track_gradient_change(self.Dszb))
+            self.gradients['Dx' ].append(self.track_gradient_change(self.Dx))
+            self.gradients['Dxz'].append(self.track_gradient_change(self.Dxz))
+            self.gradients['Dsx'].append(self.track_gradient_change(self.Dsx))
+            self.gradients['Dszf'].append(self.track_gradient_change(self.Dszf))
+            self.gradients['Dzf'].append(self.track_gradient_change(self.Dzf))
+            zerograd(self.optz)
         # clipweights(self.Dnets)
         
-        self.losses['Dloss'         ].append(Dloss.tolist())
-        self.losses['Dloss_ali'     ].append(Dloss_ali.tolist())
-        self.losses['Dloss_ali_y'   ].append(Dloss_ali_y.tolist())
-        self.losses['Dloss_ali_x'   ].append(Dloss_ali_x.tolist())
+        losses['Dloss'         ].append(Dloss.tolist())
+        losses['Dloss_ali'     ].append(Dloss_ali.tolist())
+        losses['Dloss_ali_y'   ].append(Dloss_ali_y.tolist())
+        losses['Dloss_ali_x'   ].append(Dloss_ali_x.tolist())
 
-        self.losses['Dloss_marginal'    ].append(Dloss_marginal.tolist())
-        self.losses['Dloss_marginal_y'  ].append(Dloss_marginal_y.tolist())
-        self.losses['Dloss_marginal_zd' ].append(Dloss_marginal_zd.tolist())
-        self.losses['Dloss_marginal_x'  ].append(Dloss_marginal_x.tolist())
-        self.losses['Dloss_marginal_zf' ].append(Dloss_marginal_zf.tolist())
+        losses['Dloss_marginal'    ].append(Dloss_marginal.tolist())
+        losses['Dloss_marginal_y'  ].append(Dloss_marginal_y.tolist())
+        losses['Dloss_marginal_zd' ].append(Dloss_marginal_zd.tolist())
+        losses['Dloss_marginal_x'  ].append(Dloss_marginal_x.tolist())
+        losses['Dloss_marginal_zf' ].append(Dloss_marginal_zf.tolist())
 
     # @profile
-    def alice_train_generator_adv(self,y,zyy, zxy, x, epoch, trial_writer=None):
+    def alice_train_generator_adv(self,y,zyy, zxy, x, epoch, trial_writer=None, is_training=True):
         # This functions is training the auto-encoder (encoder + decoder). But, we continue
         # to train the discriminators for the traing, according the ALICE algorithe. As 
         # we do in the alice_train_discriminator, we will aslo calculate the marginals. 
@@ -811,59 +814,60 @@ class trainer(object):
                         Gloss_marginal+ 
                         Gloss_rec*10.
                     )   
-
-        if epoch%25 == 0:
-            _, pvalue = is_gaussian(zyy_rec)
-            app.logger.debug("Probability to be gaussian {}".format(pvalue))
-            self.losses['kstestz'].append(pvalue)
-            writer = self.writer_debug if trial_writer == None else trial_writer
-            for idx in range(opt.batchSize//torch.cuda.device_count()):
-                writer.add_histogram("common[z2]/zyx", zyx_rec[idx,:], epoch)
-                if idx== 20: 
-                    break
-            for idx in range(opt.batchSize//torch.cuda.device_count()):
-                writer.add_histogram("common[z2]/zxy", zxy_rec[idx,:], epoch)
-                if idx== 20: 
-                    break
-            for idx in range(opt.batchSize//torch.cuda.device_count()):
-                writer.add_histogram("specific[z1]/zyy", zyy_rec[idx,:], epoch)
-                if idx== 20: 
-                    break
-            for idx in range(opt.batchSize//torch.cuda.device_count()):
-                writer.add_histogram("specific[z1]/zxx", zxx_rec[idx,:], epoch)
-                if idx== 20: 
-                    break
-        
-        Gloss.backward()
-        self.oGyx.step()
-        self.gradients['Fxy'].append(self.track_gradient_change(self.Fxy.module))
-        self.gradients['Gy'].append(self.track_gradient_change(self.Gy.module))
-        zerograd(self.optz)
+        losses = self.losses_val
+        if is_training:
+            if epoch%25 == 0:
+                _, pvalue = is_gaussian(zyy_rec)
+                app.logger.debug("Probability to be gaussian {}".format(pvalue))
+                self.losses_train['kstestz'].append(pvalue)
+                writer = self.writer_debug if trial_writer == None else trial_writer
+                for idx in range(opt.batchSize//torch.cuda.device_count()):
+                    writer.add_histogram("common[z2]/zyx", zyx_rec[idx,:], epoch)
+                    if idx== 20: 
+                        break
+                for idx in range(opt.batchSize//torch.cuda.device_count()):
+                    writer.add_histogram("common[z2]/zxy", zxy_rec[idx,:], epoch)
+                    if idx== 20: 
+                        break
+                for idx in range(opt.batchSize//torch.cuda.device_count()):
+                    writer.add_histogram("specific[z1]/zyy", zyy_rec[idx,:], epoch)
+                    if idx== 20: 
+                        break
+                for idx in range(opt.batchSize//torch.cuda.device_count()):
+                    writer.add_histogram("specific[z1]/zxx", zxx_rec[idx,:], epoch)
+                    if idx== 20: 
+                        break
+            
+            Gloss.backward()
+            self.oGyx.step()
+            self.gradients['Fxy'].append(self.track_gradient_change(self.Fxy.module))
+            self.gradients['Gy'].append(self.track_gradient_change(self.Gy.module))
+            zerograd(self.optz)
          
-        self.losses['Gloss'      ].append(Gloss.tolist())
-        self.losses['Gloss_ali'  ].append(Gloss_ali.tolist())
-        self.losses['Gloss_ali_x'].append(Gloss_ali_x.tolist())
-        self.losses['Gloss_ali_y'].append(Gloss_ali_y.tolist())
+        losses['Gloss'      ].append(Gloss.tolist())
+        losses['Gloss_ali'  ].append(Gloss_ali.tolist())
+        losses['Gloss_ali_x'].append(Gloss_ali_x.tolist())
+        losses['Gloss_ali_y'].append(Gloss_ali_y.tolist())
 
-        self.losses['Gloss_marginal'    ].append(Gloss_marginal.tolist())
-        self.losses['Gloss_marginal_y'  ].append(Gloss_marginal_y.tolist())
-        self.losses['Gloss_marginal_zd' ].append(Gloss_marginal_zd.tolist())
-        self.losses['Gloss_marginal_x'  ].append(Gloss_marginal_x.tolist())
-        self.losses['Gloss_marginal_zf' ].append(Gloss_marginal_zf.tolist())
+        losses['Gloss_marginal'    ].append(Gloss_marginal.tolist())
+        losses['Gloss_marginal_y'  ].append(Gloss_marginal_y.tolist())
+        losses['Gloss_marginal_zd' ].append(Gloss_marginal_zd.tolist())
+        losses['Gloss_marginal_x'  ].append(Gloss_marginal_x.tolist())
+        losses['Gloss_marginal_zf' ].append(Gloss_marginal_zf.tolist())
 
-        self.losses['Gloss_rec'    ].append(Gloss_rec.tolist())
-        self.losses['Gloss_rec_zd' ].append(Gloss_rec_zd.tolist())
-        self.losses['Gloss_rec_y'  ].append(Gloss_rec_y.tolist())
-        self.losses['Gloss_rec_zx' ].append(Gloss_rec_zx.tolist())
-        self.losses['Gloss_rec_x'  ].append(Gloss_rec_x.tolist())
+        losses['Gloss_rec'    ].append(Gloss_rec.tolist())
+        losses['Gloss_rec_zd' ].append(Gloss_rec_zd.tolist())
+        losses['Gloss_rec_y'  ].append(Gloss_rec_y.tolist())
+        losses['Gloss_rec_zx' ].append(Gloss_rec_zx.tolist())
+        losses['Gloss_rec_x'  ].append(Gloss_rec_x.tolist())
     
-        self.losses['Gloss_rec_zxy'].append(Gloss_rec_zxy.tolist())
+        losses['Gloss_rec_zxy'].append(Gloss_rec_zxy.tolist())
 
-    def generate_latent_variable(self, batch, nch_zd,nzd, nch_zf = 128,nzf = 128):
-        zyy  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
-        zxx  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
-        zyx  = torch.zeros([batch,nch_zf,nzf]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
-        zxy  = torch.zeros([batch,nch_zf,nzf]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
+    def generate_latent_variable(self,batch,nzd = 384,nzf = 128):
+        zyy  = torch.zeros([batch,nzd]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
+        zxx  = torch.zeros([batch,nzd]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
+        zyx  = torch.zeros([batch,nzf]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
+        zxy  = torch.zeros([batch,nzf]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
         return zyy, zyx, zxx, zxy
 
     # @profile
@@ -891,25 +895,20 @@ class trainer(object):
 
             app.logger.info(f'Tensorboard Writer setted up for trial {self.trial.number} ...')
 
-        nch_zd, nzd = 4,128
-        nch_zf, nzf = 4,128
+        nzd = 128
+        nzf = 384
         bar = trange(0,self.opt.niter)
 
         # if self.trial != None:
         #     #forcing the same seed to increase the research of good hyper parameter
         
         for epoch in bar:
-            for b,batch in enumerate(loader):
+            for b,batch in enumerate(self.trn_loader):
                 y,x, *others = batch
                 y   = y.to(app.DEVICE, non_blocking = True)
                 x   = x.to(app.DEVICE, non_blocking = True)
                 
-                zyy,zyx, *other = self.generate_latent_variable(
-                            batch   = len(y),
-                            nzd     = nzd,
-                            nch_zd  = nch_zd,
-                            nzf     = nzf,
-                            nch_zf  = nch_zf)
+                zyy,zyx, *other = self.generate_latent_variable(batch=len(y),nzd=nzd,nzf=nzf)
                 if torch.isnan(torch.max(y)):
                     app.logger.debug("your model contain nan value "
                         "this signals will be withdrawn from the training "
@@ -920,12 +919,12 @@ class trainer(object):
                     y.data = y[index[mask]]
                     x.data = x[index[mask]]
                     zyy.data, zyx.data = zyy[index[mask]],zyx[index[mask]]
-                
+            # In the training dataset    
                 for _ in range(1):
-                    self.alice_train_discriminator_adv(y,zyy,zyx,x)                 
+                    self.alice_train_discriminator_adv(y,zyy,zyx,x,epoch, is_trainig=True)                 
                 for _ in range(1):
-                    self.alice_train_generator_adv(y,zyy,zyx,x,epoch, self.writer_histo)
-                app.logger.debug(f'Epoch [{epoch}/{opt.niter}]\tStep [{b}/{total_step-1}]')
+                    self.alice_train_generator_adv(y,zyy,zyx,x,epoch, self.writer_histo, is_trainig=True)
+                app.logger.debug(f'Epoch [{epoch}/{self.opt.niter}]\tStep [{b}/{total_step-1}]')
                 
                 if epoch%20 == 0 and self.trial== None:
                     for k,v in self.losses.items():
@@ -941,6 +940,13 @@ class trainer(object):
             Gloss_zxy = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss_rec_zxy'][-b:-1])))
             # self.writer_debug.add_scalars('Loss/Main',{'Dloss':Dloss,'Gloss':Gloss},epoch)
             # bar.set_postfix(Gloss = Gloss, Dloss = Dloss)
+
+            # In validation dataset
+            for b, batch in enumerate(self.vld_loader):
+                for _ in range(1):
+                    self.alice_train_discriminator_adv(y,zyy,zyx,x,epoch, is_trainig=False)                 
+                for _ in range(1):
+                    self.alice_train_generator_adv(y,zyy,zyx,x,epoch, self.writer_histo, is_trainig=False)
 
             bar.set_postfix(Gloss = Gloss, Gloss_zxy = Gloss_zxy, Dloss = Dloss) 
             if epoch%250 == 0 and self.trial == None:
