@@ -40,11 +40,11 @@
     },
     "Gy":{
         "nlayers"   :5, 
-        "channel"   :[8,128,64,32,16,3],
+        "channel"   :[1,128,64,32,16,3],
         "kernel"    :[3,3,3,3,3],
-        "strides"   :[2,2,2,2,2],
+        "strides"   :[1,2,2,2,1],
         "dilation"  :[1,1,1,1,1],
-        "outpads"   :[1,1,1,1,1],
+        "outpads"   :[0,1,1,1,0],
         "padding"   :[1,1,1,1,1],
         "dpc"       :0.0,
         "extra"     :128,
@@ -82,7 +82,7 @@
         "limit"     :256},
     "Dzb":{
         "nlayers"   :2, 
-        "channel"   :[16,64,128],
+        "channel"   :[1,64,128],
         "kernel"    :[3,3],
         "strides"   :[1,1],
         "dilation"  :[1,1],
@@ -208,7 +208,7 @@
         "limit"     :256}, 
     "Dzf":{
         "nlayers"   :2, 
-        "channel"   :[8,64,128],
+        "channel"   :[1,64,128],
         "kernel"    :[3,3],
         "strides"   :[1,1],
         "dilation"  :[1,1],
