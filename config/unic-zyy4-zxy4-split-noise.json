@@ -81,7 +81,7 @@
         "bn"        :"True",
         "limit"     :256},
     "Dzb":{
-        "nlayers"   :2, 
+        "nlayers"   :3, 
         "channel"   :[1,8,64,128],
         "kernel"    :[3,3,3],
         "strides"   :[2,2,2],
