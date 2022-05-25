@@ -389,7 +389,7 @@ class trainer(object):
         # We apply in first the same neurol network used to extract the z information
         # from the adversarial losses. Then, we extract the sigmoïd afther 
         # the application of flatten layer,  dense layer
-        
+        breakpoint()
         wnz,*others = noise_generator(z.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
         ftz         = self.Dzb(zcat(z,wnz))
         wnz,*others = noise_generator(ftz.shape,ftz.shape,app.DEVICE,{'mean':0., 'std':self.std})
@@ -421,7 +421,7 @@ class trainer(object):
         # This function extract the probability of the marginal
         # It's reuse the neural network in the joint probability distribution
         # On one hand, we extract the real values.
-        
+        breakpoint()
         wnz,*others = noise_generator(zxy.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std}) 
         ftzxy       = self.Dzf(zcat(zxy,wnz))
         wnz,*others = noise_generator(ftzxy.shape,ftzxy.shape,app.DEVICE,{'mean':0., 'std':self.std})
@@ -895,8 +895,7 @@ class trainer(object):
 
             app.logger.info(f'Tensorboard Writer setted up for trial {self.trial.number} ...')
 
-        nzd = 128
-        nzf = 384
+        nzd, nzf = 384, 128
         bar = trange(0,self.opt.niter)
 
         # if self.trial != None:
