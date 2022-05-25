@@ -106,7 +106,8 @@ class Decoder(BasicDecoderDataParallel):
         if dconv:
             _dconv = Transpose_DConv_62(last_channel = channel[-1], bn = True, dpc = 0.0).network()
 
-        # pdb.set_trace()
+        self.cnn1 +=[UnSqueeze()]
+        
         for i in range(1, nly+1):
             _dpc = 0.0 if i ==nly else dpc
             _bn =  False if i == nly else bn

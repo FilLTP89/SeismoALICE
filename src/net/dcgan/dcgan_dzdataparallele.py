@@ -156,7 +156,7 @@ class DCGAN_Dz(BasicDCGAN_DzDataParallel):
 
         self.net.append(Dpout(dpc = dpc))
         # self.net.append(activation[-1])
-        self.net = self.prc + self.net +  self.final
+        self.net = [UnSqueeze()] + self.prc + self.net +  self.final
         self.net =sqn(*self.net)
         
         # pdb.set_trace()
