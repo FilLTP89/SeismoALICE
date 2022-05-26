@@ -153,13 +153,13 @@ class UnicTrainer(BasicTrainer):
             self.losses_gen_tracker.write(  epoch=epoch, modality = ['train','eval'])
 
     def train_unic_discriminators(self,y,x,zyy,zxy,epoch,modality,net_mode,*args,**kwargs):
-        """ The UnicTrainer class is extended to support different strategy
+        """ The UnicTrainer classe is extended to support different strategy
             WGAN, WGAN-GP, ALICE-explicite, ALICE-implicite
         """
         raise NotImplementedError
     
     def train_unic_generators(self,y,x,zyy,zxy,epoch,modality,net_mode,*args,**kwargs):
-        """ The UnicTrainer class is extended for different stragy of training
+        """ The UnicTrainer classe is extended for different stragy of training
         """
         raise NotImplementedError
 
