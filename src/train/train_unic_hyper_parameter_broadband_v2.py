@@ -1116,33 +1116,27 @@ class trainer(object):
                 
                 tsave({ 'epoch'                 : epoch,
                         'model_state_dict'      : self.Fxy.state_dict(),
-                        'optimizer_state_dict'  : self.oGyx.state_dict(),
-                        'loss'                  : self.losses,},
+                        'optimizer_state_dict'  : self.oGyx.state_dict()},
                         root_checkpoint+'/Fyx.pth')
                 tsave({ 'epoch'                 : epoch,
                         'model_state_dict'      : self.Gy.state_dict(),
-                        'optimizer_state_dict'  : self.oGyx.state_dict(),
-                        'loss'                  : self.losses,},
+                        'optimizer_state_dict'  : self.oGyx.state_dict()},
                         root_checkpoint +'/Gy.pth')
                 tsave({ 'epoch'                 : epoch,
                         'model_state_dict'      : self.Dy.state_dict(),
-                        'optimizer_state_dict'  : self.oDyxz.state_dict(),
-                        'loss'                  :self.losses,},
+                        'optimizer_state_dict'  : self.oDyxz.state_dict()},
                         root_checkpoint +'/Dy.pth')
                 tsave({ 'epoch'                 : epoch,
                         'model_state_dict'      : self.Dsy.state_dict(),
-                        'optimizer_state_dict'  : self.oDyxz.state_dict(),
-                        'loss'                  :self.losses,},
+                        'optimizer_state_dict'  : self.oDyxz.state_dict()},
                         root_checkpoint +'/Dsy.pth')
                 tsave({ 'epoch'                 : epoch,
                         'model_state_dict'      : self.Dx.state_dict(),
-                        'optimizer_state_dict'  : self.oDyxz.state_dict(),
-                        'loss'                  :self.losses,},
+                        'optimizer_state_dict'  : self.oDyxz.state_dict()},
                         root_checkpoint +'/Dx.pth')
                 tsave({ 'epoch'                 : epoch,
                         'model_state_dict'      : self.Dsx.state_dict(),
-                        'optimizer_state_dict'  : self.oDyxz.state_dict(),
-                        'loss'                  :self.losses,},
+                        'optimizer_state_dict'  : self.oDyxz.state_dict()},
                         root_checkpoint +'/Dsx.pth')
                 # tsave({ 'epoch'                 : epoch,
                 #         'model_state_dict'      : self.Dyy.state_dict(),
@@ -1156,33 +1150,27 @@ class trainer(object):
                 #         root_checkpoint +'/Dzzb.pth')
                 tsave({ 'epoch'                 : epoch,
                         'model_state_dict'      : self.Dzb.state_dict(),
-                        'optimizer_state_dict'  : self.oDyxz.state_dict(),
-                        'loss'                  :self.losses,},
+                        'optimizer_state_dict'  : self.oDyxz.state_dict()},
                         root_checkpoint +'/Dzb.pth')
                 tsave({ 'epoch'                 : epoch,
                         'model_state_dict'      : self.Dszb.state_dict(),
-                        'optimizer_state_dict'  : self.oDyxz.state_dict(),
-                        'loss'                  :self.losses,},
+                        'optimizer_state_dict'  : self.oDyxz.state_dict()},
                         root_checkpoint +'/Dszb.pth')
                 tsave({ 'epoch'                 : epoch,
                         'model_state_dict'      : self.Dzf.state_dict(),
-                        'optimizer_state_dict'  : self.oDyxz.state_dict(),
-                        'loss'                  :self.losses,},
+                        'optimizer_state_dict'  : self.oDyxz.state_dict()},
                         root_checkpoint +'/Dzf.pth')
                 tsave({ 'epoch'                 : epoch,
                         'model_state_dict'      : self.Dszf.state_dict(),
-                        'optimizer_state_dict'  : self.oDyxz.state_dict(),
-                        'loss'                  :self.losses,},
+                        'optimizer_state_dict'  : self.oDyxz.state_dict()},
                         root_checkpoint +'/Dszf.pth')
                 tsave({ 'epoch'                 : epoch,
                         'model_state_dict'      : self.Dyz.state_dict(),
-                        'optimizer_state_dict'  : self.oDyxz.state_dict(),
-                        'loss'                  :self.losses,},
+                        'optimizer_state_dict'  : self.oDyxz.state_dict()},
                         root_checkpoint +'/Dyz.pth')
                 tsave({ 'epoch'                 : epoch,
                         'model_state_dict'      : self.Dxz.state_dict(),
-                        'optimizer_state_dict'  : self.oDyxz.state_dict(),
-                        'loss'                  :self.losses,},
+                        'optimizer_state_dict'  : self.oDyxz.state_dict()},
                         root_checkpoint +'/Dxz.pth')
                 # tsave({ 'epoch'                 : epoch,
                 #         'model_state_dict'      : self.Dzyx.state_dict(),
