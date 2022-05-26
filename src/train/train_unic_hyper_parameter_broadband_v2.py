@@ -816,6 +816,7 @@ class trainer(object):
                     )   
         losses = self.losses_val
         if is_training:
+            losses =  self.losses_train
             if epoch%25 == 0:
                 _, pvalue = is_gaussian(zyy_rec)
                 app.logger.debug("Probability to be gaussian {}".format(pvalue))
@@ -925,10 +926,10 @@ class trainer(object):
                     self.alice_train_generator_adv(y,zyy,zyx,x,epoch, self.writer_histo, is_training=True)
                 app.logger.debug(f'Epoch [{epoch}/{self.opt.niter}]\tStep [{b}/{total_step-1}]')
                 
-
-            Gloss = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss'][-b:-1])))
-            Dloss = '{:>5.3f}'.format(np.mean(np.array(self.losses['Dloss'][-b:-1])))
-            Gloss_zxy = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss_rec_zxy'][-b:-1])))
+            # breakpoint()
+            Gloss = '{:>5.3f}'.format(np.mean(np.array(self.losses_train['Gloss'][-b:-1])))
+            Dloss = '{:>5.3f}'.format(np.mean(np.array(self.losses_train['Dloss'][-b:-1])))
+            Gloss_zxy = '{:>5.3f}'.format(np.mean(np.array(self.losses_train['Gloss_rec_zxy'][-b:-1])))
             # self.writer_debug.add_scalars('Loss/Main',{'Dloss':Dloss,'Gloss':Gloss},epoch)
             # bar.set_postfix(Gloss = Gloss, Dloss = Dloss)
 
@@ -1041,7 +1042,7 @@ class trainer(object):
                 if self.study_dir == None:
                     self.writer_debug.add_scalar('Accuracy/Broadband',val_accuracy_bb, epoch)
                     self.writer_debug.add_scalar('Accuracy/Filtered',val_accuracy_fl, epoch)
-                    self.writer_debug.add_scalar('Accuracy/JHybrid',val_accuracy_hb, epoch)
+                    self.writer_debug.add_scalar('Accuracy/Hybrid',val_accuracy_hb, epoch)
 
                 elif self.study_dir!=None:
                     self.writer_accuracy.add_scalar('Accuracy/Broadband',val_accuracy_bb,epoch)

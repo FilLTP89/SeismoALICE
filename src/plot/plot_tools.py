@@ -966,9 +966,9 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             wnx,*others = noise_generator(Xf.shape,[Xf.shape[0],nch_zf,nzf],dev,random_args)
             
             X_inp = zcat(Xf,wnx)
-            _,zfd_gen,*other = Qec(X_inp)
+            zhf_gen,zfd_gen,*other = Qec(X_inp)
 
-            Xr = Pdc(zfd_gen,o0l(zfd_gen))
+            Xr = Pdc(zfd_gen,o0l(zhf_gen))
             Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             Xr_fsa = tfft(Xr,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
@@ -1024,9 +1024,9 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
             # encoder filtered signals
             Xf_inp  = zcat(Xf,wnx)
-            _, zdf_gen, *other = Qec(Xf_inp)
+            zhf_gen, zdf_gen, *other = Qec(Xf_inp)
             # decoder passing guassian noise as hf 
-            wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(dev)
+            wn = torch.empty(zhf_gen.shape).normal_(**app.RNDM_ARGS).to(dev)
             _Xr     = Pdc(zdf_gen,wn)
             # encoder 
             wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
@@ -1158,7 +1158,6 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
     
     if opt is not None:
         vtm = torch.load(os.path.join(opt.dataroot,'vtm.pth'))
-
     if tag=='broadband':
         # rndm_args = {'mean': 0., 'std': 1.0} if std == None else {'mean':0., 'std':std}
         # pass
@@ -1430,7 +1429,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 xt_data.data = xt_data[index[mask]]
                 xf_data.data = xf_data[index[mask]]
                 # zt_data.data = zt_data[index[mask]]
-
+            # breakpoint()
             Xt = Variable(xf_data).to(dev, non_blocking=True)
             Xf = Variable(xf_data).to(dev, non_blocking=True)
             
@@ -1438,10 +1437,10 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             nch, nz = 4,128
             wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
             Xf_inp  = zcat(Xf,wnx)
-            _, zdf_gen, *other = Qec(Xf_inp)
-            wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**app.RNDM_ARGS).to(dev)
+            zhf_gen, zdf_gen, *other = Qec(Xf_inp)
+            wn = torch.empty(zhf_gen.shape).normal_(**app.RNDM_ARGS).to(dev)
             _Xr     = Pdc(zdf_gen,wn)
-            wnx,wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
+            wnx,wnz,*others = noise_generator(Xt.shape,zhf_gen.shape,dev,random_args)
             z2, z1  = Qec(zcat(_Xr,wnx))
             if 'hack' in pfx:
                 zhf = wnz
