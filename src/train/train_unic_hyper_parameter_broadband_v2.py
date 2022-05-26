@@ -128,6 +128,16 @@ class trainer(object):
             'Gloss_rec_zxy':[0],'Gloss_rec_x':[0],'kstestz':[0],
         }
         self.losses_val = copy.deepcopy(self.losses_train)
+        self.disc_train = {
+            'Dreal_yz':[0], 'Dfake_yz':[0],
+            'Dreal_xz':[0], 'Dfake_xz':[0],
+            'Dreal_y':[0],  'Dfake_y':[0],
+            'Dreal_zd':[0], 'Dfake_zd':[0],
+            'Dreal_x':[0],  'Dfake_x':[0],
+            'Dreal_zf':[0], 'Dfake_zf':[0]
+        }
+        self.disc_val = copy.deepcopy(self.disc_train)
+
         self.gradients = {
             'Fxy':[0],'Gy':[0],
             'Dy':[0],'Dx':[0],'Dsy':[0],'Dsx':[0],'Dzb':[0], 'Dszb':[0],
@@ -582,8 +592,10 @@ class trainer(object):
         Dloss               = Dloss_ali + Dloss_marginal
 
         losses = self.losses_val
+        disc   = self.disc_val
         if is_training:
-            losses =  self.losses_train
+            losses  = self.losses_train
+            disc    = self.disc_train
             Dloss.backward()
             self.oDyxz.step()
             # breakpoint()
@@ -599,7 +611,25 @@ class trainer(object):
             self.gradients['Dszf'].append(self.track_gradient_change(self.Dszf))
             self.gradients['Dzf'].append(self.track_gradient_change(self.Dzf))
             zerograd(self.optz)
+        
         # clipweights(self.Dnets)
+        disc['Dreal_y'].append(Dreal_y.mean().tolist())
+        disc['Dfake_y'].append(Dfake_y.mean().tolist())
+
+        disc['Dreal_x'].append(Dreal_x.mean().tolist())
+        disc['Dfake_x'].append(Dfake_x.mean().tolist())
+
+        disc['Dreal_yz'].append(Dreal_yz.mean().tolist())
+        disc['Dfake_yz'].append(Dfake_yz.mean().tolist())
+        
+        disc['Dreal_xz'].append(Dreal_xz.mean().tolist())
+        disc['Dfake_xz'].append(Dfake_xz.mean().tolist())
+        
+        disc['Dreal_zd'].append(Dreal_zd.mean().tolist())
+        disc['Dfake_zd'].append(Dfake_zd.mean().tolist())
+
+        disc['Dreal_zf'].append(Dreal_zf.mean().tolist())
+        disc['Dfake_zf'].append(Dfake_zf.mean().tolist())
         
         losses['Dloss'         ].append(Dloss.tolist())
         losses['Dloss_ali'     ].append(Dloss_ali.tolist())
@@ -946,6 +976,14 @@ class trainer(object):
                         {   'train':np.mean(np.array(v_train[-b:-1])),
                             'eval' :np.mean(np.array(v_val[-b_val:-1])),
                         },epoch)
+
+                for (k_train, v_train), (k_val, v_val) in zip(self.disc_train.items(),self.disc_val.items()):
+                    self.writer_debug.add_scalars('Probability/{}'.format(k_train),
+                        {
+                            'train':np.mean(np.array(v_train[-b:-1])),
+                            'eval' :np.mean(np.array(v_val[-b_val:-1])),
+                        },epoch)
+
                 for k, v in self.gradients.items():
                         self.writer_debug.add_scalar('Gradient/{}'.format(k),
                             np.mean(np.array(v[-b:-1])),epoch)
@@ -1009,7 +1047,7 @@ class trainer(object):
                 
                 # random.seed(opt.manualSeed)
             
-            if epoch%200 == 0:
+            if epoch%20 == 0:
                 val_accuracy_bb, val_accuracy_fl, val_accuracy_hb = self.accuracy()
                 app.logger.info("val_accuracy broadband = {:>5.3f}".format(val_accuracy_bb))
                 app.logger.info("val_accuracy filtered  = {:>5.3f}".format(val_accuracy_fl))
