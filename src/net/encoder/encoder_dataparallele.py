@@ -427,20 +427,39 @@ class Encoder_Unic_Resnet(BasicEncoderDataParallele):
                 self.cnn1 = self.cnn1+cnn1d(channel[i-1], channel[i], acts[i-1], ker=ker[i-1],\
                     std=std[i-1],pad=pad[i-1], dil=dil[i-1], bn=_bn, dpc=_dpc, wn=False)
 
-        # pdb.set_trace()
-        for n in range(1,nly_bb+1):
-            _bn  = False if n==nly_bb else bn
-            _dpc = 0.0   if n==nly_bb else dpc_bb
-            self.branch_broadband += cnn1d(channel_bb[n-1],channel_bb[n],\
-                acts_bb[n-1],ker=ker_bb[n-1],std=std_bb[n-1],\
-                pad=pad_bb[n-1],bn=_bn,dil=dil_bb[n-1],dpc=_dpc,wn=False)
+        # # pdb.set_trace()
+        # for n in range(1,nly_bb+1):
+        #     _bn  = False if n==nly_bb else bn
+        #     _dpc = 0.0   if n==nly_bb else dpc_bb
+        #     self.branch_broadband += cnn1d(channel_bb[n-1],channel_bb[n],\
+        #         acts_bb[n-1],ker=ker_bb[n-1],std=std_bb[n-1],\
+        #         pad=pad_bb[n-1],bn=_bn,dil=dil_bb[n-1],dpc=_dpc,wn=False)
 
-        net = EncoderResnet(in_signals_channels = 32, out_signals_channels=8,
-            channels = [32,64], layers = [2,2], block = block_2x2
-        )
-        self.master         = nn.Sequential(*self.cnn1)
-        self.cnn_common     = net
-        self.cnn_broadband  = nn.Sequential(*self.branch_broadband)
+        # net = EncoderResnet(in_signals_channels = 32, out_signals_channels=8,
+        #     channels = [32,64], layers = [2,2], block = block_2x2
+        # )
+
+        self.branch_common +=[
+            nn.Flatten(start_dim = 1, end_dim=2),
+            Linear(lout_zyx*channel_com[-1],128),
+            nn.LeakyReLU(1.0,inplace=True)
+        ]
+
+        self.branch_broadband +=[
+            nn.Flatten(start_dim = 1, end_dim=2),
+            Linear(lout_zy*channel_bb[-1],384),
+            nn.LeakyReLU(1.0,inplace=True)
+        ]
+
+        self.master = nn.Sequential(*self.cnn1)
+        self.branch_common      = nn.Sequential(*self.branch_common)
+        self.branch_broadband   = nn.Sequential(*self.branch_broadband)
+
+        self.cnn_common         = EncoderResnet(in_signals_channels = 32, out_signals_channels=8,
+                                    channels = [32,64], layers = [2,2], block = block_2x2)
+
+        self.cnn_broadband      = EncoderResnet(in_signals_channels = 32, out_signals_channels=8,
+                                    channels = [32,64], layers = [2,2], block = block_2x2)
 
         # self.cnn_common = nn.Sequential(*(self.cnn1+self.branch_common))
         # self.cnn_broadband = nn.Sequential(*(self.cnn1 + self.branch_broadband))
@@ -450,6 +469,10 @@ class Encoder_Unic_Resnet(BasicEncoderDataParallele):
         z   = self.master(x)
         zyx = self.cnn_common(z)
         zy  = self.cnn_broadband(z)
+
+        #Flatten results
+        zyx = self.branch_common(zyx)
+        zy  = self.branch_broadband(zy)
 
         if not self.training:
             zy, zyx = zy.detach(), zyx.detach()

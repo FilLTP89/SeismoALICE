@@ -293,7 +293,7 @@ class trainer(object):
                 self.oDyxz = reset_net(
                     self.Dnets,
                     func=set_weights,lr = self.rlr,
-                    optim='sgd', b1 = b1, b2 = b2,
+                    optim='rmsprop', b1 = b1, b2 = b2,
                     weight_decay=0.00001
                 )
                 
