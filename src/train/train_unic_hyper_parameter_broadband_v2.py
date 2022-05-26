@@ -157,7 +157,7 @@ class trainer(object):
             self.style='ALICE'
             # act = acts[self.style]
             n = self.strategy['unique']
-            breakpoint()
+            # breakpoint()
             self.Fxy  = net.Encoder(opt.config['F'],  opt)
             self.Gy  = net.Decoder(opt.config['Gy'], opt)
             # self.Gx  = net.Decoder(opt.config['Gx'], opt)
@@ -326,7 +326,7 @@ class trainer(object):
        
     def discriminate_xz(self,x,xr,z,zr):
         # Discriminate real
-        breakpoint()
+        # breakpoint()
         wnx,wnz,*others = noise_generator(x.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
         ftz         = self.Dzf(zcat(zr,wnz)) #--OK: no batchNorm
         ftx         = self.Dx(zcat(x,wnx)) #--with batchNorm
@@ -389,7 +389,7 @@ class trainer(object):
         # We apply in first the same neurol network used to extract the z information
         # from the adversarial losses. Then, we extract the sigmoïd afther 
         # the application of flatten layer,  dense layer
-        breakpoint()
+        # breakpoint()
         wnz,*others = noise_generator(z.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
         ftz         = self.Dzb(zcat(z,wnz))
         wnz,*others = noise_generator(ftz.shape,ftz.shape,app.DEVICE,{'mean':0., 'std':self.std})
@@ -421,7 +421,7 @@ class trainer(object):
         # This function extract the probability of the marginal
         # It's reuse the neural network in the joint probability distribution
         # On one hand, we extract the real values.
-        breakpoint()
+        # breakpoint()
         wnz,*others = noise_generator(zxy.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std}) 
         ftzxy       = self.Dzf(zcat(zxy,wnz))
         wnz,*others = noise_generator(ftzxy.shape,ftzxy.shape,app.DEVICE,{'mean':0., 'std':self.std})
@@ -925,14 +925,6 @@ class trainer(object):
                     self.alice_train_generator_adv(y,zyy,zyx,x,epoch, self.writer_histo, is_training=True)
                 app.logger.debug(f'Epoch [{epoch}/{self.opt.niter}]\tStep [{b}/{total_step-1}]')
                 
-                if epoch%20 == 0 and self.trial== None:
-                    for k,v in self.losses.items():
-                        self.writer_train.add_scalar('Loss/{}'.format(k),
-                            np.mean(np.array(v[-b:-1])),epoch)
-
-                    for k, v in self.gradients.items():
-                        self.writer_debug.add_scalar('Gradient/{}'.format(k),
-                            np.mean(np.array(v[-b:-1])),epoch)
 
             Gloss = '{:>5.3f}'.format(np.mean(np.array(self.losses['Gloss'][-b:-1])))
             Dloss = '{:>5.3f}'.format(np.mean(np.array(self.losses['Dloss'][-b:-1])))
@@ -941,12 +933,21 @@ class trainer(object):
             # bar.set_postfix(Gloss = Gloss, Dloss = Dloss)
 
             # In validation dataset
-            for b, batch in enumerate(self.vld_loader):
+            for b_val, batch in enumerate(self.vld_loader):
                 for _ in range(1):
                     self.alice_train_discriminator_adv(y,zyy,zyx,x,epoch, is_training=False)                 
                 for _ in range(1):
                     self.alice_train_generator_adv(y,zyy,zyx,x,epoch, self.writer_histo, is_training=False)
-
+            
+            if epoch%20 == 0 and self.trial== None:
+                for (k_train,v_train), (k_val,v_val) in zip(self.losses_train.items(),self.losses_val.items()):
+                    self.writer_train.add_scalars('Loss/{}'.format(k_train),
+                        {   'train':np.mean(np.array(v_train[-b:-1])),
+                            'eval' :np.mean(np.array(v_val[-b_val:-1])),
+                        },epoch)
+                for k, v in self.gradients.items():
+                        self.writer_debug.add_scalar('Gradient/{}'.format(k),
+                            np.mean(np.array(v[-b:-1])),epoch)
             bar.set_postfix(Gloss = Gloss, Gloss_zxy = Gloss_zxy, Dloss = Dloss) 
             if epoch%250 == 0 and self.trial == None:
                 # for k,v in self.losses.items():
