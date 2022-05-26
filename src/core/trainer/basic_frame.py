@@ -11,8 +11,9 @@ class Agent:
         self.logger = logger
         self.accelerator  = accelerator
     
-    def track_gradient_change(self,gradient_values,nets):
-        _values = {net.module.model_name : track_gradient_change(net) for net in nets}
+    def track_gradient_change(self,gradient_values,nets,epoch,*args, **kwargs):
+        _values = {'epochs':epoch,'modality':'train'}
+        _values.update({net.module.model_name : track_gradient_change(net) for net in nets})
         gradient_values.set(_values)
         gradient_values.update()
     

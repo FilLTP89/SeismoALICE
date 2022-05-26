@@ -38,15 +38,26 @@ class BasicTrainer:
         bar = trange(self.start_epoch, self.config.niter +1)
         for epoch in bar:
             self.on_training_epoch(epoch,bar)
-            self.on_validation_epoch(epoch, bar)
+            self.on_validation_epoch(epoch,bar)
+            self.on_test_epoch(epoch, bar)
             self.on_saving_checkpoint(epoch, bar)
 
     @abstractmethod
-    def on_validation_epoch(self, epoch,*args, **kwargs):
-        """ Validation of the training network
-        :param epoch: Current epoch number
+    def on_test_epoch(self, epoch,*args, **kwargs):
+        """ test of the trained network
+            :param epoch: Current epoch number
+            Printing figures and histogram every specified epoch
         """
         raise NotImplementedError
+    
+    @abstractmethod
+    def on_validation_epoch(self,epoch,*args, **kwargs):
+        """ validation of the trained network
+            Do the same as training epoch, but every thing are in eval models
+            required grad of the network, should be at False
+        """
+        raise NotImplementedError
+
 
     def on_saving_checkpoint(self, epoch, bar,*args, **kwargs):
         if epoch%self.save_checkpoint == 0:
@@ -54,7 +65,7 @@ class BasicTrainer:
             for model in self.models:
                 state = {
                     'epoch'                 :epoch,
-                    'model_state_dict'      :model.state_dict(),
+                    'model_state_dict'      :model.module.state_dict(),
                     'optimizer_state_dict'  :self.optmizer.state_dict(),
                     'loss'                  :self.losses
                 }
@@ -66,7 +77,7 @@ class BasicTrainer:
         for model, path in zip(self.models, self.strategy) :
             self.logger.info("Loading checkpoint-epoch : {}".format(path))
             checkpoint = torch.load(path)
-            model.load_state_dict(checkpoint['state_dict'])
+            model.module.load_state_dict(checkpoint['state_dict'])
             self.optimizer.load_state_dict(checkpoint['optmizer'])
         self.start_epoch = checkpoint['epoch']+1
         self.logger.info("Checkpoint loaded. Resume training from epoch {}".format(self.start_epoch))

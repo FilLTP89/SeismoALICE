@@ -11,7 +11,8 @@ def setup_logging( log_config = 'logger/logger_config.log',
         logging_format  = '%(levelname)s:%(message)s'):
     
     logger  = logging.getLogger(__name__)
-    logger.setLevel(default_level)
+    logger.setLevel(logging_level)
+    logging.getLogger('matplotlib').setLevel(logging.WARNING)
 
     formatter   = logging.Formatter(logging_format)
     log_config  = Path(log_config)
