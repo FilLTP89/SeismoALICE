@@ -216,8 +216,8 @@ class Decoder_Resnet(BasicDecoderDataParallel):
             )
         self.net =  _net
 
-    def forward(self,x):
-        z = self.cnn1(x)
+    def forward(self,z_common, z_broadband):
+        z = self.cnn1(zcat(z_common, z_broadband))
         z = self.net(z)
         return z
 

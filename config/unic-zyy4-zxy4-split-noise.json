@@ -39,7 +39,7 @@
             "limit"     :256}
     },
     "Gy":{
-        "name"      :"Resnet"
+        "name"      :"Resnet",
         "nlayers"   :5, 
         "channel"   :[1,128,64,32,16,3],
         "kernel"    :[3,3,3,3,3],
