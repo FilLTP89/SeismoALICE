@@ -208,7 +208,7 @@ class Decoder_Resnet(BasicDecoderDataParallel):
         ]
         self.cnn1 +=[UnSqueeze()]
         self.cnn1 = nn.Sequential(*self.cnn1)
-        
+
         _net = DecoderResnet(in_signals_channels =1,
                 out_signals_channels=3,
                 channels = [16, 32, 64], 
@@ -218,8 +218,8 @@ class Decoder_Resnet(BasicDecoderDataParallel):
 
     def forward(self,x):
         z = self.cnn1(x)
-        x = self.net(z)
-        return x
+        z = self.net(z)
+        return z
 
 class Decoder_Octave(BasicDecoderDataParallel):
     """docstring for Decoder_Octave"""
