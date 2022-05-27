@@ -316,7 +316,7 @@ class trainer(object):
                 else:
                     flagF=False
 
-        self.writer_debug_encoder.add_graph(next(iter(self.F_.children())),torch.randn(128,6,4096).cuda())
+        self.writer_debug_encoder.add_graph(next(iter(self.Fxy.children())),torch.randn(128,6,4096).cuda())
         self.writer_debug_decoder.add_graph(next(iter(self.Gy.children())),(torch.randn(128,128).cuda(), torch.randn(128,384).cuda()))
         # self.writer_hparams_graph_encoder.add_graph(next(iter(self.F_.children())),torch.randn(10,6,4096).cuda())
         # self.writer_hparams_graph_decoder.add_graph(next(iter(self.Gy.children())), (torch.randn(10,4,128).cuda(),torch.randn(10,4,128).cuda()))
