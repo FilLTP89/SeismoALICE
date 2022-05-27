@@ -106,6 +106,15 @@ class Decoder(BasicDecoderDataParallel):
         if dconv:
             _dconv = Transpose_DConv_62(last_channel = channel[-1], bn = True, dpc = 0.0).network()
 
+        # Adding dense hidden layer 
+        self.cnn1 +=[
+            Linear(512,256),
+            nn.LeakyReLU(0.1,inplace=True),
+            Linear(256,128),
+            nn.LeakyReLU(0.1,inplace=True),
+            Linear(128,128),
+            nn.LeakyReLU(1.0,inplace=True)
+        ]
         self.cnn1 +=[UnSqueeze()]
         
         for i in range(1, nly+1):
@@ -189,7 +198,18 @@ class Decoder_Resnet(BasicDecoderDataParallel):
                  bn=True, path='',n_extra_layers=0,*args, **kwargs):
         super(Decoder_Resnet, self).__init__(*args, **kwargs)
         
-        _net = DecoderResnet(in_signals_channels = channel[0],
+        self.cnn1 +=[
+            Linear(512,256),
+            nn.LeakyReLU(0.1,inplace=True),
+            Linear(256,128),
+            nn.LeakyReLU(0.1,inplace=True),
+            Linear(128,128),
+            nn.LeakyReLU(1.0,inplace=True)
+        ]
+        self.cnn1 +=[UnSqueeze()]
+        self.cnn1 = nn.Sequential(*self.cnn1)
+        
+        _net = DecoderResnet(in_signals_channels =1,
                 out_signals_channels=3,
                 channels = [16, 32, 64], 
                 layers = [2,2,2], block=block_2x2
@@ -197,7 +217,8 @@ class Decoder_Resnet(BasicDecoderDataParallel):
         self.net =  _net
 
     def forward(self,x):
-        x = self.net(x)
+        z = self.cnn1(x)
+        x = self.net(z)
         return x
 
 class Decoder_Octave(BasicDecoderDataParallel):

@@ -802,7 +802,7 @@ class trainer(object):
         # Gloss_cycle_zxy      = -self.bce_loss(Dfake_zf, o0l(Dfake_zf))
         # To insure indepenace of zxy fro zy we do that in the L1 loss. 
         #       || zxy  - F(G(zxy,N(0,I)))  ||
-        Gloss_rec_zxy        = torch.mean(torch.abs(zxy - zxy_rec)**2)
+        Gloss_rec_zxy        = torch.mean(torch.abs(zxy - zxy_rec))
         # Secondly, for to match (x,x) and (x, G(F|(x)_zxy,0)) . So the equation that we need to 
         # compute is :
         #       E[log(1-Dxx(x,G(F|(x)_zxy,0)))]
@@ -812,7 +812,7 @@ class trainer(object):
         Gloss_rec_x          = torch.mean(torch.abs(x - x_rec))
         # This loss is 0 of HF of x signal
         #       || F|(G(zxy,0))_zxx         ||
-        Gloss_rec_zx         = torch.mean(torch.abs(zxx_rec)**2)
+        Gloss_rec_zx         = torch.mean(torch.abs(zxx_rec))
         
         # 8. Total Loss
         # Gloss_cycle =(
