@@ -1058,18 +1058,18 @@ class trainer(object):
                 
                 if self.trial == None:
                     bar.set_postfix(status='tracking weight ...')
-                    self.track_weight_change(
-                                writer  = self.writer_debug,
-                                tag     ='F[cnn_common]',
-                                model   = self.Fxy.module.cnn_common.eval(), 
-                                epoch   = epoch
-                    )
-                    self.track_weight_change(
-                                writer  = self.writer_debug,
-                                tag     ='F[cnn_broadband]',
-                                model   = self.Fxy.module.cnn_broadband.eval(), 
-                                epoch   = epoch
-                    )
+                    # self.track_weight_change(
+                    #             writer  = self.writer_debug,
+                    #             tag     ='F[cnn_common]',
+                    #             model   = self.Fxy.module.cnn_common.eval(), 
+                    #             epoch   = epoch
+                    # )
+                    # self.track_weight_change(
+                    #             writer  = self.writer_debug,
+                    #             tag     ='F[cnn_broadband]',
+                    #             model   = self.Fxy.module.cnn_broadband.eval(), 
+                    #             epoch   = epoch
+                    # )
                     self.track_weight_change(
                                 writer  = self.writer_debug,
                                 tag     ='Gy',
