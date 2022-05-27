@@ -13,7 +13,7 @@
         "padding"   :[1,1,1],
         "dpc"       :0.0,
         "extra"     :128,
-        "act"       :"Fed",
+        "act"       :"Gdd",
         "limit"     :256,
         "broadband" :{
             "nlayers"   :3, 
@@ -24,7 +24,7 @@
             "padding"   :[1,1,1],
             "dpc"       :0.0, 
             "extra"     :128,
-            "act"       :"Fed",
+            "act"       :"Gdd",
             "limit"     :256},
         "common":{
             "nlayers"   :3, 

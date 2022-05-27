@@ -149,6 +149,9 @@ class trainer(object):
             self.writer_train = SummaryWriter(f'{opt.summary_dir}/training')
             self.writer_val   = SummaryWriter(f'{opt.summary_dir}/validation')
             self.writer_debug = SummaryWriter(f'{opt.summary_dir}/debug')
+            self.writer_debug_encoder = SummaryWriter(f'{opt.summary_dir}/debug/encoder')
+            self.writer_debug_decoder = SummaryWriter(f'{opt.summary_dir}/debug/decoder')
+
         else:
             hparams_dir         = f'{self.study_dir}/hparams/'
             self.writer_hparams = SummaryWriter(f'{hparams_dir}')
@@ -313,10 +316,11 @@ class trainer(object):
                 else:
                     flagF=False
 
-        # self.writer_debug_encoder.add_graph(next(iter(self.F_.children())),torch.randn(128,6,4096).cuda())
+        self.writer_debug_encoder.add_graph(next(iter(self.F_.children())),torch.randn(128,6,4096).cuda())
+        self.writer_debug_decoder.add_graph(next(iter(self.Gy.children())),(torch.randn(128,128).cuda(), torch.randn(128,384).cuda()))
         # self.writer_hparams_graph_encoder.add_graph(next(iter(self.F_.children())),torch.randn(10,6,4096).cuda())
         # self.writer_hparams_graph_decoder.add_graph(next(iter(self.Gy.children())), (torch.randn(10,4,128).cuda(),torch.randn(10,4,128).cuda()))
-        self.bce_loss = BCE(reduction='mean')
+        self.bce_loss = BCE(reduction='mean').cuda()
         # breakpoint()
         print("Parameters of  Encoder/Decoders ")
         count_parameters(self.FGf)
@@ -988,7 +992,7 @@ class trainer(object):
                         self.writer_debug.add_scalar('Gradient/{}'.format(k),
                             np.mean(np.array(v[-b:-1])),epoch)
             bar.set_postfix(Gloss = Gloss, Gloss_zxy = Gloss_zxy, Dloss = Dloss) 
-            if epoch%250 == 0 and self.trial == None:
+            if epoch%50 == 0 and self.trial == None:
                 # for k,v in self.losses.items():
                 #     self.writer_train.add_scalar('Loss/{}'.format(k),
                 #         np.mean(np.array(v[-b:-1])),epoch)

@@ -442,9 +442,9 @@ class Encoder_Unic_Resnet(BasicEncoderDataParallele):
         self.branch_common +=[
             nn.Flatten(start_dim = 1, end_dim=2),
             Linear(lout_zyx*channel_com[-1],512),
-            nn.LeakyReLU(0.1,inplace=True),
+            nn.ReLU(),
             Linear(512,256),
-            nn.LeakyReLU(0.1,inplace=True),
+            nn.ReLU(),
             Linear(256,128),
             nn.LeakyReLU(1.0,inplace=True)
         ]
@@ -452,9 +452,9 @@ class Encoder_Unic_Resnet(BasicEncoderDataParallele):
         self.branch_broadband +=[
             nn.Flatten(start_dim = 1, end_dim=2),
             Linear(lout_zy*channel_bb[-1],512),
-            nn.LeakyReLU(0.1,inplace=True),
+            nn.ReLU(),
             Linear(512,256),
-            nn.LeakyReLU(0.1,inplace=True),
+            nn.ReLU(),
             Linear(256,384),
             nn.LeakyReLU(1.0,inplace=True)
         ]
