@@ -846,7 +846,7 @@ class trainer(object):
         Gloss       = (
                         Gloss_ali+
                         Gloss_marginal+ 
-                        Gloss_rec*10.
+                        Gloss_rec*100.
                     )   
         losses = self.losses_val
         if is_training:

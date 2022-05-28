@@ -17,6 +17,11 @@ from app.agent.unic.generators import Generators
 from app.agent.unic.discriminators import Discriminators
 
 class UnicTrainer(BasicTrainer):
+    """ docstring for UnicTrainer: 
+        This class is an extention of the Basic Trainer
+        His goal is to trainer encoder_unic and decoder unic over. 
+        So it should be call withe app.unic.generators and app.unic.discriminators agents
+    """
     def __init__(self,cv, trial=None):
         globals().update(cv)
         globals().update(opt.__dict__)
@@ -51,8 +56,8 @@ class UnicTrainer(BasicTrainer):
         }
         self.gradients_disc = {
             'epochs':'',    'modality':'',
-            'Dy':'',   'Dx':'',   'Dsy':'',  'Dsx':'',
-            'Dzb':'',  'Dszb':'', 'Dyz':'',  'Dzf':'',
+            'Dy':'',        'Dx':'',   'Dsy':'',  'Dsx':'',
+            'Dzb':'',       'Dszb':'', 'Dyz':'',  'Dzf':'',
             'Dszf':''
         }
 
@@ -93,11 +98,11 @@ class UnicTrainer(BasicTrainer):
         self.test_loader      = tst_loader
         self.bce_loss         = torch.nn.BCELoss(reduction='mean').cuda()
 
-        super(ALICE,self).__init__(
+        super(UnicTrainer,self).__init__(
             settings  = self.opt, logger = self.logger, config = self.opt,
-            models    = [self.gen_agent,self.disc_agent],
-            optimizer = [self.gen_agent.optimizer,self.disc_agent.optimizer],
-            losses    = [self.losses_disc, self.losses_gens], strategy = self.strategy['unique'])
+            models    = {'generators':self.gen_agent,'discriminators':self.disc_agent},
+            losses    = {'generators':self.losses_disc, 'discriminators':self.losses_gens}, 
+            strategy  = self.strategy['unique'])
         
         
         self.logger.info("Parameters of Generators ")
@@ -152,14 +157,14 @@ class UnicTrainer(BasicTrainer):
             self.losses_disc_tracker.write( epoch=epoch, modality = ['train','eval'])
             self.losses_gen_tracker.write(  epoch=epoch, modality = ['train','eval'])
 
-    def train_unic_discriminators(self,y,x,zyy,zxy,epoch,modality,net_mode,*args,**kwargs):
-        """ The UnicTrainer classe is extended to support different strategy
+    def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
+        """ The UnicTrainer class is extended to support different strategy
             WGAN, WGAN-GP, ALICE-explicite, ALICE-implicite
         """
         raise NotImplementedError
     
-    def train_unic_generators(self,y,x,zyy,zxy,epoch,modality,net_mode,*args,**kwargs):
-        """ The UnicTrainer classe is extended for different stragy of training
+    def train_generators(self,batch,epoch, modality, net_mode, *args, **kwargs):
+        """ The UnicTrainer class is extended for different stragy of training
         """
         raise NotImplementedError
 
@@ -240,16 +245,4 @@ class UnicTrainer(BasicTrainer):
                 bar.set_postfix(status='saving images STFD/GOF Hybrid Broadband ...')
                 self.validation_writer.add_figure('STFD Hybrid Broadband', figure_hb)
                 self.validation_writer.add_figure('GOF Hybrid Broadband', gof_hb)
-    
-    def train_discriminators(self,ncritics,batch,epoch,modality,net_mode,*args,**kwargs):
-        y,x,zyy,zxy = batch
-        for _ in range(ncritics):
-            self.train_unic_discriminators(y,x,zyy,zxy,epoch,modality,net_mode,*args,**kwargs)
-            # training could be WGAN, ALICE implicite ALICE explicite, InfoGAN
-
-    def train_generators(self,ncritics,batch,epoch, modality, net_mode, *args, **kwargs):
-        y,x,zyy,zxy = batch
-        for _ in range(ncritics):
-            self.train_unic_generators(y,x,zyy,zxy,epoch,modality,net_mode,*args,**kwargs)
-            # training could be WGAN, ALICE, InfoGAN
     
