@@ -9,12 +9,12 @@ class WGAN(SimpleTrainer):
         
         losses_disc = {
             'epochs':'',           'modality':'',
-            'Dloss_wgan':'',        
+            'Dloss':'',        
             'Dloss_wgan_y':'',     'Dloss_wgan_zd':''
         }
         losses_gens = {
             'epochs':'',           'modality':'',
-            'Gloss_wgan':'',       'Gloss_wgan_y':'',
+            'Gloss':'',            'Gloss_wgan_y':'',
             'Gloss_wgan_zd':'',
 
             'Gloss_rec':'',        'Gloss_rec_y':'',     
@@ -70,7 +70,6 @@ class WGAN(SimpleTrainer):
             self.losses_disc['epochs'       ] = epoch
             self.losses_disc['modality'     ] = modality
             self.losses_disc['Dloss'        ] = Dloss_wgan.tolist()
-            self.losses_disc['Dloss_wgan'   ] = Dloss_wgan.tolist()
             self.losses_disc['Dloss_wgan_y' ] = Dloss_wgan_y.tolist()
             self.losses_disc['Dloss_wgan_zd'] = Dloss_wgan_zd.tolist()
             self.losses_disc_tracker.update()
@@ -110,16 +109,16 @@ class WGAN(SimpleTrainer):
 
             Gloss_rec   = Gloss_rec_y + Gloss_rec_zd
 
-            Gloss_wgan = Gloss_wgan_y + Gloss_wgan_zd + 10.*Gloss_rec
+            Gloss = Gloss_wgan_y + Gloss_wgan_zd + 10.*Gloss_rec
             if modality == 'train':
-                Gloss_wgan.backward()
+                Gloss.backward()
                 self.gen_agent.optimizer.step()
                 self.gen_agent.track_gradient(epoch)
                 zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
             
             self.losses_gens['epochs'       ] = epoch
             self.losses_gens['modality'     ] = modality
-            self.losses_gens['Gloss_wgan'   ] = Gloss_wgan.tolist()
+            self.losses_gens['Gloss'        ] = Gloss.tolist()
             self.losses_gens['Gloss_wgan_y' ] = Gloss_wgan_y.tolist()
             self.losses_gens['Gloss_wgan_zd'] = Gloss_wgan_zd.tolist()
             self.losses_gens['Gloss_rec'    ] = Gloss_rec.tolist()
