@@ -1,2 +1,2 @@
 encoder,decoder,extra
-unique,None,None,-
+simple,None,None,-

@@ -38,8 +38,8 @@ class WGAN(SimpleTrainer):
         gradients_gens = gradients_gens, 
         gradients_disc = gradients_disc)
     
-    def train_unic_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
-        y,_,zyy,zxy = batch
+    def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
+        y,zyy,zxy = batch
         for _ in range(5):
             zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
@@ -50,7 +50,7 @@ class WGAN(SimpleTrainer):
             y_inp       = zcat(y,wny) 
 
             y_gen       = self.gen_agent.Gy(zxy,zyy)
-            zyy_F,zyx_F,*other = self.gen_agent.Fxy(y_inp)
+            zyy_F,zyx_F,*other = self.gen_agent.Fy(y_inp)
             zd_gen      = zcat(zyx_F,zyy_F)
 
             Dreal_y, Dfake_y = self.disc_agent.discriminate_marginal_y(y, y_gen)
@@ -75,7 +75,7 @@ class WGAN(SimpleTrainer):
             self.losses_disc_tracker.update()
 
     def train_generators(self,batch,epoch,modality,net_mode,*args,**kwargs):
-        y,_,zyy,zxy = batch
+        y,zyy,zxy = batch
         for _ in range(1):
             zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
@@ -87,7 +87,7 @@ class WGAN(SimpleTrainer):
             y_inp       = zcat(y,wny)
 
             y_gen       = self.gen_agent.Gy(zxy,zyy)
-            zyy_F,zyx_F,*other = self.gen_agent.Fxy(y_inp)
+            zyy_F,zyx_F,*other = self.gen_agent.Fy(y_inp)
             zd_gen      = zcat(zyx_F,zyy_F)
 
             _, Dfake_y  = self.disc_agent.discriminate_marginal_y(y, y_gen)
@@ -101,7 +101,7 @@ class WGAN(SimpleTrainer):
             y_gen       = zcat(y_gen,wny)
             y_rec       = self.gen_agent.Gy(zyx_F, zyy_F)
 
-            zyy_rec,zyx_rec = self.gen_agent.Fxy(y_gen)
+            zyy_rec,zyx_rec = self.gen_agent.Fy(y_gen)
             zd_rec      = zcat(zyx_rec,zyy_rec)
 
             Gloss_rec_y = torch.mean(torch.abs(y-y_rec))
