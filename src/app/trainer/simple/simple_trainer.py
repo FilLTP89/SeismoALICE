@@ -9,8 +9,8 @@ from tools.generate_noise import noise_generator
 from core.logger.logger import setup_logging
 from configuration import app
 from torch.nn import DataParallel as DP
-from common.common_nn import generate_latent_variable_1D,get_accuracy
-from common.common_nn import zerograd,zcat,modalite, count_parameters
+from common.common_nn import generate_latent_variable_1D, get_accuracy
+from common.common_nn import count_parameters
 from common.common_torch import *
 from factory.conv_factory import Network, DataParalleleFactory
 from app.agent.simple.generators import Generators
@@ -24,7 +24,7 @@ class SimpleTrainer(BasicTrainer):
         "Broadband" or "Fitered". To train on two different type of dataset like (broadband
         and filtered) see UnicTrainer implementation instead.
     """
-    def __init__(self,cv, trail,losses_disc, losses_gens, gradients_gens, gradients_disc):
+    def __init__(self,cv,losses_disc, losses_gens, gradients_gens, gradients_disc, trial=None):
         globals().update(cv)
         globals().update(opt.__dict__)
 
@@ -35,11 +35,10 @@ class SimpleTrainer(BasicTrainer):
         self.opt        = opt
         self.logger     = setup_logging()
 
-        self.losses_disc    = losses_disc
-        self.losses_gens    = losses_gens
+        self.losses_disc     = losses_disc
+        self.losses_gens     = losses_gens
         self.gradients_gens  = gradients_gens
         self.gradients_disc  = gradients_disc
-        
         
 
         self.logger.info("Setting Tensorboard for the training dataset ...")
@@ -168,7 +167,7 @@ class SimpleTrainer(BasicTrainer):
                 self.validation_writer.add_scalar('Accuracy/Broadband',accuracy_bb,epoch)
                 bar.set_postfix(accuracy_bb=accuracy_bb)
 
-                # # get weight of encoder and decoder
+                # get weight of encoder and decoder
                 # plot filtered reconstruction signal and gof
                 figure_fl, gof_fl = plot_generate_classic(tag ='broadband',
                         Qec= self.gen_agent.Fy, Pdc= self.gen_agent.Gy,

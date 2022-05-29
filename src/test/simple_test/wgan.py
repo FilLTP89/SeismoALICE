@@ -6,7 +6,7 @@ from configuration import app
 
 class WGAN(SimpleTrainer):
     def __init__(self,cv, trial=None):
-        breakpoint()
+        
         losses_disc = {
             'epochs':'',           'modality':'',
             'Dloss_wgan':'',        
@@ -31,7 +31,12 @@ class WGAN(SimpleTrainer):
             'Dzb':'',       'Dszb':'', 'Dyz':'',
             'Dszf':''
         }
-        super(WGAN, self).__init__(cv, trial,losses_disc, losses_gens, gradients_gens, gradients_disc)
+        super(WGAN, self).__init__(cv, 
+        trial       = None,
+        losses_disc = losses_disc, 
+        losses_gens = losses_gens, 
+        gradients_gens = gradients_gens, 
+        gradients_disc = gradients_disc)
     
     def train_unic_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,_,zyy,zxy = batch
@@ -105,7 +110,7 @@ class WGAN(SimpleTrainer):
 
             Gloss_rec   = Gloss_rec_y + Gloss_rec_zd
 
-            Gloss_wgan = Gloss_wgan_y +Gloss_wgan_zd + 10.*Gloss_rec
+            Gloss_wgan = Gloss_wgan_y + Gloss_wgan_zd + 10.*Gloss_rec
             if modality == 'train':
                 Gloss_wgan.backward()
                 self.gen_agent.optimizer.step()
