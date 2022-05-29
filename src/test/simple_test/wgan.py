@@ -6,14 +6,15 @@ from configuration import app
 
 class WGAN(SimpleTrainer):
     def __init__(self,cv, trial=None):
+        breakpoint()
         losses_disc = {
             'epochs':'',           'modality':'',
-            'Dloss':'',            'Dloss_wgan':'',        
+            'Dloss_wgan':'',        
             'Dloss_wgan_y':'',     'Dloss_wgan_zd':''
         }
         losses_gens = {
             'epochs':'',           'modality':'',
-            'Gloss':'',            'Gloss_wgan':'',        'Gloss_wgan_y':'',
+            'Gloss_wgan':'',       'Gloss_wgan_y':'',
             'Gloss_wgan_zd':'',
 
             'Gloss_rec':'',        'Gloss_rec_y':'',     
@@ -85,12 +86,40 @@ class WGAN(SimpleTrainer):
             zyy_F,zyx_F,*other = self.gen_agent.Fxy(y_inp)
             zd_gen      = zcat(zyx_F,zyy_F)
 
-            _, Dfake_y = self.disc_agent.discriminate_marginal_y(y, y_gen)
-            Gloss_y     = -(torch.mean(Dfake_y))
+            _, Dfake_y  = self.disc_agent.discriminate_marginal_y(y, y_gen)
+            Gloss_wgan_y= -(torch.mean(Dfake_y))
 
             _, Dfake_zd = self.disc_agent.discriminate_marginal_zd(zd_inp,zd_gen)
-            Gloss_zd    = -(torch.mean(Dfake_zd))
+            Gloss_wgan_zd= -(torch.mean(Dfake_zd))
 
-            Gloss       = Gloss_y +Gloss_zd
-            Gloss.backward()
+            # 1.2 Reconstruction of signal distributions
+            wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+            y_gen       = zcat(y_gen,wny)
+            y_rec       = self.gen_agent.Gy(zyx_F, zyy_F)
+
+            zyy_rec,zyx_rec = self.gen_agent.Fxy(y_gen)
+            zd_rec      = zcat(zyx_rec,zyy_rec)
+
+            Gloss_rec_y = torch.mean(torch.abs(y-y_rec))
+            Gloss_rec_zd= torch.mean(torch.abs(zd_inp-zd_rec))
+
+            Gloss_rec   = Gloss_rec_y + Gloss_rec_zd
+
+            Gloss_wgan = Gloss_wgan_y +Gloss_wgan_zd + 10.*Gloss_rec
+            if modality == 'train':
+                Gloss_wgan.backward()
+                self.gen_agent.optimizer.step()
+                self.gen_agent.track_gradient(epoch)
+                zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
+            
+            self.losses_gens['epochs'       ] = epoch
+            self.losses_gens['modality'     ] = modality
+            self.losses_gens['Gloss_wgan'   ] = Gloss_wgan.tolist()
+            self.losses_gens['Gloss_wgan_y' ] = Gloss_wgan_y.tolist()
+            self.losses_gens['Gloss_wgan_zd'] = Gloss_wgan_zd.tolist()
+            self.losses_gens['Gloss_rec'    ] = Gloss_rec.tolist()
+            self.losses_gens['Gloss_rec_y'  ] = Gloss_rec_y.tolist()
+            self.losses_gens['Gloss_rec_zd' ] = Gloss_rec_zd.tolist()
+
+            self.losses_gen_tracker.update()
 
