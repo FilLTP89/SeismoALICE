@@ -12,7 +12,7 @@
         "train_writer":"./runs_both/renew/wgan/bb/training/",
         "valid_writer":"./runs_both/renew/wgan/bb/validation/",
         "debug_writer":"./runs_both/renew/wgan/bb/debug/",
-        "debug.losses_writer":"./runs_both/renew/losses/",
+        "debug.losses_writer":"./runs_both/renew/wgan/bb/losses/",
         "debug.gradients_writer":"./runs_both/renew/wgan/bb/gradients/",
         "debug.encoder_writer":"./runs_both/renew/wgan/bb/net/encoder",
         "debug.decoder_writer":"./runs_both/renew/wgan/bb/net/decoder"

@@ -169,22 +169,13 @@ class SimpleTrainer(BasicTrainer):
 
                 # get weight of encoder and decoder
                 # plot filtered reconstruction signal and gof
-                figure_fl, gof_fl = plot_generate_classic(tag ='broadband',
+                figure_bb, gof_bb = plot_generate_classic(tag ='broadband',
                         Qec= self.gen_agent.Fy, Pdc= self.gen_agent.Gy,
-                        trn_set=self.test_loader, pfx="vld_set_bb_unique_hack",
+                        trn_set=self.test_loader, pfx="vld_set_bb_unique",
                         opt=self.opt, outf= self.opt.outf, save=False)
                 bar.set_postfix(status='saving images STFD/GOF Filtered ...')
-                self.validation_writer.add_figure('STFD Filtered', figure_fl)
-                self.validation_writer.add_figure('GOF Filtered', gof_fl)
-
-                # plot hybrid broadband reconstruction signal and gof
-                figure_hb, gof_hb = plot_generate_classic(tag ='hybrid',
-                        Qec= self.gen_agent.Fy, Pdc= self.gen_agent.Gy,
-                        trn_set=self.test_loader, pfx="vld_set_bb_unique_hack",
-                        opt=self.opt, outf= self.opt.outf, save=False)
-                bar.set_postfix(status='saving images STFD/GOF Hybrid Broadband ...')
-                self.validation_writer.add_figure('STFD Hybrid Broadband', figure_hb)
-                self.validation_writer.add_figure('GOF Hybrid Broadband', gof_hb)
+                self.validation_writer.add_figure('STFD Filtered', figure_bb)
+                self.validation_writer.add_figure('GOF Filtered', gof_bb)
     
     
     
