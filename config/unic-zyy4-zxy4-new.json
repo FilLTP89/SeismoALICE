@@ -18,7 +18,7 @@
         "debug.decoder_writer":"./runs_both/renew/wgan/bb/net/decoder"
     },
      "F":{
-        "name"      :"Unic_Resnet",
+        "name"      :"Unic",
         "nlayers"   :3, 
         "channel"   :[6,8,16,32],
         "kernel"    :[3,3,3],
