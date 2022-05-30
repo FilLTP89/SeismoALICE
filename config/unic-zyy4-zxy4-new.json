@@ -27,7 +27,7 @@
         "padding"   :[1,1,1],
         "dpc"       :0.0,
         "extra"     :128,
-        "act"       :"F2",
+        "act"       :"Fed",
         "limit"     :256,
         "broadband" :{
             "nlayers"   :3, 
@@ -38,7 +38,7 @@
             "padding"   :[1,1,1],
             "dpc"       :0.0, 
             "extra"     :128,
-            "act"       :"F2",
+            "act"       :"Fed",
             "limit"     :256},
         "common":{
             "nlayers"   :3, 
@@ -49,11 +49,10 @@
             "padding"   :[1,1,1],
             "dpc"       :0.0,
             "extra"     :0.0, 
-            "act"       :"F2",
+            "act"       :"Fed",
             "limit"     :256}
     },
     "Gy":{
-        "name"      :"Resnet",
         "nlayers"   :5, 
         "channel"   :[1,128,64,32,16,3],
         "kernel"    :[3,3,3,3,3],
