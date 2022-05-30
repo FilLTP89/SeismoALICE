@@ -236,13 +236,15 @@ class DCGAN_DXZ_Flatten(BasicDCGAN_DXZDataParallele):
             bn          = bn,
             normalization = torch.nn.BatchNorm1d
             ) 
+        
+        self.cnn +=[
+            nn.Flatten(start_dim = 1, end_dim=2),
+            # Shallow(shape=(batch_size,lout*channel[-1])),
+            Linear(lout*channel[-1],1),
+            
+        ]
         if prob:
-            self.cnn +=[
-                nn.Flatten(start_dim = 1, end_dim=2),
-                # Shallow(shape=(batch_size,lout*channel[-1])),
-                Linear(lout*channel[-1],1),
-                nn.Sigmoid()
-            ]
+            self.cnn +=[nn.Sigmoid()]
 
         self.cnn = nn.Sequential(*self.cnn)
 
