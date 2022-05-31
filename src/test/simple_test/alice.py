@@ -43,6 +43,7 @@ class ALICE(SimpleTrainer):
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,zxy = batch
         for _ in range(1):
+            breakpoint()
             zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])

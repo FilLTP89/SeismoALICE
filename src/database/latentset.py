@@ -8,8 +8,9 @@ from configuration import app
 from torch.utils.data import Dataset
 
 class LatentDataset(Dataset): 
-    def __init__(self, latent_space_shape=[128,384],nsy = 1280, mean=0., std = 1.0, seed=123):
-        # fix the seed for the generation of gaussian.
+    def __init__(self, latent_space_shape=[128,384],nsy = 1280, mean=0., 
+                        std = 1.0, seed=123,*args, **kwargs):
+        # fix the seed for the same generation of gaussian, independently of epoch
         torch.manual_seed(seed)
         self._latent_space_zlf = torch.empty(*[nsy,latent_space_shape[0]])
         self._latent_space_zlf = self._latent_space_zlf.normal_(mean, std)
@@ -23,8 +24,8 @@ class LatentDataset(Dataset):
     def __getitem__(self,index):
         return (self._latent_space_zlf[index,:],self._latent_space_zhf[index,:])
 
-def get_dataset(dataset, nsy = 1280, batch_size = 64):
-    dataset    = LatentDataset(nsy)
+def get_latent_dataset(nsy=1280, batch_size=64, *args, **kwargs):
+    dataset    = LatentDataset(nsy=nsy,*args,**kwargs)
     train_part,vld_part,tst_part = int(0.80*len(dataset)),int(0.10*len(dataset)),int(0.10*len(dataset))
     train_set, vld_set, tst_set  = torch.utils.data.random_split(dataset, [train_part,vld_part,tst_part])
 

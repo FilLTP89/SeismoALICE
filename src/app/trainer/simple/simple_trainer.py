@@ -75,8 +75,8 @@ class SimpleTrainer(BasicTrainer):
 
         self.logger.info("Loading the dataset ...")
         self.data_trn_loader, self.data_vld_loader,self.data_tst_loader = trn_loader, vld_loader, tst_loader
-        self.lat_trn_loader, self.lat_vld_loader, self.lat_tst_loader   = get_latent_dataset()
-        self.bce_loss         = torch.nn.BCELoss(reduction='mean').cuda()
+        self.lat_trn_loader, self.lat_vld_loader, self.lat_tst_loader   = get_latent_dataset(self.opt.nsy, self.opt.batchSize)
+        self.bce_loss = torch.nn.BCELoss(reduction='mean').cuda()
 
         super(SimpleTrainer,self).__init__(
             settings  = self.opt, logger = self.logger, config = self.opt,
@@ -103,7 +103,8 @@ class SimpleTrainer(BasicTrainer):
 
     
     def on_training_epoch(self, epoch, bar):
-        for idx, batch_data, batch_latent  in enumerate(zip(self.data_trn_loader,self.lat_trn_loader)):
+        breakpoint()
+        for idx, (batch_data,batch_latent)  in enumerate(zip(self.data_trn_loader,self.lat_trn_loader)):
             y, *others = batch_data
             zyx,zyy    = batch_latent
             y          = y.to(app.DEVICE, non_blocking = True)
@@ -123,10 +124,10 @@ class SimpleTrainer(BasicTrainer):
         bar.set_postfix(Dloss=Dloss, Gloss = Gloss)
     
     def on_validation_epoch(self, epoch, bar):
-        for idx, batch_data, batch_latent in enumerate(zip(self.data_vld_loader,self.lat_vld_loader)):
+        for idx, (batch_data, batch_latent) in enumerate(zip(self.data_vld_loader,self.lat_vld_loader)):
             y, *others = batch_data
             zyx, zyy   = batch_latent
-            y          = y.to(app.DEVICE, non_blocking = True)
+            y          = y.to(app.DEVICE, non_blocking   = True)
             zyx, zyy   = zyx.to(app.DEVICE, non_blocking = True), zyy.to(app.DEVICE, non_blocking = True)
   
             pack = y,zyy,zyx
