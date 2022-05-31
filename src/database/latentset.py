@@ -1,13 +1,16 @@
 import os
 import math
 import torch
+import random
 import numpy as np
 import matplotlib.pyplot as plt
 from configuration import app
 from torch.utils.data import Dataset
 
-class LatentSet(Dataset): 
-    def __init__(self, latent_space_shape=[128,384],nsy = 1280, mean=0., std = 1.0):
+class LatentDataset(Dataset): 
+    def __init__(self, latent_space_shape=[128,384],nsy = 1280, mean=0., std = 1.0, seed=123):
+        # fix the seed for the generation of gaussian.
+        torch.manual_seed(seed)
         self._latent_space_zlf = torch.empty(*[nsy,latent_space_shape[0]])
         self._latent_space_zlf = self._latent_space_zlf.normal_(mean, std)
 
@@ -21,7 +24,7 @@ class LatentSet(Dataset):
         return (self._latent_space_zlf[index,:],self._latent_space_zhf[index,:])
 
 def get_dataset(dataset, nsy = 1280, batch_size = 64):
-    dataset    = LatentSet(nsy)
+    dataset    = LatentDataset(nsy)
     train_part,vld_part,tst_part = int(0.80*len(dataset)),int(0.10*len(dataset)),int(0.10*len(dataset))
     train_set, vld_set, tst_set  = torch.utils.data.random_split(dataset, [train_part,vld_part,tst_part])
 

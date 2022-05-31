@@ -12,6 +12,7 @@ from torch.nn import DataParallel as DP
 from common.common_nn import generate_latent_variable_1D, get_accuracy
 from common.common_nn import count_parameters
 from common.common_torch import *
+from database.latentset import get_latent_dataset
 from factory.conv_factory import Network, DataParalleleFactory
 from app.agent.simple.generators import Generators
 from app.agent.simple.discriminators import Discriminators
@@ -73,9 +74,8 @@ class SimpleTrainer(BasicTrainer):
                         debug_writer = self.debug_writer)
 
         self.logger.info("Loading the dataset ...")
-        self.training_loader  = trn_loader
-        self.validation_loader= vld_loader
-        self.test_loader      = tst_loader
+        self.data_trn_loader, self.data_vld_loader,self.data_tst_loader = trn_loader, vld_loader, tst_loader
+        self.lat_trn_loader, self.lat_vld_loader, self.lat_tst_loader   = get_latent_dataset()
         self.bce_loss         = torch.nn.BCELoss(reduction='mean').cuda()
 
         super(SimpleTrainer,self).__init__(
@@ -103,11 +103,11 @@ class SimpleTrainer(BasicTrainer):
 
     
     def on_training_epoch(self, epoch, bar):
-        for idx, batch in enumerate(self.training_loader):
-            y, *others = batch
-            y   = y.to(app.DEVICE, non_blocking = True)
-
-            zyy,zyx, *other = generate_latent_variable_1D(batch=len(y))
+        for idx, batch_data, batch_latent  in enumerate(zip(self.data_trn_loader,self.lat_trn_loader)):
+            y, *others = batch_data
+            zyx,zyy    = batch_latent
+            y          = y.to(app.DEVICE, non_blocking = True)
+            zyx, zyy   = zyx.to(app.DEVICE, non_blocking = True), zyy.to(app.DEVICE, non_blocking = True)
             pack = y,zyy,zyx
             self.train_discriminators(ncritics=1, batch=pack,epoch=epoch, 
                 modality='train',net_mode=['eval','train'])
@@ -123,11 +123,12 @@ class SimpleTrainer(BasicTrainer):
         bar.set_postfix(Dloss=Dloss, Gloss = Gloss)
     
     def on_validation_epoch(self, epoch, bar):
-        for idx, batch in enumerate(self.validation_loader):
-            y, *others = batch
-            y   = y.to(app.DEVICE, non_blocking = True)
-    
-            zyy,zyx, *other = generate_latent_variable_1D(batch=len(y))
+        for idx, batch_data, batch_latent in enumerate(zip(self.data_vld_loader,self.lat_vld_loader)):
+            y, *others = batch_data
+            zyx, zyy   = batch_latent
+            y          = y.to(app.DEVICE, non_blocking = True)
+            zyx, zyy   = zyx.to(app.DEVICE, non_blocking = True), zyy.to(app.DEVICE, non_blocking = True)
+  
             pack = y,zyy,zyx
             self.train_discriminators(batch=pack,epoch=epoch, 
                         modality='eval',net_mode=['eval','eval'])
@@ -160,7 +161,7 @@ class SimpleTrainer(BasicTrainer):
                 accuracy_bb = get_accuracy(tag='broadband',plot_function=get_gofs,
                     encoder = self.gen_agent.Fy,
                     decoder = self.gen_agent.Gy,
-                    vld_loader = self.test_loader,
+                    vld_loader = self.data_tst_loader,
                     pfx ="vld_set_bb_unique",opt= self.opt,
                     outf = self.opt.outf, save = False
                 )
@@ -171,7 +172,7 @@ class SimpleTrainer(BasicTrainer):
                 # plot filtered reconstruction signal and gof
                 figure_bb, gof_bb = plot_generate_classic(tag ='broadband',
                         Qec= self.gen_agent.Fy, Pdc= self.gen_agent.Gy,
-                        trn_set=self.test_loader, pfx="vld_set_bb_unique",
+                        trn_set=self.data_tst_loader, pfx="vld_set_bb_unique",
                         opt=self.opt, outf= self.opt.outf, save=False)
                 bar.set_postfix(status='saving images STFD/GOF Filtered ...')
                 self.validation_writer.add_figure('STFD Filtered', figure_bb)
