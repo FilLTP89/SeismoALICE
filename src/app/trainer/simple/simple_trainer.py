@@ -103,7 +103,6 @@ class SimpleTrainer(BasicTrainer):
 
     
     def on_training_epoch(self, epoch, bar):
-        breakpoint()
         for idx, (batch_data,batch_latent)  in enumerate(zip(self.data_trn_loader,self.lat_trn_loader)):
             y, *others = batch_data
             zyx,zyy    = batch_latent
