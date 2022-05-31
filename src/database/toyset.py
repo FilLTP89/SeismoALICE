@@ -9,14 +9,8 @@ from configuration import app
 from torch.utils.data import Dataset
 
 class Toyset(Dataset): 
-    def __init__(self, 
-                    time       = 40.96, 
-                    delta_t       = 0.01, 
-                    nsy           = 1280,
-                    num_channels  = 3,
-                    latent_space  = [64,64],
-                    latent_channel= [16,32]):
-
+    def __init__(self, time=40.96, delta_t = 0.01, nsy = 1280,
+                num_channels  = 3,latent_space  = [64,64],latent_channel= [16,32]):
         #time =
         app.RNDM_ARGS = {'mean': 0, 'std': 1}
         N = round(time/delta_t)
