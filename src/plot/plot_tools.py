@@ -1141,7 +1141,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
     outf='./imgs',save = True, Qed=None,std=None):
     
     dev = app.DEVICE
-    
+    data_tst_loader, lat_tst_loader = trn_set
 
     Qec.eval(),Pdc.eval()
     Qec.to(dev),Pdc.to(dev)
@@ -1164,10 +1164,11 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
         if Qed is not None:
             Qed.eval()
 
-        for _,batch in enumerate(trn_set):
+        for idx,batch_data, batch_latent in enumerate(zip(data_tst_loader, lat_tst_loader)):
             #_,xt_data,zt_data,_,_,_,_ = batch
             app.logger.debug("Plotting signals ...")
-            xt_data,xf_data,zt_data,*other = batch
+            xt_data,xf_data,*other  = batch_data
+            zyx, zyy                = batch_latent
 
             if torch.isnan(torch.max(xt_data)):
                 app.logger.debug("your model contain nan value "
@@ -1186,7 +1187,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             
             Xt = Variable(xt_data).to(dev, non_blocking=True)
             Xf = Variable(xf_data).to(dev, non_blocking=True)
-            zt = Variable(zt_data).to(dev, non_blocking=True)
+            
 
             if cnt == 1 and save == False:
                 break
@@ -1317,15 +1318,16 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             
     elif 'filtered' in tag:
         rndm_args = {'mean': 0., 'std': 1.0} if std == None else {'mean':0., 'std':std}
-        for _,batch in enumerate(trn_set):
+        for _,batch_data, batch_latent in enumerate(zip(data_tst_loader, lat_tst_loader)):
             # _,xf_data,_,zf_data,_,_,_,*other = batch
             # xt_data,xf_data,zt_data,zf_data,_,_,_,*other = batch
-            xt_data,xf_data,_,zf_data,*other = batch
+            xt_data,xf_data,*other = batch_data
+            zyx, zyy               = batch_latent
             # _,xf_data,zf_data,*other = batch
             # tweaked value
             Xt = Variable(xt_data).to(dev, non_blocking=True)
             Xf = Variable(xf_data).to(dev, non_blocking=True)
-            zf = Variable(zf_data).to(dev, non_blocking=True)
+            # zf = Variable(zf_data).to(dev, non_blocking=True)
 
             if cnt == 3 and not save == False:
                 break
@@ -1408,16 +1410,17 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             random_args = {'mean':0., 'std':std}
         # pass
 
-        for _,batch in enumerate(trn_set):
+        for _,batch_data, batch_latent in enumerate(zip(data_tst_loader, lat_tst_loader)):
             #_,xt_data,zt_data,_,_,_,_ = batch
             app.logger.debug("Plotting signals ...")
 
             if str(pfx).find('Niigata')!=-1:
-                xt_data = batch
+                xt_data = batch_data
             # elif str(pfx).find('hack')!=-1:
             #     _,xt_data,*other = batch
             else:
-                xt_data,xf_data,*other = batch
+                xt_data,xf_data,*other = batch_data
+                zyx, zyy               = batch_latent
             # xt_data,zt_data,*other = batch
             if torch.isnan(torch.max(xt_data)):
                 app.logger.debug("your model contain nan value "
@@ -1430,9 +1433,10 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 xf_data.data = xf_data[index[mask]]
                 # zt_data.data = zt_data[index[mask]]
             # breakpoint()
-            Xt = Variable(xf_data).to(dev, non_blocking=True)
-            Xf = Variable(xf_data).to(dev, non_blocking=True)
-            
+            Xt  = Variable(xf_data).to(dev, non_blocking=True)
+            Xf  = Variable(xf_data).to(dev, non_blocking=True)
+            zyy = Variable(zyy).to(dev, non_blocking=True)
+            zyx = Variable(zyx).to(dev, non_blocking=True)
             # zt = Variable(zt_data).to(dev, non_blocking=True)
             nch, nz = 4,128
             wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
