@@ -10,16 +10,16 @@ class ALICE(SimpleTrainer):
         
         losses_disc = {
             'epochs':'',           'modality':'',
-            'Dloss':'',            'Dloss_marginal':'',             
-            'Dloss_ali_y':'',      'Dloss_marginal_y':''
-            'Dloss_marginal_zd'
+            'Dloss':'',            'Dloss_cross_entropy':'',             
+            'Dloss_ali_y':'',      'Dloss_cross_entropy_y':''
+            'Dloss_cross_entropy_zd'
         }
         losses_gens = {
-            'epochs':'',           'modality':'',
-            'Gloss':'',            'Gloss_marginal':'',
+            'epochs':'',                'modality':'',
+            'Gloss':'',                 'Gloss_cross_entropy':'',
             'Gloss_ali_y':'',
-            'Gloss_marginal_y':'', 'Gloss_marginal_zd':'',
-            'Gloss_rec':'',        'Gloss_rec_y':'',     
+            'Gloss_cross_entropy_y':'', 'Gloss_cross_entropy_zd':'',
+            'Gloss_rec':'',             'Gloss_rec_y':'',     
             'Gloss_rec_zd':'',    
         }
 
@@ -121,9 +121,9 @@ class ALICE(SimpleTrainer):
             Gloss_rec_zd= torch.mean(torch.abs(zd_inp-zd_rec))
 
             Gloss_rec   = Gloss_rec_y + Gloss_rec_zd
-            Gloss_marginal = Gloss_cross_entropy_y + Gloss_cross_entropy_zd
+            Gloss_cross_entropy = Gloss_cross_entropy_y + Gloss_cross_entropy_zd
 
-            Gloss = Gloss_ali_y+ Gloss_marginal + 0.1*Gloss_rec
+            Gloss = Gloss_ali_y+ Gloss_cross_entropy + 0.1*Gloss_rec
             if modality == 'train':
                 Gloss.backward()
                 self.gen_agent.optimizer.step()
@@ -137,9 +137,9 @@ class ALICE(SimpleTrainer):
             self.losses_gens['Gloss_rec'    ] = Gloss_rec.tolist()
             self.losses_gens['Gloss_rec_y'  ] = Gloss_rec_y.tolist()
             self.losses_gens['Gloss_rec_zd' ] = Gloss_rec_zd.tolist()
-            self.losses_gens['Gloss_marginal']= Gloss_marginal.tolist()
-            self.losses_gens['Gloss_marginal_y' ] = Gloss_cross_entropy_y.tolist()
-            self.losses_gens['Gloss_marginal_zd'] = Gloss_cross_entropy_zd.tolist()
+            self.losses_gens['Gloss_cross_entropy']= Gloss_cross_entropy.tolist()
+            self.losses_gens['Gloss_cross_entropy_y' ] = Gloss_cross_entropy_y.tolist()
+            self.losses_gens['Gloss_cross_entropy_zd'] = Gloss_cross_entropy_zd.tolist()
 
             self.losses_gen_tracker.update()
 

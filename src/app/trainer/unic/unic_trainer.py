@@ -11,6 +11,7 @@ from configuration import app
 from torch.nn import DataParallel as DP
 from common.common_nn import generate_latent_variable_1D,get_accuracy
 from common.common_nn import zerograd,zcat,modalite, count_parameters
+from database.latentset import get_latent_dataset
 from common.common_torch import *
 from factory.conv_factory import Network, DataParalleleFactory
 from app.agent.unic.generators import Generators
@@ -22,7 +23,7 @@ class UnicTrainer(BasicTrainer):
         His goal is to trainer encoder_unic and decoder unic over. 
         So it should be call withe app.unic.generators and app.unic.discriminators agents
     """
-    def __init__(self,cv, trial=None):
+    def __init__(self,cv,losses_disc, losses_gens, gradients_gens, gradients_disc, trial=None):
         globals().update(cv)
         globals().update(opt.__dict__)
 
@@ -32,34 +33,6 @@ class UnicTrainer(BasicTrainer):
         self.strategy   = strategy
         self.opt        = opt
         self.logger     = setup_logging()
-        
-        self.losses_disc = {
-            'epochs':'',           'modality':'',
-            'Dloss':'',            'Dloss_ali':'',        'Dloss_ali_y':'',  
-            'Dloss_ali_x':'',      'Dloss_marginal':'',   'Dloss_marginal_y':'',
-            'Dloss_marginal_zd':'','Dloss_marginal_x':'', 'Dloss_marginal_zf':''
-        }
-        self.losses_gens = {
-            'epochs':'',           'modality':'',
-            'Gloss':'',            'Gloss_ali':'',        'Gloss_ali_x':'',
-            'Gloss_ali_y':'',      'Gloss_marginal':'',   'Gloss_marginal_y':'',
-            'Gloss_marginal_zd':'','Gloss_marginal_x':'', 'Gloss_marginal_zf':'',
-
-            'Gloss_rec':'',        'Gloss_rec_y':'',      'Gloss_rec_x':'',
-            'Gloss_rec_zd':'',     'Gloss_rec_zx':'',     'Gloss_rec_zxy':'',
-            'Gloss_rec_x':'', 
-        }
-
-        self.gradients_gens = {
-            'epochs':'',    'modality':'',
-            'Fxy':'',       'Gy':'',
-        }
-        self.gradients_disc = {
-            'epochs':'',    'modality':'',
-            'Dy':'',        'Dx':'',   'Dsy':'',  'Dsx':'',
-            'Dzb':'',       'Dszb':'', 'Dyz':'',  'Dzf':'',
-            'Dszf':''
-        }
 
         self.logger.info("Setting Tensorboard for the training dataset ...")
         loss_writer             = Writer(log_dir=self.opt.config['log_dir']['debug.losses_writer'], 
@@ -93,9 +66,8 @@ class UnicTrainer(BasicTrainer):
                         debug_writer = self.debug_writer)
 
         self.logger.info("Loading the dataset ...")
-        self.training_loader  = trn_loader
-        self.validation_loader= vld_loader
-        self.test_loader      = tst_loader
+        self.training_loader,  self.validation_loader, self.test_loader = trn_loader,vld_loader,tst_loader
+        self.lat_trn_loader, self.lat_vld_loader, self.lat_tst_loader   = get_latent_dataset(self.opt.nsy, self.opt.batchSize)
         self.bce_loss         = torch.nn.BCELoss(reduction='mean').cuda()
 
         super(UnicTrainer,self).__init__(

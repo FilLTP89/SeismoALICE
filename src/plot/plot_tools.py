@@ -1164,7 +1164,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
         if Qed is not None:
             Qed.eval()
 
-        for idx,batch_data, batch_latent in enumerate(zip(data_tst_loader, lat_tst_loader)):
+        for idx, (batch_data, batch_latent) in enumerate(zip(data_tst_loader, lat_tst_loader)):
             #_,xt_data,zt_data,_,_,_,_ = batch
             app.logger.debug("Plotting signals ...")
             xt_data,xf_data,*other  = batch_data
@@ -1318,7 +1318,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             
     elif 'filtered' in tag:
         rndm_args = {'mean': 0., 'std': 1.0} if std == None else {'mean':0., 'std':std}
-        for _,batch_data, batch_latent in enumerate(zip(data_tst_loader, lat_tst_loader)):
+        for _,(batch_data, batch_latent) in enumerate(zip(data_tst_loader, lat_tst_loader)):
             # _,xf_data,_,zf_data,_,_,_,*other = batch
             # xt_data,xf_data,zt_data,zf_data,_,_,_,*other = batch
             xt_data,xf_data,*other = batch_data
@@ -1410,7 +1410,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             random_args = {'mean':0., 'std':std}
         # pass
 
-        for _,batch_data, batch_latent in enumerate(zip(data_tst_loader, lat_tst_loader)):
+        for _,(batch_data, batch_latent) in enumerate(zip(data_tst_loader, lat_tst_loader)):
             #_,xt_data,zt_data,_,_,_,_ = batch
             app.logger.debug("Plotting signals ...")
 

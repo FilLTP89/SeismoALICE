@@ -161,7 +161,7 @@ class SimpleTrainer(BasicTrainer):
                 accuracy_bb = get_accuracy(tag='broadband',plot_function=get_gofs,
                     encoder = self.gen_agent.Fy,
                     decoder = self.gen_agent.Gy,
-                    vld_loader = (self.data_tst_loader,self.lat_vld_loader),
+                    vld_loader = self.data_tst_loader,
                     pfx ="vld_set_bb_unique",opt= self.opt,
                     outf = self.opt.outf, save = False
                 )
@@ -175,9 +175,9 @@ class SimpleTrainer(BasicTrainer):
                         trn_set= (self.data_tst_loader, self.lat_tst_loader),
                         pfx="vld_set_bb_unique",
                         opt=self.opt, outf= self.opt.outf, save=False)
-                bar.set_postfix(status='saving images STFD/GOF Filtered ...')
-                self.validation_writer.add_figure('STFD Filtered', figure_bb)
-                self.validation_writer.add_figure('GOF Filtered', gof_bb)
+                bar.set_postfix(status='saving images STFD/GOF Broadband ...')
+                self.validation_writer.add_figure('STFD Broadband', figure_bb)
+                self.validation_writer.add_figure('GOF Broadband', gof_bb)
     
     
     

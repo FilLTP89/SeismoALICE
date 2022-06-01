@@ -611,7 +611,7 @@ class T(object):
     def activation(name, nly, typo = 'ALICE'):
         acts = {}
         acts['ALICE'] = {
-                 'Feu' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)],
+                 'Feu' :[nn.LeakyReLU(0.1,inplace=True) for t in range(1, nly+1)],
                  'F2'  :[nn.ReLU(inplace=True) for t in range(1, nly+1)],
                  'Fed' :[nn.LeakyReLU(0.1,inplace=True) for t in range(1, nly)] + [nn.LeakyReLU(1.0,inplace=True)],
                  'Gdd' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.Tanh()],
