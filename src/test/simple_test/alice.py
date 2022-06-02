@@ -29,9 +29,8 @@ class ALICE(SimpleTrainer):
         }
         gradients_disc = {
             'epochs':'',    'modality':'',
-            'Dy':'',        'Dsy':'',
-            'Dzb':'',       'Dszb':'', 'Dyz':'',
-            'Dszf':''
+            'Dy':'',        'Dyy':'',
+            'Dzb':'',       'Dzzb':'', 'Dyz':'',
         }
         super(ALICE, self).__init__(cv, 
         trial       = None,
@@ -86,7 +85,7 @@ class ALICE(SimpleTrainer):
 
     def train_generators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,zxy = batch
-        for _ in range(2):
+        for _ in range(5):
             zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])

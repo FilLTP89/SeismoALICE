@@ -20,10 +20,11 @@ from app.agent.simple.discriminators import Discriminators
 
 class SimpleTrainer(BasicTrainer):
     """ This class is an extension of the BasicTrainer class.
-        The BasicTrainer works a template pattern.So the basic logic to launch
+        The BasicTrainer works a template pattern.So the base logic to launch
         a training is already implemented on it.
-        The SimpleTrainer class shoudl be call to train over a one type of dataset : 
-        "Broadband" or "Fitered". To train on two different type of dataset like (broadband
+        The SimpleTrainer class should be call to train over a one type of dataset : 
+        "Broadband" or "Fitered", as example.
+        To train simultaneously on two different types of dataset like (broadband
         and filtered) see UnicTrainer implementation instead.
     """
     def __init__(self,cv,losses_disc, losses_gens, gradients_gens, gradients_disc, trial=None):
@@ -175,7 +176,9 @@ class SimpleTrainer(BasicTrainer):
                 self.validation_writer.add_scalar('Accuracy/Broadband',accuracy_bb,epoch)
                 bar.set_postfix(accuracy_bb=accuracy_bb)
 
-                # get weight of encoder and decoder
+                # get weight of generators and discriminators
+                self.gen_agent.track_weight(epoch)
+
                 # plot filtered reconstruction signal and gof
                 figure_bb, gof_bb = plot_generate_classic(tag ='broadband',
                         Qec= self.gen_agent.Fy, Pdc= self.gen_agent.Gy,

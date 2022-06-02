@@ -23,9 +23,10 @@ class Agent:
             if (classname.find('Conv1d')!= -1 
                     or 
                 classname.find('ConvTranspose1d')!= -1) and writer != None:
+                writer.set_step(mode='debug',step=epoch)
                 writer.add_histogram(f'{tag}/{idx}', model[idx].weight, epoch)
             else:
-                self.logger.info("weights are not tracked ... ")
+                self.logger.debug("weights are not tracked ... ")
         
     def track_gradient(self,*args,**kwargs):
         raise NotImplementedError
