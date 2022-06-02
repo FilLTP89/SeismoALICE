@@ -27,7 +27,8 @@ class SimpleTrainer(BasicTrainer):
         To train simultaneously on two different types of dataset like (broadband
         and filtered) see UnicTrainer implementation instead.
     """
-    def __init__(self,cv,losses_disc, losses_gens, gradients_gens, gradients_disc, trial=None):
+    def __init__(self,cv,losses_disc, losses_gens, gradients_gens, gradients_disc, prob_disc,
+                    trial=None,*args,**kwargs):
         globals().update(cv)
         globals().update(opt.__dict__)
 
@@ -42,6 +43,7 @@ class SimpleTrainer(BasicTrainer):
         self.losses_gens     = losses_gens
         self.gradients_gens  = gradients_gens
         self.gradients_disc  = gradients_disc
+        self.prob_disc       = prob_disc
         
 
         self.logger.info("Setting Tensorboard for the training dataset ...")
@@ -59,6 +61,7 @@ class SimpleTrainer(BasicTrainer):
         self.logger.info("Tracking metrics ...")
         self.losses_disc_tracker    = MetricTracker(self.losses_disc,loss_writer,'Dloss')
         self.losses_gen_tracker     = MetricTracker(self.losses_gens,loss_writer,'Gloss')
+        self.prob_disc_tracker      = MetricTracker(self.prob_disc,loss_writer,'Probs')
         self.gradients_tracker_gen  = MetricTracker(self.gradients_gens,gradients_writer,'Ggradient')
         self.gradients_tracker_disc = MetricTracker(self.gradients_disc,gradients_writer,'Dgradient')
         

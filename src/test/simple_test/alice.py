@@ -23,6 +23,13 @@ class ALICE(SimpleTrainer):
             'Gloss_rec_zd':'',    
         }
 
+        prob_disc = {
+            'epochs':'',                'modality':'',
+            'Dreal_yz':'',              'Dfake_yz':'',
+            'Dreal_y':'',               'Dfake_y':'',
+            'Dreal_zd':'',              'Dfake_zd':'',
+        }
+
         gradients_gens = {
             'epochs':'',    'modality':'',
             'Fxy':'',       'Gy':'',
@@ -35,7 +42,8 @@ class ALICE(SimpleTrainer):
         super(ALICE, self).__init__(cv, 
         trial       = None,
         losses_disc = losses_disc, 
-        losses_gens = losses_gens, 
+        losses_gens = losses_gens,
+        prob_disc  = prob_disc,
         gradients_gens = gradients_gens, 
         gradients_disc = gradients_disc)
     
@@ -79,10 +87,19 @@ class ALICE(SimpleTrainer):
             self.losses_disc['Dloss_ali_y'  ] = Dloss_ali_y.tolist()
             self.losses_disc['Dloss_cross_entropy'   ] = Dloss_cross_entropy.tolist()
             self.losses_disc['Dloss_cross_entropy_y' ] = Dloss_cross_entropy_y.tolist()
-            self.losses_disc['Dloss_cross_entropy_zd'] = Dloss_cross_entropy_zd.tolist()
-            
+            self.losses_disc['Dloss_cross_entropy_zd'] = Dloss_cross_entropy_zd.tolist()            
             self.losses_disc_tracker.update()
 
+            self.prob_disc['epochs'  ] = epoch
+            self.prob_disc['modality'] = modality
+            self.prob_disc['Dreal_yz'] = Dreal_yz.tolist()
+            self.prob_disc['Dfake_yz'] = Dfake_yz.tolist()
+            self.prob_disc['Dreal_y' ] = Dreal_y.tolist()
+            self.prob_disc['Dfake_y' ] = Dfake_y.tolist()
+            self.prob_disc['Dreal_zd'] = Dreal_zd.tolist()
+            self.prob_disc['Dfake_zd'] = Dfake_zd.tolist()
+            self.prob_disc_tracker.update()
+            
     def train_generators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,zxy = batch
         for _ in range(1):
