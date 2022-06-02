@@ -9,13 +9,13 @@
         "test_epochs":50
     },
     "log_dir":{
-        "train_writer":"./runs_both/renew/alice/bb4/training/",
-        "valid_writer":"./runs_both/renew/alice/bb4/validation/",
-        "debug_writer":"./runs_both/renew/alice/bb4/debug/",
-        "debug.losses_writer":"./runs_both/renew/alice/bb4/losses/",
-        "debug.gradients_writer":"./runs_both/renew/alice/bb4/gradients/",
-        "debug.encoder_writer":"./runs_both/renew/alice/bb4/net/encoder",
-        "debug.decoder_writer":"./runs_both/renew/alice/bb4/net/decoder"
+        "train_writer":"./runs_both/renew/alice/bb3/training/",
+        "valid_writer":"./runs_both/renew/alice/bb3/validation/",
+        "debug_writer":"./runs_both/renew/alice/bb3/debug/",
+        "debug.losses_writer":"./runs_both/renew/alice/bb3/losses/",
+        "debug.gradients_writer":"./runs_both/renew/alice/bb3/gradients/",
+        "debug.encoder_writer":"./runs_both/renew/alice/bb3/net/encoder",
+        "debug.decoder_writer":"./runs_both/renew/alice/bb3/net/decoder"
     },
      "F":{
         "name"      :"Unic",
@@ -65,14 +65,14 @@
         "act"       :"Gdd",
         "limit"     :256},
     "Dy":{
-        "nlayers"   :5, 
-        "channel"   :[3,8,16,32,64,128],
-        "kernel"    :[4,4,4,4,4],
-        "strides"   :[2,2,2,2,2],
-        "dilation"  :[1,1,1,1,1],
-        "outpads"   :[0,0,0,0,0],
-        "padding"   :[1,1,1,1,1],
-        "dpc"       :0.0,
+        "nlayers"   :3, 
+        "channel"   :[3,8,64,128],
+        "kernel"    :[4,4,4],
+        "strides"   :[2,4,4],
+        "dilation"  :[1,1,1],
+        "outpads"   :[0,0,0],
+        "padding"   :[1,1,1],
+        "dpc"       :0.25,
         "extra"     :128,
         "act"       :"Dfz",
         "prob"      :"False",

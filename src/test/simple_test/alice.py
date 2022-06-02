@@ -85,7 +85,7 @@ class ALICE(SimpleTrainer):
 
     def train_generators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,zxy = batch
-        for _ in range(5):
+        for _ in range(1):
             zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
@@ -122,7 +122,7 @@ class ALICE(SimpleTrainer):
             Gloss_rec   = Gloss_rec_y + Gloss_rec_zd
             Gloss_cross_entropy = Gloss_cross_entropy_y + Gloss_cross_entropy_zd
 
-            Gloss = Gloss_ali_y+ Gloss_cross_entropy + Gloss_rec
+            Gloss = Gloss_ali_y+ Gloss_cross_entropy + 10.*Gloss_rec
             if modality == 'train':
                 Gloss.backward()
                 self.gen_agent.optimizer.step()
