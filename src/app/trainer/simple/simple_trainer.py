@@ -1,6 +1,7 @@
 from pstats import Stats
 from re import S
 import torch
+from tqdm import tqdm as tq
 from plot.plot_tools import get_gofs, plot_generate_classic
 from core.trainer.basic_trainer import BasicTrainer
 from core.metric.metric import MetricTracker
@@ -103,11 +104,14 @@ class SimpleTrainer(BasicTrainer):
 
     
     def on_training_epoch(self, epoch, bar):
-        for idx, (batch_data,batch_latent)  in enumerate(zip(self.data_trn_loader,self.lat_trn_loader)):
+        _bar = tq(enumerate(zip(self.data_trn_loader,self.lat_trn_loader)),
+                    position=1,leave=False, desc='train.', 
+                    total=len(self.data_trn_loader))
+        for idx, (batch_data,batch_latent)  in _bar:
             y, *others = batch_data
             zyx,zyy    = batch_latent
-            y          = y.to(app.DEVICE, non_blocking = True)
-            zyx, zyy   = zyx.to(app.DEVICE, non_blocking = True), zyy.to(app.DEVICE, non_blocking = True)
+            y          = y.to(app.DEVICE,non_blocking=True)
+            zyx,zyy    = zyx.to(app.DEVICE,non_blocking=True),zyy.to(app.DEVICE,non_blocking=True)
             pack = y,zyy,zyx
             self.train_discriminators(ncritics=1, batch=pack,epoch=epoch, 
                 modality='train',net_mode=['eval','train'])
@@ -123,7 +127,10 @@ class SimpleTrainer(BasicTrainer):
         bar.set_postfix(Dloss=Dloss, Gloss = Gloss)
     
     def on_validation_epoch(self, epoch, bar):
-        for idx, (batch_data, batch_latent) in enumerate(zip(self.data_vld_loader,self.lat_vld_loader)):
+        _bar = tq(enumerate(zip(self.data_vld_loader,self.lat_vld_loader)),
+                    position=1, leave=False, desc='valid.', 
+                    total=len(self.data_vld_loader))
+        for idx, (batch_data, batch_latent) in _bar:
             y, *others = batch_data
             zyx, zyy   = batch_latent
             y          = y.to(app.DEVICE, non_blocking   = True)

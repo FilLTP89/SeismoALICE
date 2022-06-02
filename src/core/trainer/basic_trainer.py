@@ -34,7 +34,7 @@ class BasicTrainer:
 
 
     def train(self):
-        bar = trange(self.start_epoch, self.config.niter +1)
+        bar = trange(self.start_epoch, self.config.niter +1,position=0,desc='epochs')
         for epoch in bar:
             self.on_training_epoch(epoch,bar)
             self.on_validation_epoch(epoch,bar)

@@ -8,6 +8,7 @@ from core.writer.writer import Writer
 from tools.generate_noise import noise_generator
 from core.logger.logger import setup_logging
 from configuration import app
+from tqdm import tqdm as tq
 from torch.nn import DataParallel as DP
 from common.common_nn import generate_latent_variable_1D,get_accuracy
 from common.common_nn import zerograd,zcat,modalite, count_parameters
@@ -66,7 +67,7 @@ class UnicTrainer(BasicTrainer):
                         debug_writer = self.debug_writer)
 
         self.logger.info("Loading the dataset ...")
-        self.training_loader,  self.validation_loader, self.test_loader = trn_loader,vld_loader,tst_loader
+        self.data_trn_loader,  self.data_vld_loader, self.data_tst_loader = trn_loader,vld_loader,tst_loader
         self.lat_trn_loader, self.lat_vld_loader, self.lat_tst_loader   = get_latent_dataset(self.opt.nsy, self.opt.batchSize)
         self.bce_loss         = torch.nn.BCELoss(reduction='mean').cuda()
 
@@ -95,11 +96,15 @@ class UnicTrainer(BasicTrainer):
 
     
     def on_training_epoch(self, epoch, bar):
-        for idx, batch in enumerate(self.training_loader):
-            y, x, *others = batch
-            y   = y.to(app.DEVICE, non_blocking = True)
-            x   = x.to(app.DEVICE, non_blocking = True)
-            zyy,zyx, *other = generate_latent_variable_1D(batch=len(y))
+        _bar = tq(enumerate(zip(self.data_trn_loader,self.lat_trn_loader)),
+                    position=1,leave=False, desc='train.', 
+                    total=len(self.data_trn_loader))
+
+        for idx, (batch_data,batch_latent) in _bar:
+            y, x, *others = batch_data
+            zyy,zyx, *other = batch_latent
+            y,x     = y.to(app.DEVICE, non_blocking = True), x.to(app.DEVICE, non_blocking = True)
+            zyx,zyy = zyx.to(app.DEVICE,non_blocking=True),zyy.to(app.DEVICE,non_blocking=True)
             pack = y,x,zyy,zyx
             self.train_discriminators(ncritics=1, batch=pack,epoch=epoch, 
                 modality='train',net_mode=['eval','train'])
@@ -115,11 +120,14 @@ class UnicTrainer(BasicTrainer):
         bar.set_postfix(Dloss=Dloss, Gloss = Gloss)
     
     def on_validation_epoch(self, epoch, bar):
-        for idx, batch in enumerate(self.validation_loader):
-            y, x, *others = batch
-            y   = y.to(app.DEVICE, non_blocking = True)
-            x   = x.to(app.DEVICE, non_blocking = True)
-            zyy,zyx, *other = generate_latent_variable_1D(batch=len(y))
+        _bar = tq(enumerate(zip(self.data_vld_loader,self.lat_vld_loader)),
+                    position=1, leave=False, desc='valid.', 
+                    total=len(self.data_vld_loader))
+        for idx, (batch_data,batch_latent) in enumerate(self.data_vld_loader):
+            y, x, *others   = batch_data
+            zyy,zyx, *other = batch_latent
+            y,x     = y.to(app.DEVICE, non_blocking = True), x.to(app.DEVICE, non_blocking = True)
+            zyx,zyy = zyx.to(app.DEVICE,non_blocking=True),zyy.to(app.DEVICE,non_blocking=True)
             pack = y,x,zyy,zyx
             self.train_discriminators(ncritics=1, batch=pack,epoch=epoch, 
                         modality='eval',net_mode=['eval','eval'])
@@ -150,7 +158,7 @@ class UnicTrainer(BasicTrainer):
                 accuracy_hb = get_accuracy(tag='hybrid',plot_function=get_gofs,
                     encoder = self.gen_agent.Fxy,
                     decoder = self.gen_agent.Gy,
-                    vld_loader = self.test_loader,
+                    vld_loader = self.data_tst_loader,
                     pfx ="vld_set_bb_unique",opt= self.opt,
                     outf = self.opt.outf, save = False
                 )
@@ -160,7 +168,7 @@ class UnicTrainer(BasicTrainer):
                 accuracy_bb = get_accuracy(tag='broadband',plot_function=get_gofs,
                     encoder = self.gen_agent.Fxy,
                     decoder = self.gen_agent.Gy,
-                    vld_loader = self.test_loader,
+                    vld_loader = self.data_tst_loader,
                     pfx ="vld_set_bb_unique",opt= self.opt,
                     outf = self.opt.outf, save = False
                 )
@@ -170,7 +178,7 @@ class UnicTrainer(BasicTrainer):
                 accuracy_fl = get_accuracy(tag='broadband',plot_function=get_gofs,
                     encoder = self.gen_agent.Fxy,
                     decoder = self.gen_agent.Gy,
-                    vld_loader = self.test_loader,
+                    vld_loader = self.data_tst_loader,
                     pfx ="vld_set_bb_unique_hack",opt= self.opt,
                     outf = self.opt.outf, save = False
                 )
@@ -185,7 +193,7 @@ class UnicTrainer(BasicTrainer):
                 #plot broadband reconstruction signal and gof
                 figure_bb, gof_bb = plot_generate_classic(tag ='broadband',
                         Qec= self.gen_agent.Fxy, Pdc= self.gen_agent.Gy,
-                        trn_set=self.test_loader, pfx="vld_set_bb_unique",
+                        trn_set=self.data_tst_loader, pfx="vld_set_bb_unique",
                         opt=self.opt, outf= self.opt.outf, save=False)
                 bar.set_postfix(status='saving images STFD/GOF Broadband ...')
                 self.validation_writer.add_figure('STFD Broadband', figure_bb)
@@ -194,7 +202,7 @@ class UnicTrainer(BasicTrainer):
                 # plot filtered reconstruction signal and gof
                 figure_fl, gof_fl = plot_generate_classic(tag ='broadband',
                         Qec= self.gen_agent.Fxy, Pdc= self.gen_agent.Gy,
-                        trn_set=self.test_loader, pfx="vld_set_bb_unique_hack",
+                        trn_set=self.data_tst_loader, pfx="vld_set_bb_unique_hack",
                         opt=self.opt, outf= self.opt.outf, save=False)
                 bar.set_postfix(status='saving images STFD/GOF Filtered ...')
                 self.validation_writer.add_figure('STFD Filtered', figure_fl)
@@ -203,7 +211,7 @@ class UnicTrainer(BasicTrainer):
                 # plot hybrid filtred reconstruction signal and gof
                 figure_hf, gof_hf = plot_generate_classic(tag ='hybrid',
                         Qec= self.gen_agent.Fxy, Pdc= self.gen_agent.Gy,
-                        trn_set=self.test_loader, pfx="vld_set_bb_unique",
+                        trn_set=self.data_tst_loader, pfx="vld_set_bb_unique",
                         opt=self.opt, outf= self.opt.outf, save=False)
                 bar.set_postfix(status='saving images STFD/GOF Hybrid Filtered ...')
                 self.validation_writer.add_figure('STFD Hybrid Filtered', figure_hf)
@@ -212,7 +220,7 @@ class UnicTrainer(BasicTrainer):
                 # plot hybrid broadband reconstruction signal and gof
                 figure_hb, gof_hb = plot_generate_classic(tag ='hybrid',
                         Qec= self.gen_agent.Fxy, Pdc= self.gen_agent.Gy,
-                        trn_set=self.test_loader, pfx="vld_set_bb_unique_hack",
+                        trn_set=self.data_tst_loader, pfx="vld_set_bb_unique_hack",
                         opt=self.opt, outf= self.opt.outf, save=False)
                 bar.set_postfix(status='saving images STFD/GOF Hybrid Broadband ...')
                 self.validation_writer.add_figure('STFD Hybrid Broadband', figure_hb)
