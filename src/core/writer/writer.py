@@ -26,7 +26,7 @@ class Writer(object):
     
     def set_step(self, step,mode='train'): 
         _mode =  [  'train', 'eval','debug', 'test', 'tuning',
-                    'Dloss',  'Gloss', 'Ggradient','Dgradient']
+                    'Dloss',  'Gloss', 'Ggradient','Dgradient','Probs']
         if mode in _mode:
             self.mode = mode
         else:

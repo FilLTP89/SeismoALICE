@@ -146,8 +146,9 @@ class SimpleTrainer(BasicTrainer):
             self.train_generators(batch=pack, epoch=epoch, 
                         modality='eval',net_mode=['eval','eval'])
         if epoch%self.opt.config['hparams']['validation_epochs'] == 0:
-            self.losses_disc_tracker.write( epoch=epoch, modality = ['train','eval'])
-            self.losses_gen_tracker.write(  epoch=epoch, modality = ['train','eval'])
+            self.losses_disc_tracker.write(epoch=epoch, modality = ['train','eval'])
+            self.losses_gen_tracker.write(epoch=epoch, modality = ['train','eval'])
+            self.prob_disc_tracker.write(epoch=epoch, modality = ['train','eval'])
 
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         """ The SimpleTrainer class is extended to support different strategy
