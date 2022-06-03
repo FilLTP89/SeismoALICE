@@ -58,8 +58,6 @@ class ALICE(SimpleTrainer):
             zyy_F,zyx_F,*other = self.gen_agent.Fy(y_inp)
             zd_gen      = zcat(zyx_F,zyy_F)
 
-            Dreal_yz, Dfake_yz = self.disc_agent.discriminate_yz(y,y_gen,zd_inp,zd_gen)
-            Dloss_ali_y =  self.bce_loss(Dreal_yz,o1l(Dreal_yz)) + self.bce_loss(Dfake_yz,o0l(Dfake_yz))
 
             # 1.2 Reconstruction of signal distributions
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
@@ -68,6 +66,9 @@ class ALICE(SimpleTrainer):
 
             zyy_rec,zyx_rec = self.gen_agent.Fy(y_gen)
             zd_rec      = zcat(zyx_rec,zyy_rec)
+
+            Dreal_yz, Dfake_yz = self.disc_agent.discriminate_yz(y,y_rec,zd_inp,zd_rec)
+            Dloss_ali_y =  self.bce_loss(Dreal_yz,o1l(Dreal_yz)) + self.bce_loss(Dfake_yz,o0l(Dfake_yz))
 
             Dreal_y, Dfake_y = self.disc_agent.discriminate_yy(y, y_rec)
             Dloss_cross_entropy_y  = self.bce_loss(Dreal_y,o1l(Dreal_y))+\
@@ -121,9 +122,6 @@ class ALICE(SimpleTrainer):
             zyy_F,zyx_F,*other = self.gen_agent.Fy(y_inp)
             zd_gen      = zcat(zyx_F,zyy_F)
 
-            Dreal_yz, Dfake_yz  = self.disc_agent.discriminate_yz(y, y_gen,zd_inp,zd_gen)
-            Gloss_ali_y = self.bce_loss(Dreal_yz,o0l(Dreal_yz))+self.bce_loss(Dfake_yz,o1l(Dfake_yz))
-
             # 1.2 Reconstruction of signal distributions
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
             y_gen       = zcat(y_gen,wny)
@@ -134,6 +132,9 @@ class ALICE(SimpleTrainer):
 
             Gloss_rec_y = torch.mean(torch.abs(y-y_rec))
             Gloss_rec_zd= torch.mean(torch.abs(zd_inp-zd_rec))
+
+            Dreal_yz, Dfake_yz  = self.disc_agent.discriminate_yz(y, y_rec,zd_inp,zd_rec)
+            Gloss_ali_y = self.bce_loss(Dreal_yz,o0l(Dreal_yz))+self.bce_loss(Dfake_yz,o1l(Dfake_yz))
 
             _, Dfake_y  = self.disc_agent.discriminate_yy(y, y_rec)
             Gloss_cross_entropy_y= self.bce_loss(Dfake_y,o1l(Dfake_y))
