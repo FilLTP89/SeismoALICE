@@ -49,6 +49,7 @@ class ALICE(SimpleTrainer):
             zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
+            
             # 1.1 We Generate conditional samples
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
             zd_inp      = zcat(zxy,zyy)
@@ -132,8 +133,8 @@ class ALICE(SimpleTrainer):
             zyy_rec,zyx_rec = self.gen_agent.Fy(y_gen)
             zd_rec      = zcat(zyx_rec,zyy_rec)
 
-            Gloss_rec_y = torch.mean(torch.abs(y-y_rec))
-            Gloss_rec_zd= torch.mean(torch.abs(zd_inp-zd_rec))
+            Gloss_rec_y = torch.mean(torch.abs(y-y_rec)**2)
+            Gloss_rec_zd= torch.mean(torch.abs(zd_inp-zd_rec)**2)
 
             _, Dfake_y  = self.disc_agent.discriminate_yy(y, y_rec)
             Gloss_cross_entropy_y= self.bce_loss(Dfake_y,o1l(Dfake_y))
@@ -144,7 +145,7 @@ class ALICE(SimpleTrainer):
             Gloss_rec   = Gloss_rec_y + Gloss_rec_zd
             Gloss_cross_entropy = Gloss_cross_entropy_y + Gloss_cross_entropy_zd
 
-            Gloss = Gloss_ali_y+ Gloss_cross_entropy + 10.*Gloss_rec
+            Gloss = Gloss_ali_y+ Gloss_cross_entropy + Gloss_rec
             if modality == 'train':
                 Gloss.backward()
                 self.gen_agent.optimizer.step()
