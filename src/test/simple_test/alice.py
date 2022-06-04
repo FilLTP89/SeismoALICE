@@ -70,6 +70,9 @@ class ALICE(SimpleTrainer):
             zyy_rec,zyx_rec = self.gen_agent.Fy(y_gen)
             zd_rec      = zcat(zyx_rec,zyy_rec)
 
+            if epoch == 20:
+                breakpoint()
+
             Dreal_y, Dfake_y = self.disc_agent.discriminate_yy(y, y_rec)
             Dloss_cross_entropy_y  = self.bce_loss(Dreal_y,o1l(Dreal_y))+\
                     self.bce_loss(Dfake_y,o0l(Dfake_y))
@@ -135,7 +138,7 @@ class ALICE(SimpleTrainer):
 
             Gloss_rec_y = torch.mean(torch.abs(y-y_rec)**2)
             Gloss_rec_zd= torch.mean(torch.abs(zd_inp-zd_rec)**2)
-
+            
             _, Dfake_y  = self.disc_agent.discriminate_yy(y, y_rec)
             Gloss_cross_entropy_y= self.bce_loss(Dfake_y,o1l(Dfake_y))
 

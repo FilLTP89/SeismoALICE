@@ -30,13 +30,13 @@ def get_latent_dataset(nsy=1280, batch_size=64, *args, **kwargs):
     train_set, vld_set, tst_set  = torch.utils.data.random_split(dataset, [train_part,vld_part,tst_part])
 
     trn_loader = torch.utils.data.DataLoader(dataset=train_set, 
-                batch_size =batch_size, shuffle =False,
+                batch_size =batch_size, shuffle =True,
                 num_workers=0, pin_memory =True)
     vld_loader = torch.utils.data.DataLoader(dataset=vld_set, 
-                batch_size =batch_size, shuffle =False,
+                batch_size =batch_size, shuffle =True,
                 num_workers=0,pin_memory =True)
     tst_loader = torch.utils.data.DataLoader(dataset=tst_set, 
-                batch_size =batch_size, shuffle =False,
+                batch_size =batch_size, shuffle =True,
                 num_workers=0,pin_memory =True)
 
     return trn_loader, vld_loader, tst_loader

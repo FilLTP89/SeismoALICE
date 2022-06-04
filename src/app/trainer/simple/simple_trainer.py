@@ -10,7 +10,7 @@ from tools.generate_noise import noise_generator
 from core.logger.logger import setup_logging
 from configuration import app
 from torch.nn import DataParallel as DP
-from common.common_nn import generate_latent_variable_1D, get_accuracy
+from common.common_nn import generate_latent_variable_1D, get_accuracy,patch
 from common.common_nn import count_parameters
 from common.common_torch import *
 from database.latentset import get_latent_dataset
@@ -116,7 +116,8 @@ class SimpleTrainer(BasicTrainer):
             zyx,zyy    = batch_latent
             y          = y.to(app.DEVICE,non_blocking=True)
             zyx,zyy    = zyx.to(app.DEVICE,non_blocking=True),zyy.to(app.DEVICE,non_blocking=True)
-            pack = y,zyy,zyx
+            
+            pack = patch(y=y,zyy=zyy,zyx=zyx)
             self.train_discriminators(ncritics=1, batch=pack,epoch=epoch, 
                 modality='train',net_mode=['eval','train'])
             self.train_generators(ncritics=1, batch=pack, epoch=epoch, 
@@ -140,7 +141,7 @@ class SimpleTrainer(BasicTrainer):
             y          = y.to(app.DEVICE, non_blocking   = True)
             zyx, zyy   = zyx.to(app.DEVICE, non_blocking = True), zyy.to(app.DEVICE, non_blocking = True)
   
-            pack = y,zyy,zyx
+            pack = patch(y=y,zyy=zyy,zyx=zyx)
             self.train_discriminators(batch=pack,epoch=epoch, 
                         modality='eval',net_mode=['eval','eval'])
             self.train_generators(batch=pack, epoch=epoch, 

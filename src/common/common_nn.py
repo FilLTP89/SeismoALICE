@@ -376,7 +376,7 @@ def zerograd(optz):
     #     for o in _optim:
     #         if o is not None:
     #             o.zero_grad()
-def patch(y,zyx,zyy, x = None):
+def patch(y,zyy,zyx, x = None):
     if torch.isnan(torch.max(y)):
         app.logger.debug("your model contain nan value "
             "this signals will be withdrawn from the training "
@@ -388,7 +388,9 @@ def patch(y,zyx,zyy, x = None):
         if x is not None:
             x.data = x[index[mask]]
         zyx.data, zyy.data  = zyx[index[mask]],zyy[index[mask]]
-        return y, x, zyx, zyy
+    if x == None:
+            return y,zyy,zyx
+    return y, x, zyy, zyx
         
 def penalty(loss,params,typ,lam=1.e-5):
     pen = {'L1':1,'L2':2}
