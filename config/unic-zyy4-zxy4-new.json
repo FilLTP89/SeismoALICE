@@ -1,21 +1,21 @@
 {   "hparams":
     {   
-        "generators.lr":0.00005354744858174844,
+        "generators.lr":0.000005354744858174844,
         "generators.weight_decay":0.0001,
         "discriminators.lr":0.000001375824099541618,
         "discriminators.weight_decay":0.0001,
-        "training_epochs":25,
-        "validation_epochs":25,
+        "training_epochs":5,
+        "validation_epochs":5,
         "test_epochs":50
     },
     "log_dir":{
-        "train_writer":"./runs_both/renew/alice/bb5/training/",
-        "valid_writer":"./runs_both/renew/alice/bb5/validation/",
-        "debug_writer":"./runs_both/renew/alice/bb5/debug/",
-        "debug.losses_writer":"./runs_both/renew/alice/bb5/losses/",
-        "debug.gradients_writer":"./runs_both/renew/alice/bb5/gradients/",
-        "debug.encoder_writer":"./runs_both/renew/alice/bb5/net/encoder",
-        "debug.decoder_writer":"./runs_both/renew/alice/bb5/net/decoder"
+        "train_writer":"./runs_both/renew/alice/bb7/training/",
+        "valid_writer":"./runs_both/renew/alice/bb7/validation/",
+        "debug_writer":"./runs_both/renew/alice/bb7/debug/",
+        "debug.losses_writer":"./runs_both/renew/alice/bb7/losses/",
+        "debug.gradients_writer":"./runs_both/renew/alice/bb7/gradients/",
+        "debug.encoder_writer":"./runs_both/renew/alice/bb7/net/encoder",
+        "debug.decoder_writer":"./runs_both/renew/alice/bb7/net/decoder"
     },
      "F":{
         "name"      :"Unic",
