@@ -22,8 +22,8 @@ class DCGAN_DzDataParallele(object):
         pass
 
     @staticmethod
-    def getDCGAN_DzDataParallele(name,ngpu, nc,nz, act, ncl, ndf, path, nly, channel, bn, fpd=1,\
-                 ker=2,std=2,pad=0, dil=0,grp=0,wf=False, dpc=0.0, prob = True,extra = 128, 
+    def getDCGAN_DzDataParallele(name,ngpu, nc,nz, act, ncl, ndf, path, nly, channel, bn, prob, fpd=1,\
+                 ker=2,std=2,pad=0, dil=0,grp=0,wf=False, dpc=0.0,extra = 128, 
                  n_extra_layers=0, limit = 256, bias = False, batch_size = 128,*args,**kwargs):
         if name is not None:
             classname = 'DCGAN_Dz_' + name
@@ -73,7 +73,7 @@ class BasicDCGAN_DzDataParallel(BasicModel):
         _bool_bn[0] = False
         pack = zip(channel[:-1], channel[1:], kernel, strides,dilation, padding, activation,_bool_bn)
 
-        for in_channels, out_channels, kernel_size, stride, padding, dilation, acts, _bn in pack:
+        for in_channels, out_channels, kernel_size, stride, dilation, padding, acts, _bn in pack:
             cnn += cnn1d(in_channels=in_channels, 
                         out_channels=out_channels,
                         ker = kernel_size,
@@ -81,7 +81,8 @@ class BasicDCGAN_DzDataParallel(BasicModel):
                         pad = padding,
                         act = acts,
                         dil = dilation,
-                        bn  = _bn, 
+                        bn  = _bn,
+                        dpc = dpc,
                         *args, **kwargs)
         return cnn
 

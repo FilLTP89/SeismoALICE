@@ -175,7 +175,7 @@
         "extra"     :128,
         "act"       :"Dfz",
         "bn"        :"True",
-        "prob"      :"True",
+        "prob"      :"False",
         "wf"        :"False",
         "limit"     :256},
     "Gx":{
