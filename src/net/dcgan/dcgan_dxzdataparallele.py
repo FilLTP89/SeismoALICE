@@ -76,13 +76,14 @@ class BasicDCGAN_DXZDataParallele(BasicModel):
     def block_conv(self, channel, kernel, strides, dilation, padding, dpc, activation, *args, **kwargs):
         cnn  = []
         pack = zip(channel[:-1], channel[1:], kernel, strides, dilation, padding, activation)
-        for in_channels, out_channels, kernel_size, stride, padding, dilation, acts in pack:
+        for in_channels, out_channels, kernel_size, stride, dilation,padding, acts in pack:
             cnn += cnn1d(in_channels=in_channels, 
                         out_channels=out_channels,
                         ker = kernel_size,
                         std = stride,
                         pad = padding,
-                        act=acts,
+                        actc= acts,
+                        dpc = dpc,
                         dil = dilation,*args, **kwargs)
         return cnn
 
@@ -215,7 +216,7 @@ class DCGAN_DXZ_Flatten(BasicDCGAN_DXZDataParallele):
         bn=True,wf=False, dpc=0.25, limit =1024, prob = False,\
         n_extra_layers= 1, bias=False, *args, **kwargs):
         super(DCGAN_DXZ_Flatten, self).__init__(*args, **kwargs)
-
+        
         activation = T.activation(act, nly)
         self.cnn  = []
 
