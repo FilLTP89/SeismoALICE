@@ -71,11 +71,11 @@ class ALICE(SimpleTrainer):
             zyy_rec,zyx_rec = self.gen_agent.Fy(y_gen)
             zd_rec      = zcat(zyx_rec,zyy_rec)
 
-            Dreal_y, Dfake_y = self.disc_agent.discriminate_yy(y, y_rec)
-            Dloss_cross_entropy_y  = self.bce_logit_loss(Dreal_y,o1l(Dreal_y))+\
+            Dreal_y, Dfake_y        = self.disc_agent.discriminate_yy(y, y_rec)
+            Dloss_cross_entropy_y   = self.bce_logit_loss(Dreal_y,o1l(Dreal_y))+\
                     self.bce_logit_loss(Dfake_y,o0l(Dfake_y))
 
-            Dreal_zd, Dfake_zd = self.disc_agent.discriminate_zzb(zd_inp,zd_rec)
+            Dreal_zd, Dfake_zd      = self.disc_agent.discriminate_zzb(zd_inp,zd_rec)
             Dloss_cross_entropy_zd  = self.bce_logit_loss(Dreal_zd,o1l(Dreal_zd))+\
                     self.bce_logit_loss(Dfake_zd,o0l(Dfake_zd))
 
@@ -138,12 +138,12 @@ class ALICE(SimpleTrainer):
             Gloss_rec_y = torch.mean(torch.abs(y-y_rec)**2)
             Gloss_rec_zd= torch.mean(torch.abs(zd_inp-zd_rec)**2)
             
-            Dreal_y, Dfake_y  = self.disc_agent.discriminate_yy(y, y_rec)
-            Gloss_cross_entropy_y = self.bce_logit_loss(Dreal_y,o0l(Dreal_y))+\
+            Dreal_y, Dfake_y        = self.disc_agent.discriminate_yy(y, y_rec)
+            Gloss_cross_entropy_y   = self.bce_logit_loss(Dreal_y,o0l(Dreal_y))+\
                     self.bce_logit_loss(Dfake_y,o1l(Dfake_y))
 
-            Dreal_zd, Dfake_zd = self.disc_agent.discriminate_zzb(zd_inp,zd_rec)
-            Gloss_cross_entropy_zd= self.bce_logit_loss(Dreal_zd,o0l(Dreal_zd))+\
+            Dreal_zd, Dfake_zd      = self.disc_agent.discriminate_zzb(zd_inp,zd_rec)
+            Gloss_cross_entropy_zd  = self.bce_logit_loss(Dreal_zd,o0l(Dreal_zd))+\
                     self.bce_logit_loss(Dfake_zd,o1l(Dfake_zd))
 
             Gloss_rec           = Gloss_rec_y + Gloss_rec_zd
