@@ -82,7 +82,7 @@ class BasicDCGAN_DXZDataParallele(BasicModel):
                         ker = kernel_size,
                         std = stride,
                         pad = padding,
-                        actc= acts,
+                        act = acts,
                         dpc = dpc,
                         dil = dilation,*args, **kwargs)
         return cnn
