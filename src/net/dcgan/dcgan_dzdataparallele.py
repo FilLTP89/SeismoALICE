@@ -236,13 +236,14 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
         #         nn.LeakyReLU(1.0,inplace=True),
         #         Dpout(dpc = dpc)
         #     ]
-        if prob:
-            self.cnn1[-2:]=[
+        self.cnn1[-2:]=[
                 nn.Flatten(start_dim = 1, end_dim=2),
                 # Shallow(shape=(batch_size,lout*channel[-1])),
                 Linear(lout*channel[-1],1),
-                nn.Sigmoid()
+                
             ]
+        if prob:
+            self.cnn1+=[nn.Sigmoid()]
 
         self.cnn1 = self.cnn1
         self.cnn1  = sqn(*self.cnn1)
