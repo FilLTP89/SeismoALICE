@@ -72,7 +72,7 @@ class BasicDCGAN_DxDataParallel(BasicModel):
     def discriminate_circle(self,x,x_rec): 
         return self(zcat(x,x)), self(zcat(x,x_rec))
 
-    def block_linear(self, channel, activation):
+    def block_linear(self, channel, activation, dpc):
         cnn = []
         for in_channels, out_channels, acts in zip(channel[:-1], channel[1:], activation):
             cnn += [nn.Linear(in_channels, out_channels)]
@@ -153,7 +153,7 @@ class DCGAN_Dx(BasicDCGAN_DxDataParallel):
             self.final = [
                 # Squeeze(),
                 Shallow(shape = lout*channel[-1]),
-                torch.nn.utils.spectral_norm(lout*channel[-1]),
+                torch.nn.utils.spectral_norm(),
                 nn.Linear(lout*channel[-1], 1024),
                 nn.Dpout(dpc = dpc),
                 nn.LeakyReLU(negative_slope=0.1,inplace=True),

@@ -11,6 +11,7 @@ warnings.filterwarnings("ignore")
 # COMMON
 from common.common_model import AKA
 # NUMPY
+import copy
 import numpy as np
 # TORCH GENERIC
 #from torch._jit_internal import weak_module, weak_script_method
@@ -179,7 +180,11 @@ def cnn1d(in_channels,out_channels,\
     #    block.insert(0,AddNoise(dev=dev))
     
     if bn:
-        block.append(normalization(out_channels))
+        if isinstance(normalization,BatchNorm1d):
+            block.append(normalization(out_channels))
+        elif normalization == torch.nn.utils.spectral_norm:
+            block = [normalization(copy.deepcopy(block[0]))]
+
     block.append(act)
     block.append(Dpout(dpc=dpc))
     if wn:
@@ -188,7 +193,7 @@ def cnn1d(in_channels,out_channels,\
 
 def cnn1dt(in_channels,out_channels,\
            act=LeakyReLU(1.0),#\inplace=True
-           bn=True,ker=2,std=2,pad=0,opd=0,\
+           bn=True,ker=2,std=2,pad=0,opd=0,normalization=partial(BatchNorm1d),\
            dil=1,grp=1,dpc=0.1):
 
     block = [ConvTranspose1d(in_channels=in_channels,\
@@ -199,7 +204,10 @@ def cnn1dt(in_channels,out_channels,\
                              bias=False)]
     
     if bn:
-        block.append(BatchNorm1d(out_channels))
+        if isinstance(normalization,BatchNorm1d):
+            block.append(BatchNorm1d(out_channels))
+        elif normalization == torch.nn.utils.spectral_norm:
+            block = [normalization(copy.deepcopy(block[0]))]
     block.append(act)
     block.append(Dpout(dpc=dpc))
     return block
@@ -216,7 +224,8 @@ def DenseBlock(in_channels,out_channels,\
 
 class ConvBlock(Module):
     def __init__(self, ni, no, ker, std, bias=False,
-                 act = None, bn=True, normalization = partial(BatchNorm1d), pad=None, dpc=None, dil = 1,*args, **kwargs):
+                 act = None, bn=True, normalization = partial(BatchNorm1d), 
+                 pad=None, dpc=None, dil = 1,*args, **kwargs):
         super(ConvBlock,self).__init__()
         if pad is None: pad = ks//2//stride
 
@@ -226,13 +235,14 @@ class ConvBlock(Module):
                     padding=pad, bias=bias, 
                     dilation = dil)]
 
-
         if bn:
-            if str(normalization).find('InstanceNorm1d'):
+            if isinstance(normalization,InstanceNorm1d):
                 self.ann+= [normalization(no, affine=True)]
+            elif normalization == torch.nn.utils.spectral_norm:
+                self.ann = [normalization(copy.deepcopy(self.ann[0]))]
             else:
                 self.ann+= [normalization(no)]
-
+                
         if dpc is not None: self.ann += [Dpout(dpc=dpc)]
         if act is not None: self.ann += [act]
 
