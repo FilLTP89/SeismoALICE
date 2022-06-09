@@ -129,7 +129,7 @@ class DCGAN_Dx(BasicDCGAN_DxDataParallel):
         #building network
         self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
                 ker = ker[0], std = std[0], pad = pad[0], dil = dil[0],\
-                bn = False, act = activation[0], dpc = dpc,normalization=BatchNorm1d))
+                bn = False, act = activation[0], dpc = dpc,normalization=torch.nn.utils.spectral_norm))
 
         for i in range(2, nly+1):
             act = activation[i-1]
@@ -139,7 +139,7 @@ class DCGAN_Dx(BasicDCGAN_DxDataParallel):
             _dpc = 0.0 if i == nly else dpc
             self.net.append(ConvBlock(ni = channel[i-1], no = channel[i],
                 ker = ker[i-1], std = std[i-1], pad = pad[i-1], dil = dil[i-1], bias = False,\
-                bn = _bn, dpc = dpc, act = act,normalization=BatchNorm1d)) 
+                bn = _bn, dpc = dpc, act = act,normalization=torch.nn.utils.spectral_norm)) 
 
         """
             The kernel = 3 and the stride = 1 not change the third dimension
@@ -153,9 +153,10 @@ class DCGAN_Dx(BasicDCGAN_DxDataParallel):
             self.final = [
                 # Squeeze(),
                 Shallow(shape = lout*channel[-1]),
+                torch.nn.utils.spectral_norm(lout*channel[-1]),
                 nn.Linear(lout*channel[-1], 1024),
-                nn.ReLU(inplace=True),
-                nn.BatchNorm1d(),
+                nn.Dpout(dpc = dpc),
+                nn.LeakyReLU(negative_slope=0.1,inplace=True),
                 # according to Randford et al., 2016, no more Full connected layer is needed
                 # only a flattend is applied in the discriminator
                 torch.nn.Linear(1024, 1),
@@ -219,7 +220,7 @@ class DCGAN_Dx_Lite(BasicDCGAN_DxDataParallel):
 
         self.cnn = self.block_conv( channel = channel,kernel = ker,\
                     strides = std, dilation= dil,  activation = activation,\
-                    padding = pad, bn = bn, dpc = dpc, normalization=nn.BatchNorm1d)
+                    padding = pad, bn = bn, dpc = dpc, normalization=torch.nn.utils.spectral_norm)
         
         lout = self.lout(nch = nc,
                     padding = pad, dilation = dil,\

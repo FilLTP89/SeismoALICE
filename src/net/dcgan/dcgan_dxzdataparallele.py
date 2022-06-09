@@ -235,13 +235,15 @@ class DCGAN_DXZ_Flatten(BasicDCGAN_DXZDataParallele):
             dpc         = dpc, 
             activation  = activation, 
             bn          = bn,
-            normalization = torch.nn.BatchNorm1d
+            normalization = torch.nn.utils.spectral_norm
             ) 
         
         self.cnn +=[
             nn.Flatten(start_dim = 1, end_dim=2),
             # Shallow(shape=(batch_size,lout*channel[-1])),
+            torch.nn.utils.spectral_norm(lout*channel[-1]),
             nn.LeakyReLU(negative_slope=0.1, inplace=True),
+            nn.Dropout(dpc),
             Linear(lout*channel[-1],1),
             nn.LeakyReLU(negative_slope=1.0, inplace=True)
         ]

@@ -222,7 +222,7 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
             dpc         = dpc, 
             activation  = acts, 
             bn          = bn,
-            normalization =BatchNorm1d)
+            normalization =torch.nn.utils.spectral_norm)
         # for i in range(1, nly+1):
         #     _dpc = 0.0 if i ==nly else dpc
         #     _bn =  False if i == nly else bn
@@ -231,15 +231,11 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
         #         dil=dil[i-1], opd=0, bn=_bn,dpc=_dpc)
         
 
-        # self.cnn1 += [
-        #         Linear(channel[-1], extra, bias = False),
-        #         BatchNorm1d(extra),
-        #         nn.LeakyReLU(1.0,inplace=True),
-        #         Dpout(dpc = dpc)
-        #     ]
         self.cnn1[-2:]=[
                 nn.Flatten(start_dim = 1, end_dim=2),
-                # Shallow(shape=(batch_size,lout*channel[-1])),
+                torch.nn.utils.spectral_norm(lout*channel[-1]),
+                nn.LeakyReLU(0.2,inplace=True),
+                nn.Dpout(dpc = dpc),
                 Linear(lout*channel[-1],1),
                 
             ]
