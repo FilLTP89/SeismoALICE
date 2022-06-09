@@ -109,7 +109,7 @@ class ALICE(SimpleTrainer):
             
     def train_generators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,zxy = batch
-        for _ in range(3):
+        for _ in range(1):
             zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
@@ -135,8 +135,8 @@ class ALICE(SimpleTrainer):
             zyy_rec,zyx_rec = self.gen_agent.Fy(y_gen)
             zd_rec      = zcat(zyx_rec,zyy_rec)
 
-            Gloss_rec_y = torch.mean(torch.abs(y-y_rec)**2)
-            Gloss_rec_zd= torch.mean(torch.abs(zd_inp-zd_rec)**2)
+            Gloss_rec_y = torch.mean(torch.abs(y-y_rec))
+            Gloss_rec_zd= torch.mean(torch.abs(zd_inp-zd_rec))
             
             Dreal_y, Dfake_y        = self.disc_agent.discriminate_yy(y, y_rec)
             Gloss_cross_entropy_y   = self.bce_logit_loss(Dreal_y,o0l(Dreal_y))+\
@@ -148,7 +148,7 @@ class ALICE(SimpleTrainer):
 
             Gloss_rec           = Gloss_rec_y + Gloss_rec_zd
             Gloss_cross_entropy = Gloss_cross_entropy_y + Gloss_cross_entropy_zd
-            Gloss               = Gloss_ali_y+ Gloss_cross_entropy + 0.1*Gloss_rec
+            Gloss               = Gloss_ali_y+ Gloss_cross_entropy + 1.*Gloss_rec
 
             if modality == 'train':
                 Gloss.backward()

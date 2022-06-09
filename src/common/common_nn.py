@@ -532,7 +532,7 @@ def reset_net(nets,func=set_weights,lr=0.0002,b1=b1,b2=b2,
         else:
             return Adam(ittc(*p),lr=lr,betas=(b1,b2),weight_decay=weight_decay)
     elif 'rmsprop' in optim.lower():
-        return RMSprop(ittc(*p),lr=lr)
+        return RMSprop(ittc(*p),lr=lr, *args, **kwargs)
     elif 'sgd' in optim.lower():
         return SGD(ittc(*p),lr=lr)
 

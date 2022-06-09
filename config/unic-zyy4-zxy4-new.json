@@ -2,7 +2,7 @@
     {   
         "generators.lr":0.00002,
         "generators.weight_decay":0.0001,
-        "discriminators.lr":0.00002,
+        "discriminators.lr":0.02,
         "discriminators.weight_decay":0.0001,
         "training_epochs":5,
         "validation_epochs":5,
