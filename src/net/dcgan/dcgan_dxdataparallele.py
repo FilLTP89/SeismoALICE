@@ -105,7 +105,7 @@ class DCGAN_Dx(BasicDCGAN_DxDataParallel):
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
         self.cnn  = []
-
+        
         #activation code
         activation = T.activation(act, nly)
         self.device = tdev("cuda" if torch.cuda.is_available() else "cpu")
@@ -153,7 +153,6 @@ class DCGAN_Dx(BasicDCGAN_DxDataParallel):
             self.final = [
                 # Squeeze(),
                 Shallow(shape = lout*channel[-1]),
-                torch.nn.utils.spectral_norm(),
                 nn.Linear(lout*channel[-1], 1024),
                 nn.Dpout(dpc = dpc),
                 nn.LeakyReLU(negative_slope=0.1,inplace=True),
@@ -217,7 +216,7 @@ class DCGAN_Dx_Lite(BasicDCGAN_DxDataParallel):
                  prob = False,batch_size =128,n_extra_layers=0, extra = 128, *args,**kwargs):
         super(DCGAN_Dx_Lite, self).__init__(*args, **kwargs)
         activation = T.activation(act, nly)
-
+        breakpoint()
         self.cnn = self.block_conv( channel = channel,kernel = ker,\
                     strides = std, dilation= dil,  activation = activation,\
                     padding = pad, bn = bn, dpc = dpc, normalization=torch.nn.utils.spectral_norm)

@@ -51,6 +51,7 @@ class ALICE(SimpleTrainer):
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
             
             # 1. We Generate conditional samples
+            breakpoint()
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
             zd_inp      = zcat(zxy,zyy)
             y_inp       = zcat(y,wny) 
@@ -124,7 +125,7 @@ class ALICE(SimpleTrainer):
             zd_gen      = zcat(zyx_F,zyy_F)
 
             Dreal_yz, Dfake_yz  = self.disc_agent.discriminate_yz(y, y_gen,zd_inp,zd_gen)
-            Gloss_ali_y = self.bce_logit_loss(Dreal_yz,o0l(Dreal_yz)) +\
+            Gloss_ali_y = self.bce_logit_loss(Dreal_yz,o1l(Dreal_yz)) +\
                          self.bce_logit_loss(Dfake_yz,o1l(Dfake_yz))
 
             # 2. Reconstruction of signal distributions
@@ -139,12 +140,10 @@ class ALICE(SimpleTrainer):
             Gloss_rec_zd= torch.mean(torch.abs(zd_inp-zd_rec))
             
             Dreal_y, Dfake_y        = self.disc_agent.discriminate_yy(y, y_rec)
-            Gloss_cross_entropy_y   = self.bce_logit_loss(Dreal_y,o0l(Dreal_y))+\
-                    self.bce_logit_loss(Dfake_y,o1l(Dfake_y))
+            Gloss_cross_entropy_y   = self.bce_logit_loss(Dfake_y,o1l(Dfake_y))
 
             Dreal_zd, Dfake_zd      = self.disc_agent.discriminate_zzb(zd_inp,zd_rec)
-            Gloss_cross_entropy_zd  = self.bce_logit_loss(Dreal_zd,o0l(Dreal_zd))+\
-                    self.bce_logit_loss(Dfake_zd,o1l(Dfake_zd))
+            Gloss_cross_entropy_zd  = self.bce_logit_loss(Dfake_zd,o1l(Dfake_zd))
 
             Gloss_rec           = Gloss_rec_y + Gloss_rec_zd
             Gloss_cross_entropy = Gloss_cross_entropy_y + Gloss_cross_entropy_zd

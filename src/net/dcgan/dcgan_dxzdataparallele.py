@@ -243,7 +243,8 @@ class DCGAN_DXZ_Flatten(BasicDCGAN_DXZDataParallele):
             # Shallow(shape=(batch_size,lout*channel[-1])),
             nn.LeakyReLU(negative_slope=0.1, inplace=True),
             nn.Dropout(dpc),
-            torch.nn.utils.spectral_norm(Linear(lout*channel[-1],1)),
+            nn.BatchNorm1d(lout*channel[-1]),
+            Linear(lout*channel[-1],1),
             nn.LeakyReLU(negative_slope=1.0, inplace=True)
         ]
         if prob:

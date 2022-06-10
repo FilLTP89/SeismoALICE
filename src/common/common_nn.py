@@ -180,10 +180,9 @@ def cnn1d(in_channels,out_channels,\
     #    block.insert(0,AddNoise(dev=dev))
     
     if bn:
-        if isinstance(normalization,BatchNorm1d):
-            block.append(normalization(out_channels))
-        elif normalization == torch.nn.utils.spectral_norm:
+        if normalization == torch.nn.utils.spectral_norm:
             block = [normalization(copy.deepcopy(block[0]))]
+        block.append(BatchNorm1d(out_channels))
 
     block.append(act)
     block.append(Dpout(dpc=dpc))
@@ -204,10 +203,9 @@ def cnn1dt(in_channels,out_channels,\
                              bias=False)]
     
     if bn:
-        if isinstance(normalization,BatchNorm1d):
-            block.append(BatchNorm1d(out_channels))
-        elif normalization == torch.nn.utils.spectral_norm:
+        if normalization == torch.nn.utils.spectral_norm:
             block = [normalization(copy.deepcopy(block[0]))]
+        block.append(BatchNorm1d(out_channels))
     block.append(act)
     block.append(Dpout(dpc=dpc))
     return block
@@ -236,12 +234,12 @@ class ConvBlock(Module):
                     dilation = dil)]
 
         if bn:
+            if normalization == torch.nn.utils.spectral_norm:
+                self.ann = [normalization(copy.deepcopy(self.ann[0]))]
             if isinstance(normalization,InstanceNorm1d):
                 self.ann+= [normalization(no, affine=True)]
-            elif normalization == torch.nn.utils.spectral_norm:
-                self.ann = [normalization(copy.deepcopy(self.ann[0]))]
             else:
-                self.ann+= [normalization(no)]
+                self.ann+= [BatchNorm1d(no)]
                 
         if dpc is not None: self.ann += [Dpout(dpc=dpc)]
         if act is not None: self.ann += [act]

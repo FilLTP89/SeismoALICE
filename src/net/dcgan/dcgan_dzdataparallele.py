@@ -123,23 +123,27 @@ class DCGAN_Dz(BasicDCGAN_DzDataParallel):
 
         self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
                 ker = ker[0], std = std[0], pad = pad[0], dil = dil[0],\
-                bn = False, act = activation[0], dpc = dpc,normalization=nn.BatchNorm1d))
+                bn = False, act = activation[0], dpc = dpc,
+                normalization=torch.nn.utils.spectral_norm))
 
         for i in range(2,nly+1):
             act = activation[i-1]
             self.net.append(ConvBlock(ni = channel[i-1], no = channel[i],
                 ker = ker[i-1], std = std[i-1], pad = pad[i-1],\
-                bias = bias, act = activation[i-1], dpc = dpc, bn = bn,normalization=nn.BatchNorm1d))
+                bias = bias, act = activation[i-1], dpc = dpc, bn = bn,
+                normalization=torch.nn.utils.spectral_norm))
             # self.cnn1 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,\
             #         bn=_bn,dpc=dpc,wn=False)
             layers.append(ConvBlock(ni = channel[i-1],no=channel[i],\
                     ker = 3, std = 1, pad = 1, dil = 1, bias = False, bn = bn,\
-                    dpc = dpc, act = activation[i-1],normalization=nn.BatchNorm1d))
+                    dpc = dpc, act = activation[i-1],
+                    normalization=torch.nn.utils.spectral_norm))
 
         for k in range(0,n_extra_layers):
             self.net.append(ConvBlock(ni = channel[i-1],no=channel[i],\
                 ker = 3, std = 1, pad = 1, dil = 1, bias = False, bn = bn,\
-                dpc = dpc, act = activation[k],normalization=nn.BatchNorm1d))
+                dpc = dpc, act = activation[k],
+                normalization=torch.nn.utils.spectral_norm))
 
 
         if prob:
@@ -157,7 +161,7 @@ class DCGAN_Dz(BasicDCGAN_DzDataParallel):
 
         self.net.append(Dpout(dpc = dpc))
         # self.net.append(activation[-1])
-        self.net = [UnSqueeze()] + self.prc + self.net +  self.final
+        self.net = self.prc + self.net +  self.final
         self.net =sqn(*self.net)
         
         # pdb.set_trace()
@@ -222,7 +226,7 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
             dpc         = dpc, 
             activation  = acts, 
             bn          = bn,
-            normalization =torch.nn.utils.spectral_norm)
+            normalization =nn.BatchNorm1d)
         # for i in range(1, nly+1):
         #     _dpc = 0.0 if i ==nly else dpc
         #     _bn =  False if i == nly else bn
@@ -235,7 +239,7 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
                 nn.Flatten(start_dim = 1, end_dim=2),
                 nn.LeakyReLU(0.2,inplace=True),
                 Dpout(dpc = dpc),
-                torch.nn.utils.spectral_norm(Linear(lout*channel[-1],1))
+                Linear(lout*channel[-1],1)
             ]
         if prob:
             self.cnn1+=[nn.Sigmoid()]
