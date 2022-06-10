@@ -280,25 +280,6 @@ class Encoder_Unic(BasicEncoderDataParallele):
                 acts_com[n-1],ker=ker_com[n-1],std=std_com[n-1],\
                 pad=pad_com[n-1],bn=_bn,dil=dil_com[n-1],dpc=_dpc,wn=False)
 
-        self.branch_common +=[
-            nn.Flatten(start_dim = 1, end_dim=2),
-            Linear(lout_zyx*channel_com[-1],256),
-            BatchNorm1d(256),
-            nn.LeakyReLU(0.2,inplace=True),
-            Dropout(dpc),
-            Linear(256,128),
-            nn.LeakyReLU(1.0,inplace=True)
-        ]
-
-        self.branch_broadband +=[
-            nn.Flatten(start_dim = 1, end_dim=2),
-            Linear(lout_zy*channel_bb[-1],256),
-            BatchNorm1d(256),
-            nn.LeakyReLU(0.2,inplace=True),
-            Dropout(dpc),
-            Linear(256,384),
-            nn.LeakyReLU(1.0,inplace=True)
-        ]
         # self.branch_broadband.append(Squeeze())
 
         # self.branch_broadband +=[
