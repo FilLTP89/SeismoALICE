@@ -109,7 +109,9 @@ class Decoder(BasicDecoderDataParallel):
         # Adding dense hidden layer 
         self.cnn1 +=[
             Linear(512,256),
-            nn.ReLU()
+            BatchNorm1d(256),
+            nn.ReLU(),
+            Dropout(dpc),
         ]
         self.cnn1 +=[UnSqueeze()]
         
