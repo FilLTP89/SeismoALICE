@@ -8,13 +8,13 @@ from configuration import app
 from torch.utils.data import Dataset
 
 class LatentDataset(Dataset): 
-    def __init__(self, latent_space_shape=[128,384],nsy = 1280, mean=0., 
+    def __init__(self, latent_space_shape=[[1,128],[3, 128]],nsy = 1280, mean=0., 
                         std = 1.0, seed=123,*args, **kwargs):
         # fix the seed for the same generation of gaussian, independently of epoch
-        self._latent_space_zlf = torch.empty(*[nsy,latent_space_shape[0]])
+        self._latent_space_zlf = torch.empty(*[nsy,*latent_space_shape[0]])
         self._latent_space_zlf = self._latent_space_zlf.normal_(mean, std)
 
-        self._latent_space_zhf = torch.empty(*[nsy,latent_space_shape[1]])
+        self._latent_space_zhf = torch.empty(*[nsy,*latent_space_shape[1]])
         self._latent_space_zhf = self._latent_space_zhf.normal_(mean, std)
 
     def __len__(self): 
