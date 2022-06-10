@@ -204,7 +204,7 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
         
         acts      = T.activation(act, nly)
         self.cnn1 = []
-        self.cnn1 += [UnSqueeze()]
+        # self.cnn1 += [UnSqueeze()]
         # self.cnn1 += [Explode(shape = [extra, limit])]
         # self.cnn1 += [nn.BatchNorm1d(extra)]
         # self.cnn1 += [acts[0]]
@@ -280,7 +280,7 @@ class DCGAN_Dz_Flatten(BasicDCGAN_DzDataParallel):
         super(DCGAN_Dz_Flatten, self).__init__(*args, **kwargs)
         acts      = T.activation(act, nly)
         self.cnn1 = []
-        self.cnn1 += [UnSqueeze()]
+        # self.cnn1 += [UnSqueeze()]
         # self.cnn1 += [Explode(shape = [extra, limit])]
         # self.cnn1 += [nn.BatchNorm1d(extra)]
         # self.cnn1 += [acts[0]]
