@@ -107,14 +107,6 @@ class Decoder(BasicDecoderDataParallel):
             _dconv = Transpose_DConv_62(last_channel = channel[-1], bn = True, dpc = 0.0).network()
 
         # Adding dense hidden layer 
-        self.cnn1 +=[
-            Linear(512,256),
-            BatchNorm1d(256),
-            nn.ReLU(),
-            Dropout(dpc),
-        ]
-        self.cnn1 +=[UnSqueeze()]
-        
         for i in range(1, nly+1):
             _dpc = 0.0 if i ==nly else dpc
             _bn =  False if i == nly else bn
