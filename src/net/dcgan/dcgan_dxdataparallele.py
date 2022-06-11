@@ -218,7 +218,7 @@ class DCGAN_Dx_Lite(BasicDCGAN_DxDataParallel):
                  prob = False,batch_size =128,n_extra_layers=0, extra = 128, *args,**kwargs):
         super(DCGAN_Dx_Lite, self).__init__(*args, **kwargs)
         activation = T.activation(act, nly)
-        breakpoint()
+        
         self.cnn = self.block_conv( channel = channel,kernel = ker,\
                     strides = std, dilation= dil,  activation = activation,\
                     padding = pad, bn = bn, dpc = dpc, normalization=torch.nn.utils.spectral_norm)

@@ -51,7 +51,6 @@ class ALICE(SimpleTrainer):
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
             
             # 1. We Generate conditional samples
-            breakpoint()
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
             zd_inp      = zcat(zxy,zyy)
             y_inp       = zcat(y,wny) 
@@ -139,10 +138,10 @@ class ALICE(SimpleTrainer):
             Gloss_rec_y = torch.mean(torch.abs(y-y_rec))
             Gloss_rec_zd= torch.mean(torch.abs(zd_inp-zd_rec))
             
-            Dreal_y, Dfake_y        = self.disc_agent.discriminate_yy(y, y_rec)
+            _, Dfake_y        = self.disc_agent.discriminate_yy(y, y_rec)
             Gloss_cross_entropy_y   = self.bce_logit_loss(Dfake_y,o1l(Dfake_y))
 
-            Dreal_zd, Dfake_zd      = self.disc_agent.discriminate_zzb(zd_inp,zd_rec)
+            _, Dfake_zd      = self.disc_agent.discriminate_zzb(zd_inp,zd_rec)
             Gloss_cross_entropy_zd  = self.bce_logit_loss(Dfake_zd,o1l(Dfake_zd))
 
             Gloss_rec           = Gloss_rec_y + Gloss_rec_zd

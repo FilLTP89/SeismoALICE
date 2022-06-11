@@ -2,7 +2,7 @@
     {   
         "generators.lr":0.00002,
         "generators.weight_decay":0.0001,
-        "discriminators.lr":0.005,
+        "discriminators.lr":0.00080,
         "discriminators.weight_decay":0.0001,
         "training_epochs":5,
         "validation_epochs":5,
@@ -164,8 +164,8 @@
     "Dzzb":{
         "name"      :"Lite",
         "nlayers"   :3,
-        "nc"        :1024,
-        "channel"   :[4,8,16,32],
+        "nc"        :128,
+        "channel"   :[8,8,16,32],
         "kernel"    :[3,2,2],
         "strides"   :[1,2,4],
         "dilation"  :[1,1,1],
