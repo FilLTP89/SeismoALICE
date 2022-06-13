@@ -21,6 +21,13 @@ class WGAN(SimpleTrainer):
             'Gloss_rec_zd':'',    
         }
 
+        prob_disc = {
+            'epochs':'',                'modality':'',
+            'Dreal_yz':'',              'Dfake_yz':'',
+            'Dreal_y':'',               'Dfake_y':'',
+            'Dreal_zd':'',              'Dfake_zd':'',
+        }
+
         gradients_gens = {
             'epochs':'',    'modality':'',
             'Fxy':'',       'Gy':'',
@@ -34,7 +41,8 @@ class WGAN(SimpleTrainer):
         super(WGAN, self).__init__(cv, 
         trial       = None,
         losses_disc = losses_disc, 
-        losses_gens = losses_gens, 
+        losses_gens = losses_gens,
+        prob_disc   = prob_disc,
         gradients_gens = gradients_gens, 
         gradients_disc = gradients_disc)
     
@@ -74,6 +82,14 @@ class WGAN(SimpleTrainer):
             self.losses_disc['Dloss_wgan_zd'] = Dloss_wgan_zd.tolist()
             self.losses_disc_tracker.update()
 
+            self.prob_disc['epochs'  ] = epoch
+            self.prob_disc['modality'] = modality
+            self.prob_disc['Dreal_y' ] = Dreal_y.mean().tolist()
+            self.prob_disc['Dfake_y' ] = Dfake_y.mean().tolist()
+            self.prob_disc['Dreal_zd'] = Dreal_zd.mean().tolist()
+            self.prob_disc['Dfake_zd'] = Dfake_zd.mean().tolist()
+            self.prob_disc_tracker.update()
+
     def train_generators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,zxy = batch
         for _ in range(1):
@@ -109,7 +125,7 @@ class WGAN(SimpleTrainer):
 
             Gloss_rec   = Gloss_rec_y + Gloss_rec_zd
 
-            Gloss = Gloss_wgan_y + Gloss_wgan_zd + 10.*Gloss_rec
+            Gloss = Gloss_wgan_y + Gloss_wgan_zd + Gloss_rec
             if modality == 'train':
                 Gloss.backward()
                 self.gen_agent.optimizer.step()
@@ -124,6 +140,5 @@ class WGAN(SimpleTrainer):
             self.losses_gens['Gloss_rec'    ] = Gloss_rec.tolist()
             self.losses_gens['Gloss_rec_y'  ] = Gloss_rec_y.tolist()
             self.losses_gens['Gloss_rec_zd' ] = Gloss_rec_zd.tolist()
-
             self.losses_gen_tracker.update()
 
