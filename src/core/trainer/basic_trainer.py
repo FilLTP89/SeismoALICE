@@ -61,13 +61,12 @@ class BasicTrainer:
     def on_saving_checkpoint(self, epoch, bar,*args, **kwargs):
         if epoch%self.save_checkpoint == 0:
             bar.set_postfix(satus = f'saving models at {epoch}...')
-            for group_name, group_models in self.models.items():
+            for _, group_models in self.models.items():
                 for model in group_models:
                     state = {
                         'epoch'                 :epoch,
                         'model_state_dict'      :model.module.state_dict(),
-                        'optimizer_state_dict'  :group_models.optmizer.state_dict(),
-                        'loss'                  :self.losses[group_name]
+                        'optimizer_state_dict'  :group_models.optmizer.state_dict()
                     }
                     filename = str(self.root_checkpoint /'checkpoint-epoch{}-{}'.format(model.name, epoch))
                     torch.save(state, filename)
