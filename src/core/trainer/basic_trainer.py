@@ -61,22 +61,26 @@ class BasicTrainer:
     def on_saving_checkpoint(self, epoch, bar,*args, **kwargs):
         if epoch%self.save_checkpoint == 0:
             bar.set_postfix(satus = f'saving models at {epoch}...')
-            for _, group_models in self.models.items():
+            for group_name, group_models in self.models.items():
                 for model in group_models:
                     state = {
                         'epoch'                 :epoch,
                         'model_state_dict'      :model.module.state_dict(),
                         'optimizer_state_dict'  :group_models.optmizer.state_dict()
                     }
-                    filename = str(self.root_checkpoint /'checkpoint-epoch{}-{}'.format(model.name, epoch))
+                    filename = str(self.root_checkpoint /'checkpoint-{}_epoch-{}'.format(model.model_name, epoch))
                     torch.save(state, filename)
                     self.logger.info("saving checkpoint-epoch : {}".format(filename))
 
-    def on_resuming_checkpoint(self):
-        for model, path in zip(self.models, self.strategy) :
-            self.logger.info("Loading checkpoint-epoch : {}".format(path))
-            checkpoint = torch.load(path)
-            model.module.load_state_dict(checkpoint['state_dict'])
-            model.optimizer.load_state_dict(checkpoint['optmizer'])
+    def on_resuming_checkpoint(self, epoch, bar, *args, **kwargs):
+        bar.set_postfix(satus =f'loading models from {self.root_checkpoint} from {epoch}...')
+        for group_name, group_models in self.models.items():
+            for model in group_models:
+                filename = str(self.root_checkpoint /'checkpoint-{}_epoch-{}'.format(model.model_name, epoch))
+                self.logger.info("Loading checkpoint-epoch : {}".format(filename))
+                checkpoint = torch.load(filename)
+                model.module.load_state_dict(checkpoint['model_state_dict'])
+            group_models.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
         self.start_epoch = checkpoint['epoch']+1
         self.logger.info("Checkpoint loaded. Resume training from epoch {}".format(self.start_epoch))
