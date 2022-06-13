@@ -64,26 +64,27 @@ class BasicTrainer:
         if epoch%self.save_checkpoint == 0:
             bar.set_postfix(satus = f'saving models at {epoch}...')
             for group_name, group_models in self.models.items():
-                for model in group_models:
+                bar.set_postfix(satus = f'saving models for group {group_name}')
+                for model, optimizer in group_models:
                     state = {
                         'epoch'                 :epoch,
                         'model_state_dict'      :model.module.state_dict(),
-                        'optimizer_state_dict'  :group_models.optmizer.state_dict()
+                        'optimizer_state_dict'  :optimizer.state_dict()
                     }
-                    filename = str(self.root_checkpoint /'checkpoint-{}_epoch-{}'.format(model.model_name, epoch))
+                    filename = f'{self.root_checkpoint}checkpoint-{model.module.model_name}_epoch-{epoch}.pth'
                     torch.save(state, filename)
-                    self.logger.info("saving checkpoint-epoch : {}".format(filename))
+                    self.logger.debug("saving checkpoint-epoch : {}".format(filename))
 
     def on_resuming_checkpoint(self, epoch, bar, *args, **kwargs):
         bar.set_postfix(satus =f'loading models from {self.root_checkpoint} from {epoch}...')
         for group_name, group_models in self.models.items():
             bar.set_postfix(satus =f'loading models of {group_name}')
-            for model in group_models:
-                filename = str(self.root_checkpoint /'checkpoint-{}_epoch-{}'.format(model.model_name, epoch))
+            for model, optimizer in group_models:
+                filename = f'{self.root_checkpoint}checkpoint-{model.module.model_name}_epoch-{epoch}.pth'
                 self.logger.info("Loading checkpoint-epoch : {}".format(filename))
                 checkpoint = torch.load(filename)
                 model.module.load_state_dict(checkpoint['model_state_dict'])
-            group_models.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
         self.start_epoch = checkpoint['epoch']+1
-        self.logger.info("Checkpoint loaded. Resume training from epoch {}".format(self.start_epoch))
+        self.logger.debug("Checkpoint loaded. Resume training from epoch {}".format(self.start_epoch))
