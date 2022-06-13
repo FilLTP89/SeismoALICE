@@ -47,11 +47,17 @@ from common.common_torch import trnd,ln0c,tnrm,ttns
 # NOISE 
 from tools.generate_noise import noise_generator
 from functools import partial
+from pathlib import Path
 import os
 rndm_args = {'mean': 0, 'std': 1}
 eps = 1e-15  # to avoid possible numerical instabilities during backward
 b1 = 0.5
 b2 = 0.9999
+
+def dir_setup(dirname):
+    dirname = Path(dirname)
+    if not dirname.is_dir():
+        dirname.mkdir(parents=True, exist_ok=False)
   
 # def get_features(t_img,model,layer,szs):
 #     

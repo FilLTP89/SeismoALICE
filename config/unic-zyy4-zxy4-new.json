@@ -9,13 +9,13 @@
         "test_epochs":50
     },
     "log_dir":{
-        "train_writer":"./runs_both/renew/alice/bb9/training/",
-        "valid_writer":"./runs_both/renew/alice/bb9/validation/",
-        "debug_writer":"./runs_both/renew/alice/bb9/debug/",
-        "debug.losses_writer":"./runs_both/renew/alice/bb9/losses/",
-        "debug.gradients_writer":"./runs_both/renew/alice/bb9/gradients/",
-        "debug.encoder_writer":"./runs_both/renew/alice/bb9/net/encoder",
-        "debug.decoder_writer":"./runs_both/renew/alice/bb9/net/decoder"
+        "train_writer":"./runs_both/renew/alice/bb10/training/",
+        "valid_writer":"./runs_both/renew/alice/bb10/validation/",
+        "debug_writer":"./runs_both/renew/alice/bb10/debug/",
+        "debug.losses_writer":"./runs_both/renew/alice/bb10/losses/",
+        "debug.gradients_writer":"./runs_both/renew/alice/bb10/gradients/",
+        "debug.encoder_writer":"./runs_both/renew/alice/bb10/net/encoder",
+        "debug.decoder_writer":"./runs_both/renew/alice/bb10/net/decoder"
     },
      "F":{
         "name"      :"Unic",

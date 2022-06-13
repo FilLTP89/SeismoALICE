@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from common.common_nn import dir_setup
 from tqdm import tqdm, trange
 import torch
 class BasicTrainer:
@@ -59,6 +60,7 @@ class BasicTrainer:
 
 
     def on_saving_checkpoint(self, epoch, bar,*args, **kwargs):
+        dir_setup(self.root_checkpoint)
         if epoch%self.save_checkpoint == 0:
             bar.set_postfix(satus = f'saving models at {epoch}...')
             for group_name, group_models in self.models.items():
@@ -75,6 +77,7 @@ class BasicTrainer:
     def on_resuming_checkpoint(self, epoch, bar, *args, **kwargs):
         bar.set_postfix(satus =f'loading models from {self.root_checkpoint} from {epoch}...')
         for group_name, group_models in self.models.items():
+            bar.set_postfix(satus =f'loading models of {group_name}')
             for model in group_models:
                 filename = str(self.root_checkpoint /'checkpoint-{}_epoch-{}'.format(model.model_name, epoch))
                 self.logger.info("Loading checkpoint-epoch : {}".format(filename))
