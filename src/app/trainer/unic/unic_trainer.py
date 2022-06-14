@@ -56,6 +56,7 @@ class UnicTrainer(BasicTrainer):
         self.logger.info("Tracking metrics ...")
         self.losses_disc_tracker    = MetricTracker(self.losses_disc,loss_writer,'Dloss')
         self.losses_gen_tracker     = MetricTracker(self.losses_gens,loss_writer,'Gloss')
+        self.prob_disc_tracker      = MetricTracker(self.prob_disc,loss_writer,'Probs')
         self.gradients_tracker_gen  = MetricTracker(self.gradients_gens,gradients_writer,'Ggradient')
         self.gradients_tracker_disc = MetricTracker(self.gradients_disc,gradients_writer,'Dgradient')
         
@@ -84,7 +85,6 @@ class UnicTrainer(BasicTrainer):
             losses    = {'generators':self.losses_disc, 'discriminators':self.losses_gens}, 
             strategy  = self.strategy['unique'])
         
-        
         self.logger.info("Parameters of Generators ")
         count_parameters(self.gen_agent.generators)
         self.logger.info(f"Learning rate : {self.opt.config['hparams']['generators.lr']}")
@@ -101,7 +101,6 @@ class UnicTrainer(BasicTrainer):
         for _, root in self.opt.config['log_dir'].items():
             self.logger.info(f"Summary:{root}")
 
-    
     def on_training_epoch(self, epoch, bar):
         _bar = tq(enumerate(zip(self.data_trn_loader,self.lat_trn_loader)),
                     position=1,leave=False, desc='train.', 
