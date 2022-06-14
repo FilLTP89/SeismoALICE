@@ -38,13 +38,9 @@ class WGAN(SimpleTrainer):
             'Dzb':'',       'Dszb':'', 'Dyz':'',
             'Dszf':''
         }
-        super(WGAN, self).__init__(cv, 
-        trial       = None,
-        losses_disc = losses_disc, 
-        losses_gens = losses_gens,
-        prob_disc   = prob_disc,
-        gradients_gens = gradients_gens, 
-        gradients_disc = gradients_disc)
+        super(WGAN, self).__init__(cv, trial = None,
+        losses_disc = losses_disc, losses_gens = losses_gens,prob_disc   = prob_disc,
+        gradients_gens = gradients_gens, gradients_disc = gradients_disc)
     
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,zxy = batch
@@ -52,7 +48,7 @@ class WGAN(SimpleTrainer):
             zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
-            # 1.1 We Generate conditional samples
+            
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
             zd_inp      = zcat(zxy,zyy)
             y_inp       = zcat(y,wny) 
@@ -97,7 +93,7 @@ class WGAN(SimpleTrainer):
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
 
-            # 1.1 We Generate conditional samples
+            # 1. We Generate conditional samples
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
             zd_inp      = zcat(zxy,zyy)
             y_inp       = zcat(y,wny)
@@ -112,7 +108,7 @@ class WGAN(SimpleTrainer):
             _, Dfake_zd = self.disc_agent.discriminate_marginal_zd(zd_inp,zd_gen)
             Gloss_wgan_zd= -(torch.mean(Dfake_zd))
 
-            # 1.2 Reconstruction of signal distributions
+            # 2. Reconstruction of signal distributions
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
             y_gen       = zcat(y_gen,wny)
             y_rec       = self.gen_agent.Gy(zyx_F, zyy_F)
