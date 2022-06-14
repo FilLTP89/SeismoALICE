@@ -24,7 +24,7 @@ class UnicTrainer(BasicTrainer):
         His goal is to trainer encoder_unic and decoder unic over. 
         So it should be call withe app.unic.generators and app.unic.discriminators agents
     """
-    def __init__(self,cv,losses_disc, losses_gens, gradients_gens, gradients_disc, trial=None):
+    def __init__(self,cv,losses_disc, losses_gens, gradients_gens, gradients_disc, prob_disc, trial=None):
         globals().update(cv)
         globals().update(opt.__dict__)
 
@@ -34,6 +34,12 @@ class UnicTrainer(BasicTrainer):
         self.strategy   = strategy
         self.opt        = opt
         self.logger     = setup_logging()
+
+        self.losses_disc     = losses_disc
+        self.losses_gens     = losses_gens
+        self.gradients_gens  = gradients_gens
+        self.gradients_disc  = gradients_disc
+        self.prob_disc       = prob_disc
 
         self.logger.info("Setting Tensorboard for the training dataset ...")
         loss_writer             = Writer(log_dir=self.opt.config['log_dir']['debug.losses_writer'], 
@@ -70,6 +76,7 @@ class UnicTrainer(BasicTrainer):
         self.data_trn_loader,  self.data_vld_loader, self.data_tst_loader = trn_loader,vld_loader,tst_loader
         self.lat_trn_loader, self.lat_vld_loader, self.lat_tst_loader   = get_latent_dataset(self.opt.nsy, self.opt.batchSize)
         self.bce_loss         = torch.nn.BCELoss(reduction='mean').cuda()
+        self.bce_logit_loss   = torch.nn.BCEWithLogitsLoss(reduction='mean').cuda()
 
         super(UnicTrainer,self).__init__(
             settings  = self.opt, logger = self.logger, config = self.opt,
