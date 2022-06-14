@@ -19,6 +19,7 @@ class Agent:
         return self
     
     def __next__(self):
+        # the class is able to give is child model in a loop
         if self.current_val>=len(self.models):
             raise StopIteration
         _model = self.models[self.current_val]
