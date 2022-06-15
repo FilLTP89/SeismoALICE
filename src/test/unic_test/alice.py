@@ -1,6 +1,6 @@
 import torch
 from app.trainer.unic.unic_trainer import UnicTrainer
-from common.common_nn import zerograd,zcat,modalite, clipweights
+from common.common_nn import zerograd,zcat,modalite
 from tools.generate_noise import noise_generator
 from common.common_torch import *
 from configuration import app
@@ -8,19 +8,19 @@ from configuration import app
 class ALICE(UnicTrainer):
     def __init__(self,cv, trial=None):
         losses_disc = {
-            'epochs':'',           'modality':'',
-            'Dloss':'',            'Dloss_ali':'',        'Dloss_ali_y':'',  
-            'Dloss_ali_x':'',      'Dloss_marginal':'',   'Dloss_marginal_y':'',
-            'Dloss_marginal_zd':'','Dloss_marginal_x':'', 'Dloss_marginal_zf':''
+            'epochs':'',                'modality':'',
+            'Dloss':'',                 'Dloss_ali':'',              'Dloss_ali_y':'',  
+            'Dloss_ali_x':'',           'Dloss_cross_entropy':'',    'Dloss_cross_entropy_y':'',
+            'Dloss_marginal_zd':'',     'Dloss_cross_entropy_x':'',  'Dloss_cross_entropy_zf':''
         }
         losses_gens = {
-            'epochs':'',           'modality':'',
-            'Gloss':'',            'Gloss_ali':'',        'Gloss_ali_x':'',
-            'Gloss_ali_y':'',      'Gloss_marginal':'',   'Gloss_marginal_y':'',
-            'Gloss_marginal_zd':'','Gloss_marginal_x':'', 'Gloss_marginal_zf':'',
+            'epochs':'',                'modality':'',
+            'Gloss':'',                 'Gloss_ali':'',             'Gloss_ali_x':'',
+            'Gloss_ali_y':'',           'Gloss_cross_entropy':'',   'Gloss_cross_entropy_y':'',
+            'Gloss_cross_entropy_zd':'','Gloss_cross_entropy_x':'', 'Gloss_cross_entropy_zf':'',
 
-            'Gloss_rec':'',        'Gloss_rec_y':'',      'Gloss_rec_x':'',
-            'Gloss_rec_zd':'',     'Gloss_rec_zx':'',     'Gloss_rec_zxy':'',
+            'Gloss_rec':'',             'Gloss_rec_y':'',           'Gloss_rec_x':'',
+            'Gloss_rec_zd':'',          'Gloss_rec_zx':'',          'Gloss_rec_zxy':'',
             'Gloss_rec_x':'', 
         }
 
@@ -187,7 +187,7 @@ class ALICE(UnicTrainer):
             Gloss_rec_zd= torch.mean(torch.abs(zd_inp-zd_rec))
 
             _, Dfake_y  = self.disc_agent.discriminate_yy(y, y_rec)
-            Gloss_cross_entropy_y   = self.bce_logit_loss(Dfake_y,o1l(Dfake_y))
+            Gloss_cross_entropy_y = self.bce_logit_loss(Dfake_y,o1l(Dfake_y))
 
             _, Dfake_zd = self.disc_agent.discriminate_zzb(zd_inp,zd_rec)
             Gloss_cross_entropy_zd  = self.bce_logit_loss(Dfake_zd,o1l(Dfake_zd))

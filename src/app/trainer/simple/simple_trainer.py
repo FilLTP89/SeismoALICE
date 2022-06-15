@@ -68,8 +68,7 @@ class SimpleTrainer(BasicTrainer):
         
         network   = Network(DataParalleleFactory())
         self.logger.info("Creating Generators Agent ...")
-        self.gen_agent  = Generators(
-                        network=network, config=self.opt.config, logger=self.logger,
+        self.gen_agent  = Generators(network=network, config=self.opt.config, logger=self.logger,
                         accel=DP, opt=self.opt, gradients_tracker = self.gradients_tracker_gen,
                         debug_writer = self.debug_writer)
 

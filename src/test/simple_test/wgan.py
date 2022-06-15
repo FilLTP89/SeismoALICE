@@ -23,7 +23,6 @@ class WGAN(SimpleTrainer):
 
         prob_disc = {
             'epochs':'',                'modality':'',
-            'Dreal_yz':'',              'Dfake_yz':'',
             'Dreal_y':'',               'Dfake_y':'',
             'Dreal_zd':'',              'Dfake_zd':'',
         }
@@ -35,8 +34,7 @@ class WGAN(SimpleTrainer):
         gradients_disc = {
             'epochs':'',    'modality':'',
             'Dy':'',        'Dsy':'',
-            'Dzb':'',       'Dszb':'', 'Dyz':'',
-            'Dszf':''
+            'Dzb':'',       'Dszb':''
         }
         super(WGAN, self).__init__(cv, trial = None,
         losses_disc = losses_disc, losses_gens = losses_gens,prob_disc   = prob_disc,
@@ -70,7 +68,7 @@ class WGAN(SimpleTrainer):
                 self.disc_agent.track_gradient(epoch)
                 zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
 
-            clipweights(self.disc_agent.discriminators)
+            # no clipweights spectral_norm is implemented
             self.losses_disc['epochs'       ] = epoch
             self.losses_disc['modality'     ] = modality
             self.losses_disc['Dloss'        ] = Dloss_wgan.tolist()

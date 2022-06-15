@@ -9,13 +9,13 @@
         "test_epochs":50
     },
     "log_dir":{
-        "train_writer":"./runs_both/renew/alice/bb10/training/",
-        "valid_writer":"./runs_both/renew/alice/bb10/validation/",
-        "debug_writer":"./runs_both/renew/alice/bb10/debug/",
-        "debug.losses_writer":"./runs_both/renew/alice/bb10/losses/",
-        "debug.gradients_writer":"./runs_both/renew/alice/bb10/gradients/",
-        "debug.encoder_writer":"./runs_both/renew/alice/bb10/net/encoder",
-        "debug.decoder_writer":"./runs_both/renew/alice/bb10/net/decoder"
+        "train_writer":"./runs_both/renew/wgan/bb/training/",
+        "valid_writer":"./runs_both/renew/wgan/bb/validation/",
+        "debug_writer":"./runs_both/renew/wgan/bb/debug/",
+        "debug.losses_writer":"./runs_both/renew/wgan/bb/losses/",
+        "debug.gradients_writer":"./runs_both/renew/wgan/bb/gradients/",
+        "debug.encoder_writer":"./runs_both/renew/wgan/bb/net/encoder",
+        "debug.decoder_writer":"./runs_both/renew/wgan/bb/net/decoder"
     },
      "F":{
         "name"      :"Unic",
@@ -81,7 +81,7 @@
     "Dsy":{
         "name"      :"Flatten",
         "nlayers"   :4, 
-        "channel"   :[128,64,32,16,8],
+        "channel"   :[32,128,64,32,8],
         "kernel"    :[4,4,4,4],
         "strides"   :[2,2,2,2],
         "dilation"  :[1,1,1,1],
@@ -91,7 +91,7 @@
         "extra"     :128,
         "nc"        :128,
         "act"       :"Dfz",
-        "prob"      :"True",
+        "prob"      :"False",
         "bn"        :"True",
         "limit"     :256},
     "Dzb":{
@@ -113,7 +113,7 @@
     "Dszb":{
         "name"      :"Flatten",
         "nlayers"   :4, 
-        "channel"   :[4,128,64,32,8],
+        "channel"   :[32,128,64,32,8],
         "kernel"    :[3,3,3,3],
         "strides"   :[1,2,2,2],
         "dilation"  :[1,1,1,1],
@@ -124,7 +124,7 @@
         "nc"        :128,
         "act"       :"Dfz",
         "bn"        :"True",
-        "prob"      :"True",
+        "prob"      :"False",
         "wf"        :"False",
         "limit"     :256},
     "Dyz":{

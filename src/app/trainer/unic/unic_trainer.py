@@ -10,8 +10,8 @@ from core.logger.logger import setup_logging
 from configuration import app
 from tqdm import tqdm as tq
 from torch.nn import DataParallel as DP
-from common.common_nn import generate_latent_variable_1D,get_accuracy
-from common.common_nn import zerograd,zcat,modalite, count_parameters
+from common.common_nn import patch,get_accuracy
+from common.common_nn import count_parameters
 from database.latentset import get_latent_dataset
 from common.common_torch import *
 from factory.conv_factory import Network, DataParalleleFactory
@@ -111,7 +111,7 @@ class UnicTrainer(BasicTrainer):
             zyy,zyx, *other = batch_latent
             y,x     = y.to(app.DEVICE, non_blocking = True), x.to(app.DEVICE, non_blocking = True)
             zyx,zyy = zyx.to(app.DEVICE,non_blocking=True),zyy.to(app.DEVICE,non_blocking=True)
-            pack = y,x,zyy,zyx
+            pack = pack = patch(y=y,x=x,zyy=zyy,zyx=zyx)
             self.train_discriminators(ncritics=1, batch=pack,epoch=epoch, 
                 modality='train',net_mode=['eval','train'])
             self.train_generators(ncritics=1, batch=pack, epoch=epoch, 
