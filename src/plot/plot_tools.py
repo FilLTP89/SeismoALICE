@@ -743,6 +743,35 @@ def plot_generate_hybrid(Qec,Pdc,Ghz,dev,vtm,trn_set,pfx='hybrid',outf='./imgs')
 #             cnt += 1
 
             # filtered signals
+def plot_distribution(tag,z_calc, save=False):
+    fig, axes = plt.subplots(figsize=(8, 5), sharey=True)
+    z_gauss = np.random.normal(size=z_calc.shape)
+    ax = sns.histplot({tag:z_calc.reshape(-1), "N(0,1)":z_gauss.reshape(-1)},kde=False,
+            stat="density", common_norm=True, element="poly",fill=False)
+    ax.set_xlim(-10,10)
+    ax.set_ylim(0.,1.0)
+    fig = ax.get_figure()
+    if save:
+        fig.savefig("file_zxx.png")
+
+    return fig
+
+def get_histogram(Fy, Gy, trn_set):
+    Fy.eval(),Gy.eval()
+    fig = []
+    batch = next(iter(trn_set))
+    y, *others = batch
+    y = y.to(app.DEVICE)
+    random_args = {'mean':0., 'std': 1.0}
+    wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,random_args)
+    zyy, zxy =  Fy(zcat(y,wny))
+    zyy = zyy.cpu().data.numpy().copy()
+    zxy = zxy.cpu().data.numpy().copy()
+    fig.append(plot_distribution(tag='zlf',z_calc=zxy))
+    fig.append(plot_distribution(tag='zhf',z_calc=zyy))
+    
+    return fig
+
 
 
 def plot_error(error, outf):
@@ -1133,8 +1162,6 @@ def plot_of_fake_broadband_signal(Fyx,Gy,vld_loader,dataroot):
                 break
             # app.logger.info("saving %sres_bb_aae_%s_%u_%u ... "%(outf,pfx,cnt,io))
     return figure
-
-
 
 
 def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',
@@ -2275,8 +2302,8 @@ def z_correlation_matrix(df,figname,cov=None,prc=None):
         #plt.savefig(figname+".eps",format='eps',bbox_inches='tight',dpi = 500)
         plt.close()
 
-def z_histogram(zt,zm,figname):
-    print("plot histogram ...")
+def z_histogram(zt,zm,figname,save=False):
+    app.logger.debug("plot histogram ...")
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
     zt = zt.stack().reset_index()
@@ -2292,7 +2319,7 @@ def z_histogram(zt,zm,figname):
     ax1.plot(zi,np.exp(-zi**2/2.)/np.sqrt(2.*np.pi),lw=4,color='gold')
     #import pdb
     #pdb.set_trace()
-    print("[!]Mean of Variable zm ", zm.mean().values)
+    app.logger.debug("[!]Mean of Variable zm ", zm.mean().values)
     ax1.axvline(x=zm.mean()[0],lw=4,color='cornflowerblue')
     ax1.axvline(x=zm.mean()[0]+zm.std().values[0],lw=2,color='cornflowerblue',ls='--')
     ax1.axvline(x=zm.mean()[0]-zm.std().values[0],lw=2,color='cornflowerblue',ls='--')
@@ -2304,9 +2331,13 @@ def z_histogram(zt,zm,figname):
     ax1.set_xticks(list(np.linspace(-5.0,5.0,11)))
     plt.title(r'A-posteriori distribution',fontsize=22)
     plt.legend(fontsize=20)
-    plt.savefig(figname+".png",format='png',bbox_inches='tight',dpi = 500)
-    #plt.savefig(figname+".eps",format='eps',bbox_inches='tight',dpi = 500)
+
+    if save:
+        plt.savefig(figname+".png",format='png',bbox_inches='tight',dpi = 500)
+        #plt.savefig(figname+".eps",format='eps',bbox_inches='tight',dpi = 500)
     plt.close()
+
+    return fig
 
 def discriminate_broadband_xz(DsXd,Dszd,Ddxz,Xd,Xdr,zd,zdr):
     

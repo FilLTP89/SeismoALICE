@@ -2,7 +2,7 @@ from pstats import Stats
 from re import S
 import torch
 from tqdm import tqdm as tq
-from plot.plot_tools import get_gofs, plot_generate_classic
+from plot.plot_tools import get_gofs, plot_generate_classic, get_histogram
 from core.trainer.basic_trainer import BasicTrainer
 from core.metric.metric import MetricTracker
 from core.writer.writer import Writer
@@ -10,7 +10,7 @@ from tools.generate_noise import noise_generator
 from core.logger.logger import setup_logging
 from configuration import app
 from torch.nn import DataParallel as DP
-from common.common_nn import generate_latent_variable_1D, get_accuracy,patch
+from common.common_nn import get_accuracy,patch
 from common.common_nn import count_parameters
 from common.common_torch import *
 from database.latentset import get_latent_dataset
@@ -170,7 +170,12 @@ class SimpleTrainer(BasicTrainer):
                 # get accuracy
                 self.validation_writer.set_step(mode='test', step=epoch)
                 bar.set_postfix(status='saving accuracy and images ... ')
-                
+
+                figure_histo = get_histogram(Fy=self.gen_agent.Fy, 
+                Gy = self.gen_agent.Gy, trn_set = self.data_tst_loader)
+                bar.set_postfix(status='saving z distribution ...')
+                self.validation_writer.add_figure('z Histogram', figure_histo)
+
                 accuracy_bb = get_accuracy(tag='broadband',plot_function=get_gofs,
                     encoder = self.gen_agent.Fy,
                     decoder = self.gen_agent.Gy,

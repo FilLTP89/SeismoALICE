@@ -4,8 +4,8 @@
         "generators.weight_decay":0.0001,
         "discriminators.lr":0.00080,
         "discriminators.weight_decay":0.0001,
-        "training_epochs":5,
-        "validation_epochs":5,
+        "training_epochs":10,
+        "validation_epochs":10,
         "test_epochs":50
     },
     "log_dir":{
