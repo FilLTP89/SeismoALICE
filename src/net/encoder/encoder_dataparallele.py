@@ -252,21 +252,18 @@ class Encoder_Unic(BasicEncoderDataParallele):
             if i ==1 and with_noise:
             #We take the first layers for adding noise to the system if the condition is set
                 self.cnn1 = self.cnn1+cnn1d(channel[i-1],channel[i], acts[0],ker=ker[i-1],std=std[i-1],\
-                    pad=pad[i-1],bn=bn,dil = dil[i-1], dpc=0.0,wn=True ,
-                    normalization=torch.nn.utils.spectral_norm,\
+                    pad=pad[i-1],bn=bn,dil = dil[i-1], dpc=0.0,wn=True,\
                     dtm = dtm, ffr = ffr, wpc = wpc,dev='cuda:0')
             # esle if we not have a noise but we at the strating network
             elif i == 1:
                 self.cnn1 = self.cnn1+cnn1d(channel[i-1],channel[i], acts[0],ker=ker[i-1],std=std[i-1],\
-                    pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=0.0,wn=False, 
-                    normalization=torch.nn.utils.spectral_norm)
+                    pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=0.0,wn=False)
             #else we proceed normaly
             else:
                 _bn  = False if i == nly else bn
                 _dpc = 0.0 if i == nly else dpc 
                 self.cnn1 = self.cnn1+cnn1d(channel[i-1], channel[i], acts[i-1], ker=ker[i-1],\
-                    std=std[i-1],pad=pad[i-1], dil=dil[i-1], bn=_bn, dpc=_dpc, wn=False,
-                    normalization=torch.nn.utils.spectral_norm)
+                    std=std[i-1],pad=pad[i-1], dil=dil[i-1], bn=_bn, dpc=_dpc, wn=False)
 
         # pdb.set_trace()
         for n in range(1,nly_bb+1):
@@ -274,16 +271,14 @@ class Encoder_Unic(BasicEncoderDataParallele):
             _dpc = 0.0   if n==nly_bb else dpc_bb
             self.branch_broadband += cnn1d(channel_bb[n-1],channel_bb[n],\
                 acts_bb[n-1],ker=ker_bb[n-1],std=std_bb[n-1],\
-                pad=pad_bb[n-1],bn=_bn,dil=dil_bb[n-1],dpc=_dpc,wn=False,
-                normalization=torch.nn.utils.spectral_norm)
+                pad=pad_bb[n-1],bn=_bn,dil=dil_bb[n-1],dpc=_dpc,wn=False)
 
         for n in range(1,nly_com+1):
             _bn  = False if n==nly_com else bn
             _dpc = 0.0   if n==nly_com else dpc_com
             self.branch_common +=cnn1d(channel_com[n-1],channel_com[n],\
                 acts_com[n-1],ker=ker_com[n-1],std=std_com[n-1],\
-                pad=pad_com[n-1],bn=_bn,dil=dil_com[n-1],dpc=_dpc,wn=False,
-                normalization=torch.nn.utils.spectral_norm)
+                pad=pad_com[n-1],bn=_bn,dil=dil_com[n-1],dpc=_dpc,wn=False)
 
         # self.branch_broadband.append(Squeeze())
 

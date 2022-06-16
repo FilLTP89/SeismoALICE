@@ -123,8 +123,7 @@ class DCGAN_Dz(BasicDCGAN_DzDataParallel):
 
         self.prc.append(ConvBlock(ni = channel[0], no = channel[1],
                 ker = ker[0], std = std[0], pad = pad[0], dil = dil[0],\
-                bn = False, act = activation[0], dpc = dpc,
-                normalization=torch.nn.utils.spectral_norm))
+                bn = False, act = activation[0], dpc = dpc))
 
         for i in range(2,nly+1):
             act = activation[i-1]
@@ -136,14 +135,12 @@ class DCGAN_Dz(BasicDCGAN_DzDataParallel):
             #         bn=_bn,dpc=dpc,wn=False)
             layers.append(ConvBlock(ni = channel[i-1],no=channel[i],\
                     ker = 3, std = 1, pad = 1, dil = 1, bias = False, bn = bn,\
-                    dpc = dpc, act = activation[i-1],
-                    normalization=torch.nn.utils.spectral_norm))
+                    dpc = dpc, act = activation[i-1]))
 
         for k in range(0,n_extra_layers):
             self.net.append(ConvBlock(ni = channel[i-1],no=channel[i],\
                 ker = 3, std = 1, pad = 1, dil = 1, bias = False, bn = bn,\
-                dpc = dpc, act = activation[k],
-                normalization=torch.nn.utils.spectral_norm))
+                dpc = dpc, act = activation[k]))
 
 
         if prob:

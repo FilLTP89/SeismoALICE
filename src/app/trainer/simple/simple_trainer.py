@@ -79,7 +79,7 @@ class SimpleTrainer(BasicTrainer):
 
         self.logger.info("Loading the dataset ...")
         self.data_trn_loader, self.data_vld_loader,self.data_tst_loader = trn_loader, vld_loader, tst_loader
-        self.lat_trn_loader, self.lat_vld_loader, self.lat_tst_loader   = get_latent_dataset(self.opt.nsy, self.opt.batchSize)
+        self.lat_trn_loader, self.lat_vld_loader, self.lat_tst_loader   = get_latent_dataset(nsy = self.opt.nsy, batch_size=self.opt.batchSize)
         self.bce_loss        = torch.nn.BCELoss(reduction='mean').cuda()
         self.bce_logit_loss  = torch.nn.BCEWithLogitsLoss(reduction='mean').cuda()
 
@@ -172,7 +172,7 @@ class SimpleTrainer(BasicTrainer):
                 bar.set_postfix(status='saving accuracy and images ... ')
 
                 figure_histo = get_histogram(Fy=self.gen_agent.Fy, 
-                Gy = self.gen_agent.Gy, trn_set = self.data_tst_loader)
+                Gy = self.gen_agent.Gy, trn_set = (self.data_tst_loader, self.lat_tst_loader))
                 bar.set_postfix(status='saving z distribution ...')
                 self.validation_writer.add_figure('z Histogram', figure_histo)
 

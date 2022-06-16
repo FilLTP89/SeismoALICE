@@ -234,8 +234,7 @@ class DCGAN_DXZ_Flatten(BasicDCGAN_DXZDataParallele):
             padding     = pad, 
             dpc         = dpc, 
             activation  = activation, 
-            bn          = bn,
-            normalization = torch.nn.utils.spectral_norm
+            bn          = bn
             ) 
         
         self.cnn +=[

@@ -111,7 +111,7 @@ class Decoder(BasicDecoderDataParallel):
             _dpc = 0.0 if i ==nly else dpc
             _bn =  False if i == nly else bn
             self.cnn1 += cnn1dt(channel[i-1],channel[i], acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
-                dil=dil[i-1], opd=opd[i-1], bn=_bn,dpc=_dpc,normalization=torch.nn.utils.spectral_norm)
+                dil=dil[i-1], opd=opd[i-1], bn=_bn,dpc=_dpc)
             
         # pdb.set_trace()
         for i in range(0,n_extra_layers):
