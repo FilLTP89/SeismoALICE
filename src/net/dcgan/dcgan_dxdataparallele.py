@@ -224,8 +224,12 @@ class DCGAN_Dx_Lite(BasicDCGAN_DxDataParallel):
         lout = self.lout(nch = nc,
                     padding = pad, dilation = dil,\
                     kernel_size = ker, stride = std)
-        self.cnn += [nn.Flatten(start_dim = 1, end_dim=2)]
-        self.cnn += [nn.Linear(lout*channel[-1],1, bias=False)]
+        self.cnn += [nn.BatchNorm1d(channel[-1])]
+        
+        if wf:
+            self.cnn += [nn.Flatten(start_dim = 1, end_dim=2)]
+            self.cnn += [nn.Linear(lout*channel[-1],1, bias=False)]
+
         if prob:
             self.cnn += [nn.Sigmoid()]
 

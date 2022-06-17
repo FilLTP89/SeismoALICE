@@ -112,15 +112,14 @@ class Decoder(BasicDecoderDataParallel):
             _bn =  False if i == nly else bn
             self.cnn1 += cnn1dt(channel[i-1],channel[i], acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
                 dil=dil[i-1], opd=opd[i-1], bn=_bn,dpc=_dpc)
-            
-        # pdb.set_trace()
+
         for i in range(0,n_extra_layers):
             self.cnn1 += [ResidualBlock(channel[-1], activation_function='selu')]
-
-        # pdb.set_trace()
+        
         if dconv:
             self.cnn1  =  self.cnn1 + _dconv
 
+        self.cnn1 += [nn.BatchNorm1d(channel[-1])]
         self.cnn1  = sqn(*self.cnn1)
         if path: 
             self.cnn1[-1] = self.model

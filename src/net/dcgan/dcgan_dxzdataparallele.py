@@ -244,7 +244,8 @@ class DCGAN_DXZ_Flatten(BasicDCGAN_DXZDataParallele):
             nn.Dropout(dpc),
             nn.BatchNorm1d(lout*channel[-1]),
             Linear(lout*channel[-1],1),
-            nn.LeakyReLU(negative_slope=1.0, inplace=True)
+            nn.LeakyReLU(negative_slope=1.0, inplace=True),
+            nn.BatchNorm1d(1)
         ]
         if prob:
             self.cnn +=[nn.Sigmoid()]

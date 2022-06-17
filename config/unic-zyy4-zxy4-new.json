@@ -6,7 +6,7 @@
         "discriminators.weight_decay":0.0001,
         "training_epochs":15,
         "validation_epochs":15,
-        "test_epochs":2
+        "test_epochs":50
     },
     "log_dir":{
         "train_writer":"./runs_both/renew/alice/bb/training/",
@@ -65,8 +65,9 @@
         "act"       :"Gdd",
         "limit"     :256},
     "Dy":{
+        "name"      :"Lite",
         "nlayers"   :5, 
-        "channel"   :[3,8,256,128,64,32],
+        "channel"   :[3,8,16,32,64,128],
         "kernel"    :[3,3,3,3,3],
         "strides"   :[2,2,2,2,2],
         "dilation"  :[1,1,1,1,1],
@@ -95,8 +96,9 @@
         "bn"        :"True",
         "limit"     :256},
     "Dzb":{
+        "name"      :"Lite",
         "nlayers"   :3, 
-        "channel"   :[4,128,64,32],
+        "channel"   :[4,8,64,128],
         "kernel"    :[3,3,3],
         "strides"   :[1,1,1],
         "dilation"  :[1,1,1],
@@ -130,13 +132,13 @@
     "Dyz":{
         "name"      :"Flatten",
         "nc"        :128,
-        "nlayers"   :3, 
-        "channel"   :[64,128,64,8],
-        "kernel"    :[2,2,3],
-        "strides"   :[2,2,1],
-        "dilation"  :[1,1,1],
-        "outpads"   :[0,0,0],
-        "padding"   :[0,0,1],
+        "nlayers"   :2, 
+        "channel"   :[256,128,64],
+        "kernel"    :[2,2],
+        "strides"   :[2,2],
+        "dilation"  :[1,1],
+        "outpads"   :[0,0],
+        "padding"   :[0,0],
         "dpc"       :0.30,
         "extra"     :128,
         "act"       :"Dfz",
