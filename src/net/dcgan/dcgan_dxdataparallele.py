@@ -228,7 +228,7 @@ class DCGAN_Dx_Lite(BasicDCGAN_DxDataParallel):
         
         if wf:
             self.cnn += [nn.Flatten(start_dim = 1, end_dim=2)]
-            self.cnn += [nn.Linear(lout*channel[-1],1, bias=False)]
+            self.cnn += [torch.nn.utils.spectral_norm(nn.Linear(lout*channel[-1],1, bias=False))]
 
         if prob:
             self.cnn += [nn.Sigmoid()]

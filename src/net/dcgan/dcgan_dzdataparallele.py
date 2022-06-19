@@ -237,7 +237,7 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
                 nn.Flatten(start_dim = 1, end_dim=2),
                 nn.LeakyReLU(0.2,inplace=True),
                 Dpout(dpc = dpc),
-                Linear(lout*channel[-1],1),
+                torch.nn.utils.spectral_norm(Linear(lout*channel[-1],1)),
                 nn.BatchNorm1d(1)
             ]
             self.cnn+=[nn.Sigmoid()]
