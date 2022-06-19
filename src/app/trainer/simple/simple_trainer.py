@@ -80,8 +80,8 @@ class SimpleTrainer(BasicTrainer):
         self.logger.info("Loading the dataset ...")
         self.data_trn_loader, self.data_vld_loader,self.data_tst_loader = trn_loader, vld_loader, tst_loader
         self.lat_trn_loader, self.lat_vld_loader, self.lat_tst_loader   = get_latent_dataset(nsy = self.opt.nsy, batch_size=self.opt.batchSize)
-        self.bce_loss        = torch.nn.BCELoss(reduction='mean').cuda()
-        self.bce_logit_loss  = torch.nn.BCEWithLogitsLoss(reduction='mean').cuda()
+        self.bce_loss        = torch.nn.BCELoss(reduction='mean')
+        self.bce_logit_loss  = torch.nn.BCEWithLogitsLoss(reduction='mean')
 
         super(SimpleTrainer,self).__init__(
             settings  = self.opt, logger = self.logger, config = self.opt,

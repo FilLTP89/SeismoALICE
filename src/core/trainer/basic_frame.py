@@ -38,6 +38,8 @@ class Agent:
             classname = model[idx].__class__.__name__
             if (classname.find('Conv1d')!= -1 
                     or 
+                classname.find('Linear')!= -1
+                    or
                 classname.find('ConvTranspose1d')!= -1) and writer != None:
                 writer.set_step(mode='debug',step=epoch)
                 writer.add_histogram(f'{tag}/{idx}', model[idx].weight, epoch)

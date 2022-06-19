@@ -478,14 +478,17 @@ def is_gaussian(distribution):
 # custom weights initialization called on netG and netD¬                 
 def set_weights(m):                                 
     classname = m.__class__.__name__               
-    if classname.find('Conv1d') != -1 or classname.find('ConvTranspose1d') != -1:                   
+    if (classname.find('Conv1d') != -1 
+            or
+        classname.find('ConvTranspose1d') != -1):                   
         try:
-            # init.xavier_uniform(m.weight)
-            init.normal_(m.weight, mean=0.0, std=0.02)
+            init.xavier_uniform(m.weight)
+            # init.xavier_normal_(m.weight)
+            # init.normal_(m.weight, mean=0.0, std=0.02)
         except:
             print("warnings no initialization is made training may not work")
         #m.weight.data.normal_(0.0, 0.02)                                
-    elif classname.find('BatchNorm') != -1:                             
+    elif (classname.find('BatchNorm') != -1 or classname.find('Linear')!=-1):                             
         m.weight.data.normal_(1.0, 0.02)                              
         m.bias.data.fill_(0)
 
@@ -652,7 +655,7 @@ class T(object):
     def activation(name, nly, typo = 'ALICE'):
         acts = {}
         acts['ALICE'] = {
-                 'Feu' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)],
+                 'Feu' :[nn.LeakyReLU(0.2,inplace=True) for t in range(1, nly+1)],
                  'Fed_PReLU':[nn.PReLU() for t in range(1, nly+1)],
                  'F2'  :[nn.ReLU(inplace=True) for t in range(1, nly+1)],
                  'Fed' :[nn.LeakyReLU(0.2,inplace=True) for t in range(1, nly)] + [nn.LeakyReLU(1.0,inplace=True)],

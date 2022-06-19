@@ -224,6 +224,8 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
             activation  = acts, 
             bn          = bn,
             normalization=torch.nn.utils.spectral_norm)
+        self.cnn += [torch.nn.utils.spectral_norm(nn.Conv1d(in_channels=channel[-1],out_channels=channel[-1],
+        kernel_size = 3, stride = 1, padding=1))]
         self.cnn += [nn.BatchNorm1d(channel[-1])]
         # for i in range(1, nly+1):
         #     _dpc = 0.0 if i ==nly else dpc
