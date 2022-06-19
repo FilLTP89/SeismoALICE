@@ -89,7 +89,20 @@ def dir_setup(dirname):
 #             self.features.extend(output.view(output.size(0),-1).cpu().data)        
 #         def remove(self):                
 #             self.hook.remove()
-        
+
+class Exp(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, i):
+        result = i.exp()
+        ctx.save_for_backward(result)
+        return result
+    @staticmethod
+    def backward(ctx, grad_output):
+        breakpoint()
+        result, = ctx.saved_tensors
+        return grad_output * result
+
+
 class Feature_extractor(Module):
     def __init__(self,lay):
         super(Feature_extractor,self).__init__()
@@ -652,12 +665,12 @@ class T(object):
                  'Gdd2':[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.LeakyReLU(1.0,inplace=True)],
                  'Fef' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)]+[nn.LeakyReLU(1.0,inplace=True)],
                  'Gdf' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.Tanh()],
-                 'Ghz' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.LeakyReLU(1.0,inplace=True)],
+                 'Ghz' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.ReLU(inplace=True)],
                  'Fhz' :[nn.ReLU(inplace=True) for t in range(1, nly)]+[nn.LeakyReLU(1.0,inplace=True)],
                  'Dsx' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)],
                  'Dfx' :[nn.LeakyReLU(0.2,inplace=True) for t in range(1, nly+1)],
                  'Dsz' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)],
-                 'Dfz' :[nn.LeakyReLU(0.2,inplace=True) for t in range(1, nly+1)],
+                 'Dyz' :[nn.Tanh()]+[nn.LeakyReLU(0.2,inplace=True) for t in range(1, nly)],
                  'Drx' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.Sigmoid()],
                  'Dss' :[nn.LeakyReLU(0.2,inplace=True) for t in range(1, nly)] + [nn.Sigmoid()],
                  'Drz' :[nn.LeakyReLU(0.2,inplace=True) for t in range(1, nly+1)] + [nn.Sigmoid()],

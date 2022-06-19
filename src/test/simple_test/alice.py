@@ -1,6 +1,6 @@
 import torch
 from app.trainer.simple.simple_trainer import SimpleTrainer
-from common.common_nn import zerograd,zcat,modalite, clipweights
+from common.common_nn import zerograd,zcat,modalite, Exp
 from tools.generate_noise import noise_generator
 from common.common_torch import *
 from configuration import app
@@ -78,9 +78,9 @@ class ALICE(SimpleTrainer):
             Dloss_cross_entropy_zd  = self.bce_logit_loss(Dreal_zd,o1l(Dreal_zd))+\
                     self.bce_logit_loss(Dfake_zd,o0l(Dfake_zd))
 
-            Dloss_cross_entropy =  Dloss_cross_entropy_y + Dloss_cross_entropy_zd
+            Dloss_cross_entropy = Dloss_cross_entropy_y + Dloss_cross_entropy_zd
             Dloss               = Dloss_ali_y + Dloss_cross_entropy
-
+            
             if modality == 'train':
                 Dloss.backward()
                 self.disc_agent.optimizer.step()
@@ -134,8 +134,8 @@ class ALICE(SimpleTrainer):
             zyy_rec,zyx_rec = self.gen_agent.Fy(y_gen)
             zd_rec      = zcat(zyx_rec,zyy_rec)
 
-            Gloss_rec_y = torch.mean(torch.abs(y-y_rec))
-            Gloss_rec_zd= torch.mean(torch.abs(zd_inp-zd_rec))
+            Gloss_rec_y = 0 #torch.mean(torch.abs(y-y_rec))
+            Gloss_rec_zd= 0 #torch.mean(torch.abs(zd_inp-zd_rec))
             
             _, Dfake_y        = self.disc_agent.discriminate_yy(y, y_rec)
             Gloss_cross_entropy_y   = self.bce_logit_loss(Dfake_y,o1l(Dfake_y))
@@ -145,8 +145,8 @@ class ALICE(SimpleTrainer):
 
             Gloss_rec           = Gloss_rec_y + Gloss_rec_zd
             Gloss_cross_entropy = Gloss_cross_entropy_y + Gloss_cross_entropy_zd
-            Gloss               = Gloss_ali_y + Gloss_cross_entropy + 0.1*Gloss_rec
-
+            Gloss               = Gloss_ali_y + Gloss_cross_entropy #+ 0.1*Gloss_rec
+            
             if modality == 'train':
                 Gloss.backward()
                 self.gen_agent.optimizer.step()
@@ -157,9 +157,9 @@ class ALICE(SimpleTrainer):
             self.losses_gens['modality'     ] = modality
             self.losses_gens['Gloss'        ] = Gloss.tolist()
             self.losses_gens['Gloss_ali_y'  ] = Gloss_ali_y.tolist()
-            self.losses_gens['Gloss_rec'    ] = Gloss_rec.tolist()
-            self.losses_gens['Gloss_rec_y'  ] = Gloss_rec_y.tolist()
-            self.losses_gens['Gloss_rec_zd' ] = Gloss_rec_zd.tolist()
+            self.losses_gens['Gloss_rec'    ] = 0 #Gloss_rec.tolist()
+            self.losses_gens['Gloss_rec_y'  ] = 0 #Gloss_rec_y.tolist()
+            self.losses_gens['Gloss_rec_zd' ] = 0 #Gloss_rec_zd.tolist()
             self.losses_gens['Gloss_cross_entropy'] = Gloss_cross_entropy.tolist()
             self.losses_gens['Gloss_cross_entropy_y' ] = Gloss_cross_entropy_y.tolist()
             self.losses_gens['Gloss_cross_entropy_zd'] = Gloss_cross_entropy_zd.tolist()

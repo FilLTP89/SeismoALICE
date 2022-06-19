@@ -204,7 +204,7 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
         super(DCGAN_Dz_Lite, self).__init__(*args, **kwargs)
         
         acts      = T.activation(act, nly)
-        self.cnn1 = []
+        self.cnn = []
         # self.cnn1 += [UnSqueeze()]
         # self.cnn1 += [Explode(shape = [extra, limit])]
         # self.cnn1 += [nn.BatchNorm1d(extra)]
@@ -215,7 +215,7 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
                 kernel_size = ker, 
                 stride      = std)
         # pdb.set_trace()
-        self.cnn1 += self.block_conv(channel, 
+        self.cnn += self.block_conv(channel, 
             kernel      = ker, 
             strides     = std, 
             dilation    = dil, 
@@ -224,7 +224,7 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
             activation  = acts, 
             bn          = bn,
             normalization=torch.nn.utils.spectral_norm)
-        self.cnn1 += [nn.BatchNorm1d(channel[-1])]
+        self.cnn += [nn.BatchNorm1d(channel[-1])]
         # for i in range(1, nly+1):
         #     _dpc = 0.0 if i ==nly else dpc
         #     _bn =  False if i == nly else bn
@@ -233,21 +233,21 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
         #         dil=dil[i-1], opd=0, bn=_bn,dpc=_dpc)
 
         if prob:
-            self.cnn1[-2:]=[
+            self.cnn[-2:]=[
                 nn.Flatten(start_dim = 1, end_dim=2),
                 nn.LeakyReLU(0.2,inplace=True),
                 Dpout(dpc = dpc),
                 Linear(lout*channel[-1],1),
                 nn.BatchNorm1d(1)
             ]
-            self.cnn1+=[nn.Sigmoid()]
+            self.cnn+=[nn.Sigmoid()]
 
-        self.cnn1 = self.cnn1
-        self.cnn1  = sqn(*self.cnn1)
+        self.cnn = self.cnn
+        self.cnn  = sqn(*self.cnn)
 
 
     def forward(self, x):
-        xr = self.cnn1(x)
+        xr = self.cnn(x)
         if not self.training:
             xr = xr.detach()
         return xr

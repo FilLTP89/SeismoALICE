@@ -188,7 +188,7 @@ class SimpleTrainer(BasicTrainer):
 
                 # get weight of generators and discriminators
                 self.gen_agent.track_weight(epoch)
-
+                self.disc_agent.track_weight(epoch)
                 # plot filtered reconstruction signal and gof
                 figure_bb, gof_bb = plot_generate_classic(tag ='broadband',
                         Qec= self.gen_agent.Fy, Pdc= self.gen_agent.Gy,
