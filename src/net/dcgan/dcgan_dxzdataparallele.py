@@ -244,10 +244,14 @@ class DCGAN_DXZ_Flatten(BasicDCGAN_DXZDataParallele):
             nn.ReLU(inplace=True),
             nn.Dropout(dpc),
             nn.BatchNorm1d(lout*channel[-1]),
-            torch.nn.utils.spectral_norm(Linear(lout*channel[-1],1)),
-            nn.LeakyReLU(negative_slope=1.0, inplace=True),
-            nn.BatchNorm1d(1)
+            torch.nn.utils.spectral_norm(Linear(lout*channel[-1],lout*channel[-1]//2)),
+            nn.LeakyReLU(negative_slope=0.2, inplace=True),
+            nn.BatchNorm1d(lout*channel[-1]//2),
+            torch.nn.utils.spectral_norm(Linear(lout*channel[-1]//2,1)),
+            nn.LeakyReLU(negative_slope=0.2, inplace=True),
+            nn.BatchNorm1d(1),
         ]
+        
         if prob:
             self.cnn +=[nn.Sigmoid()]
 
