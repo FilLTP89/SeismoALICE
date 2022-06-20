@@ -15,7 +15,12 @@
         "debug.losses_writer":"./runs_both/renew/alice/bb4/losses/",
         "debug.gradients_writer":"./runs_both/renew/alice/bb4/gradients/",
         "debug.encoder_writer":"./runs_both/renew/alice/bb4/net/encoder",
-        "debug.decoder_writer":"./runs_both/renew/alice/bb4/net/decoder"
+        "debug.decoder_writer":"./runs_both/renew/alice/bb4/net/decoder",
+        "debug.dy_writer":"./runs_both/renew/alice/bb4/net/dy/",
+        "debug.dyy_writer":"./runs_both/renew/alice/bb4/net/dyy",
+        "debug.dzb_writer":"./runs_both/renew/alice/bb4/net/dzb",
+        "debug.dzzb_writer":"./runs_both/renew/alice/bb4/net/dzzb",
+        "debug.dyz_writer":"./runs_both/renew/alice/bb4/net/dyz"
     },
      "F":{
         "name"      :"Unic",
