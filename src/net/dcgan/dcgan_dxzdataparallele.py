@@ -76,7 +76,7 @@ class BasicDCGAN_DXZDataParallele(BasicModel):
     def block_conv(self, channel, kernel, strides, dilation, padding, dpc, activation, *args, **kwargs):
         cnn      = []
         _dpc     = [0. for _ in range(len(channel))]
-        _dpc[-1] = dpc
+        _dpc[-2:0] = [dpc,dpc]
         pack = zip(channel[:-1], channel[1:], kernel, strides, dilation, padding, activation, _dpc)
         for in_channels, out_channels, kernel_size, stride, dilation,padding, acts, __dpc in pack:
             cnn += cnn1d(in_channels=in_channels, 

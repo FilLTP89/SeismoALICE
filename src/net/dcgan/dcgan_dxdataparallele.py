@@ -84,7 +84,7 @@ class BasicDCGAN_DxDataParallel(BasicModel):
                     padding, activation, dpc, *args, **kwargs):
         cnn     = []
         _dpc    = [0. for _ in range(len(channel))]
-        _dpc[-1]= dpc
+        _dpc[-2:0] = [dpc,dpc]
         for in_channels, out_channels, kernel_size,\
             stride, dilation, padding, acts, __dpc in zip(channel[:-1],\
             channel[1:], kernel, strides, dilation, padding, activation, _dpc):
