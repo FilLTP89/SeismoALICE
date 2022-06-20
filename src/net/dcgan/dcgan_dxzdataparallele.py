@@ -74,16 +74,18 @@ class BasicDCGAN_DXZDataParallele(BasicModel):
         pass
 
     def block_conv(self, channel, kernel, strides, dilation, padding, dpc, activation, *args, **kwargs):
-        cnn  = []
-        pack = zip(channel[:-1], channel[1:], kernel, strides, dilation, padding, activation)
-        for in_channels, out_channels, kernel_size, stride, dilation,padding, acts in pack:
+        cnn      = []
+        _dpc     = [0. for _ in range(len(channel))]
+        _dpc[-1] = dpc
+        pack = zip(channel[:-1], channel[1:], kernel, strides, dilation, padding, activation, _dpc)
+        for in_channels, out_channels, kernel_size, stride, dilation,padding, acts, __dpc in pack:
             cnn += cnn1d(in_channels=in_channels, 
                         out_channels=out_channels,
                         ker = kernel_size,
                         std = stride,
                         pad = padding,
                         act = acts,
-                        dpc = dpc,
+                        dpc = __dpc,
                         dil = dilation,*args, **kwargs)
         return cnn
 
@@ -251,7 +253,7 @@ class DCGAN_DXZ_Flatten(BasicDCGAN_DXZDataParallele):
             nn.LeakyReLU(negative_slope=0.2, inplace=True),
             nn.BatchNorm1d(1),
         ]
-        
+
         if prob:
             self.cnn +=[nn.Sigmoid()]
 
