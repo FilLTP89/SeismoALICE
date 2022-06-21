@@ -744,6 +744,7 @@ def plot_generate_hybrid(Qec,Pdc,Ghz,dev,vtm,trn_set,pfx='hybrid',outf='./imgs')
 
             # filtered signals
 def plot_distribution(tag,z_calc,save=False):
+    z_calc = z_calc.cpu().data.numpy().copy()
     fig, axes = plt.subplots(figsize=(8, 5), sharey=True)
     ax = sns.histplot({f'{tag},s={z_calc.std()}':z_calc.reshape(-1)},kde=False,
             stat="density", common_norm=True, element="poly",fill=False)
@@ -758,7 +759,7 @@ def plot_distribution(tag,z_calc,save=False):
 def get_histogram(Fy, Gy, trn_set):
     Fy.eval(),Gy.eval()
     fig = []
-    for batch_data in trn_set:
+    for b, batch_data in enumerate(trn_set):
         y, *others  = batch_data
         y           = y.to(app.DEVICE)
 

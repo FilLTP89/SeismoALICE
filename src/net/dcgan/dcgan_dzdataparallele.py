@@ -210,7 +210,7 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
         # self.cnn1 += [Explode(shape = [extra, limit])]
         # self.cnn1 += [nn.BatchNorm1d(extra)]
         # self.cnn1 += [acts[0]]
-        normalization =  partial(nn.InstanceNorm1d)
+        normalization =  partial(nn.BatchNorm1d)
         lout = self.lout(nch= nc,
                 padding     = pad, 
                 dilation    = dil, 

@@ -157,9 +157,9 @@ class ALICE(SimpleTrainer):
             self.losses_gens['modality'     ] = modality
             self.losses_gens['Gloss'        ] = Gloss.tolist()
             self.losses_gens['Gloss_ali_y'  ] = Gloss_ali_y.tolist()
-            self.losses_gens['Gloss_rec'    ] = 0 #Gloss_rec.tolist()
-            self.losses_gens['Gloss_rec_y'  ] = 0 #Gloss_rec_y.tolist()
-            self.losses_gens['Gloss_rec_zd' ] = 0 #Gloss_rec_zd.tolist()
+            self.losses_gens['Gloss_rec'    ] = Gloss_rec.tolist()
+            self.losses_gens['Gloss_rec_y'  ] = Gloss_rec_y.tolist()
+            self.losses_gens['Gloss_rec_zd' ] = Gloss_rec_zd.tolist()
             self.losses_gens['Gloss_cross_entropy'] = Gloss_cross_entropy.tolist()
             self.losses_gens['Gloss_cross_entropy_y' ] = Gloss_cross_entropy_y.tolist()
             self.losses_gens['Gloss_cross_entropy_zd'] = Gloss_cross_entropy_zd.tolist()

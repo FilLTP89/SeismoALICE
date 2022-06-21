@@ -221,7 +221,7 @@ class DCGAN_DXZ_Flatten(BasicDCGAN_DXZDataParallele):
         
         activation = T.activation(act, nly)
         self.cnn  = []
-        normalization =  partial(nn.InstanceNorm1d)
+        normalization =  partial(nn.BatchNorm1d)
         lout = self.lout(nch= nc,
                 padding     = pad, 
                 dilation    = dil, 

@@ -219,7 +219,7 @@ class DCGAN_Dx_Lite(BasicDCGAN_DxDataParallel):
                  prob = False,batch_size =128,n_extra_layers=0, extra = 128, *args,**kwargs):
         super(DCGAN_Dx_Lite, self).__init__(*args, **kwargs)
         activation = T.activation(act, nly)
-        normalization = partial(nn.InstanceNorm1d)
+        normalization = partial(nn.BatchNorm1d)
         self.cnn = self.block_conv( channel = channel,kernel = ker,\
                     strides = std, dilation= dil,  activation = activation,\
                     padding = pad, bn = bn, dpc = dpc, normalization=normalization)
