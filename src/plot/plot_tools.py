@@ -756,6 +756,22 @@ def plot_distribution(tag,z_calc,save=False):
 
     return fig
 
+def plot_spatial_rep(tag, z_calc, save=False):
+    z_calc = z_calc.cpu().data.numpy().copy()
+    z1 = z_calc[:,0,:].reshape(-1)
+    z2 = z_calc[:,1,:].reshape(-1)
+
+    fig, axes = plt.subplots(figsize=(8, 5), sharey=True)
+    ax = sns.scatterplot(z1,z2)
+    ax.set_xlim(-3.5,3.5)
+    ax.set_ylim(-3.5,3.5)
+    fig = ax.get_figure()
+    
+    if save:
+        fig.savefig('file_{tag}.png')
+    
+    return fig
+
 def get_histogram(Fy, Gy, trn_set):
     Fy.eval(),Gy.eval()
     fig = []
@@ -767,6 +783,18 @@ def get_histogram(Fy, Gy, trn_set):
         zyy, zxy    =  Fy(zcat(y,wny))
         fig.append(plot_distribution(tag='zlf',z_calc=zxy))
         fig.append(plot_distribution(tag='zhf',z_calc=zyy))
+    return fig
+
+def get_latent_rep(Fy, Gy, trn_set):
+    Fy.eval(),Gy.eval()
+    fig = []
+    for b, batch_data in enumerate(trn_set):
+        y, *others  = batch_data
+        y           = y.to(app.DEVICE)
+
+        wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std': 1.0})
+        zyy, zxy    =  Fy(zcat(y,wny))
+        fig.append(plot_spatial_rep(tag='zhf',z_calc=zyy))
     return fig
 
 

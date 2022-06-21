@@ -487,14 +487,15 @@ def set_weights(m):
         classname.find('ConvTranspose1d') != -1):                   
         try:
             # init.xavier_uniform(m.weight)
-            init.xavier_normal_(m.weight)
+            # init.xavier_normal_(m.weight)
             # init.kaiming_uniform(m.weight)
-            # init.normal_(m.weight, mean=0.0, std=0.02)
+            init.normal_(m.weight, mean=0.0, std=0.02)
         except:
             print("warnings no initialization is made training may not work")
         #m.weight.data.normal_(0.0, 0.02) 
     elif (classname.find('Linear')!=-1): 
-        m.weight.data.normal_(0.0, 1.0)                               
+        m.weight.data.normal_(0.0, 1.0)
+        m.bias.data.fill_(0)                               
     elif (classname.find('BatchNorm') !=-1):
         m.weight.data.normal_(1.0, 0.02)                              
         m.bias.data.fill_(0)

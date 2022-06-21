@@ -234,10 +234,10 @@ class DCGAN_Dx_Lite(BasicDCGAN_DxDataParallel):
         if wf:
             self.cnn += [nn.Flatten(start_dim = 1, end_dim=2)]
             self.cnn += [
-                            nn.Linear(lout*channel[-1],lout*channel[-1]//2, bias=True),
-                            nn.LeakyReLU(0.2,inplace=True),
-                            nn.Linear(lout*channel[-1]//2,1, bias=True),
-                            nn.LeakyReLU(1.0, inplace=True)
+                            nn.Linear(lout*channel[-1],1, bias=True),
+                            nn.LeakyReLU(1.0, inplace=True),
+                            Dpout(dpc = dpc),
+                            nn.BatchNorm1d(1)
                         ]
 
         if prob:

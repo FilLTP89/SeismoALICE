@@ -2,7 +2,8 @@ from pstats import Stats
 from re import S
 import torch
 from tqdm import tqdm as tq
-from plot.plot_tools import get_gofs, plot_generate_classic, get_histogram
+from plot.plot_tools import get_gofs, plot_generate_classic
+from plot.plot_tools import get_histogram, get_latent_rep
 from core.trainer.basic_trainer import BasicTrainer
 from core.metric.metric import MetricTracker
 from core.writer.writer import Writer
@@ -175,6 +176,11 @@ class SimpleTrainer(BasicTrainer):
                 Gy = self.gen_agent.Gy, trn_set = self.data_tst_loader)
                 bar.set_postfix(status='saving z distribution ...')
                 self.validation_writer.add_figure('z Histogram', figure_histo)
+
+                figure_rep = get_latent_rep(Fy=self.gen_agent.Fy, 
+                Gy = self.gen_agent.Gy, trn_set = self.data_tst_loader)
+                bar.set_postfix(status='saving z scatter representation ...')
+                self.validation_writer.add_figure('z Spatial 2D satter', figure_rep)
 
                 accuracy_bb = get_accuracy(tag='broadband',plot_function=get_gofs,
                     encoder = self.gen_agent.Fy,
