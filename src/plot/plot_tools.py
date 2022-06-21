@@ -746,8 +746,8 @@ def plot_generate_hybrid(Qec,Pdc,Ghz,dev,vtm,trn_set,pfx='hybrid',outf='./imgs')
 def plot_distribution(tag,z_calc,save=False):
     z_calc = z_calc.cpu().data.numpy().copy()
     fig, axes = plt.subplots(figsize=(8, 5), sharey=True)
-    ax = sns.histplot({f'{tag},s={z_calc.std()}':z_calc.reshape(-1)},kde=False,
-            stat="density", common_norm=True, element="poly",fill=False)
+    ax = sns.histplot({f'{tag},s={z_calc.std()}':z_calc.reshape(-1)},
+            stat="density", common_norm=False, element="poly",fill=False)
     ax.set_xlim(-5,5)
     ax.set_ylim(0.,1.0)
     fig = ax.get_figure()
@@ -778,7 +778,6 @@ def get_histogram(Fy, Gy, trn_set):
     for b, batch_data in enumerate(trn_set):
         y, *others  = batch_data
         y           = y.to(app.DEVICE)
-
         wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std': 1.0})
         zyy, zxy    =  Fy(zcat(y,wny))
         fig.append(plot_distribution(tag='zlf',z_calc=zxy))

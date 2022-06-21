@@ -283,7 +283,9 @@ class DCGAN_Dz_Flatten(BasicDCGAN_DzDataParallel):
                  n_extra_layers=0, path='',*args,**kwargs):
         super(DCGAN_Dz_Flatten, self).__init__(*args, **kwargs)
         acts      = T.activation(act, nly)
-        self.cnn1 = []
+        self.cnn = []
+        
+        normalization =partial(nn.BatchNorm1d)
         # self.cnn1 += [UnSqueeze()]
         # self.cnn1 += [Explode(shape = [extra, limit])]
         # self.cnn1 += [nn.BatchNorm1d(extra)]
@@ -292,10 +294,24 @@ class DCGAN_Dz_Flatten(BasicDCGAN_DzDataParallel):
         for i in range(1, nly+1):
             _dpc = 0.0 if i ==nly else dpc
             _bn =  False if i == nly else bn
-            self.cnn1 += cnn1d(channel[i-1],channel[i],\
+            self.cnn += cnn1d(channel[i-1],channel[i],\
                 acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
-                dil=dil[i-1], bn=_bn,dpc=_dpc)
+                dil=dil[i-1], bn=_bn,dpc=_dpc, normalization=normalization)
         
+        lout = self.lout(nch= nc,
+                padding     = pad, 
+                dilation    = dil, 
+                kernel_size = ker, 
+                stride      = std)
+
+        if wf:
+            self.cnn +=[
+                nn.Flatten(start_dim = 1, end_dim=2),
+                nn.Linear(lout*channel[-1],extra,bias = True),
+                Dpout(dpc = dpc),
+                nn.BatchNorm1d(extra),
+                UnSqueeze(extra)
+            ]
 
         if prob:
             self.final =[
@@ -305,11 +321,11 @@ class DCGAN_Dz_Flatten(BasicDCGAN_DzDataParallel):
         else:
             self.final=[]
 
-        self.cnn1 = self.cnn1+self.final
-        self.cnn1  = sqn(*self.cnn1)
+        self.cnn = self.cnn+self.final
+        self.cnn  = sqn(*self.cnn)
 
     def forward(self,x):
-        z = self.cnn1(x)
+        z = self.cnn(x)
         if not self.training:
             z = z.detach()
         return z
