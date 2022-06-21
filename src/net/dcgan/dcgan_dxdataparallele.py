@@ -84,7 +84,7 @@ class BasicDCGAN_DxDataParallel(BasicModel):
                     padding, activation, dpc, *args, **kwargs):
         cnn     = []
         _dpc    = [0. for _ in range(len(channel))]
-        _dpc[-2:0] = [dpc,dpc]
+        _dpc[-1] = dpc
         for in_channels, out_channels, kernel_size,\
             stride, dilation, padding, acts, __dpc in zip(channel[:-1],\
             channel[1:], kernel, strides, dilation, padding, activation, _dpc):
@@ -219,21 +219,26 @@ class DCGAN_Dx_Lite(BasicDCGAN_DxDataParallel):
                  prob = False,batch_size =128,n_extra_layers=0, extra = 128, *args,**kwargs):
         super(DCGAN_Dx_Lite, self).__init__(*args, **kwargs)
         activation = T.activation(act, nly)
-        
+        normalization = partial(nn.InstanceNorm1d)
         self.cnn = self.block_conv( channel = channel,kernel = ker,\
                     strides = std, dilation= dil,  activation = activation,\
-                    padding = pad, bn = bn, dpc = dpc, normalization=torch.nn.utils.spectral_norm)
+                    padding = pad, bn = bn, dpc = dpc, normalization=normalization)
         
         lout = self.lout(nch = nc,
                     padding = pad, dilation = dil,\
                     kernel_size = ker, stride = std)
-        self.cnn += [torch.nn.utils.spectral_norm(nn.Conv1d(in_channels=channel[-1],out_channels=channel[-1],
-        kernel_size = 3, stride = 1, padding=1))]
-        self.cnn += [BatchNorm1d(channel[-1])]
+        self.cnn += [nn.Conv1d(in_channels=channel[-1],out_channels=channel[-1],
+                        kernel_size = 3, stride = 1, padding=1)]
+        self.cnn += [normalization(channel[-1])]
         
         if wf:
             self.cnn += [nn.Flatten(start_dim = 1, end_dim=2)]
-            self.cnn += [torch.nn.utils.spectral_norm(nn.Linear(lout*channel[-1],1, bias=False))]
+            self.cnn += [
+                            nn.Linear(lout*channel[-1],lout*channel[-1]//2, bias=True),
+                            nn.LeakyReLU(0.2,inplace=True),
+                            nn.Linear(lout*channel[-1]//2,1, bias=True),
+                            nn.LeakyReLU(1.0, inplace=True)
+                        ]
 
         if prob:
             self.cnn += [nn.Sigmoid()]

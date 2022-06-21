@@ -76,7 +76,7 @@ class BasicDCGAN_DXZDataParallele(BasicModel):
     def block_conv(self, channel, kernel, strides, dilation, padding, dpc, activation, *args, **kwargs):
         cnn      = []
         _dpc     = [0. for _ in range(len(channel))]
-        _dpc[-2:0] = [dpc,dpc]
+        _dpc[-1] = dpc
         pack = zip(channel[:-1], channel[1:], kernel, strides, dilation, padding, activation, _dpc)
         for in_channels, out_channels, kernel_size, stride, dilation,padding, acts, __dpc in pack:
             cnn += cnn1d(in_channels=in_channels, 
@@ -221,7 +221,7 @@ class DCGAN_DXZ_Flatten(BasicDCGAN_DXZDataParallele):
         
         activation = T.activation(act, nly)
         self.cnn  = []
-
+        normalization =  partial(nn.InstanceNorm1d)
         lout = self.lout(nch= nc,
                 padding     = pad, 
                 dilation    = dil, 
@@ -237,21 +237,15 @@ class DCGAN_DXZ_Flatten(BasicDCGAN_DXZDataParallele):
             dpc         = dpc, 
             activation  = activation, 
             bn          = bn,
-            normalization=torch.nn.utils.spectral_norm
+            normalization =normalization
             ) 
         
         self.cnn +=[
             nn.Flatten(start_dim = 1, end_dim=2),
-            # Shallow(shape=(batch_size,lout*channel[-1])),
-            nn.ReLU(inplace=True),
-            nn.Dropout(dpc),
-            nn.BatchNorm1d(lout*channel[-1]),
-            torch.nn.utils.spectral_norm(Linear(lout*channel[-1],lout*channel[-1]//2)),
+            Linear(lout*channel[-1],lout*channel[-1]//2),
             nn.LeakyReLU(negative_slope=0.2, inplace=True),
-            nn.BatchNorm1d(lout*channel[-1]//2),
-            torch.nn.utils.spectral_norm(Linear(lout*channel[-1]//2,1)),
-            nn.LeakyReLU(negative_slope=0.2, inplace=True),
-            nn.BatchNorm1d(1),
+            Linear(lout*channel[-1]//2,1),
+            nn.LeakyReLU(negative_slope=1.0, inplace=True)
         ]
 
         if prob:

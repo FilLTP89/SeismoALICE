@@ -172,7 +172,7 @@ class SimpleTrainer(BasicTrainer):
                 bar.set_postfix(status='saving accuracy and images ... ')
 
                 figure_histo = get_histogram(Fy=self.gen_agent.Fy, 
-                Gy = self.gen_agent.Gy, trn_set = (self.data_tst_loader, self.lat_tst_loader))
+                Gy = self.gen_agent.Gy, trn_set = self.data_tst_loader)
                 bar.set_postfix(status='saving z distribution ...')
                 self.validation_writer.add_figure('z Histogram', figure_histo)
 

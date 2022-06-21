@@ -201,7 +201,9 @@ def cnn1d(in_channels,out_channels,\
     if bn:
         if normalization == torch.nn.utils.spectral_norm:
             block = [normalization(copy.deepcopy(block[0]))]
-        block.append(BatchNorm1d(out_channels))
+            block.append(BatchNorm1d(out_channels))
+        else:
+            block.append(normalization(out_channels))
 
     block.append(act)
     block.append(Dpout(dpc=dpc))
@@ -224,7 +226,9 @@ def cnn1dt(in_channels,out_channels,\
     if bn:
         if normalization == torch.nn.utils.spectral_norm:
             block = [normalization(copy.deepcopy(block[0]))]
-        block.append(BatchNorm1d(out_channels))
+            block.append(BatchNorm1d(out_channels))
+        else:
+            block.append(normalization(out_channels))
     block.append(act)
     block.append(Dpout(dpc=dpc))
     return block
@@ -491,7 +495,7 @@ def set_weights(m):
         #m.weight.data.normal_(0.0, 0.02) 
     elif (classname.find('Linear')!=-1): 
         m.weight.data.normal_(0.0, 1.0)                               
-    elif (classname.find('BatchNorm') !=-1):                             
+    elif (classname.find('BatchNorm') !=-1):
         m.weight.data.normal_(1.0, 0.02)                              
         m.bias.data.fill_(0)
 

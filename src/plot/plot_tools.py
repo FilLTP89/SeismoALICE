@@ -743,42 +743,30 @@ def plot_generate_hybrid(Qec,Pdc,Ghz,dev,vtm,trn_set,pfx='hybrid',outf='./imgs')
 #             cnt += 1
 
             # filtered signals
-def plot_distribution(tag,z_calc, z_targ, save=False):
+def plot_distribution(tag,z_calc,save=False):
     fig, axes = plt.subplots(figsize=(8, 5), sharey=True)
-    ax = sns.histplot({f'{tag},s={z_calc.std()}':z_calc.reshape(-1), f"ztar, s={z_targ.std()}":z_targ.reshape(-1)},kde=False,
+    ax = sns.histplot({f'{tag},s={z_calc.std()}':z_calc.reshape(-1)},kde=False,
             stat="density", common_norm=True, element="poly",fill=False)
-    ax.set_xlim(-10,10)
+    ax.set_xlim(-5,5)
     ax.set_ylim(0.,1.0)
     fig = ax.get_figure()
     if save:
-        fig.savefig("file_zxx.png")
+        fig.savefig(f"file_{tag}.png")
 
     return fig
 
 def get_histogram(Fy, Gy, trn_set):
     Fy.eval(),Gy.eval()
     fig = []
-    data_tst, lat_tst =  trn_set
-    data_batch = next(iter(data_tst))
-    lat_batch  = next(iter(lat_tst))
-    y, *others = data_batch
-    _zyx, _zyy   = lat_batch
-    y = y.to(app.DEVICE)
-    random_args = {'mean':0., 'std': 1.0}
-    wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,random_args)
-    zyy, zxy =  Fy(zcat(y,wny))
+    for batch_data in trn_set:
+        y, *others  = batch_data
+        y           = y.to(app.DEVICE)
 
-    zyy = zyy.cpu().data.numpy().copy()
-    zxy = zxy.cpu().data.numpy().copy()
-
-    _zyy = _zyy.cpu().data.numpy().copy()
-    _zyx = _zyx.cpu().data.numpy().copy()
-
-    fig.append(plot_distribution(tag='zlf',z_calc=zxy, z_targ = _zyx))
-    fig.append(plot_distribution(tag='zhf',z_calc=zyy, z_targ = _zyy))
-    
+        wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std': 1.0})
+        zyy, zxy    =  Fy(zcat(y,wny))
+        fig.append(plot_distribution(tag='zlf',z_calc=zxy))
+        fig.append(plot_distribution(tag='zhf',z_calc=zyy))
     return fig
-
 
 
 def plot_error(error, outf):

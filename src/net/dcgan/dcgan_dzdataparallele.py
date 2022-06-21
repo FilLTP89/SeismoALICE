@@ -71,7 +71,7 @@ class BasicDCGAN_DzDataParallel(BasicModel):
         #For the first layer we will not use Batchnorm
         _bool_bn    = [True for _ in range(len(channel))]
         _dpc        = [0.0 for _ in range(len(channel))]
-        _dpc[-2:0]  = [dpc,dpc]
+        _dpc[-1]  = dpc
         _bool_bn[0] = False
         pack = zip(channel[:-1], channel[1:], kernel, strides,dilation, padding, activation,_bool_bn, _dpc)
 
@@ -131,8 +131,7 @@ class DCGAN_Dz(BasicDCGAN_DzDataParallel):
             act = activation[i-1]
             self.net.append(ConvBlock(ni = channel[i-1], no = channel[i],
                 ker = ker[i-1], std = std[i-1], pad = pad[i-1],\
-                bias = bias, act = activation[i-1], dpc = dpc, bn = bn,
-                normalization=torch.nn.utils.spectral_norm))
+                bias = bias, act = activation[i-1], dpc = dpc, bn = bn))
             # self.cnn1 += cnn1d(in_channels,out_channels, act, ker=ker,std=std,pad=pad,\
             #         bn=_bn,dpc=dpc,wn=False)
             layers.append(ConvBlock(ni = channel[i-1],no=channel[i],\
@@ -211,6 +210,7 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
         # self.cnn1 += [Explode(shape = [extra, limit])]
         # self.cnn1 += [nn.BatchNorm1d(extra)]
         # self.cnn1 += [acts[0]]
+        normalization =  partial(nn.InstanceNorm1d)
         lout = self.lout(nch= nc,
                 padding     = pad, 
                 dilation    = dil, 
@@ -224,26 +224,27 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
             padding     = pad, 
             dpc         = dpc, 
             activation  = acts, 
-            bn          = bn,
-            normalization=torch.nn.utils.spectral_norm)
-        self.cnn += [torch.nn.utils.spectral_norm(nn.Conv1d(in_channels=channel[-1],out_channels=channel[-1],
-        kernel_size = 3, stride = 1, padding=1))]
-        self.cnn += [nn.BatchNorm1d(channel[-1])]
+            bn          = bn, 
+            normalization = normalization)
+        self.cnn += [nn.Conv1d(in_channels=channel[-1],out_channels=channel[-1],kernel_size = 3, stride = 1, padding=1)]
+        self.cnn += [normalization(channel[-1])]
         # for i in range(1, nly+1):
         #     _dpc = 0.0 if i ==nly else dpc
         #     _bn =  False if i == nly else bn
         #     self.cnn1 += cnn1d(channel[i-1],channel[i],\
         #         acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
         #         dil=dil[i-1], opd=0, bn=_bn,dpc=_dpc)
-
-        if prob:
+        if wf:
             self.cnn[-2:]=[
                 nn.Flatten(start_dim = 1, end_dim=2),
+                nn.Linear(lout*channel[-1],lout*channel[-1]//2),
                 nn.LeakyReLU(0.2,inplace=True),
                 Dpout(dpc = dpc),
-                torch.nn.utils.spectral_norm(Linear(lout*channel[-1],1)),
-                nn.BatchNorm1d(1)
+                nn.Linear(lout*channel[-1]//2,1),
+                nn.LeakyReLU(1.0,inplace=True)
             ]
+        
+        if prob:
             self.cnn+=[nn.Sigmoid()]
 
         self.cnn = self.cnn
