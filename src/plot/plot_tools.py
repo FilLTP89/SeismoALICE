@@ -763,8 +763,8 @@ def plot_spatial_rep(tag, z_calc, save=False):
 
     fig, axes = plt.subplots(figsize=(8, 5), sharey=True)
     ax = sns.scatterplot(z1,z2)
-    ax.set_xlim(-3.5,3.5)
-    ax.set_ylim(-3.5,3.5)
+    ax.set_xlim(-5,5)
+    ax.set_ylim(-5,5)
     fig = ax.get_figure()
     
     if save:
