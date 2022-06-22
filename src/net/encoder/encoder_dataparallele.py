@@ -280,8 +280,6 @@ class Encoder_Unic(BasicEncoderDataParallele):
                 acts_com[n-1],ker=ker_com[n-1],std=std_com[n-1],\
                 pad=pad_com[n-1],bn=_bn,dil=dil_com[n-1],dpc=_dpc,wn=False)
 
-        self.branch_common +=[BatchNorm1d(channel_com[-1])]
-        self.branch_broadband +=[BatchNorm1d(channel_bb[-1])]
         # self.branch_broadband.append(Squeeze())
 
         # self.branch_broadband +=[

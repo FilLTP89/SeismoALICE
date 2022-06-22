@@ -23,6 +23,12 @@ class LatentDataset(Dataset):
     def __getitem__(self,index):
         return (self._latent_space_zlf[index,:],self._latent_space_zhf[index,:])
 
+class MultVariate(Dataset):
+    def __init__(self,*args,**kwargs):
+        pass
+    
+
+
 def get_latent_dataset(nsy=1280, batch_size=64, *args, **kwargs):
     dataset    = LatentDataset(nsy=nsy,*args,**kwargs)
     train_part,vld_part,tst_part = int(0.80*len(dataset)),int(0.10*len(dataset)),int(0.10*len(dataset))

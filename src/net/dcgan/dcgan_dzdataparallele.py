@@ -309,7 +309,6 @@ class DCGAN_Dz_Flatten(BasicDCGAN_DzDataParallel):
                 nn.Flatten(start_dim = 1, end_dim=2),
                 nn.Linear(lout*channel[-1],extra,bias = True),
                 Dpout(dpc = dpc),
-                normalization(extra),
                 UnSqueeze(1)
             ]
 
