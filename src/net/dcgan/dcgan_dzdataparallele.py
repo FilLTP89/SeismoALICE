@@ -237,8 +237,7 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
             self.cnn[-2:]=[
                 nn.Flatten(start_dim = 1, end_dim=2),
                 nn.Linear(lout*channel[-1],1,bias = True),
-                Dpout(dpc = dpc),
-                nn.BatchNorm1d(1), 
+                Dpout(dpc = dpc)
             ]
         
         if prob:
@@ -285,7 +284,7 @@ class DCGAN_Dz_Flatten(BasicDCGAN_DzDataParallel):
         acts      = T.activation(act, nly)
         self.cnn = []
         
-        normalization =partial(nn.InstanceNorm1d)
+        normalization =partial(nn.BatchNorm1d)
         # self.cnn1 += [UnSqueeze()]
         # self.cnn1 += [Explode(shape = [extra, limit])]
         # self.cnn1 += [nn.BatchNorm1d(extra)]
