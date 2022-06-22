@@ -247,7 +247,7 @@ class DCGAN_DXZ_Flatten(BasicDCGAN_DXZDataParallele):
                 Linear(lout*channel[-1],lout*channel[-1]//4, bias =True),
                 nn.LeakyReLU(negative_slope=1.0, inplace=True),
                 Dpout(dpc = dpc),
-                nn.BatchNorm1d(lout*channel[-1]//4),
+                normalization(lout*channel[-1]//4),
                 Linear(lout*channel[-1]//4,1, bias = True),
                 nn.LeakyReLU(negative_slope=1.0, inplace=True),
                 Dpout(dpc = dpc),

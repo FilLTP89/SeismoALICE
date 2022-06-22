@@ -98,12 +98,12 @@ class ALICE(SimpleTrainer):
 
             self.prob_disc['epochs'  ] = epoch
             self.prob_disc['modality'] = modality
-            self.prob_disc['Dreal_yz'] = Dreal_yz.mean().tolist()
-            self.prob_disc['Dfake_yz'] = Dfake_yz.mean().tolist()
-            self.prob_disc['Dreal_y' ] = Dreal_y.mean().tolist()
-            self.prob_disc['Dfake_y' ] = Dfake_y.mean().tolist()
-            self.prob_disc['Dreal_zd'] = Dreal_zd.mean().tolist()
-            self.prob_disc['Dfake_zd'] = Dfake_zd.mean().tolist()
+            self.prob_disc['Dreal_yz'] = Dreal_yz.median().tolist()
+            self.prob_disc['Dfake_yz'] = Dfake_yz.median().tolist()
+            self.prob_disc['Dreal_y' ] = Dreal_y.median().tolist()
+            self.prob_disc['Dfake_y' ] = Dfake_y.median().tolist()
+            self.prob_disc['Dreal_zd'] = Dreal_zd.median().tolist()
+            self.prob_disc['Dfake_zd'] = Dfake_zd.median().tolist()
             self.prob_disc_tracker.update()
             
     def train_generators(self,batch,epoch,modality,net_mode,*args,**kwargs):
@@ -145,7 +145,7 @@ class ALICE(SimpleTrainer):
 
             Gloss_rec           = Gloss_rec_y + Gloss_rec_zd
             Gloss_cross_entropy = Gloss_cross_entropy_y + Gloss_cross_entropy_zd
-            Gloss               = Gloss_ali_y + Gloss_cross_entropy +Gloss_rec
+            Gloss               = Gloss_ali_y + Gloss_cross_entropy + 10.*Gloss_rec
             
             if modality == 'train':
                 Gloss.backward()

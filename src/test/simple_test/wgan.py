@@ -66,9 +66,11 @@ class WGAN(SimpleTrainer):
                 Dloss_wgan.backward()
                 self.disc_agent.optimizer.step()
                 self.disc_agent.track_gradient(epoch)
+                clipweights(self.disc_agent)
                 zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
 
             # no clipweights spectral_norm is implemented
+            
             self.losses_disc['epochs'       ] = epoch
             self.losses_disc['modality'     ] = modality
             self.losses_disc['Dloss'        ] = Dloss_wgan.tolist()
