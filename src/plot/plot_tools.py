@@ -746,18 +746,26 @@ def plot_generate_hybrid(Qec,Pdc,Ghz,dev,vtm,trn_set,pfx='hybrid',outf='./imgs')
 def plot_distribution(tag,z_calc,z_tar, save=False):
     z_calc = z_calc.cpu().data.numpy().copy()
     z_tar  = z_tar.cpu().data.numpy().copy()
-    plt.figure()
-    fig = plt.hist([z_calc, z_tar], bins=40, density=True)
-    plt.xlim(-5.,5.)
-    plt.ylim(0,1.)
+    mu, sigma = 0, 0.1
+    
+    plt.figure(figsize=(6,6))
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
+    ax = [ax1, ax2, ax3]
+    _, v_size, *others = z_calc.shape
+    for i in range(v_size):
+        ax[i].hist(z_calc[0,i,:], bins=10, density=True)
+        ax[i].xlim(-5.,5.)
+        ax[i].ylim(0,1.)
+        ax[i].xlabel(tag)
     if save:
         plt.savefig(f'{tag}.png')
     return fig
 
-def plot_spatial_rep(tag, z1, z2, save=False):
-    z1 = z1.cpu().data.numpy().copy()
-    z1 = z2.cpu().data.numpy().copy()
-    fig = plt.scatter(z1,z2)
+def plot_spatial_rep(tag, z,index, save=False):
+    z = z.cpu().data.numpy().copy()
+    fig = plt.figure(figsize=(6,6)) 
+    plt.scatter(z[0,index[0],:],z[0,index[1],:])
+    plt.xlabel(tag)
     plt.xlim(-4,4)
     plt.ylim(-4,4)
     if save:
@@ -786,10 +794,12 @@ def get_latent_rep(Fy, Gy, trn_set):
     for b, batch_data in enumerate(trn_set):
         y, *others  = batch_data
         y           = y.to(app.DEVICE)
-
+        if b>=1:
+            break
         wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std': 1.0})
         zyy, zxy    =  Fy(zcat(y,wny))
-        fig.append(plot_spatial_rep(tag='zhf',z_calc=zyy))
+        fig.append(plot_spatial_rep(tag='zhf z0/z1',z=zyy,index = [0,1]))
+        fig.append(plot_spatial_rep(tag='zhf z0/z2',z=zyy,index = [0,2]))
     return fig
 
 

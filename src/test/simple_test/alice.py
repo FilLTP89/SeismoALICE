@@ -63,6 +63,7 @@ class ALICE(SimpleTrainer):
                              self.bce_logit_loss(Dfake_yz,o0l(Dfake_yz))
 
             # 2. Reconstruction of signal distributions
+            
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
             y_gen       = zcat(y_gen,wny)
             y_rec       = self.gen_agent.Gy(zyx_F, zyy_F)

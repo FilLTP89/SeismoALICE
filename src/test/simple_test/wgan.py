@@ -66,7 +66,7 @@ class WGAN(SimpleTrainer):
                 Dloss_wgan.backward()
                 self.disc_agent.optimizer.step()
                 self.disc_agent.track_gradient(epoch)
-                clipweights(self.disc_agent)
+                clipweights(self.disc_agent.discriminators)
                 zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
 
             # no clipweights spectral_norm is implemented
