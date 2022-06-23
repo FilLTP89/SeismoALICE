@@ -8,25 +8,18 @@ from configuration import app
 from torch.utils.data import Dataset
 
 class LatentDataset(Dataset): 
-    def __init__(self, latent_space_shape=[[1,128],[3, 128]],nsy = 1280, mean=0., 
+    def __init__(self, latent_space_shape=[[1,512],[1, 512]],nsy = 1280, mean=0., 
                         std = 1.0, seed=123,*args, **kwargs):
         # fix the seed for the same generation of gaussian, independently of epoch
-        self._latent_space_zlf = torch.empty(*[nsy,*latent_space_shape[0]])
-        self._latent_space_zlf = self._latent_space_zlf.normal_(mean, std)
-
-        self._latent_space_zhf = torch.empty(*[nsy,*latent_space_shape[1]])
-        self._latent_space_zhf = self._latent_space_zhf.normal_(mean, std)
+        torch.manual_seed(seed)
+        self._latent_space_zlf = torch.randn(*[nsy,*latent_space_shape[0]])
+        self._latent_space_zhf = torch.randn(*[nsy,*latent_space_shape[1]])
 
     def __len__(self): 
         return len(self._latent_space_zlf)
 
     def __getitem__(self,index):
         return (self._latent_space_zlf[index,:],self._latent_space_zhf[index,:])
-
-class MultVariate(Dataset):
-    def __init__(self,*args,**kwargs):
-        pass
-    
 
 
 def get_latent_dataset(nsy=1280, batch_size=64, *args, **kwargs):

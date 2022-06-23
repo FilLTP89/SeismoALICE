@@ -237,7 +237,8 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
             self.cnn[-2:]=[
                 nn.Flatten(start_dim = 1, end_dim=2),
                 nn.Linear(lout*channel[-1],1,bias = True),
-                Dpout(dpc = dpc)
+                Dpout(dpc = dpc),
+                normalization(1)
             ]
         
         if prob:
@@ -281,9 +282,9 @@ class DCGAN_Dz_Flatten(BasicDCGAN_DzDataParallel):
                  ker=2,std=2,pad=0, dil=1,grp=1,wf=False, dpc=0.250, bias = False, prob=False,batch_size=128,\
                  n_extra_layers=0, path='',*args,**kwargs):
         super(DCGAN_Dz_Flatten, self).__init__(*args, **kwargs)
-        acts      = T.activation(act, nly)
-        self.cnn = []
-        
+        acts        = T.activation(act, nly)
+        self.cnn    = []
+        self.wf     = wf
         normalization =partial(nn.BatchNorm1d)
         # self.cnn1 += [UnSqueeze()]
         # self.cnn1 += [Explode(shape = [extra, limit])]
@@ -303,12 +304,13 @@ class DCGAN_Dz_Flatten(BasicDCGAN_DzDataParallel):
                 kernel_size = ker, 
                 stride      = std)
 
-        if wf:
+        if self.wf:
             self.cnn +=[
                 nn.Flatten(start_dim = 1, end_dim=2),
                 nn.Linear(lout*channel[-1],extra,bias = True),
                 Dpout(dpc = dpc),
-                UnSqueeze(1)
+                UnSqueeze(1),
+                normalization(1)
             ]
 
         if prob:

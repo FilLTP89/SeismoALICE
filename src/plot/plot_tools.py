@@ -743,30 +743,23 @@ def plot_generate_hybrid(Qec,Pdc,Ghz,dev,vtm,trn_set,pfx='hybrid',outf='./imgs')
 #             cnt += 1
 
             # filtered signals
-def plot_distribution(tag,z_calc,save=False):
+def plot_distribution(tag,z_calc,z_tar, save=False):
     z_calc = z_calc.cpu().data.numpy().copy()
-    fig, axes = plt.subplots(figsize=(8, 5), sharey=True)
-    ax = sns.histplot({f'{tag},s={z_calc.std()}':z_calc.reshape(-1)},
-            stat="density", common_norm=False, element="poly",fill=False)
-    ax.set_xlim(-5,5)
-    ax.set_ylim(0.,1.0)
-    fig = ax.get_figure()
+    z_tar  = z_tar.cpu().data.numpy().copy()
+    plt.figure()
+    fig = plt.hist([z_calc, z_tar], bins=40, density=True)
+    plt.xlim(-5.,5.)
+    plt.ylim(0,1.)
     if save:
-        fig.savefig(f"file_{tag}.png")
-
+        plt.savefig(f'{tag}.png')
     return fig
 
-def plot_spatial_rep(tag, z_calc, save=False):
-    z_calc = z_calc.cpu().data.numpy().copy()
-    z1 = z_calc[:,0,:].reshape(-1)
-    z2 = z_calc[:,1,:].reshape(-1)
-
-    fig, axes = plt.subplots(figsize=(8, 5), sharey=True)
-    ax = sns.scatterplot(z1,z2)
-    ax.set_xlim(-5,5)
-    ax.set_ylim(-5,5)
-    fig = ax.get_figure()
-    
+def plot_spatial_rep(tag, z1, z2, save=False):
+    z1 = z1.cpu().data.numpy().copy()
+    z1 = z2.cpu().data.numpy().copy()
+    fig = plt.scatter(z1,z2)
+    plt.xlim(-4,4)
+    plt.ylim(-4,4)
     if save:
         fig.savefig('file_{tag}.png')
     
@@ -775,13 +768,16 @@ def plot_spatial_rep(tag, z_calc, save=False):
 def get_histogram(Fy, Gy, trn_set):
     Fy.eval(),Gy.eval()
     fig = []
-    for b, batch_data in enumerate(trn_set):
+    data_vld_loader,lat_vld_loader = trn_set
+    for b, (batch_data, batch_latent) in enumerate(zip(data_vld_loader,lat_vld_loader)):
         y, *others  = batch_data
-        y           = y.to(app.DEVICE)
+        zyx, zyy    = batch_latent
+        y           = y.to(app.DEVICE, non_blocking = True)
+        zyx, zyy    = zyx.to(app.DEVICE, non_blocking = True), zyy.to(app.DEVICE, non_blocking = True)
         wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std': 1.0})
-        zyy, zxy    =  Fy(zcat(y,wny))
-        fig.append(plot_distribution(tag='zlf',z_calc=zxy))
-        fig.append(plot_distribution(tag='zhf',z_calc=zyy))
+        zyy_cal, zxy_cal =  Fy(zcat(y,wny))
+        fig.append(plot_distribution(tag='zlf',z_calc=zxy_cal, z_tar=zyx))
+        fig.append(plot_distribution(tag='zhf',z_calc=zyy_cal, z_tar=zyy))
     return fig
 
 def get_latent_rep(Fy, Gy, trn_set):

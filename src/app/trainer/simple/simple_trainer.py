@@ -99,9 +99,10 @@ class SimpleTrainer(BasicTrainer):
         count_parameters(self.disc_agent.discriminators)
         self.logger.info(f"Learning rate : {self.opt.config['hparams']['discriminators.lr']}")
 
-        self.logger.info(f"Number of GPU : {torch.cuda.device_count()} GPUs")
-        self.logger.info(f"Root checkpoint {self.opt.root_checkpoint}")
-        self.logger.info(f"Saving epoch every {self.opt.save_checkpoint} iterations")
+        self.logger.info(f"Number of GPU        : {torch.cuda.device_count()} GPUs")
+        self.logger.info(f"Batch Size per GPU   : {self.opt.batchSize//torch.cuda.device_count()}")
+        self.logger.info(f"Root checkpoint      : {self.opt.root_checkpoint}")
+        self.logger.info(f"Saving epoch every   : {self.opt.save_checkpoint} iterations")
         
         self.logger.info(f"Root summary")
         for _, root in self.opt.config['log_dir'].items():
@@ -173,7 +174,7 @@ class SimpleTrainer(BasicTrainer):
                 bar.set_postfix(status='saving accuracy and images ... ')
 
                 figure_histo = get_histogram(Fy=self.gen_agent.Fy, 
-                Gy = self.gen_agent.Gy, trn_set = self.data_tst_loader)
+                Gy = self.gen_agent.Gy, trn_set = (self.data_vld_loader,self.lat_vld_loader))
                 bar.set_postfix(status='saving z distribution ...')
                 self.validation_writer.add_figure('z Histogram', figure_histo)
 
