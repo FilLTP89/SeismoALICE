@@ -209,7 +209,7 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
         # self.cnn1 += [Explode(shape = [extra, limit])]
         # self.cnn1 += [nn.BatchNorm1d(extra)]
         # self.cnn1 += [acts[0]]
-        normalization =  partial(nn.BatchNorm1d)
+        normalization =  partial(nn.InstanceNorm1d)
         lout = self.lout(nch= nc,
                 padding     = pad, 
                 dilation    = dil, 
@@ -237,8 +237,9 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
             self.cnn[-2:]=[
                 nn.Flatten(start_dim = 1, end_dim=2),
                 nn.Linear(lout*channel[-1],1,bias = True),
-                Dpout(dpc = dpc),
-                normalization(1)
+                nn.LeakyReLU(negative_slope=1.0, inplace=True)
+                # Dpout(dpc = dpc),
+                # normalization(1)
             ]
         
         if prob:

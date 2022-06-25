@@ -2,6 +2,7 @@ import torch
 from app.trainer.simple.simple_trainer import SimpleTrainer
 from common.common_nn import zerograd,zcat,modalite, clipweights
 from tools.generate_noise import noise_generator
+from common.common_model import gradient_penalty
 from configuration import app
 
 class WGAN(SimpleTrainer):
@@ -33,8 +34,7 @@ class WGAN(SimpleTrainer):
         }
         gradients_disc = {
             'epochs':'',    'modality':'',
-            'Dy':'',        'Dsy':'',
-            'Dzb':'',       'Dszb':''
+            'Dsy':'',       'Dszb':''
         }
         super(WGAN, self).__init__(cv, trial = None,
         losses_disc = losses_disc, losses_gens = losses_gens,prob_disc   = prob_disc,
@@ -46,24 +46,28 @@ class WGAN(SimpleTrainer):
             zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
-            
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
             zd_inp      = zcat(zxy,zyy)
             y_inp       = zcat(y,wny) 
-
+            
             y_gen       = self.gen_agent.Gy(zxy,zyy)
             zyy_F,zyx_F,*other = self.gen_agent.Fy(y_inp)
             zd_gen      = zcat(zyx_F,zyy_F)
 
             Dreal_y, Dfake_y = self.disc_agent.discriminate_marginal_y(y, y_gen)
-            Dloss_wgan_y     = -(torch.mean(Dreal_y) - torch.mean(Dfake_y))
+            Dloss_wgan_y     = -(torch.mean(Dreal_y) - torch.mean(Dfake_y)) +\
+                                gradient_penalty(self.disc_agent.Dsy, Dreal_y, Dfake_y,app.DEVICE)
 
             Dreal_zd, Dfake_zd = self.disc_agent.discriminate_marginal_zd(zd_inp,zd_gen)
-            Dloss_wgan_zd    = -(torch.mean(Dreal_zd) - torch.mean(Dfake_zd))
+            Dloss_wgan_zd    = -(torch.mean(Dreal_zd) - torch.mean(Dfake_zd))+\
+                                gradient_penalty(self.disc_agent.Dszb, Dreal_zd,Dfake_zd, app.DEVICE)
 
             Dloss_wgan =  Dloss_wgan_y + Dloss_wgan_zd
+            
             if modality == 'train':
-                Dloss_wgan.backward()
+                # Dfake_y.register_hook(lambda grad: print(grad))
+                # self.disc_agent.Dszb.module.cnn[8].weight.register_hook(lambda grad: print(grad))
+                Dloss_wgan.backward(retain_graph=True)
                 self.disc_agent.optimizer.step()
                 self.disc_agent.track_gradient(epoch)
                 clipweights(self.disc_agent.discriminators)

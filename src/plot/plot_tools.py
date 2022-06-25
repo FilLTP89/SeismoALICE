@@ -744,19 +744,20 @@ def plot_generate_hybrid(Qec,Pdc,Ghz,dev,vtm,trn_set,pfx='hybrid',outf='./imgs')
 
             # filtered signals
 def plot_distribution(tag,z_calc,z_tar, save=False):
+    
     z_calc = z_calc.cpu().data.numpy().copy()
     z_tar  = z_tar.cpu().data.numpy().copy()
     mu, sigma = 0, 0.1
-    
-    plt.figure(figsize=(6,6))
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
-    ax = [ax1, ax2, ax3]
     _, v_size, *others = z_calc.shape
+    plt.figure(figsize=(6,6))
+    fig = plt.subplots(1, v_size)
+    
     for i in range(v_size):
-        ax[i].hist(z_calc[0,i,:], bins=10, density=True)
-        ax[i].xlim(-5.,5.)
-        ax[i].ylim(0,1.)
-        ax[i].xlabel(tag)
+        plt.hist(z_calc[0,i,:], bins=10, density=True)
+        plt.title(f'Distribution z{i}')
+        plt.xlim([-5.,5.])
+        plt.ylim([0,1.])
+        plt.xlabel(tag)
     if save:
         plt.savefig(f'{tag}.png')
     return fig
@@ -799,7 +800,7 @@ def get_latent_rep(Fy, Gy, trn_set):
         wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std': 1.0})
         zyy, zxy    =  Fy(zcat(y,wny))
         fig.append(plot_spatial_rep(tag='zhf z0/z1',z=zyy,index = [0,1]))
-        fig.append(plot_spatial_rep(tag='zhf z0/z2',z=zyy,index = [0,2]))
+        # fig.append(plot_spatial_rep(tag='zhf z0/z2',z=zyy,index = [0,2]))
     return fig
 
 
