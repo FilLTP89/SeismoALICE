@@ -83,7 +83,7 @@ class ALICE(SimpleTrainer):
             Dloss               = Dloss_ali_y + Dloss_cross_entropy
             
             if modality == 'train':
-                Dloss.backward()
+                Dloss.backward(retain_graph=True)
                 self.disc_agent.optimizer.step()
                 self.disc_agent.track_gradient(epoch)
                 zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])

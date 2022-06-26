@@ -747,7 +747,7 @@ def plot_distribution(tag,z_calc,z_tar, save=False):
     
     z_calc = z_calc.cpu().data.numpy().copy()
     z_tar  = z_tar.cpu().data.numpy().copy()
-    mu, sigma = 0, 0.1
+    
     _, v_size, *others = z_calc.shape
     plt.figure(figsize=(6,6))
     fig = plt.subplots(1, v_size)

@@ -203,7 +203,7 @@ def cnn1d(in_channels,out_channels,\
             block = [normalization(copy.deepcopy(block[0]))]
             block.append(BatchNorm1d(out_channels))
         else:
-            block.append(normalization(out_channels))
+            block.append(normalization(out_channels, affine=True))
 
     block.append(act)
     block.append(Dpout(dpc=dpc))
@@ -228,7 +228,7 @@ def cnn1dt(in_channels,out_channels,\
             block = [normalization(copy.deepcopy(block[0]))]
             block.append(BatchNorm1d(out_channels))
         else:
-            block.append(normalization(out_channels))
+            block.append(normalization(out_channels, affine=True))
     block.append(act)
     block.append(Dpout(dpc=dpc))
     return block
