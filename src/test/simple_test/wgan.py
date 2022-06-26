@@ -26,6 +26,7 @@ class WGAN(SimpleTrainer):
             'epochs':'',                'modality':'',
             'Dreal_y':'',               'Dfake_y':'',
             'Dreal_zd':'',              'Dfake_zd':'',
+            'GPy':'',                   'GPzb':''
         }
 
         gradients_gens = {
@@ -46,6 +47,7 @@ class WGAN(SimpleTrainer):
             zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
+            breakpoint()
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
             zd_inp      = zcat(zxy,zyy)
             y_inp       = zcat(y,wny) 
@@ -55,12 +57,14 @@ class WGAN(SimpleTrainer):
             zd_gen      = zcat(zyx_F,zyy_F)
 
             Dreal_y, Dfake_y = self.disc_agent.discriminate_marginal_y(y, y_gen)
-            Dloss_wgan_y     = -(torch.mean(Dreal_y) - torch.mean(Dfake_y)) +\
-                                gradient_penalty(self.disc_agent.Dsy, Dreal_y, Dfake_y,app.DEVICE)
-
+            GPy              = gradient_penalty(self.disc_agent.Dsy, y, y_gen,app.DEVICE)
+            Dloss_wgan_y     = -(torch.mean(Dreal_y.reshape(-1)) - torch.mean(Dfake_y.reshape(-1))) +\
+                                app.LAMBDA_GP*GPy
+            
             Dreal_zd, Dfake_zd = self.disc_agent.discriminate_marginal_zd(zd_inp,zd_gen)
-            Dloss_wgan_zd    = -(torch.mean(Dreal_zd) - torch.mean(Dfake_zd))+\
-                                gradient_penalty(self.disc_agent.Dszb, Dreal_zd,Dfake_zd, app.DEVICE)
+            GPzb             = gradient_penalty(self.disc_agent.Dszb, zd_inp, zd_gen, app.DEVICE)
+            Dloss_wgan_zd    = -(torch.mean(Dreal_zd.reshape(-1)) - torch.mean(Dfake_zd.reshape(-1)))+\
+                                app.LAMBDA_GP*GPzb
 
             Dloss_wgan =  Dloss_wgan_y + Dloss_wgan_zd
             
@@ -70,7 +74,6 @@ class WGAN(SimpleTrainer):
                 Dloss_wgan.backward(retain_graph=True)
                 self.disc_agent.optimizer.step()
                 self.disc_agent.track_gradient(epoch)
-                clipweights(self.disc_agent.discriminators)
                 zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
 
             # no clipweights spectral_norm is implemented
@@ -88,6 +91,8 @@ class WGAN(SimpleTrainer):
             self.prob_disc['Dfake_y' ] = Dfake_y.mean().tolist()
             self.prob_disc['Dreal_zd'] = Dreal_zd.mean().tolist()
             self.prob_disc['Dfake_zd'] = Dfake_zd.mean().tolist()
+            self.prob_disc['GPy'     ] = GPy.mean().tolist()
+            self.prob_disc['GPzb'    ] = GPzb.mean().tolist()
             self.prob_disc_tracker.update()
 
     def train_generators(self,batch,epoch,modality,net_mode,*args,**kwargs):
@@ -107,10 +112,10 @@ class WGAN(SimpleTrainer):
             zd_gen      = zcat(zyx_F,zyy_F)
 
             _, Dfake_y  = self.disc_agent.discriminate_marginal_y(y, y_gen)
-            Gloss_wgan_y= -(torch.mean(Dfake_y))
+            Gloss_wgan_y= -(torch.mean(Dfake_y.reshape(-1)))
 
             _, Dfake_zd = self.disc_agent.discriminate_marginal_zd(zd_inp,zd_gen)
-            Gloss_wgan_zd= -(torch.mean(Dfake_zd))
+            Gloss_wgan_zd= -(torch.mean(Dfake_zd.reshape(-1)))
 
             # 2. Reconstruction of signal distributions
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})

@@ -145,9 +145,9 @@ class SimpleTrainer(BasicTrainer):
   
             pack = patch(y=y,zyy=zyy,zyx=zyx)
             self.train_discriminators(batch=pack,epoch=epoch, 
-                        modality='eval',net_mode=['eval','eval'])
+                        modality='eval',net_mode=['eval','train'])
             self.train_generators(batch=pack, epoch=epoch, 
-                        modality='eval',net_mode=['eval','eval'])
+                        modality='eval',net_mode=['train','train'])
         if epoch%self.opt.config['hparams']['validation_epochs'] == 0:
             self.losses_disc_tracker.write(epoch=epoch, modality = ['train','eval'])
             self.losses_gen_tracker.write(epoch=epoch, modality = ['train','eval'])

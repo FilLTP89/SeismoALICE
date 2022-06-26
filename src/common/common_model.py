@@ -44,10 +44,11 @@ def track_gradient_change(model):
     return total_norm
 
 def gradient_penalty(critic, real, fake, device):
+    
     _real = real
-    _fake = real
+    _fake = fake
     BATCH_SIZE, C, W = _real.shape
-    alpha = torch.rand((BATCH_SIZE, 1, 1)).repeat(1, C, W).to(device)
+    alpha = torch.rand((BATCH_SIZE,1, 1)).repeat(1, C, W).to(device)
     interpolated = _real.data * alpha + _fake.data * (1 - alpha)
 
     interpolated =  Variable(interpolated, requires_grad=True)

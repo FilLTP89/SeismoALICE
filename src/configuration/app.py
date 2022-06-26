@@ -24,7 +24,7 @@ LAMBDA_ALI      = 1.
 LOGGING_FORMAT  = '%(levelname)s:%(message)s'
 LAMBDA_IDENTITY   = 10.
 LAMBDA_CONSISTENCY= 0.9
-LAMBDA_GP         = 1.0
+LAMBDA_GP         = 10.
 GAMMA             = 1000.
 OPTIMAL_VAL     = 0.6108643020548934
             
