@@ -748,16 +748,17 @@ def plot_distribution(tag,z_calc,z_tar, save=False):
     z_calc = z_calc.cpu().data.numpy().copy()
     z_tar  = z_tar.cpu().data.numpy().copy()
     
-    _, v_size, *others = z_calc.shape
+    batch, v_size, *others = z_calc.shape
     plt.figure(figsize=(6,6))
-    fig = plt.subplots(1, v_size)
+    fig, ax = plt.subplots(1, v_size)
     
     for i in range(v_size):
-        plt.hist(z_calc[0,i,:], bins=10, density=True)
-        plt.title(f'Distribution z{i}')
-        plt.xlim([-5.,5.])
-        plt.ylim([0,1.])
-        plt.xlabel(tag)
+        ax[i].hist(z_calc[0,i,:], bins=30, density=True, label='calc',fc=(0.8, 0, 0, 1))
+        ax[i].hist(z_tar[0,i,:], bins=30, density=True, label='tar',fc=(1., 0.8, 0, 0.5))
+        ax[i].legend(loc = "lower right",frameon=False)
+        ax[i].set_xlim([-5.,5.])
+        ax[i].set_ylim([0,1.])
+        ax[i].set_xlabel(f'{tag}-{i}')
     if save:
         plt.savefig(f'{tag}.png')
     return fig
@@ -785,8 +786,10 @@ def get_histogram(Fy, Gy, trn_set):
         zyx, zyy    = zyx.to(app.DEVICE, non_blocking = True), zyy.to(app.DEVICE, non_blocking = True)
         wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std': 1.0})
         zyy_cal, zxy_cal =  Fy(zcat(y,wny))
-        fig.append(plot_distribution(tag='zlf',z_calc=zxy_cal, z_tar=zyx))
-        fig.append(plot_distribution(tag='zhf',z_calc=zyy_cal, z_tar=zyy))
+        zd_gen      = zcat(zxy_cal, zyy_cal)
+        zd_inp      = zcat(zyx,zyy)
+        fig.append(plot_distribution(tag='zlf',z_calc=zd_gen, z_tar=zd_inp))
+        
     return fig
 
 def get_latent_rep(Fy, Gy, trn_set):

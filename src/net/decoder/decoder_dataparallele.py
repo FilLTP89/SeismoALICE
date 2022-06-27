@@ -119,7 +119,7 @@ class Decoder(BasicDecoderDataParallel):
         if dconv:
             self.cnn1  =  self.cnn1 + _dconv
 
-        self.cnn1 += [nn.BatchNorm1d(channel[-1])]
+        # self.cnn1 += [nn.BatchNorm1d(channel[-1])]
         self.cnn1  = sqn(*self.cnn1)
         if path: 
             self.cnn1[-1] = self.model

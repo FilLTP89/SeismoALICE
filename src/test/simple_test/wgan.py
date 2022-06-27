@@ -57,12 +57,12 @@ class WGAN(SimpleTrainer):
             zd_gen      = zcat(zyx_F,zyy_F)
 
             Dreal_y, Dfake_y = self.disc_agent.discriminate_marginal_y(y, y_gen)
-            GPy              = gradient_penalty(self.disc_agent.Dsy, y, y_gen,app.DEVICE)
+            GPy              = gradient_penalty(self.disc_agent.Dsy, y, y_gen,app.DEVICE) if modality == 'train' else torch.zeros([])
             Dloss_wgan_y     = -(torch.mean(Dreal_y.reshape(-1)) - torch.mean(Dfake_y.reshape(-1))) +\
                                 app.LAMBDA_GP*GPy
             
-            Dreal_zd, Dfake_zd = self.disc_agent.discriminate_marginal_zd(zd_inp,zd_gen)
-            GPzb             = gradient_penalty(self.disc_agent.Dszb, zd_inp, zd_gen, app.DEVICE)
+            Dreal_zd, Dfake_zd = self.disc_agent.discriminate_marginal_zd(zd_inp,zd_gen) 
+            GPzb             = gradient_penalty(self.disc_agent.Dszb, zd_inp, zd_gen, app.DEVICE) if modality == 'train' else torch.zeros([])
             Dloss_wgan_zd    = -(torch.mean(Dreal_zd.reshape(-1)) - torch.mean(Dfake_zd.reshape(-1)))+\
                                 app.LAMBDA_GP*GPzb
 
@@ -130,7 +130,7 @@ class WGAN(SimpleTrainer):
 
             Gloss_rec   = Gloss_rec_y + Gloss_rec_zd
 
-            Gloss = Gloss_wgan_y + Gloss_wgan_zd + Gloss_rec
+            Gloss = Gloss_wgan_y + Gloss_wgan_zd + Gloss_rec*app.LAMBDA_IDENTITY
             if modality == 'train':
                 Gloss.backward()
                 self.gen_agent.optimizer.step()

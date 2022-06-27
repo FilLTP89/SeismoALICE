@@ -225,7 +225,8 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
             activation  = acts, 
             bn          = bn, 
             normalization = normalization)
-        self.cnn += [nn.Conv1d(in_channels=channel[-1],out_channels=channel[-1],kernel_size = 3, stride = 1, padding=1)]
+        self.cnn += [nn.Conv1d(in_channels=channel[-1],out_channels=channel[-1],\
+            kernel_size = 3, stride = 1, padding=1, bias = False)]
         # self.cnn += [normalization(channel[-1])]
         # for i in range(1, nly+1):
         #     _dpc = 0.0 if i ==nly else dpc

@@ -145,9 +145,9 @@ class SimpleTrainer(BasicTrainer):
   
             pack = patch(y=y,zyy=zyy,zyx=zyx)
             self.train_discriminators(batch=pack,epoch=epoch, 
-                        modality='eval',net_mode=['eval','train'])
+                        modality='eval',net_mode=['eval','eval'])
             self.train_generators(batch=pack, epoch=epoch, 
-                        modality='eval',net_mode=['train','train'])
+                        modality='eval',net_mode=['eval','eval'])
         if epoch%self.opt.config['hparams']['validation_epochs'] == 0:
             self.losses_disc_tracker.write(epoch=epoch, modality = ['train','eval'])
             self.losses_gen_tracker.write(epoch=epoch, modality = ['train','eval'])
@@ -173,10 +173,10 @@ class SimpleTrainer(BasicTrainer):
                 self.validation_writer.set_step(mode='test', step=epoch)
                 bar.set_postfix(status='saving accuracy and images ... ')
 
-                # figure_histo = get_histogram(Fy=self.gen_agent.Fy, 
-                # Gy = self.gen_agent.Gy, trn_set = (self.data_vld_loader,self.lat_vld_loader))
-                # bar.set_postfix(status='saving z distribution ...')
-                # self.validation_writer.add_figure('z Histogram', figure_histo)
+                figure_histo = get_histogram(Fy=self.gen_agent.Fy, 
+                Gy = self.gen_agent.Gy, trn_set = (self.data_vld_loader,self.lat_vld_loader))
+                bar.set_postfix(status='saving z distribution ...')
+                self.validation_writer.add_figure('z Histogram', figure_histo)
 
                 # figure_rep = get_latent_rep(Fy=self.gen_agent.Fy, 
                 # Gy = self.gen_agent.Gy, trn_set = self.data_tst_loader)

@@ -227,7 +227,7 @@ class DCGAN_Dx_Lite(BasicDCGAN_DxDataParallel):
                     padding = pad, dilation = dil,\
                     kernel_size = ker, stride = std)
         self.cnn += [nn.Conv1d(in_channels=channel[-1],out_channels=channel[-1],
-                        kernel_size = 3, stride = 1, padding=1)]
+                        kernel_size = 3, stride = 1, padding=1, bias=False)]
         # self.cnn += [normalization(channel[-1])]
         
         if wf:
