@@ -189,6 +189,7 @@ class Encoder_Unic(BasicEncoderDataParallele):
         self.ngpu= ngpu
         self.gang = range(ngpu)
         self.wf = wf
+        
 
         acts = T.activation(act, nly)
         # pdb.set_trace()
@@ -263,22 +264,23 @@ class Encoder_Unic(BasicEncoderDataParallele):
                 _bn  = False if i == nly else bn
                 _dpc = 0.0 if i == nly else dpc 
                 self.cnn1 = self.cnn1+cnn1d(channel[i-1], channel[i], acts[i-1], ker=ker[i-1],\
-                    std=std[i-1],pad=pad[i-1], dil=dil[i-1], bn=_bn, dpc=_dpc, wn=False)
+                    std=std[i-1],pad=pad[i-1], dil=dil[i-1], bn=_bn, dpc=_dpc, wn=False, 
+                    )
 
         # pdb.set_trace()
         for n in range(1,nly_bb+1):
             _bn  = False if n==nly_bb else bn
             _dpc = 0.0   if n==nly_bb else dpc_bb
             self.branch_broadband += cnn1d(channel_bb[n-1],channel_bb[n],\
-                acts_bb[n-1],ker=ker_bb[n-1],std=std_bb[n-1],\
-                pad=pad_bb[n-1],bn=_bn,dil=dil_bb[n-1],dpc=_dpc,wn=False)
+                acts_bb[n-1],ker=ker_bb[n-1],std=std_bb[n-1], pad=pad_bb[n-1],bn=_bn,dil=dil_bb[n-1],dpc=_dpc,wn=False,
+                )
 
         for n in range(1,nly_com+1):
             _bn  = False if n==nly_com else bn
             _dpc = 0.0   if n==nly_com else dpc_com
             self.branch_common +=cnn1d(channel_com[n-1],channel_com[n],\
-                acts_com[n-1],ker=ker_com[n-1],std=std_com[n-1],\
-                pad=pad_com[n-1],bn=_bn,dil=dil_com[n-1],dpc=_dpc,wn=False)
+                acts_com[n-1],ker=ker_com[n-1],std=std_com[n-1],pad=pad_com[n-1],
+                bn=_bn,dil=dil_com[n-1],dpc=_dpc,wn=False)
 
         # self.branch_common +=[BatchNorm1d(channel_com[-1])]
         # self.branch_broadband +=[BatchNorm1d(channel_bb[-1])]

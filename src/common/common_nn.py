@@ -203,7 +203,7 @@ def cnn1d(in_channels,out_channels,\
             block = [torch.nn.utils.spectral_norm(copy.deepcopy(block[0]))]
             block.append(normalization(out_channels, affine=True))
         else:
-            block.append(BatchNorm1d(out_channels))
+            block.append(InstanceNorm1d(out_channels))
 
     block.append(act)
     block.append(Dpout(dpc=dpc))
@@ -224,11 +224,11 @@ def cnn1dt(in_channels,out_channels,\
                              bias=False)]
     
     if bn:
-        if normalization == torch.nn.utils.spectral_norm:
-            block = [normalization(copy.deepcopy(block[0]))]
-            block.append(BatchNorm1d(out_channels))
-        else:
+        if normalization.func.__name__.find('InstanceNorm1d')!=-1:
+            block = [torch.nn.utils.spectral_norm(copy.deepcopy(block[0]))]
             block.append(normalization(out_channels, affine=True))
+        else:
+            block.append(InstanceNorm1d(out_channels))
     block.append(act)
     block.append(Dpout(dpc=dpc))
     return block

@@ -148,7 +148,7 @@ class Decoder_Lite(BasicDecoderDataParallel):
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
         acts      = T.activation(act, nly)
-
+        
         # pdb.set_trace()
         
         # self.cnn1 += [nn.Linear(limit, 10, bias=False)]
