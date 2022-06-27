@@ -47,7 +47,7 @@ class WGAN(SimpleTrainer):
             zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
-            
+            breakpoint()
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
             zd_inp      = zcat(zxy,zyy)
             y_inp       = zcat(y,wny) 

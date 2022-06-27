@@ -14,7 +14,6 @@ class Agent:
         self.accelerator  = accelerator
         self.current_val = 0
 
-    
     def __iter__(self):
         return self
     

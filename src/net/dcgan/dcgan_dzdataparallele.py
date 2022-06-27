@@ -203,7 +203,7 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
                  n_extra_layers=0, path='',*args,**kwargs):
         super(DCGAN_Dz_Lite, self).__init__(*args, **kwargs)
         
-        acts      = T.activation(act, nly)
+        acts     = T.activation(act, nly)
         self.cnn = []
         # self.cnn1 += [UnSqueeze()]
         # self.cnn1 += [Explode(shape = [extra, limit])]
