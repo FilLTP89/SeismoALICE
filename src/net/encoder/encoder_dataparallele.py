@@ -266,6 +266,7 @@ class Encoder_Unic(BasicEncoderDataParallele):
                 self.cnn1 = self.cnn1+cnn1d(channel[i-1], channel[i], acts[i-1], ker=ker[i-1],\
                     std=std[i-1],pad=pad[i-1], dil=dil[i-1], bn=_bn, dpc=_dpc, wn=False, 
                     )
+                
 
         # pdb.set_trace()
         for n in range(1,nly_bb+1):
@@ -274,6 +275,10 @@ class Encoder_Unic(BasicEncoderDataParallele):
             self.branch_broadband += cnn1d(channel_bb[n-1],channel_bb[n],\
                 acts_bb[n-1],ker=ker_bb[n-1],std=std_bb[n-1], pad=pad_bb[n-1],bn=_bn,dil=dil_bb[n-1],dpc=_dpc,wn=False,
                 )
+            for extra_layer in extra_bb:
+                    self.branch_broadband += cnn1d(channel[i], channel[i], acts[i-1], ker=1,\
+                    std=1,pad=0, dil=2**extra_layer, bn=_bn, dpc=_dpc, wn=False, 
+                    )
 
         for n in range(1,nly_com+1):
             _bn  = False if n==nly_com else bn
@@ -281,46 +286,17 @@ class Encoder_Unic(BasicEncoderDataParallele):
             self.branch_common +=cnn1d(channel_com[n-1],channel_com[n],\
                 acts_com[n-1],ker=ker_com[n-1],std=std_com[n-1],pad=pad_com[n-1],
                 bn=_bn,dil=dil_com[n-1],dpc=_dpc,wn=False)
+            for extra_layer in extra_com:
+                    self.branch_common += cnn1d(channel[i], channel[i], acts[i-1], ker=1,\
+                    std=1,pad=0, dil=2**extra_layer, bn=_bn, dpc=_dpc, wn=False, 
+                    ) 
 
-        # self.branch_common +=[BatchNorm1d(channel_com[-1])]
-        # self.branch_broadband +=[BatchNorm1d(channel_bb[-1])]
-        # self.branch_broadband.append(Squeeze())
-
-        # self.branch_broadband +=[
-        #             Shallow(shape=lout_zy*channel_bb[-1]),
-        #             Linear(lout_zy*channel_bb[-1],extra_bb, bias=False),
-        #         ]
-        # self.branch_common += [
-        #             Shallow(shape=lout_zyx*channel_com[-1]),
-        #             Linear(lout_zyx*channel_com[-1],extra_com, bias=False),
-        #     ]
-        # self.branch_broadband+=[
-        #             Shallow(shape = lout_zy*channel_bb[-1]),
-        #             nn.Linear(lout_zy*channel_bb[-1],channel_bb[-1]),
-        #             nn.BatchNorm1d(channel_bb[-1]),
-        #             nn.LeakyReLU(1.0,inplace=True)
-        #         ]
-        # self.branch_broadband.append(nn.Linear(lout_zy,channel_bb[-1]))
-        # self.branch_broadband.append(nn.BatchNorm1d(channel_bb[-1]))
-
-        # self.branch_common.append(Squeeze())
-        # self.branch_common +=[
-        #             Shallow(shape = lout_zyx*channel_com[-1]),
-        #             nn.Linear(lout_zyx*channel_com[-1],channel_com[-1]),
-        #             nn.BatchNorm1d(channel_com[-1]),
-        #             nn.LeakyReLU(1.0,inplace=True)
-        #         ]
-        # self.branch_common.append(nn.Linear(lout_zyx,channel_com[-1]))
-        # self.branch_common.append(nn.BatchNorm1d(channel_com[-1]))
-        # pdb.set_trace()
 
         self.master         = nn.Sequential(*self.cnn1)
         self.cnn_common     = nn.Sequential(*self.branch_common)
         self.cnn_broadband  = nn.Sequential(*self.branch_broadband)
 
-        # self.cnn_common = nn.Sequential(*(self.cnn1+self.branch_common))
-        # self.cnn_broadband = nn.Sequential(*(self.cnn1 + self.branch_broadband))
-        # self.zyx        = nn.Sequential(*self.branch_common)
+        
 
     def forward(self, x):
         z   = self.master(x)

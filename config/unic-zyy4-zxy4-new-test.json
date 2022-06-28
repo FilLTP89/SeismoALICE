@@ -28,7 +28,7 @@
         "dilation"  :[1,1],
         "padding"   :[3,1],
         "dpc"       :0.0,
-        "extra"     :128,
+        "extra"     :0,
         "act"       :"Feu",
         "limit"     :256,
         "broadband" :{
@@ -39,7 +39,7 @@
             "dilation"  :[1,1],
             "padding"   :[3,1],
             "dpc"       :0.0, 
-            "extra"     :128,
+            "extra"     :3,
             "act"       :"Fed",
             "limit"     :256},
         "common":{
@@ -50,7 +50,7 @@
             "dilation"  :[1,1],
             "padding"   :[3,1],
             "dpc"       :0.0,
-            "extra"     :0.0, 
+            "extra"     :3, 
             "act"       :"Fed",
             "limit"     :256}
     },
