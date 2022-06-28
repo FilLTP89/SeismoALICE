@@ -81,18 +81,21 @@ class BasicDCGAN_DxDataParallel(BasicModel):
         return cnn
 
     def block_conv(self, channel, kernel, strides, dilation, 
-                    padding, activation, dpc, *args, **kwargs):
+                    padding, activation, dpc,bn, *args, **kwargs):
         cnn     = []
         _dpc    = [dpc for _ in range(len(channel))]
+        _bool_bn    = [bn for _ in range(len(channel))]
+        _bool_bn[0] = False
         for in_channels, out_channels, kernel_size,\
-            stride, dilation, padding, acts, __dpc in zip(channel[:-1],\
-            channel[1:], kernel, strides, dilation, padding, activation, _dpc):
+            stride, dilation, padding, acts,_bn, __dpc in zip(channel[:-1],\
+            channel[1:], kernel, strides, dilation, padding, activation,_bool_bn, _dpc):
             cnn += cnn1d(in_channels = in_channels, 
                         out_channels = out_channels,
                         ker = kernel_size,
                         std = stride,
                         pad = padding,
                         act =acts,
+                        bn=_bn,
                         dpc=__dpc,
                         dil = dilation,*args, **kwargs)
         return cnn

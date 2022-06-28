@@ -277,7 +277,7 @@ class Encoder_Unic(BasicEncoderDataParallele):
                 acts_bb[n-1],ker=ker_bb[n-1],std=std_bb[n-1], pad=pad_bb[n-1],\
                     bn=_bn,dil=dil_bb[n-1],dpc=_dpc,wn=False)
             for extra_layer in range(extra_bb):
-                act = nn.LeakyReLU(1.0,inplace=True) if n==nly_bb and extra_layer==extra_bb-1 else nn.LeakyReLU(0.2, inplace=True)
+                act = nn.LeakyReLU(1.0,inplace=True)
                 self.branch_broadband += cnn1d(channel_bb[n], channel_bb[n], act, ker=1,\
                     std=1,pad=0, dil=2**extra_layer, bn=_bn, dpc=_dpc, wn=False)
 
@@ -288,7 +288,7 @@ class Encoder_Unic(BasicEncoderDataParallele):
                 acts_com[n-1],ker=ker_com[n-1],std=std_com[n-1],pad=pad_com[n-1],
                 bn=_bn,dil=dil_com[n-1],dpc=_dpc,wn=False)
             for extra_layer in range(extra_com):
-                act = nn.LeakyReLU(1.0,inplace=True) if n==nly_com and extra_layer==extra_bb-1 else nn.LeakyReLU(0.2, inplace=True)
+                act = nn.LeakyReLU(1.0,inplace=True)
                 self.branch_common += cnn1d(channel_com[n], channel_com[n], act, ker=1,\
                     std=1,pad=0, dil=2**extra_layer, bn=_bn, dpc=_dpc, wn=False)
 

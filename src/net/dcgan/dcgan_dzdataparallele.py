@@ -70,6 +70,7 @@ class BasicDCGAN_DzDataParallel(BasicModel):
         cnn  = []
         #For the first layer we will not use Batchnorm
         _bool_bn    = [bn for _ in range(len(channel))]
+        _bool_bn[0] = False
         _dpc        = [dpc for _ in range(len(channel))]
         pack = zip(channel[:-1], channel[1:], kernel, strides,dilation, padding, activation,_bool_bn, _dpc)
 
