@@ -744,7 +744,6 @@ def plot_generate_hybrid(Qec,Pdc,Ghz,dev,vtm,trn_set,pfx='hybrid',outf='./imgs')
 
             # filtered signals
 def plot_distribution(tag,z_calc,z_tar, save=False):
-    
     z_calc = z_calc.cpu().data.numpy().copy()
     z_tar  = z_tar.cpu().data.numpy().copy()
     
@@ -752,7 +751,7 @@ def plot_distribution(tag,z_calc,z_tar, save=False):
     plt.figure(figsize=(6,6))
     fig, ax = plt.subplots(1, v_size)
     
-    for i in range(v_size):
+    for i in range(v_size+1):
         ax[i].hist(z_calc[0,i,:], bins=30, density=True, label='calc',fc=(0.8, 0, 0, 1))
         ax[i].hist(z_tar[0,i,:], bins=30, density=True, label='tar',fc=(1., 0.8, 0, 0.5))
         ax[i].legend(loc = "lower right",frameon=False)
@@ -969,15 +968,15 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             # Xf = Variable(xf_data).to(dev, non_blocking=True)
             # zt = Variable(zt_data).to(dev, non_blocking=True)        
             nch, nz         = 4,128
-            wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
+            wnx,wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
 
             X_inp = zcat(Xt,wnx)
-            zy,zdf_gen,*other =  Qec(X_inp)
+            zy =  Qec(X_inp)
 
             if str(pfx).find('hack')!=-1:
                 Xr  = Pdc(zdf_gen,o0l(zy))
             else:
-                Xr = Pdc(zdf_gen,zy)
+                Xr = Pdc(zy,wnz)
             #Xp = Pdc(z_pre)
             # Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             # Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
@@ -1254,15 +1253,15 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             # zt = torch.randn(*zt_shape).to(dev, non_blocking = True)
             random_args = {'mean':0.,'std': 1.0}
             nch, nz         = 4,128
-            wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
+            wnx,wnz,*others = noise_generator(Xt.shape,zyy.shape,dev,random_args)
 
             X_inp = zcat(Xt,wnx)
-            zy,zdf_gen,*other =  Qec(X_inp)
+            zy =  Qec(X_inp)
 
             if str(pfx).find('hack')!=-1:
                 Xr = Pdc(zdf_gen,o0l(zy))
             else:
-                Xr = Pdc(zdf_gen,zy)
+                Xr = Pdc(zy,wnz)
             #Xp = Pdc(z_pre)
             Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
