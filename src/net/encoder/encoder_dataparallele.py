@@ -120,62 +120,31 @@ class Encoder(BasicEncoderDataParallele):
         super(Encoder, self).__init__(*args, **kwargs)
         
         self.ngpu= ngpu
-        self.gang = range(ngpu)
         self.wf = wf
         acts = T.activation(act, nly)
-        # pdb.set_trace()
 
-        if path:
-            self.model = T.load_net(path)
-            # Freeze model weights
-            for param in self.model.parameters():
-                param.requires_grad = False
-
-        if dconv:
-            _dconv = DConv_62(last_channel = channel[-1], bn = True, dpc = 0.0).network()
-        # pdb.set_trace()
-        # lin = 4096
         for i in range(1, nly+1):
-            # ker[i-1] = self.kout(nly,i,ker)
-            # lout = self.lout(lin, std, ker, pad, dil)
-            # _pad = self.pad(nly,i,pad,lin,lout, dil, ker, std)
-            # lin = lout
             if i ==1 and with_noise:
-            #We take the first layers for adding noise to the system if the condition is set
-                self.cnn1 = self.cnn1+cnn1d(channel[i-1],channel[i], acts[0],ker=ker[i-1],std=std[i-1],\
+                self.cnn = self.cnn+cnn1d(channel[i-1],channel[i], acts[0],ker=ker[i-1],std=std[i-1],\
                     pad=pad[i-1],bn=bn,dil = dil[i-1], dpc=0.0,wn=True ,\
                     dtm = dtm, ffr = ffr, wpc = wpc,dev='cuda:0')
-            # esle if we not have a noise but we at the strating network
             elif i == 1:
-                self.cnn1 = self.cnn1+cnn1d(channel[i-1],channel[i], acts[0],ker=ker[i-1],std=std[i-1],\
+                self.cnn = self.cnn+cnn1d(channel[i-1],channel[i], acts[0],ker=ker[i-1],std=std[i-1],\
                     pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=0.0,wn=False)
-            #else we proceed normaly
             else:
                 _bn  = False if i == nly else bn
                 _dpc = 0.0 if i == nly else dpc 
-                self.cnn1 = self.cnn1+cnn1d(channel[i-1], channel[i], acts[i-1], ker=ker[i-1],\
+                self.cnn = self.cnn+cnn1d(channel[i-1], channel[i], acts[i-1], ker=ker[i-1],\
                     std=std[i-1],pad=pad[i-1], dil=dil[i-1], bn=_bn, dpc=_dpc, wn=False)
-        
-        if dconv:
-            self.cnn1 = self.cnn1 + _dconv
 
-        self.cnn1  = sqn(*self.cnn1)
-        # pdb.set_trace()
-        if path:
-            self.model.cnn1[-1] = copy.deepcopy(self.cnn1)
-            self.cnn1 = self.model
-        # self.cnn1.to(self.device)
-
-    
+        self.cnn  = sqn(*self.cnn)
 
     def forward(self,x):
-        z = self.cnn1(x)
-
+        z = self.cnn(x)
         if not self.training:
-            result = z.detach() + 0.
+            result = z.detach()
             return result
         else:
-            # print(z.requires_grad)
             return z
 
 class Encoder_Unic(BasicEncoderDataParallele):
@@ -377,10 +346,6 @@ class Encoder_Unic_Resnet(BasicEncoderDataParallele):
             kernel_size =config["common"]["kernel"])
 
         for i in range(1, nly+1):
-            # ker[i-1] = self.kout(nly,i,ker)
-            # lout = self.lout(lin, std, ker, pad, dil)
-            # _pad = self.pad(nly,i,pad,lin,lout, dil, ker, std)
-            # lin = lout
             if i ==1 and with_noise:
             #We take the first layers for adding noise to the system if the condition is set
                 self.cnn1 = self.cnn1+cnn1d(channel[i-1],channel[i], acts[0],ker=ker[i-1],std=std[i-1],\
@@ -397,60 +362,22 @@ class Encoder_Unic_Resnet(BasicEncoderDataParallele):
                 self.cnn1 = self.cnn1+cnn1d(channel[i-1], channel[i], acts[i-1], ker=ker[i-1],\
                     std=std[i-1],pad=pad[i-1], dil=dil[i-1], bn=_bn, dpc=_dpc, wn=False)
 
-        # # pdb.set_trace()
-        # for n in range(1,nly_bb+1):
-        #     _bn  = False if n==nly_bb else bn
-        #     _dpc = 0.0   if n==nly_bb else dpc_bb
-        #     self.branch_broadband += cnn1d(channel_bb[n-1],channel_bb[n],\
-        #         acts_bb[n-1],ker=ker_bb[n-1],std=std_bb[n-1],\
-        #         pad=pad_bb[n-1],bn=_bn,dil=dil_bb[n-1],dpc=_dpc,wn=False)
-
-        # net = EncoderResnet(in_signals_channels = 32, out_signals_channels=8,
-        #     channels = [32,64], layers = [2,2], block = block_2x2
-        # )
-
-        self.branch_common +=[
-            nn.Flatten(start_dim = 1, end_dim=2),
-            Linear(lout_zyx*channel_com[-1],512),
-            nn.ReLU(),
-            Linear(512,256),
-            nn.ReLU(),
-            Linear(256,128),
-            nn.LeakyReLU(1.0,inplace=True)
-        ]
-
-        self.branch_broadband +=[
-            nn.Flatten(start_dim = 1, end_dim=2),
-            Linear(lout_zy*channel_bb[-1],512),
-            nn.ReLU(),
-            Linear(512,256),
-            nn.ReLU(),
-            Linear(256,384),
-            nn.LeakyReLU(1.0,inplace=True)
-        ]
-
+        
         self.master = nn.Sequential(*self.cnn1)
         self.branch_common      = nn.Sequential(*self.branch_common)
         self.branch_broadband   = nn.Sequential(*self.branch_broadband)
 
-        self.cnn_common         = EncoderResnet(in_signals_channels = 32, out_signals_channels=4,
+        self.cnn_common         = EncoderResnet(in_signals_channels = channel_com[0], out_signals_channels=channel_com[-1],
                                     channels = [32,64], layers = [2,2], block = block_2x2)
 
-        self.cnn_broadband      = EncoderResnet(in_signals_channels = 32, out_signals_channels=4,
+        self.cnn_broadband      = EncoderResnet(in_signals_channels = channel_bb[0], out_signals_channels=channel_com[-1],
                                     channels = [32,64], layers = [2,2], block = block_2x2)
 
-        # self.cnn_common = nn.Sequential(*(self.cnn1+self.branch_common))
-        # self.cnn_broadband = nn.Sequential(*(self.cnn1 + self.branch_broadband))
-        # self.zyx        = nn.Sequential(*self.branch_common)
 
     def forward(self, x):
         z   = self.master(x)
         zyx = self.cnn_common(z)
         zy  = self.cnn_broadband(z)
-        # breakpoint()
-        #Flatten results
-        zyx = self.branch_common(zyx)
-        zy  = self.branch_broadband(zy)
 
         if not self.training:
             zy, zyx = zy.detach(), zyx.detach()

@@ -785,10 +785,9 @@ def get_histogram(Fy, Gy, trn_set):
         y           = y.to(app.DEVICE, non_blocking = True)
         zyx, zyy    = zyx.to(app.DEVICE, non_blocking = True), zyy.to(app.DEVICE, non_blocking = True)
         wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std': 1.0})
-        zyy_cal, zxy_cal =  Fy(zcat(y,wny))
-        zd_gen      = zcat(zxy_cal, zyy_cal)
-        zd_inp      = zcat(zyx,zyy)
-        fig.append(plot_distribution(tag='zlf',z_calc=zd_gen, z_tar=zd_inp))
+        zyy_cal     =  Fy(zcat(y,wny))
+
+        fig.append(plot_distribution(tag='zlf',z_calc=zyy_cal, z_tar=zyy))
         
     return fig
 

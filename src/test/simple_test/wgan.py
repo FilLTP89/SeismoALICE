@@ -48,13 +48,13 @@ class WGAN(SimpleTrainer):
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
             
-            wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-            zd_inp      = zcat(zxy,zyy)
+            wny,wnz,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+            zd_inp      = zyy
             y_inp       = zcat(y,wny) 
             
-            y_gen       = self.gen_agent.Gy(zxy,zyy)
-            zyy_F,zyx_F,*other = self.gen_agent.Fy(y_inp)
-            zd_gen      = zcat(zyx_F,zyy_F)
+            y_gen       = self.gen_agent.Gy(zyy,wnz)
+            zyy_F = self.gen_agent.Fy(y_inp)
+            zd_gen      = zyy_F
 
             Dreal_y, Dfake_y = self.disc_agent.discriminate_marginal_y(y, y_gen)
             GPy              = gradient_penalty(self.disc_agent.Dsy, y, y_gen,app.DEVICE) if modality == 'train' else torch.zeros([])
@@ -96,20 +96,19 @@ class WGAN(SimpleTrainer):
             self.prob_disc_tracker.update()
 
     def train_generators(self,batch,epoch,modality,net_mode,*args,**kwargs):
-        y,zyy,zxy = batch
+        y,zyy,_ = batch
         for _ in range(1):
             zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
 
             # 1. We Generate conditional samples
-            wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
-            zd_inp      = zcat(zxy,zyy)
+            wny,wnz,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+            zd_inp      = zyy
             y_inp       = zcat(y,wny)
 
-            y_gen       = self.gen_agent.Gy(zxy,zyy)
-            zyy_F,zyx_F,*other = self.gen_agent.Fy(y_inp)
-            zd_gen      = zcat(zyx_F,zyy_F)
+            y_gen       = self.gen_agent.Gy(zyy,wnz)
+            zd_gen      = self.gen_agent.Fy(y_inp)
 
             _, Dfake_y  = self.disc_agent.discriminate_marginal_y(y, y_gen)
             Gloss_wgan_y= -(torch.mean(Dfake_y.reshape(-1)))
@@ -118,12 +117,12 @@ class WGAN(SimpleTrainer):
             Gloss_wgan_zd= -(torch.mean(Dfake_zd.reshape(-1)))
 
             # 2. Reconstruction of signal distributions
-            wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+            wny,wnz,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
             y_gen       = zcat(y_gen,wny)
-            y_rec       = self.gen_agent.Gy(zyx_F, zyy_F)
+            y_rec       = self.gen_agent.Gy(zd_gen,wnz)
 
-            zyy_rec,zyx_rec = self.gen_agent.Fy(y_gen)
-            zd_rec      = zcat(zyx_rec,zyy_rec)
+            zd_rec      = self.gen_agent.Fy(y_gen)
+            
 
             Gloss_rec_y = torch.mean(torch.abs(y-y_rec))
             Gloss_rec_zd= torch.mean(torch.abs(zd_inp-zd_rec))
