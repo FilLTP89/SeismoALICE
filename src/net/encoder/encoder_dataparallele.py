@@ -270,15 +270,16 @@ class Encoder_Unic(BasicEncoderDataParallele):
 
         # pdb.set_trace()
         for n in range(1,nly_bb+1):
+
             _bn  = False if n==nly_bb else bn
             _dpc = 0.0   if n==nly_bb else dpc_bb
             self.branch_broadband += cnn1d(channel_bb[n-1],channel_bb[n],\
-                acts_bb[n-1],ker=ker_bb[n-1],std=std_bb[n-1], pad=pad_bb[n-1],bn=_bn,dil=dil_bb[n-1],dpc=_dpc,wn=False,
-                )
-            for extra_layer in extra_bb:
-                    self.branch_broadband += cnn1d(channel[i], channel[i], acts[i-1], ker=1,\
-                    std=1,pad=0, dil=2**extra_layer, bn=_bn, dpc=_dpc, wn=False, 
-                    )
+                acts_bb[n-1],ker=ker_bb[n-1],std=std_bb[n-1], pad=pad_bb[n-1],\
+                    bn=_bn,dil=dil_bb[n-1],dpc=_dpc,wn=False)
+            for extra_layer in range(extra_bb):
+                act = nn.LeakyReLU(1.0,inplace=True) if n==nly_bb and extra_layer==extra_bb-1 else nn.LeakyReLU(0.2, inplace=True)
+                self.branch_broadband += cnn1d(channel_bb[n], channel_bb[n], act, ker=1,\
+                    std=1,pad=0, dil=2**extra_layer, bn=_bn, dpc=_dpc, wn=False)
 
         for n in range(1,nly_com+1):
             _bn  = False if n==nly_com else bn
@@ -286,10 +287,10 @@ class Encoder_Unic(BasicEncoderDataParallele):
             self.branch_common +=cnn1d(channel_com[n-1],channel_com[n],\
                 acts_com[n-1],ker=ker_com[n-1],std=std_com[n-1],pad=pad_com[n-1],
                 bn=_bn,dil=dil_com[n-1],dpc=_dpc,wn=False)
-            for extra_layer in extra_com:
-                    self.branch_common += cnn1d(channel[i], channel[i], acts[i-1], ker=1,\
-                    std=1,pad=0, dil=2**extra_layer, bn=_bn, dpc=_dpc, wn=False, 
-                    ) 
+            for extra_layer in range(extra_com):
+                act = nn.LeakyReLU(1.0,inplace=True) if n==nly_com and extra_layer==extra_bb-1 else nn.LeakyReLU(0.2, inplace=True)
+                self.branch_common += cnn1d(channel_com[n], channel_com[n], act, ker=1,\
+                    std=1,pad=0, dil=2**extra_layer, bn=_bn, dpc=_dpc, wn=False)
 
 
         self.master         = nn.Sequential(*self.cnn1)
