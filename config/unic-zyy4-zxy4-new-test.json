@@ -9,15 +9,15 @@
         "test_epochs":5
     },
     "log_dir":{
-        "train_writer":"./runs_both/renew/wgan/bbt0032ad8/training/",
-        "valid_writer":"./runs_both/renew/wgan/bbt0032ad8/validation/",
-        "debug_writer":"./runs_both/renew/wgan/bbt0032ad8/debug/",
-        "debug.losses_writer":"./runs_both/renew/wgan/bbt0032ad8/losses/",
-        "debug.gradients_writer":"./runs_both/renew/wgan/bbt0032ad8/gradients/",
-        "debug.encoder_writer":"./runs_both/renew/wgan/bbt0032ad8/net/encoder",
-        "debug.decoder_writer":"./runs_both/renew/wgan/bbt0032ad8/net/decoder",
-        "debug.dsy_writer":"./runs_both/renew/wgan/bbt0032ad8/net/dsy/",
-        "debug.dszb_writer":"./runs_both/renew/wgan/bbt0032ad8/net/dszb"
+        "train_writer":"./runs_both/renew/wgan/bbt69d1d24/training/",
+        "valid_writer":"./runs_both/renew/wgan/bbt69d1d24/validation/",
+        "debug_writer":"./runs_both/renew/wgan/bbt69d1d24/debug/",
+        "debug.losses_writer":"./runs_both/renew/wgan/bbt69d1d24/losses/",
+        "debug.gradients_writer":"./runs_both/renew/wgan/bbt69d1d24/gradients/",
+        "debug.encoder_writer":"./runs_both/renew/wgan/bbt69d1d24/net/encoder",
+        "debug.decoder_writer":"./runs_both/renew/wgan/bbt69d1d24/net/decoder",
+        "debug.dsy_writer":"./runs_both/renew/wgan/bbt69d1d24/net/dsy/",
+        "debug.dszb_writer":"./runs_both/renew/wgan/bbt69d1d24/net/dszb"
     },
      "F":{
         "nlayers"   :6, 
@@ -37,7 +37,7 @@
         "kernel"    :[7,3,7,3,3],
         "strides"   :[2,1,2,1,1],
         "dilation"  :[1,1,1,1,1],
-        "outpads"   :[1,1,1,0,0],
+        "outpads"   :[1,0,1,0,0],
         "padding"   :[3,1,3,1,1],
         "dpc"       :0.0,
         "extra"     :128,
@@ -96,7 +96,7 @@
     "Dszb":{
         "name"      :"Lite",
         "nlayers"   :4, 
-        "channel"   :[2,8,16,32,64],
+        "channel"   :[1,8,16,32,64],
         "kernel"    :[4,4,4,4],
         "strides"   :[2,2,2,2],
         "dilation"  :[1,1,1,1],

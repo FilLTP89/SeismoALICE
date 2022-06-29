@@ -748,16 +748,14 @@ def plot_distribution(tag,z_calc,z_tar, save=False):
     z_tar  = z_tar.cpu().data.numpy().copy()
     
     batch, v_size, *others = z_calc.shape
-    plt.figure(figsize=(6,6))
-    fig, ax = plt.subplots(1, v_size)
-    
-    for i in range(v_size+1):
-        ax[i].hist(z_calc[0,i,:], bins=30, density=True, label='calc',fc=(0.8, 0, 0, 1))
-        ax[i].hist(z_tar[0,i,:], bins=30, density=True, label='tar',fc=(1., 0.8, 0, 0.5))
-        ax[i].legend(loc = "lower right",frameon=False)
-        ax[i].set_xlim([-5.,5.])
-        ax[i].set_ylim([0,1.])
-        ax[i].set_xlabel(f'{tag}-{i}')
+    fig = plt.figure(figsize=(6,6))
+    plt.hist(z_calc[0,0,:], bins=30, density=True, label='calc',fc=(0.8, 0, 0, 1))
+    plt.hist(z_tar[0,0,:], bins=30, density=True, label='tar',fc=(1., 0.8, 0, 0.5))
+    plt.legend(loc = "lower right",frameon=False)
+    plt.xlim([-5.,5.])
+    plt.ylim([0,1.])
+    plt.xlabel(f'{tag}')
+
     if save:
         plt.savefig(f'{tag}.png')
     return fig
@@ -967,7 +965,7 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             Xt = Variable(xt_data).to(dev, non_blocking=True)
             # Xf = Variable(xf_data).to(dev, non_blocking=True)
             # zt = Variable(zt_data).to(dev, non_blocking=True)        
-            nch, nz         = 4,128
+            nch, nz         = 1,1024
             wnx,wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
 
             X_inp = zcat(Xt,wnx)
@@ -976,7 +974,7 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             if str(pfx).find('hack')!=-1:
                 Xr  = Pdc(zdf_gen,o0l(zy))
             else:
-                Xr = Pdc(zy,wnz)
+                Xr = Pdc(zy)
             #Xp = Pdc(z_pre)
             # Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             # Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
@@ -1261,7 +1259,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             if str(pfx).find('hack')!=-1:
                 Xr = Pdc(zdf_gen,o0l(zy))
             else:
-                Xr = Pdc(zy,wnz)
+                Xr = Pdc(zy)
             #Xp = Pdc(z_pre)
             Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()

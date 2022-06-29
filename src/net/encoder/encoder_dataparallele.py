@@ -119,28 +119,28 @@ class Encoder(BasicEncoderDataParallele):
                  with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2,*args, **kwargs):
         super(Encoder, self).__init__(*args, **kwargs)
         
-        self.ngpu= ngpu
+        self.cnn1=[]
         self.wf = wf
         acts = T.activation(act, nly)
 
         for i in range(1, nly+1):
             if i ==1 and with_noise:
-                self.cnn = self.cnn+cnn1d(channel[i-1],channel[i], acts[0],ker=ker[i-1],std=std[i-1],\
+                self.cnn1 = self.cnn1+cnn1d(channel[i-1],channel[i], acts[0],ker=ker[i-1],std=std[i-1],\
                     pad=pad[i-1],bn=bn,dil = dil[i-1], dpc=0.0,wn=True ,\
                     dtm = dtm, ffr = ffr, wpc = wpc,dev='cuda:0')
             elif i == 1:
-                self.cnn = self.cnn+cnn1d(channel[i-1],channel[i], acts[0],ker=ker[i-1],std=std[i-1],\
+                self.cnn1 = self.cnn1+cnn1d(channel[i-1],channel[i], acts[0],ker=ker[i-1],std=std[i-1],\
                     pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=0.0,wn=False)
             else:
                 _bn  = False if i == nly else bn
                 _dpc = 0.0 if i == nly else dpc 
-                self.cnn = self.cnn+cnn1d(channel[i-1], channel[i], acts[i-1], ker=ker[i-1],\
+                self.cnn1 = self.cnn1+cnn1d(channel[i-1], channel[i], acts[i-1], ker=ker[i-1],\
                     std=std[i-1],pad=pad[i-1], dil=dil[i-1], bn=_bn, dpc=_dpc, wn=False)
 
-        self.cnn  = sqn(*self.cnn)
+        self.cnn1  = sqn(*self.cnn1)
 
     def forward(self,x):
-        z = self.cnn(x)
+        z = self.cnn1(x)
         if not self.training:
             result = z.detach()
             return result
