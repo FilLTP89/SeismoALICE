@@ -93,7 +93,8 @@ class SimpleTrainer(BasicTrainer):
         
         self.logger.info("Parameters of Generators ")
         count_parameters(self.gen_agent.generators)
-        self.logger.info(f"Learning rate : {self.opt.config['hparams']['generators.lr']}")
+        self.logger.info(f"Learning rate Encoder : {self.opt.config['hparams']['encoder.lr']}")
+        self.logger.info(f"Learning rate Decoder : {self.opt.config['hparams']['decoder.lr']}")
 
         self.logger.info("Parameters of Discriminators")
         count_parameters(self.disc_agent.discriminators)

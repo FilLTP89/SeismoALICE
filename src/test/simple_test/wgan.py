@@ -43,8 +43,8 @@ class WGAN(SimpleTrainer):
     
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,_ = batch
-        for _ in range(5):
-            zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
+        for _ in range(1):
+            zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder, self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
             
@@ -58,13 +58,11 @@ class WGAN(SimpleTrainer):
 
             Dreal_y, Dfake_y = self.disc_agent.discriminate_marginal_y(y, y_gen)
             GPy              = gradient_penalty(self.disc_agent.Dsy, y, y_gen,app.DEVICE) if modality == 'train' else torch.zeros([])
-            Dloss_wgan_y     = -(torch.mean(Dreal_y.reshape(-1)) - torch.mean(Dfake_y.reshape(-1))) +\
-                                app.LAMBDA_GP*GPy
+            Dloss_wgan_y     = -(torch.mean(Dreal_y.reshape(-1)) - torch.mean(Dfake_y.reshape(-1)))
             
             Dreal_zd, Dfake_zd = self.disc_agent.discriminate_marginal_zd(zd_inp,zd_gen) 
             GPzb             = gradient_penalty(self.disc_agent.Dszb, zd_inp, zd_gen, app.DEVICE) if modality == 'train' else torch.zeros([])
-            Dloss_wgan_zd    = -(torch.mean(Dreal_zd.reshape(-1)) - torch.mean(Dfake_zd.reshape(-1)))+\
-                                app.LAMBDA_GP*GPzb
+            Dloss_wgan_zd    = -(torch.mean(Dreal_zd.reshape(-1)) - torch.mean(Dfake_zd.reshape(-1)))
 
             Dloss_wgan =  Dloss_wgan_y + Dloss_wgan_zd
             
@@ -74,7 +72,7 @@ class WGAN(SimpleTrainer):
                 Dloss_wgan.backward(retain_graph=True)
                 self.disc_agent.optimizer.step()
                 self.disc_agent.track_gradient(epoch)
-                zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
+                zerograd([self.gen_agent.optimizer_encoder,self.gen_agent.optimizer_decoder, self.disc_agent.optimizer])
 
             # no clipweights spectral_norm is implemented
             self.losses_disc['epochs'       ] = epoch
@@ -97,7 +95,7 @@ class WGAN(SimpleTrainer):
     def train_generators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,_ = batch
         for _ in range(1):
-            zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
+            zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder, self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
 
@@ -119,7 +117,6 @@ class WGAN(SimpleTrainer):
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
             y_gen       = zcat(y_gen,wny)
             y_rec       = self.gen_agent.Gy(zd_gen)
-
             zd_rec      = self.gen_agent.Fy(y_gen)
             
             Gloss_rec_y = torch.mean(torch.abs(y-y_rec))
@@ -133,7 +130,7 @@ class WGAN(SimpleTrainer):
                 self.gen_agent.optimizer_encoder.step()
                 self.gen_agent.optimizer_decoder.step()
                 self.gen_agent.track_gradient(epoch)
-                zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
+                zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder, self.disc_agent.optimizer])
             
             self.losses_gens['epochs'       ] = epoch
             self.losses_gens['modality'     ] = modality
