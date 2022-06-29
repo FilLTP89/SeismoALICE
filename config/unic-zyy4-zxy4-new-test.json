@@ -1,6 +1,7 @@
 {   "hparams":
     {   
-        "generators.lr":0.00002,
+        "encoder.lr":0.0002,
+        "decoder.lr":0.00002
         "generators.weight_decay":0.0001,
         "discriminators.lr":0.0001,
         "discriminators.weight_decay":0.0001,
@@ -9,15 +10,15 @@
         "test_epochs":5
     },
     "log_dir":{
-        "train_writer":"./runs_both/renew/wgan/bbt69d1d24/training/",
-        "valid_writer":"./runs_both/renew/wgan/bbt69d1d24/validation/",
-        "debug_writer":"./runs_both/renew/wgan/bbt69d1d24/debug/",
-        "debug.losses_writer":"./runs_both/renew/wgan/bbt69d1d24/losses/",
-        "debug.gradients_writer":"./runs_both/renew/wgan/bbt69d1d24/gradients/",
-        "debug.encoder_writer":"./runs_both/renew/wgan/bbt69d1d24/net/encoder",
-        "debug.decoder_writer":"./runs_both/renew/wgan/bbt69d1d24/net/decoder",
-        "debug.dsy_writer":"./runs_both/renew/wgan/bbt69d1d24/net/dsy/",
-        "debug.dszb_writer":"./runs_both/renew/wgan/bbt69d1d24/net/dszb"
+        "train_writer":"./runs_both/renew/wgan/bbt1cc1450/training/",
+        "valid_writer":"./runs_both/renew/wgan/bbt1cc1450/validation/",
+        "debug_writer":"./runs_both/renew/wgan/bbt1cc1450/debug/",
+        "debug.losses_writer":"./runs_both/renew/wgan/bbt1cc1450/losses/",
+        "debug.gradients_writer":"./runs_both/renew/wgan/bbt1cc1450/gradients/",
+        "debug.encoder_writer":"./runs_both/renew/wgan/bbt1cc1450/net/encoder",
+        "debug.decoder_writer":"./runs_both/renew/wgan/bbt1cc1450/net/decoder",
+        "debug.dsy_writer":"./runs_both/renew/wgan/bb1cc1450/net/dsy/",
+        "debug.dszb_writer":"./runs_both/renew/wgan/bbt1cc1450/net/dszb"
     },
      "F":{
         "nlayers"   :6, 
@@ -33,7 +34,7 @@
     },
     "Gy":{
         "nlayers"   :5, 
-        "channel"   :[2,64,32,16,8,3],
+        "channel"   :[1,64,32,16,8,3],
         "kernel"    :[7,3,7,3,3],
         "strides"   :[2,1,2,1,1],
         "dilation"  :[1,1,1,1,1],

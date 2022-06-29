@@ -31,7 +31,7 @@ class WGAN(SimpleTrainer):
 
         gradients_gens = {
             'epochs':'',    'modality':'',
-            'Fxy':'',       'Gy':'',
+            'F':'',         'Gy':'',
         }
         gradients_disc = {
             'epochs':'',    'modality':'',
@@ -130,7 +130,8 @@ class WGAN(SimpleTrainer):
             Gloss = Gloss_wgan_y + Gloss_wgan_zd + Gloss_rec*app.LAMBDA_IDENTITY
             if modality == 'train':
                 Gloss.backward()
-                self.gen_agent.optimizer.step()
+                self.gen_agent.optimizer_encoder.step()
+                self.gen_agent.optimizer_decoder.step()
                 self.gen_agent.track_gradient(epoch)
                 zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
             
