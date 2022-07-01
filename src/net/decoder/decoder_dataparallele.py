@@ -104,17 +104,18 @@ class Decoder(BasicDecoderDataParallel):
                 param.requires_grad = False
         
         if dconv:
-            _dconv = Transpose_DConv_62(last_channel = channel[-1], bn = True, dpc = 0.0).network()
+            _dconv = Transpose_DConv_62(last_channel=channel[-1], bn = True, dpc = 0.0).network()
 
         # Adding dense hidden layer 
         for i in range(1, nly+1):
             _dpc = 0.0 if i ==nly else dpc
-            _bn =  False if i == nly else bn
+            _bn  = False if i == nly else bn
+            bias = True if i == nly else False
             self.cnn1 += cnn1dt(channel[i-1],channel[i], acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
-                dil=dil[i-1], opd=opd[i-1], bn=_bn,dpc=_dpc)
+                dil=dil[i-1], opd=opd[i-1], bn=_bn,dpc=_dpc,bias=bias)
 
         for i in range(0,n_extra_layers):
-            self.cnn1 += [ResidualBlock(channel[-1], activation_function='selu')]
+            self.cnn1 += [ResidualBlock(channel[-1], activation_function='relu')]
         
         if dconv:
             self.cnn1  =  self.cnn1 + _dconv

@@ -80,25 +80,30 @@ class BasicDCGAN_DxDataParallel(BasicModel):
             cnn += [Dpout(dpc=dpc)]
         return cnn
 
-    def block_conv(self, channel, kernel, strides, dilation, 
-                    padding, activation, dpc,bn, *args, **kwargs):
-        cnn     = []
-        _dpc    = [dpc for _ in range(len(channel))]
+    def block_conv(self, channel, kernel, strides, dilation, padding, dpc, activation,bn, 
+            bias,normalization, spectral_norm, *args, **kwargs):
+        _cnn  = []
+        
+        #For the first layer we will not use Batchnorm
         _bool_bn    = [bn for _ in range(len(channel))]
-        _bool_bn[0] = False
-        for in_channels, out_channels, kernel_size,\
-            stride, dilation, padding, acts,_bn, __dpc in zip(channel[:-1],\
-            channel[1:], kernel, strides, dilation, padding, activation,_bool_bn, _dpc):
-            cnn += cnn1d(in_channels = in_channels, 
-                        out_channels = out_channels,
+        _dpc        = [dpc for _ in range(len(channel))]
+        pack = zip(channel[:-1], channel[1:], kernel, strides,dilation, padding, activation,_bool_bn, _dpc)
+
+        for in_channels, out_channels, kernel_size, stride, dilation, padding, acts, _bn, __dpc in pack:
+            _cnn += cnn1d(in_channels=in_channels, 
+                        out_channels=out_channels,
                         ker = kernel_size,
                         std = stride,
                         pad = padding,
-                        act =acts,
-                        bn=_bn,
-                        dpc=__dpc,
-                        dil = dilation,*args, **kwargs)
-        return cnn
+                        act = acts,
+                        dil = dilation,
+                        bn  = _bn,
+                        dpc = __dpc,
+                        bias = bias,
+                        normalization =normalization,
+                        spectral_norm = spectral_norm,
+                        *args, **kwargs)
+        return _cnn
 
 class DCGAN_Dx(BasicDCGAN_DxDataParallel):
     """docstring for    DCGAN_Dx"""
@@ -220,28 +225,32 @@ class DCGAN_Dx_Lite(BasicDCGAN_DxDataParallel):
                  ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.0, path = '',\
                  prob = False,batch_size =128,n_extra_layers=0, extra = 128, *args,**kwargs):
         super(DCGAN_Dx_Lite, self).__init__(*args, **kwargs)
-        activation = T.activation(act, nly)
+        
+        acts     = T.activation(act, nly)
+        self.cnn = []
         normalization = partial(nn.InstanceNorm1d)
-        self.cnn = self.block_conv( channel = channel,kernel = ker,\
-                    strides = std, dilation= dil,  activation = activation,\
-                    padding = pad, bn = bn, dpc = dpc, normalization=normalization)
+        lout    = self.lout(nch = nc,padding=pad, dilation=dil, kernel_size = ker, stride = std)
         
-        lout = self.lout(nch = nc,
-                    padding = pad, dilation = dil,\
-                    kernel_size = ker, stride = std)
-        self.cnn += [nn.Conv1d(in_channels=channel[-1],out_channels=1,
-                        kernel_size = 3, stride = 1, padding=1)]
-        # self.cnn += [normalization(channel[-1])]
+        self.cnn = [
+            torch.nn.utils.spectral_norm(nn.Conv1d(in_channels=channel[0],
+                out_channels=channel[1], kernel_size = ker[0], stride = std[0], padding = pad[0])),
+            acts[0]
+            ]
+
+        self.cnn += self.block_conv(channel[1:], 
+            kernel = ker[1:], strides = std[1:], dilation = dil[1:], padding = pad[1:], 
+            dpc = dpc, activation  = acts[1:], bn = bn, bias = False, 
+            spectral_norm = True, normalization = normalization, affine=True)
         
+        self.cnn += [torch.nn.utils.spectral_norm(nn.Conv1d(in_channels=channel[-1],out_channels=1,
+                        kernel_size = 3, stride = 1, padding=1))]
+       
         if wf:
             self.cnn += [nn.Flatten(start_dim = 1, end_dim=2)]
             self.cnn += [
                             nn.Linear(lout*channel[-1],1, bias=True),
-                            nn.LeakyReLU(1.0, inplace=True),
-                            # Dpout(dpc = dpc),
-                            # nn.BatchNorm1d(1)
+                            nn.LeakyReLU(1.0, inplace=True)
                         ]
-
         if prob:
             self.cnn += [nn.Sigmoid()]
 

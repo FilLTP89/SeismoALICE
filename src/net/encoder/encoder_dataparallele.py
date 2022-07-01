@@ -132,10 +132,11 @@ class Encoder(BasicEncoderDataParallele):
                 self.cnn1 = self.cnn1+cnn1d(channel[i-1],channel[i], acts[0],ker=ker[i-1],std=std[i-1],\
                     pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=0.0,wn=False)
             else:
+                bias = True if i == nly else False
                 _bn  = False if i == nly else bn
                 _dpc = 0.0 if i == nly else dpc 
                 self.cnn1 = self.cnn1+cnn1d(channel[i-1], channel[i], acts[i-1], ker=ker[i-1],\
-                    std=std[i-1],pad=pad[i-1], dil=dil[i-1], bn=_bn, dpc=_dpc, wn=False)
+                    std=std[i-1],pad=pad[i-1], dil=dil[i-1], bn=_bn, dpc=_dpc, wn=False, bias=bias)
 
         self.cnn1  = sqn(*self.cnn1)
 
@@ -230,43 +231,42 @@ class Encoder_Unic(BasicEncoderDataParallele):
                     pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=0.0,wn=False)
             #else we proceed normaly
             else:
+                bias = True if i==nly else False
                 _bn  = False if i == nly else bn
                 _dpc = 0.0 if i == nly else dpc 
                 self.cnn1 = self.cnn1+cnn1d(channel[i-1], channel[i], acts[i-1], ker=ker[i-1],\
-                    std=std[i-1],pad=pad[i-1], dil=dil[i-1], bn=_bn, dpc=_dpc, wn=False, 
+                    std=std[i-1],pad=pad[i-1], dil=dil[i-1], bn=_bn, dpc=_dpc, wn=False, bias=bias
                     )
                 
 
         # pdb.set_trace()
         for n in range(1,nly_bb+1):
-
+            bias = True if i==nly_bb else False
             _bn  = False if n==nly_bb else bn
             _dpc = 0.0   if n==nly_bb else dpc_bb
             self.branch_broadband += cnn1d(channel_bb[n-1],channel_bb[n],\
                 acts_bb[n-1],ker=ker_bb[n-1],std=std_bb[n-1], pad=pad_bb[n-1],\
-                    bn=_bn,dil=dil_bb[n-1],dpc=_dpc,wn=False)
+                    bn=_bn,dil=dil_bb[n-1],dpc=_dpc,wn=False,bias=bias)
             for extra_layer in range(extra_bb):
                 act = nn.LeakyReLU(1.0,inplace=True)
                 self.branch_broadband += cnn1d(channel_bb[n], channel_bb[n], act, ker=1,\
                     std=1,pad=0, dil=2**extra_layer, bn=_bn, dpc=_dpc, wn=False)
 
         for n in range(1,nly_com+1):
+            bias = True if i==nly_com else False
             _bn  = False if n==nly_com else bn
             _dpc = 0.0   if n==nly_com else dpc_com
             self.branch_common +=cnn1d(channel_com[n-1],channel_com[n],\
                 acts_com[n-1],ker=ker_com[n-1],std=std_com[n-1],pad=pad_com[n-1],
-                bn=_bn,dil=dil_com[n-1],dpc=_dpc,wn=False)
+                bn=_bn,dil=dil_com[n-1],dpc=_dpc,wn=False,bias=bias)
             for extra_layer in range(extra_com):
                 act = nn.LeakyReLU(1.0,inplace=True)
                 self.branch_common += cnn1d(channel_com[n], channel_com[n], act, ker=1,\
                     std=1,pad=0, dil=2**extra_layer, bn=_bn, dpc=_dpc, wn=False)
 
-
         self.master         = nn.Sequential(*self.cnn1)
         self.cnn_common     = nn.Sequential(*self.branch_common)
         self.cnn_broadband  = nn.Sequential(*self.branch_broadband)
-
-        
 
     def forward(self, x):
         z   = self.master(x)

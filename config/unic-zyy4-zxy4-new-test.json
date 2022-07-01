@@ -1,7 +1,7 @@
 {   "hparams":
     {   
         "encoder.lr":0.0005,
-        "decoder.lr":0.000005,
+        "decoder.lr":0.00002,
         "generators.weight_decay":0.0001,
         "discriminators.lr":0.00004,
         "discriminators.weight_decay":0.0001,

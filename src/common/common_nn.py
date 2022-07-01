@@ -188,22 +188,21 @@ class Explode(Module):
 def cnn1d(in_channels,out_channels,\
           act=LeakyReLU(1.0,inplace=True),\
           bn=True,ker=7,std=4,pad=0,normalization=partial(BatchNorm1d),\
-          dil=1,grp=1,dpc=0.1,wn=False,dev=tdev("cpu"),bias = False):
+          dil=1,grp=1,dpc=0.1,wn=False,dev=tdev("cpu"),
+          bias = False, spectral_norm=False, *args, **kwargs):
 
     block = [Conv1d(in_channels=in_channels,\
                     out_channels=out_channels,\
                     kernel_size=ker,stride=std,\
                     padding=pad,dilation=dil,groups=grp,\
                     bias=bias)]
-    #if wn:
-    #    block.insert(0,AddNoise(dev=dev))
-    
+    if spectral_norm:
+        block = [torch.nn.utils.spectral_norm(copy.deepcopy(block[0]))]
     if bn:
         if normalization.func.__name__.find('InstanceNorm1d')!=-1:
-            block = [torch.nn.utils.spectral_norm(copy.deepcopy(block[0]))]
-            block.append(normalization(out_channels, affine=True))
+            block.append(normalization(out_channels,*args, **kwargs))
         else:
-            block.append(InstanceNorm1d(out_channels))
+            block.append(BatchNorm1d(out_channels))
 
     block.append(act)
     block.append(Dpout(dpc=dpc))
@@ -214,21 +213,23 @@ def cnn1d(in_channels,out_channels,\
 def cnn1dt(in_channels,out_channels,\
            act=LeakyReLU(1.0),#\inplace=True
            bn=True,ker=2,std=2,pad=0,opd=0,normalization=partial(BatchNorm1d),\
-           dil=1,grp=1,dpc=0.1):
+           dil=1,grp=1,dpc=0.1, bias=False, spectral_norm=False,*args, **kwargs):
 
     block = [ConvTranspose1d(in_channels=in_channels,\
                              out_channels=out_channels,\
                              kernel_size=ker,stride=std,\
                              output_padding=opd,padding=pad,\
                              dilation=dil,groups=grp,\
-                             bias=False)]
-    
+                             bias=bias)]
+    if spectral_norm:
+        block = [torch.nn.utils.spectral_norm(copy.deepcopy(block[0]))]
+       
     if bn:
         if normalization.func.__name__.find('InstanceNorm1d')!=-1:
             block = [torch.nn.utils.spectral_norm(copy.deepcopy(block[0]))]
-            block.append(normalization(out_channels, affine=True))
+            block.append(normalization(out_channels, *args, **kwargs))
         else:
-            block.append(InstanceNorm1d(out_channels))
+            block.append(BatchNorm1d(out_channels))
     block.append(act)
     block.append(Dpout(dpc=dpc))
     return block
