@@ -504,7 +504,6 @@ def set_weights(m):
 
 def initialize_weights(model):
     # Initializes weights according to the DCGAN paper
-    breakpoint()
     for m in model.modules():
         if isinstance(m, (nn.Conv1d, nn.ConvTranspose1d, nn.BatchNorm1d)):
             nn.init.normal_(m.weight.data, 0.0, 0.02)
@@ -558,10 +557,8 @@ def scheduler(scheduler_name,optimizer,*args,**kwargs):
     return scale_fn
 
 def reset_net(nets,func=set_weights,lr=0.0002,b1=b1,b2=b2,
-    weight_decay=None,optim='Adam',scheduler=scheduler,scheduler_name=None, check=False, *args, **kwargs):
+    weight_decay=None,optim='Adam',scheduler=scheduler,scheduler_name=None, *args, **kwargs):
     p = []
-    if check:
-        breakpoint()
     for n in nets:
         n.apply(func)
         p.append(n.parameters())
