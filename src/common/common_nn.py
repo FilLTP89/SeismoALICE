@@ -481,7 +481,8 @@ def is_gaussian(distribution):
 
 
 # custom weights initialization called on netG and netD¬                 
-def set_weights(m):                                 
+def set_weights(m):
+                               
     classname = m.__class__.__name__               
     if (classname.find('Conv1d') != -1 
             or
@@ -490,7 +491,7 @@ def set_weights(m):
             # init.xavier_uniform(m.weight)
             # init.xavier_normal_(m.weight)
             # init.kaiming_uniform(m.weight)
-            init.normal_(m.weight, mean=0.0, std=0.02)
+            init.normal_(m.weight.data, mean=0.0, std=0.02)
         except:
             print("warnings no initialization is made training may not work")
         #m.weight.data.normal_(0.0, 0.02) 
@@ -500,6 +501,13 @@ def set_weights(m):
     elif (classname.find('BatchNorm') !=-1):
         m.weight.data.normal_(1.0, 0.02)                              
         m.bias.data.fill_(0)
+
+def initialize_weights(model):
+    # Initializes weights according to the DCGAN paper
+    breakpoint()
+    for m in model.modules():
+        if isinstance(m, (nn.Conv1d, nn.ConvTranspose1d, nn.BatchNorm1d)):
+            nn.init.normal_(m.weight.data, 0.0, 0.02)
 
 def tie_weights(m):
     for _,n in m.__dict__['_modules'].items():
@@ -550,8 +558,10 @@ def scheduler(scheduler_name,optimizer,*args,**kwargs):
     return scale_fn
 
 def reset_net(nets,func=set_weights,lr=0.0002,b1=b1,b2=b2,
-    weight_decay=None,optim='Adam',scheduler=scheduler,scheduler_name=None, *args, **kwargs):
+    weight_decay=None,optim='Adam',scheduler=scheduler,scheduler_name=None, check=False, *args, **kwargs):
     p = []
+    if check:
+        breakpoint()
     for n in nets:
         n.apply(func)
         p.append(n.parameters())
