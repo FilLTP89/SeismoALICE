@@ -242,8 +242,11 @@ class DCGAN_Dx_Lite(BasicDCGAN_DxDataParallel):
             dpc = dpc, activation  = acts[1:], bn = bn, bias = False, 
             spectral_norm = True, normalization = normalization, affine=True)
         
-        self.cnn += [torch.nn.utils.spectral_norm(nn.Conv1d(in_channels=channel[-1],out_channels=1,
-                        kernel_size = 3, stride = 1, padding=1))]
+        self.cnn += [   
+                        nn.Conv1d(in_channels=channel[-1],out_channels=1,
+                            kernel_size = 3, stride = 1, padding=1), 
+                        nn.LeakyReLU(1.0, inplace=True)
+                    ]
        
         if wf:
             self.cnn += [nn.Flatten(start_dim = 1, end_dim=2)]

@@ -224,7 +224,8 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
             spectral_norm = True, normalization = normalization, affine=True)
         
         self.cnn += [torch.nn.utils.spectral_norm(nn.Conv1d(in_channels=channel[-1],
-            out_channels=1,kernel_size=3, stride=1, padding=1))]
+            out_channels=1,kernel_size=3, stride=1, padding=1)),
+            nn.LeakyReLU(1.0,inplace=True)]
         
         if wf:
             self.cnn[-2:]=[

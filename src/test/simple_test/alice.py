@@ -63,7 +63,6 @@ class ALICE(SimpleTrainer):
                              self.bce_logit_loss(Dfake_yz,o0l(Dfake_yz))
 
             # 2. Reconstruction of signal distributions
-            
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
             y_gen       = zcat(y_gen,wny)
             y_rec       = self.gen_agent.Gy(zyx_F, zyy_F)
@@ -146,7 +145,7 @@ class ALICE(SimpleTrainer):
 
             Gloss_rec           = Gloss_rec_y + Gloss_rec_zd
             Gloss_cross_entropy = Gloss_cross_entropy_y + Gloss_cross_entropy_zd
-            Gloss               = Gloss_ali_y + Gloss_cross_entropy + 10.*Gloss_rec
+            Gloss               = Gloss_ali_y + Gloss_cross_entropy + Gloss_rec
             
             if modality == 'train':
                 Gloss.backward()

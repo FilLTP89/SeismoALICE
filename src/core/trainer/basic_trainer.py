@@ -69,7 +69,7 @@ class BasicTrainer:
                     state = {
                         'epoch'                 :epoch,
                         'model_state_dict'      :model.module.state_dict(),
-                        'optimizer_state_dict'  :optimizer.state_dict()
+                        # 'optimizer_state_dict'  :optimizer.state_dict()
                     }
                     filename = f'{self.root_checkpoint}checkpoint-{model.module.model_name}_epoch-{epoch}.pth'
                     torch.save(state, filename)
@@ -84,7 +84,7 @@ class BasicTrainer:
                 self.logger.info("Loading checkpoint-epoch : {}".format(filename))
                 checkpoint = torch.load(filename)
                 model.module.load_state_dict(checkpoint['model_state_dict'])
-            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
         self.start_epoch = checkpoint['epoch']+1
         self.logger.debug("Checkpoint loaded. Resume training from epoch {}".format(self.start_epoch))
