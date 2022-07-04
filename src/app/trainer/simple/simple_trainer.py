@@ -174,15 +174,12 @@ class SimpleTrainer(BasicTrainer):
                 self.validation_writer.set_step(mode='test', step=epoch)
                 bar.set_postfix(status='saving accuracy and images ... ')
 
-                figure_histo = get_histogram(Fy=self.gen_agent.Fy, 
+                figure_histo_z,figure_histo_y = get_histogram(Fy=self.gen_agent.Fy, 
                 Gy = self.gen_agent.Gy, trn_set = (self.data_vld_loader,self.lat_vld_loader))
                 bar.set_postfix(status='saving z distribution ...')
-                self.validation_writer.add_figure('z Histogram', figure_histo)
-
-                # figure_rep = get_latent_rep(Fy=self.gen_agent.Fy, 
-                # Gy = self.gen_agent.Gy, trn_set = self.data_tst_loader)
-                # bar.set_postfix(status='saving z scatter representation ...')
-                # self.validation_writer.add_figure('z Spatial 2D satter', figure_rep)
+                self.validation_writer.add_figure('z Histogram', figure_histo_z)
+                bar.set_postfix(status='saving y distribution ...')
+                self.validation_writer.add_figure('y Histogram ', figure_histo_y)
 
                 accuracy_bb = get_accuracy(tag='broadband',plot_function=get_gofs,
                     encoder = self.gen_agent.Fy,

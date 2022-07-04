@@ -124,7 +124,7 @@ class WGAN(SimpleTrainer):
 
             Gloss_rec   = Gloss_rec_y + Gloss_rec_zd
 
-            Gloss = Gloss_wgan_y + Gloss_wgan_zd + Gloss_rec
+            Gloss = Gloss_wgan_y + Gloss_wgan_zd + Gloss_rec*10
             if modality == 'train':
                 Gloss.backward()
                 self.gen_agent.optimizer_encoder.step()

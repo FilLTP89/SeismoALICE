@@ -743,17 +743,17 @@ def plot_generate_hybrid(Qec,Pdc,Ghz,dev,vtm,trn_set,pfx='hybrid',outf='./imgs')
 #             cnt += 1
 
             # filtered signals
-def plot_distribution(tag,z_calc,z_tar, save=False):
-    z_calc = z_calc.cpu().data.numpy().copy()
-    z_tar  = z_tar.cpu().data.numpy().copy()
+def plot_distribution(tag,calc,tar, save=False):
+    calc = calc.cpu().data.numpy().copy()
+    tar  = tar.cpu().data.numpy().copy()
     
-    batch, v_size, *others = z_calc.shape
-    plt.figure(figsize=(6,6))
+    batch, v_size, *others = calc.shape
+    plt.figure(figsize=(12,6))
     fig, ax = plt.subplots(1, v_size)
     for i in range(v_size):
-        ax[i].hist(z_calc[0,0,:], bins=30, density=True, label='calc',fc=(0.8, 0, 0, 1))
-        ax[i].hist(z_tar[0,0,:], bins=30, density=True, label='tar',fc=(1., 0.8, 0, 0.5))
-        ax[i].legend(loc = "lower right",frameon=False)
+        ax[i].hist(calc[0,0,:], bins=10, density=True, label='calc',fc=(0.8, 0, 0, 1))
+        ax[i].hist(tar[0,0,:], bins=10, density=True, label='tar',fc=(1., 0.8, 0, 0.5))
+        ax[i].legend(loc = "upper right",frameon=False)
         ax[i].set_xlim([-5.,5.])
         ax[i].set_ylim([0,1.])
         ax[i].set_xlabel(f'{tag}')
@@ -776,7 +776,8 @@ def plot_spatial_rep(tag, z,index, save=False):
 
 def get_histogram(Fy, Gy, trn_set):
     Fy.eval(),Gy.eval()
-    fig = []
+    fig_latent = []
+    fig_data  = []
     data_vld_loader,lat_vld_loader = trn_set
     for b, (batch_data, batch_latent) in enumerate(zip(data_vld_loader,lat_vld_loader)):
         y, *others  = batch_data
@@ -784,11 +785,12 @@ def get_histogram(Fy, Gy, trn_set):
         y           = y.to(app.DEVICE, non_blocking = True)
         zyx, zyy    = zyx.to(app.DEVICE, non_blocking = True), zyy.to(app.DEVICE, non_blocking = True)
         wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std': 1.0})
-        zyy_cal     =  Fy(zcat(y,wny))
-
-        fig.append(plot_distribution(tag='zlf',z_calc=zyy_cal, z_tar=zyy))
+        zyy_cal     = Fy(zcat(y,wny))
+        y_cal       = Gy(zyy)
+        fig_latent.append(plot_distribution(tag='zlf',calc=zyy_cal, tar=zyy))
+        fig_data.append(plot_distribution(tag='zlf',calc=y_cal, tar=y))
         
-    return fig
+    return fig_latent, fig_data
 
 def get_latent_rep(Fy, Gy, trn_set):
     Fy.eval(),Gy.eval()

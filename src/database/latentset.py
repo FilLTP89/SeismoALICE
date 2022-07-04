@@ -8,7 +8,7 @@ from configuration import app
 from torch.utils.data import Dataset
 
 class LatentDataset(Dataset): 
-    def __init__(self, latent_space_shape=[[1,128],[1, 128]],nsy = 1280, mean=0., 
+    def __init__(self, latent_space_shape=[[4,128],[4, 128]],nsy = 1280, mean=0., 
                         std = 1.0, seed=123,*args, **kwargs):
         # fix the seed for the same generation of gaussian, independently of epoch
         torch.manual_seed(seed)

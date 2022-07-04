@@ -1,5 +1,6 @@
 from torch.nn.modules import activation
 from core.net.basic_model import BasicModel
+import torch.nn.utils.spectral_norm as spectral_norm
 from conv.resnet.residual import DecoderResnet,block_2x2
 u'''AE design'''
 from torch.nn.modules import activation
@@ -213,7 +214,7 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
         lout = self.lout(nch=nc, padding=pad, dilation=dil, kernel_size=ker, stride=std)
         
         self.cnn = [
-            torch.nn.utils.spectral_norm(nn.Conv1d(in_channels=channel[0],
+            spectral_norm(nn.Conv1d(in_channels=channel[0],
             out_channels=channel[1], kernel_size = ker[0], stride = std[0], padding = pad[0])),
             acts[0]
         ]
@@ -224,7 +225,7 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
             spectral_norm = True, normalization = normalization, affine=True)
         
         self.cnn += [   
-                        nn.Conv1d(in_channels=channel[-1],out_channels=1,kernel_size = 3, stride = 1, padding=1), 
+                        spectral_norm(nn.Conv1d(in_channels=channel[-1],out_channels=1,kernel_size = 3, stride = 1, padding=1)), 
                         nn.LeakyReLU(1.0, inplace=True)
                     ]
         
