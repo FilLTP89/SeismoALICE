@@ -515,18 +515,18 @@ def tie_weights(m):
         except: 
             pass
 
-def generate_latent_variable_3D(batch, nch_zd=4, nch_zf = 4, nzd=128, nzf = 128,std=1):
-        zyy  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
-        zxx  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
-        zyx  = torch.zeros([batch,nch_zf,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
-        zxy  = torch.zeros([batch,nch_zf,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
+def generate_latent_variable_3D(batch_size, nch_zd=4, nch_zf = 4, nzd=128, nzf = 128,std=1):
+        zyy  = torch.zeros([batch_size,nch_zd,nzd]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
+        zxx  = torch.zeros([batch_size,nch_zd,nzd]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
+        zyx  = torch.zeros([batch_size,nch_zf,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
+        zxy  = torch.zeros([batch_size,nch_zf,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
         return zyy, zyx, zxx, zxy
 
-def generate_latent_variable_1D(batch,nzd = 384,nzf = 128, std=1):
-    zyy  = torch.zeros([batch,nzd]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
-    zxx  = torch.zeros([batch,nzd]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
-    zyx  = torch.zeros([batch,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
-    zxy  = torch.zeros([batch,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
+def generate_latent_variable_1D(batch_size,nzd = 384,nzf = 128, std=1):
+    zyy  = torch.zeros([batch_size,nzd]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
+    zxx  = torch.zeros([batch_size,nzd]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
+    zyx  = torch.zeros([batch_size,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
+    zxy  = torch.zeros([batch_size,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
     return zyy, zyx, zxx, zxy
 
 def get_accuracy(tag, plot_function,encoder, decoder, vld_loader,*args, **kwargs):

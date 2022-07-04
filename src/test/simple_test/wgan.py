@@ -120,7 +120,7 @@ class WGAN(SimpleTrainer):
             zd_rec      = self.gen_agent.Fy(y_gen)
             
             Gloss_rec_y = torch.mean(torch.abs(y-y_rec))
-            Gloss_rec_zd= torch.mean(torch.abs(zd_inp-zd_rec)**2)
+            Gloss_rec_zd= torch.mean(torch.abs(zd_inp-zd_rec))
 
             Gloss_rec   = Gloss_rec_y + Gloss_rec_zd
 

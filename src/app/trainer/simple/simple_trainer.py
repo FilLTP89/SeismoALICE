@@ -11,7 +11,7 @@ from tools.generate_noise import noise_generator
 from core.logger.logger import setup_logging
 from configuration import app
 from torch.nn import DataParallel as DP
-from common.common_nn import get_accuracy,patch
+from common.common_nn import generate_latent_variable_3D, get_accuracy,patch
 from common.common_nn import count_parameters
 from common.common_torch import *
 from database.latentset import get_latent_dataset
@@ -80,7 +80,6 @@ class SimpleTrainer(BasicTrainer):
 
         self.logger.info("Loading the dataset ...")
         self.data_trn_loader, self.data_vld_loader,self.data_tst_loader = trn_loader, vld_loader, tst_loader
-        self.lat_trn_loader, self.lat_vld_loader, self.lat_tst_loader   = get_latent_dataset(nsy = self.opt.nsy, batch_size=self.opt.batchSize)
         self.bce_loss        = torch.nn.BCELoss(reduction='mean')
         self.bce_logit_loss  = torch.nn.BCEWithLogitsLoss(reduction='mean')
 
@@ -111,13 +110,11 @@ class SimpleTrainer(BasicTrainer):
 
     
     def on_training_epoch(self, epoch, bar):
-        _bar = tq(enumerate(zip(self.data_trn_loader,self.lat_trn_loader)),
-                    position=1,leave=False, desc='train.', 
-                    total=len(self.data_trn_loader))
-        for idx, (batch_data,batch_latent)  in _bar:
+        _bar = tq(enumerate(self.data_trn_loader),position=1,leave=False, desc='train.', total=len(self.data_trn_loader))
+        for idx, batch_data  in _bar:
             y, *others = batch_data
-            zyx,zyy    = batch_latent
             y          = y.to(app.DEVICE,non_blocking=True)
+            zyx,zyy,*others = generate_latent_variable_3D(batch_size=len(y))
             zyx,zyy    = zyx.to(app.DEVICE,non_blocking=True),zyy.to(app.DEVICE,non_blocking=True)
             
             pack = patch(y=y,zyy=zyy,zyx=zyx)
@@ -135,13 +132,11 @@ class SimpleTrainer(BasicTrainer):
         bar.set_postfix(Dloss=Dloss, Gloss = Gloss)
     
     def on_validation_epoch(self, epoch, bar):
-        _bar = tq(enumerate(zip(self.data_vld_loader,self.lat_vld_loader)),
-                    position=1, leave=False, desc='valid.', 
-                    total=len(self.data_vld_loader))
-        for idx, (batch_data, batch_latent) in _bar:
+        _bar = tq(enumerate(self.data_vld_loader),position=1, leave=False, desc='valid.', total=len(self.data_vld_loader))
+        for idx, batch_data in _bar:
             y, *others = batch_data
-            zyx, zyy   = batch_latent
             y          = y.to(app.DEVICE, non_blocking   = True)
+            zyx, zyy,*others = generate_latent_variable_3D(batch_size=len(y))
             zyx, zyy   = zyx.to(app.DEVICE, non_blocking = True), zyy.to(app.DEVICE, non_blocking = True)
   
             pack = patch(y=y,zyy=zyy,zyx=zyx)
@@ -175,7 +170,7 @@ class SimpleTrainer(BasicTrainer):
                 bar.set_postfix(status='saving accuracy and images ... ')
 
                 figure_histo_z,figure_histo_y = get_histogram(Fy=self.gen_agent.Fy, 
-                Gy = self.gen_agent.Gy, trn_set = (self.data_vld_loader,self.lat_vld_loader))
+                Gy = self.gen_agent.Gy, trn_set = self.data_vld_loader)
                 bar.set_postfix(status='saving z distribution ...')
                 self.validation_writer.add_figure('z Histogram', figure_histo_z)
                 bar.set_postfix(status='saving y distribution ...')
@@ -197,7 +192,7 @@ class SimpleTrainer(BasicTrainer):
                 # plot filtered reconstruction signal and gof
                 figure_bb, gof_bb = plot_generate_classic(tag ='broadband',
                         Qec= self.gen_agent.Fy, Pdc= self.gen_agent.Gy,
-                        trn_set= (self.data_tst_loader, self.lat_tst_loader),
+                        trn_set= self.data_tst_loader,
                         pfx="vld_set_bb_unique",
                         opt=self.opt, outf= self.opt.outf, save=False)
                 bar.set_postfix(status='saving images STFD/GOF Broadband ...')

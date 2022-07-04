@@ -21,6 +21,7 @@ from database.database_sae import arias_intensity
 import torch
 from torch import zeros_like as o0l
 from torch import ones_like as o1l
+from common.common_nn import generate_latent_variable_3D
 from obspy.signal.tf_misfit import plot_tf_gofs, eg,pg
 from obspy.signal.tf_misfit import eg, pg
 from sklearn.covariance import EmpiricalCovariance
@@ -743,10 +744,9 @@ def plot_generate_hybrid(Qec,Pdc,Ghz,dev,vtm,trn_set,pfx='hybrid',outf='./imgs')
 #             cnt += 1
 
             # filtered signals
-def plot_distribution(tag,calc,tar, save=False):
+def plot_distribution(tag,calc,tar, lim=[-5,5],save=False):
     calc = calc.cpu().data.numpy().copy()
     tar  = tar.cpu().data.numpy().copy()
-    
     batch, v_size, *others = calc.shape
     plt.figure(figsize=(int(v_size*3),6))
     fig, ax = plt.subplots(1, v_size)
@@ -754,9 +754,9 @@ def plot_distribution(tag,calc,tar, save=False):
         ax[i].hist(calc[0,i,:], bins=10, density=True, label='calc',fc=(0.8, 0, 0, 1))
         ax[i].hist(tar[0,i,:], bins=10, density=True, label='tar',fc=(1., 0.8, 0, 0.5))
         ax[i].legend(loc = "upper right",frameon=False)
-        ax[i].set_xlim([-5.,5.])
+        ax[i].set_xlim(lim)
         ax[i].set_ylim([0,1.])
-        ax[i].set_xlabel(f'{tag}')
+        ax[i].set_xlabel(f'{tag}[{i}]')
 
     if save:
         plt.savefig(f'{tag}.png')
@@ -778,17 +778,17 @@ def get_histogram(Fy, Gy, trn_set):
     Fy.eval(),Gy.eval()
     fig_latent = []
     fig_data  = []
-    data_vld_loader,lat_vld_loader = trn_set
-    for b, (batch_data, batch_latent) in enumerate(zip(data_vld_loader,lat_vld_loader)):
+    data_vld_loader = trn_set
+    for b, batch_data in enumerate(data_vld_loader):
         y, *others  = batch_data
-        zyx, zyy    = batch_latent
         y           = y.to(app.DEVICE, non_blocking = True)
+        zyx, zyy,*others = generate_latent_variable_3D(batch_size=len(y))
         zyx, zyy    = zyx.to(app.DEVICE, non_blocking = True), zyy.to(app.DEVICE, non_blocking = True)
         wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std': 1.0})
         zyy_cal     = Fy(zcat(y,wny))
         y_cal       = Gy(zyy)
-        fig_latent.append(plot_distribution(tag='latent-space',calc=zyy_cal, tar=zyy))
-        fig_data.append(plot_distribution(tag='data',calc=y_cal, tar=y))
+        fig_latent.append(plot_distribution(tag='zd',calc=zyy_cal,tar=zyy,lim=[-5,5]))
+        fig_data.append(plot_distribution(tag='y',calc=y_cal, tar=y, lim=[-1,1]))
         
     return fig_latent, fig_data
 
@@ -1201,7 +1201,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
     outf='./imgs',save = True, Qed=None,std=None):
     
     dev = app.DEVICE
-    data_tst_loader, lat_tst_loader = trn_set
+    data_tst_loader = trn_set
 
     Qec.eval(),Pdc.eval()
     Qec.to(dev),Pdc.to(dev)
@@ -1224,11 +1224,10 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
         if Qed is not None:
             Qed.eval()
 
-        for idx, (batch_data, batch_latent) in enumerate(zip(data_tst_loader, lat_tst_loader)):
+        for idx, batch_data, in enumerate(data_tst_loader):
             #_,xt_data,zt_data,_,_,_,_ = batch
             app.logger.debug("Plotting signals ...")
             xt_data,xf_data,*other  = batch_data
-            zyx, zyy                = batch_latent
 
             if torch.isnan(torch.max(xt_data)):
                 app.logger.debug("your model contain nan value "
@@ -1255,7 +1254,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             # zt = torch.randn(*zt_shape).to(dev, non_blocking = True)
             random_args = {'mean':0.,'std': 1.0}
             nch, nz         = 4,128
-            wnx,wnz,*others = noise_generator(Xt.shape,zyy.shape,dev,random_args)
+            wnx,*others = noise_generator(Xt.shape,Xt.shape,dev,random_args)
 
             X_inp = zcat(Xt,wnx)
             zy =  Qec(X_inp)
