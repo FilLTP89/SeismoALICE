@@ -748,13 +748,15 @@ def plot_distribution(tag,z_calc,z_tar, save=False):
     z_tar  = z_tar.cpu().data.numpy().copy()
     
     batch, v_size, *others = z_calc.shape
-    fig = plt.figure(figsize=(6,6))
-    plt.hist(z_calc[0,0,:], bins=30, density=True, label='calc',fc=(0.8, 0, 0, 1))
-    plt.hist(z_tar[0,0,:], bins=30, density=True, label='tar',fc=(1., 0.8, 0, 0.5))
-    plt.legend(loc = "lower right",frameon=False)
-    plt.xlim([-5.,5.])
-    plt.ylim([0,1.])
-    plt.xlabel(f'{tag}')
+    plt.figure(figsize=(6,6))
+    fig, ax = plt.subplots(1, v_size)
+    for i in range(v_size):
+        ax[i].hist(z_calc[0,0,:], bins=30, density=True, label='calc',fc=(0.8, 0, 0, 1))
+        ax[i].hist(z_tar[0,0,:], bins=30, density=True, label='tar',fc=(1., 0.8, 0, 0.5))
+        ax[i].legend(loc = "lower right",frameon=False)
+        ax[i].set_xlim([-5.,5.])
+        ax[i].set_ylim([0,1.])
+        ax[i].set_xlabel(f'{tag}')
 
     if save:
         plt.savefig(f'{tag}.png')
