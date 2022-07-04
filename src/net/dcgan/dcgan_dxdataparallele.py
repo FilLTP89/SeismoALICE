@@ -243,8 +243,7 @@ class DCGAN_Dx_Lite(BasicDCGAN_DxDataParallel):
             spectral_norm = True, normalization = normalization, affine=True)
         
         self.cnn += [   
-                        nn.Conv1d(in_channels=channel[-1],out_channels=1,
-                            kernel_size = 3, stride = 1, padding=1), 
+                        nn.Conv1d(in_channels=channel[-1],out_channels=1,kernel_size = 3, stride = 1, padding=1), 
                         nn.LeakyReLU(1.0, inplace=True)
                     ]
        
