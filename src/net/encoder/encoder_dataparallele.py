@@ -127,12 +127,12 @@ class Encoder(BasicEncoderDataParallele):
             if i ==1 and with_noise:
                 self.cnn1 = self.cnn1+cnn1d(channel[i-1],channel[i], acts[0],ker=ker[i-1],std=std[i-1],\
                     pad=pad[i-1],bn=bn,dil = dil[i-1], dpc=0.0,wn=True ,\
-                    dtm = dtm, ffr = ffr, wpc = wpc,dev='cuda:0')
+                    dtm = dtm, ffr = ffr, wpc = wpc,dev='cuda:0',bias =False)
             elif i == 1:
                 self.cnn1 = self.cnn1+cnn1d(channel[i-1],channel[i], acts[0],ker=ker[i-1],std=std[i-1],\
-                    pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=0.0,wn=False)
+                    pad=pad[i-1],bn=bn,dil=dil[i-1],dpc=0.0,wn=False, bias =False)
             else:
-                bias = True if i == nly else False
+                bias = False
                 _bn  = False if i == nly else bn
                 _dpc = 0.0 if i == nly else dpc 
                 self.cnn1 = self.cnn1+cnn1d(channel[i-1], channel[i], acts[i-1], ker=ker[i-1],\
