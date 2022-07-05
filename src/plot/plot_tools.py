@@ -744,15 +744,15 @@ def plot_generate_hybrid(Qec,Pdc,Ghz,dev,vtm,trn_set,pfx='hybrid',outf='./imgs')
 #             cnt += 1
 
             # filtered signals
-def plot_distribution(tag,calc,tar, lim=[-5,5],save=False):
+def plot_distribution(tag,calc,tar, lim=[-5,5],bins = 20,save=False):
     calc = calc.cpu().data.numpy().copy()
     tar  = tar.cpu().data.numpy().copy()
-    batch, v_size, *others = calc.shape
+    _, v_size, *others = calc.shape
     plt.figure(figsize=(int(v_size*3),6))
     fig, ax = plt.subplots(1, v_size)
     for i in range(v_size):
-        ax[i].hist(calc[0,i,:], bins=10, density=True, label='calc',fc=(0.8, 0, 0, 1))
-        ax[i].hist(tar[0,i,:], bins=10, density=True, label='tar',fc=(1., 0.8, 0, 0.5))
+        ax[i].hist(calc[0,i,:], bins=bins, density=True, label='calc',fc=(0.8, 0, 0, 1))
+        ax[i].hist(tar[0,i,:], bins=bins, density=True, label='tar',fc=(1., 0.8, 0, 0.5))
         ax[i].legend(loc = "upper right",frameon=False)
         ax[i].set_xlim(lim)
         ax[i].set_ylim([0,1.])
@@ -787,8 +787,8 @@ def get_histogram(Fy, Gy, trn_set):
         wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std': 1.0})
         zyy_cal     = Fy(zcat(y,wny))
         y_cal       = Gy(zyy)
-        fig_latent.append(plot_distribution(tag='zd',calc=zyy_cal,tar=zyy,lim=[-5,5]))
-        fig_data.append(plot_distribution(tag='y',calc=y_cal, tar=y, lim=[-1,1]))
+        fig_latent.append(plot_distribution(tag='zd',calc=zyy_cal,tar=zyy,lim=[-5,5], bins=10))
+        fig_data.append(plot_distribution(tag='y',calc=y_cal, tar=y, lim=[-1,1], bins=25))
         
     return fig_latent, fig_data
 

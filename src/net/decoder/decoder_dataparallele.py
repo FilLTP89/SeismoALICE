@@ -110,7 +110,7 @@ class Decoder(BasicDecoderDataParallel):
         for i in range(1, nly+1):
             _dpc = 0.0 if i ==nly else dpc
             _bn  = False if i == nly else bn
-            bias = True if i == nly else False
+            bias = False
             self.cnn1 += cnn1dt(channel[i-1],channel[i], acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
                 dil=dil[i-1], opd=opd[i-1], bn=_bn,dpc=_dpc,bias=bias)
 

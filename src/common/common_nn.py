@@ -505,8 +505,11 @@ def set_weights(m):
 def initialize_weights(model):
     # Initializes weights according to the DCGAN paper
     for m in model.modules():
-        if isinstance(m, (nn.Conv1d, nn.ConvTranspose1d, nn.BatchNorm1d)):
-            nn.init.normal_(m.weight.data, 0.0, 0.02)
+        if isinstance(m, (nn.Conv1d, nn.ConvTranspose1d)):
+            nn.init.normal_(m.weight.data, mean=0.0, std=0.02)
+        if isinstance(m, (nn.BatchNorm1d)):
+            nn.init.normal_(m.weight.data, mean=0.0, std=0.02)
+            nn.init.constant_(m.bias, val=0.)
 
 def tie_weights(m):
     for _,n in m.__dict__['_modules'].items():

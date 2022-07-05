@@ -43,10 +43,10 @@ class WGAN(SimpleTrainer):
     
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,_ = batch
-        for _ in range(1):
-            zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder, self.disc_agent.optimizer])
-            modalite(self.gen_agent.generators,       mode = net_mode[0])
-            modalite(self.disc_agent.discriminators,  mode = net_mode[1])
+        for _ in range(5):
+            # zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder, self.disc_agent.optimizer])
+            # modalite(self.gen_agent.generators,       mode = net_mode[0])
+            # modalite(self.disc_agent.discriminators,  mode = net_mode[1])
             
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
             zd_inp      = zyy
@@ -64,15 +64,17 @@ class WGAN(SimpleTrainer):
             GPzb             = gradient_penalty(self.disc_agent.Dszb, zd_inp, zd_gen, app.DEVICE) if modality == 'train' else torch.zeros([])
             Dloss_wgan_zd    = -(torch.mean(Dreal_zd.reshape(-1)) - torch.mean(Dfake_zd.reshape(-1)))
 
-            Dloss_wgan =  Dloss_wgan_y + Dloss_wgan_zd
+            Dloss_wgan =  (Dloss_wgan_y + Dloss_wgan_zd)/2
             
             if modality == 'train':
                 # Dfake_y.register_hook(lambda grad: print(grad))
                 # self.disc_agent.Dszb.module.cnn[8].weight.register_hook(lambda grad: print(grad))
-                Dloss_wgan.backward(retain_graph=True)
-                self.disc_agent.optimizer.step()
                 self.disc_agent.track_gradient(epoch)
                 zerograd([self.gen_agent.optimizer_encoder,self.gen_agent.optimizer_decoder, self.disc_agent.optimizer])
+                Dloss_wgan.backward(retain_graph=True)
+                self.disc_agent.optimizer.step()
+                
+                
 
             # no clipweights spectral_norm is implemented
             self.losses_disc['epochs'       ] = epoch
@@ -95,9 +97,9 @@ class WGAN(SimpleTrainer):
     def train_generators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,_ = batch
         for _ in range(1):
-            zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder, self.disc_agent.optimizer])
-            modalite(self.gen_agent.generators,       mode = net_mode[0])
-            modalite(self.disc_agent.discriminators,  mode = net_mode[1])
+            # zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder, self.disc_agent.optimizer])
+            # modalite(self.gen_agent.generators,       mode = net_mode[0])
+            # modalite(self.disc_agent.discriminators,  mode = net_mode[1])
 
             # 1. We Generate conditional samples
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
@@ -124,13 +126,15 @@ class WGAN(SimpleTrainer):
 
             Gloss_rec   = Gloss_rec_y + Gloss_rec_zd
 
-            Gloss = Gloss_wgan_y + Gloss_wgan_zd + Gloss_rec*10
+            Gloss = (Gloss_wgan_y + Gloss_wgan_zd)/2 + Gloss_rec
             if modality == 'train':
+                self.gen_agent.track_gradient(epoch)
+                zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder, self.disc_agent.optimizer])
                 Gloss.backward()
                 self.gen_agent.optimizer_encoder.step()
                 self.gen_agent.optimizer_decoder.step()
-                self.gen_agent.track_gradient(epoch)
-                zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder, self.disc_agent.optimizer])
+                
+                
             
             self.losses_gens['epochs'       ] = epoch
             self.losses_gens['modality'     ] = modality
