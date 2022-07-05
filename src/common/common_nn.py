@@ -186,23 +186,25 @@ class Explode(Module):
 
 
 def cnn1d(in_channels,out_channels,\
-          act=LeakyReLU(1.0,inplace=True),\
+          act=LeakyReLU(1.0,inplace=True),spectral_norm=False,\
           bn=True,ker=7,std=4,pad=0,normalization=partial(BatchNorm1d),\
-          dil=1,grp=1,dpc=0.1,wn=False,dev=tdev("cpu"),
-          bias = False, spectral_norm=False, *args, **kwargs):
+          dil=1,grp=1,dpc=0.1,wn=False,dev=tdev("cpu"),bias = False, *args, **kwargs):
 
     block = [Conv1d(in_channels=in_channels,\
                     out_channels=out_channels,\
                     kernel_size=ker,stride=std,\
                     padding=pad,dilation=dil,groups=grp,\
                     bias=bias)]
+    #if wn:
+    #    block.insert(0,AddNoise(dev=dev))
     if spectral_norm:
         block = [torch.nn.utils.spectral_norm(copy.deepcopy(block[0]))]
+    
     if bn:
-        if normalization.func.__name__.find('InstanceNorm1d')!=-1:
-            block.append(normalization(out_channels,*args, **kwargs))
+        if isinstance(normalization,nn.InstanceNorm1d):
+            block.append(normalization(out_channels, affine=True))
         else:
-            block.append(BatchNorm1d(out_channels))
+            block.append(normalization(out_channels))
 
     block.append(act)
     block.append(Dpout(dpc=dpc))
@@ -211,9 +213,9 @@ def cnn1d(in_channels,out_channels,\
     return block
 
 def cnn1dt(in_channels,out_channels,\
-           act=LeakyReLU(1.0),#\inplace=True
+           act=LeakyReLU(1.0),spectral_norm=False,
            bn=True,ker=2,std=2,pad=0,opd=0,normalization=partial(BatchNorm1d),\
-           dil=1,grp=1,dpc=0.1, bias=False, spectral_norm=False,*args, **kwargs):
+           dil=1,grp=1,dpc=0.1, bias=False, *args, **kwargs):
 
     block = [ConvTranspose1d(in_channels=in_channels,\
                              out_channels=out_channels,\
@@ -221,15 +223,16 @@ def cnn1dt(in_channels,out_channels,\
                              output_padding=opd,padding=pad,\
                              dilation=dil,groups=grp,\
                              bias=bias)]
+    
     if spectral_norm:
         block = [torch.nn.utils.spectral_norm(copy.deepcopy(block[0]))]
-       
+    
     if bn:
-        if normalization.func.__name__.find('InstanceNorm1d')!=-1:
-            block = [torch.nn.utils.spectral_norm(copy.deepcopy(block[0]))]
-            block.append(normalization(out_channels, *args, **kwargs))
+        if isinstance(normalization,nn.InstanceNorm1d):
+            block.append(normalization(out_channels, affine=True))
         else:
-            block.append(BatchNorm1d(out_channels))
+            block.append(normalization(out_channels))
+    
     block.append(act)
     block.append(Dpout(dpc=dpc))
     return block
@@ -320,7 +323,6 @@ class ResConvBlock(Module):
 class ResidualBlock(Module):
     def __init__(self, in_channels, out_channels, activation='relu'):
         super(ResidualBlock,self).__init__()
-        
         self.in_channels = in_channels,
         self.out_channels = out_channels
         self.activation = activation
@@ -338,6 +340,7 @@ class ResidualBlock(Module):
         x = self.activate(x)
         return x
 
+
     def activation_function(self, activation):
         return  nn.ModuleDict([
             ['relu', nn.ReLU(inplace=True)],
@@ -345,7 +348,6 @@ class ResidualBlock(Module):
             ['selu', nn.SELU(inplace=True)],
             ['none', nn.Identity()]
         ])[activation]
-    
     @property
     def should_apply_shortcut(self):
         return self.in_channels != self.out_channels
@@ -420,9 +422,9 @@ def patch(y,zyy,zyx, x = None):
         y.data = y[index[mask]]
         if x is not None:
             x.data = x[index[mask]]
-        zyy.data, zyx.data  = zyy[index[mask]],zyx[index[mask]]
+        zyx.data, zyy.data  = zyx[index[mask]],zyy[index[mask]]
     if x == None:
-        return y,zyy,zyx
+            return y,zyy,zyx
     return y, x, zyy, zyx
         
 def penalty(loss,params,typ,lam=1.e-5):
@@ -482,8 +484,7 @@ def is_gaussian(distribution):
 
 
 # custom weights initialization called on netG and netD¬                 
-def set_weights(m):
-                               
+def set_weights(m):                                 
     classname = m.__class__.__name__               
     if (classname.find('Conv1d') != -1 
             or
@@ -492,7 +493,7 @@ def set_weights(m):
             # init.xavier_uniform(m.weight)
             # init.xavier_normal_(m.weight)
             # init.kaiming_uniform(m.weight)
-            init.normal_(m.weight.data, mean=0.0, std=0.02)
+            init.normal_(m.weight, mean=0.0, std=0.02)
         except:
             print("warnings no initialization is made training may not work")
         #m.weight.data.normal_(0.0, 0.02) 
@@ -503,15 +504,6 @@ def set_weights(m):
         m.weight.data.normal_(1.0, 0.02)                              
         m.bias.data.fill_(0)
 
-def initialize_weights(model):
-    # Initializes weights according to the DCGAN paper
-    for m in model.modules():
-        if isinstance(m, (nn.Conv1d, nn.ConvTranspose1d)):
-            nn.init.normal_(m.weight.data, mean=0.0, std=0.02)
-        if isinstance(m, (nn.BatchNorm1d)):
-            nn.init.normal_(m.weight.data, mean=0.0, std=0.02)
-            nn.init.constant_(m.bias.data, val=0.)
-
 def tie_weights(m):
     for _,n in m.__dict__['_modules'].items():
         try:
@@ -519,18 +511,18 @@ def tie_weights(m):
         except: 
             pass
 
-def generate_latent_variable_3D(batch_size, nch_zd=32, nch_zf = 4, nzd=128, nzf = 128,std=1):
-        zyy  = torch.zeros([batch_size,nch_zd,nzd]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
-        zxx  = torch.zeros([batch_size,nch_zd,nzd]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
-        zyx  = torch.zeros([batch_size,nch_zf,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
-        zxy  = torch.zeros([batch_size,nch_zf,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
+def generate_latent_variable_3D(batch, nch_zd=4, nch_zf = 4, nzd=128, nzf = 128,std=1):
+        zyy  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
+        zxx  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
+        zyx  = torch.zeros([batch,nch_zf,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
+        zxy  = torch.zeros([batch,nch_zf,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
         return zyy, zyx, zxx, zxy
 
-def generate_latent_variable_1D(batch_size,nzd = 384,nzf = 128, std=1):
-    zyy  = torch.zeros([batch_size,nzd]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
-    zxx  = torch.zeros([batch_size,nzd]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
-    zyx  = torch.zeros([batch_size,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
-    zxy  = torch.zeros([batch_size,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
+def generate_latent_variable_1D(batch,nzd = 384,nzf = 128, std=1):
+    zyy  = torch.zeros([batch,nzd]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
+    zxx  = torch.zeros([batch,nzd]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
+    zyx  = torch.zeros([batch,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
+    zxy  = torch.zeros([batch,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
     return zyy, zyx, zxx, zxy
 
 def get_accuracy(tag, plot_function,encoder, decoder, vld_loader,*args, **kwargs):

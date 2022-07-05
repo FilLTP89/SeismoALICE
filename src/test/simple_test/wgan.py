@@ -43,8 +43,8 @@ class WGAN(SimpleTrainer):
     
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,_ = batch
-        for _ in range(1):
-            # zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder, self.disc_agent.optimizer])
+        for _ in range(5):
+            zerograd([self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
             
@@ -69,15 +69,11 @@ class WGAN(SimpleTrainer):
             Dloss_wgan =  Dloss_wgan_y + Dloss_wgan_zd
             
             if modality == 'train':
-                # Dfake_y.register_hook(lambda grad: print(grad))
-                # self.disc_agent.Dszb.module.cnn[8].weight.register_hook(lambda grad: print(grad))
                 self.disc_agent.track_gradient(epoch)
                 zerograd([self.disc_agent.optimizer])
                 Dloss_wgan.backward(retain_graph=True)
                 self.disc_agent.optimizer.step()
                 
-                
-
             # no clipweights spectral_norm is implemented
             self.losses_disc['epochs'       ] = epoch
             self.losses_disc['modality'     ] = modality
@@ -99,7 +95,7 @@ class WGAN(SimpleTrainer):
     def train_generators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,_ = batch
         for _ in range(1):
-            # zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder, self.disc_agent.optimizer])
+            zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
 
@@ -131,13 +127,10 @@ class WGAN(SimpleTrainer):
             Gloss = Gloss_wgan_y + Gloss_wgan_zd + Gloss_rec
             if modality == 'train':
                 self.gen_agent.track_gradient(epoch)
-                zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder])
+                zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
                 Gloss.backward()
-                self.gen_agent.optimizer_encoder.step()
-                self.gen_agent.optimizer_decoder.step()
+                self.gen_agent.optimizer.step()
                 
-                
-            
             self.losses_gens['epochs'       ] = epoch
             self.losses_gens['modality'     ] = modality
             self.losses_gens['Gloss'        ] = Gloss.tolist()

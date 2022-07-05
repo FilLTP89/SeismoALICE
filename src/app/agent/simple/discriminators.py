@@ -15,7 +15,7 @@ class Discriminators(Agent):
 
         self.rlr = self.opt.config["hparams"]['discriminators.lr']
         self.weight_decay = self.opt.config["hparams"]['discriminators.weight_decay']
-        
+        breakpoint()
         # self.Dy     = accel(network.DCGAN_Dx( self.opt.config['Dy'],  self.opt,model_name='Dy')).cuda()
         # self.Dyy    = accel(network.DCGAN_Dx(self.opt.config['Dyy'], self.opt,model_name='Dyy')).cuda()
         # self.Dyz    = accel(network.DCGAN_DXZ(self.opt.config['Dyz'], self.opt,model_name='Dyz')).cuda()

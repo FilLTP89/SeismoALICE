@@ -11,23 +11,18 @@ class Generators(Agent):
         self.generators = []
         self.gradients_tracker = gradients_tracker
         self.debug_writer = debug_writer
-        self.elr    = self.opt.config["hparams"]['encoder.lr']
-        self.dlr    = self.opt.config["hparams"]['decoder.lr']
+        self.glr    = self.opt.config["hparams"]['generators.lr']
         self.weight_decay = self.opt.config["hparams"]['generators.weight_decay']
-        
+        breakpoint()
         self.Fy = accel(network.Encoder(self.opt.config['F'], self.opt,model_name='F')).cuda()
         self.Gy = accel(network.Decoder(self.opt.config['Gy'],self.opt,model_name='Gy')).cuda()
 
         self.generators = [self.Fy, self.Gy]
         self.current_val= 0
-        self.optimizer_encoder = reset_net([self.Fy],
-                optim='adam',alpha=0.9,lr=self.elr,b1=0.5,b2=0.9999,weight_decay=self.weight_decay
+        self.optimizer = reset_net(self.generators,
+                optim='adam',alpha=0.9,lr=self.glr,b1=0.5,b2=0.9999,weight_decay=self.weight_decay
             )
 
-        self.optimizer_decoder = reset_net([self.Gy],
-                optim='adam',alpha=0.9,lr=self.dlr,b1=0.5,b2=0.9999,weight_decay=self.weight_decay
-            )
-        self.optimizer = [self.optimizer_encoder,self.optimizer_decoder]
         self._architecture()
         super(Generators,self).__init__(self.generators, self.optimizer, config, logger, accel,*args, **kwargs)
 
@@ -46,6 +41,7 @@ class Generators(Agent):
         writer_encoder = SummaryWriter(self.opt.config['log_dir']['debug.encoder_writer'])
         writer_decoder = SummaryWriter(self.opt.config['log_dir']['debug.decoder_writer'])
         writer_encoder.add_graph(next(iter(self.Fy.children())),
-                        torch.randn(10,6,4096).cuda())
+                        torch.randn(10,3,4096).cuda())
         writer_decoder.add_graph(next(self.Gy.children()), 
-                        (torch.randn(10,32,128).cuda()))
+                        (torch.randn(10,1,1024).cuda()))
+e

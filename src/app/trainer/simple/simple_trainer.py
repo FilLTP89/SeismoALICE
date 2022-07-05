@@ -80,6 +80,9 @@ class SimpleTrainer(BasicTrainer):
 
         self.logger.info("Loading the dataset ...")
         self.data_trn_loader, self.data_vld_loader,self.data_tst_loader = trn_loader, vld_loader, tst_loader
+        self.lat_trn_loader, self.lat_vld_loader, self.lat_trn_loader   = get_latent_dataset(nsy=self.opt.nsy,\
+                                 batch_size=self.opt.batchSize)
+
         self.bce_loss        = torch.nn.BCELoss(reduction='mean')
         self.bce_logit_loss  = torch.nn.BCEWithLogitsLoss(reduction='mean')
 
@@ -92,8 +95,7 @@ class SimpleTrainer(BasicTrainer):
         
         self.logger.info("Parameters of Generators ")
         count_parameters(self.gen_agent.generators)
-        self.logger.info(f"Learning rate Encoder : {self.opt.config['hparams']['encoder.lr']}")
-        self.logger.info(f"Learning rate Decoder : {self.opt.config['hparams']['decoder.lr']}")
+        self.logger.info(f"Learning rate Encoder : {self.opt.config['hparams']['generators.lr']}")
 
         self.logger.info("Parameters of Discriminators")
         count_parameters(self.disc_agent.discriminators)
@@ -110,13 +112,13 @@ class SimpleTrainer(BasicTrainer):
 
     
     def on_training_epoch(self, epoch, bar):
-        _bar = tq(enumerate(self.data_trn_loader),position=1,leave=False, desc='train.', total=len(self.data_trn_loader))
-        for idx, batch_data  in _bar:
-            y, *others = batch_data
-            y          = y.to(app.DEVICE,non_blocking=True)
-           
-            zyy,zyx,*others = generate_latent_variable_3D(batch_size=len(y))
-            zyy,zyx    = zyy.to(app.DEVICE,non_blocking=True),zyx.to(app.DEVICE,non_blocking=True)
+        _bar = tq(enumerate(zip(self.data_trn_loader,self.lat_trn_loader)),
+        position=1,leave=False, desc='train.', total=len(self.data_trn_loader))
+        for idx, (batch_data,batch_latent)  in _bar:
+            y, *others      = batch_data
+            zyy,zyx,*others = batch_latent
+            y  = y.to(app.DEVICE,non_blocking=True)
+            zyy,zyx  = zyy.to(app.DEVICE,non_blocking=True),zyx.to(app.DEVICE,non_blocking=True)
             
             pack = patch(y=y,zyy=zyy,zyx=zyx, x=None)
             self.train_discriminators(ncritics=1, batch=pack,epoch=epoch, 
@@ -133,11 +135,12 @@ class SimpleTrainer(BasicTrainer):
         bar.set_postfix(Dloss=Dloss, Gloss = Gloss)
     
     def on_validation_epoch(self, epoch, bar):
-        _bar = tq(enumerate(self.data_vld_loader),position=1, leave=False, desc='valid.', total=len(self.data_vld_loader))
-        for idx, batch_data in _bar:
-            y, *others = batch_data
+        _bar = tq(enumerate(zip(self.data_vld_loader,self.lat_vld_loader)),
+        position=1, leave=False, desc='valid.', total=len(self.data_vld_loader))
+        for idx, (batch_data, batch_data) in _bar:
+            y,*others      = batch_data
+            zyy,zyx,*others= batch_data
             y          = y.to(app.DEVICE, non_blocking   = True)
-            zyy, zyx,*others = generate_latent_variable_3D(batch_size=len(y))
             zyy, zyx   = zyy.to(app.DEVICE, non_blocking = True), zyx.to(app.DEVICE, non_blocking = True)
             
             pack = patch(y=y,zyy=zyy,zyx=zyx)
