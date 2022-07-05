@@ -45,8 +45,8 @@ class WGAN(SimpleTrainer):
         y,zyy,_ = batch
         for _ in range(5):
             # zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder, self.disc_agent.optimizer])
-            # modalite(self.gen_agent.generators,       mode = net_mode[0])
-            # modalite(self.disc_agent.discriminators,  mode = net_mode[1])
+            modalite(self.gen_agent.generators,       mode = net_mode[0])
+            modalite(self.disc_agent.discriminators,  mode = net_mode[1])
             
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
             zd_inp      = zyy
@@ -98,8 +98,8 @@ class WGAN(SimpleTrainer):
         y,zyy,_ = batch
         for _ in range(1):
             # zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder, self.disc_agent.optimizer])
-            # modalite(self.gen_agent.generators,       mode = net_mode[0])
-            # modalite(self.disc_agent.discriminators,  mode = net_mode[1])
+            modalite(self.gen_agent.generators,       mode = net_mode[0])
+            modalite(self.disc_agent.discriminators,  mode = net_mode[1])
 
             # 1. We Generate conditional samples
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})

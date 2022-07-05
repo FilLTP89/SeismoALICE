@@ -119,7 +119,7 @@ class SimpleTrainer(BasicTrainer):
             
             pack = patch(y=y,zyy=zyy,zyx=zyx)
             self.train_discriminators(ncritics=1, batch=pack,epoch=epoch, 
-                modality='train',net_mode=['eval','train'])
+                modality='train',net_mode=['train','train'])
             self.train_generators(ncritics=1, batch=pack, epoch=epoch, 
                 modality='train',net_mode=['train','train'])
 
