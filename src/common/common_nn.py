@@ -509,7 +509,7 @@ def initialize_weights(model):
             nn.init.normal_(m.weight.data, mean=0.0, std=0.02)
         if isinstance(m, (nn.BatchNorm1d)):
             nn.init.normal_(m.weight.data, mean=0.0, std=0.02)
-            nn.init.constant_(m.bias, val=0.)
+            nn.init.constant_(m.bias.data, val=0.)
 
 def tie_weights(m):
     for _,n in m.__dict__['_modules'].items():

@@ -214,19 +214,19 @@ class DCGAN_Dz_Lite(BasicDCGAN_DzDataParallel):
         lout = self.lout(nch=nc, padding=pad, dilation=dil, kernel_size=ker, stride=std)
         
         self.cnn = [
-            spectral_norm(nn.Conv1d(in_channels=channel[0],out_channels=channel[1], 
-            kernel_size = ker[0], stride = std[0], padding = pad[0], bias = False)),
+            nn.Conv1d(in_channels=channel[0],out_channels=channel[1], 
+            kernel_size = ker[0], stride = std[0], padding = pad[0], bias = False),
             acts[0]
         ]
         
         self.cnn += self.block_conv(channel[1:], 
             kernel = ker[1:], strides = std[1:], dilation = dil[1:], padding = pad[1:], 
             dpc = dpc, activation  = acts[1:], bn = bn, bias = False, 
-            spectral_norm = True, normalization = normalization, affine=True)
+            spectral_norm = False, normalization = normalization, affine=True)
         
         self.cnn += [   
-                        spectral_norm(nn.Conv1d(in_channels=channel[-1],out_channels=1,
-                        kernel_size = 3, stride = 1, padding=1, bias = False)), 
+                        nn.Conv1d(in_channels=channel[-1],out_channels=1,
+                        kernel_size = 3, stride = 1, padding=1, bias = False), 
                         nn.LeakyReLU(1.0, inplace=True)
                     ]
         

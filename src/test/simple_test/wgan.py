@@ -43,7 +43,7 @@ class WGAN(SimpleTrainer):
     
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,_ = batch
-        for _ in range(5):
+        for _ in range(1):
             # zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder, self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
@@ -58,19 +58,21 @@ class WGAN(SimpleTrainer):
 
             Dreal_y, Dfake_y = self.disc_agent.discriminate_marginal_y(y, y_gen)
             GPy              = gradient_penalty(self.disc_agent.Dsy, y, y_gen,app.DEVICE) if modality == 'train' else torch.zeros([])
-            Dloss_wgan_y     = -(torch.mean(Dreal_y.reshape(-1)) - torch.mean(Dfake_y.reshape(-1)))
+            Dloss_wgan_y     = -(torch.mean(Dreal_y.reshape(-1)) - torch.mean(Dfake_y.reshape(-1))) +\
+                                 GPy*app.LAMBDA_GP
             
             Dreal_zd, Dfake_zd = self.disc_agent.discriminate_marginal_zd(zd_inp,zd_gen) 
             GPzb             = gradient_penalty(self.disc_agent.Dszb, zd_inp, zd_gen, app.DEVICE) if modality == 'train' else torch.zeros([])
-            Dloss_wgan_zd    = -(torch.mean(Dreal_zd.reshape(-1)) - torch.mean(Dfake_zd.reshape(-1)))
+            Dloss_wgan_zd    = -(torch.mean(Dreal_zd.reshape(-1)) - torch.mean(Dfake_zd.reshape(-1))) +\
+                                 GPzb*app.LAMBDA_GP
 
-            Dloss_wgan =  (Dloss_wgan_y + Dloss_wgan_zd)/2
+            Dloss_wgan =  Dloss_wgan_y + Dloss_wgan_zd
             
             if modality == 'train':
                 # Dfake_y.register_hook(lambda grad: print(grad))
                 # self.disc_agent.Dszb.module.cnn[8].weight.register_hook(lambda grad: print(grad))
                 self.disc_agent.track_gradient(epoch)
-                zerograd([self.gen_agent.optimizer_encoder,self.gen_agent.optimizer_decoder, self.disc_agent.optimizer])
+                zerograd([self.disc_agent.optimizer])
                 Dloss_wgan.backward(retain_graph=True)
                 self.disc_agent.optimizer.step()
                 
@@ -126,10 +128,10 @@ class WGAN(SimpleTrainer):
 
             Gloss_rec   = Gloss_rec_y + Gloss_rec_zd
 
-            Gloss = (Gloss_wgan_y + Gloss_wgan_zd)/2 + Gloss_rec
+            Gloss = Gloss_wgan_y + Gloss_wgan_zd + Gloss_rec
             if modality == 'train':
                 self.gen_agent.track_gradient(epoch)
-                zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder, self.disc_agent.optimizer])
+                zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder])
                 Gloss.backward()
                 self.gen_agent.optimizer_encoder.step()
                 self.gen_agent.optimizer_decoder.step()

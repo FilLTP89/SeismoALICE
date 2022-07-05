@@ -788,7 +788,7 @@ def get_histogram(Fy, Gy, trn_set):
         zyy_cal     = Fy(zcat(y,wny))
         y_cal       = Gy(zyy)
         fig_latent.append(plot_distribution(tag='zd',calc=zyy_cal,tar=zyy,lim=[-5,5], bins=10))
-        fig_data.append(plot_distribution(tag='y',calc=y_cal, tar=y, lim=[-1,1], bins=25))
+        fig_data.append(plot_distribution(tag='y',calc=y_cal, tar=y, lim=[-1.20,1.20], bins=50))
         
     return fig_latent, fig_data
 
