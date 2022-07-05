@@ -13,7 +13,7 @@ class Generators(Agent):
         self.debug_writer = debug_writer
         self.glr    = self.opt.config["hparams"]['generators.lr']
         self.weight_decay = self.opt.config["hparams"]['generators.weight_decay']
-        breakpoint()
+        
         self.Fy = accel(network.Encoder(self.opt.config['F'], self.opt,model_name='F')).cuda()
         self.Gy = accel(network.Decoder(self.opt.config['Gy'],self.opt,model_name='Gy')).cuda()
 
@@ -41,7 +41,6 @@ class Generators(Agent):
         writer_encoder = SummaryWriter(self.opt.config['log_dir']['debug.encoder_writer'])
         writer_decoder = SummaryWriter(self.opt.config['log_dir']['debug.decoder_writer'])
         writer_encoder.add_graph(next(iter(self.Fy.children())),
-                        torch.randn(10,3,4096).cuda())
+                        torch.randn(10,6,4096).cuda())
         writer_decoder.add_graph(next(self.Gy.children()), 
                         (torch.randn(10,1,1024).cuda()))
-e

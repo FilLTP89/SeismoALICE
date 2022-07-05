@@ -80,8 +80,8 @@ class SimpleTrainer(BasicTrainer):
 
         self.logger.info("Loading the dataset ...")
         self.data_trn_loader, self.data_vld_loader,self.data_tst_loader = trn_loader, vld_loader, tst_loader
-        self.lat_trn_loader, self.lat_vld_loader, self.lat_trn_loader   = get_latent_dataset(nsy=self.opt.nsy,\
-                                 batch_size=self.opt.batchSize)
+        self.lat_trn_loader, self.lat_vld_loader, self.lat_tst_loader   = get_latent_dataset(nsy=self.opt.nsy,\
+                        batch_size=self.opt.batchSize)
 
         self.bce_loss        = torch.nn.BCELoss(reduction='mean')
         self.bce_logit_loss  = torch.nn.BCEWithLogitsLoss(reduction='mean')
@@ -137,9 +137,9 @@ class SimpleTrainer(BasicTrainer):
     def on_validation_epoch(self, epoch, bar):
         _bar = tq(enumerate(zip(self.data_vld_loader,self.lat_vld_loader)),
         position=1, leave=False, desc='valid.', total=len(self.data_vld_loader))
-        for idx, (batch_data, batch_data) in _bar:
+        for idx, (batch_data, batch_latent) in _bar:
             y,*others      = batch_data
-            zyy,zyx,*others= batch_data
+            zyy,zyx,*others= batch_latent
             y          = y.to(app.DEVICE, non_blocking   = True)
             zyy, zyx   = zyy.to(app.DEVICE, non_blocking = True), zyx.to(app.DEVICE, non_blocking = True)
             
@@ -174,7 +174,7 @@ class SimpleTrainer(BasicTrainer):
                 bar.set_postfix(status='saving accuracy and images ... ')
 
                 figure_histo_z,figure_histo_y = get_histogram(Fy=self.gen_agent.Fy, 
-                Gy = self.gen_agent.Gy, trn_set = self.data_vld_loader)
+                Gy = self.gen_agent.Gy, trn_set = (self.data_tst_loader, self.lat_tst_loader))
                 bar.set_postfix(status='saving z distribution ...')
                 self.validation_writer.add_figure('z Histogram', figure_histo_z)
                 bar.set_postfix(status='saving y distribution ...')

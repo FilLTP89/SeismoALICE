@@ -15,7 +15,7 @@ class Discriminators(Agent):
 
         self.rlr = self.opt.config["hparams"]['discriminators.lr']
         self.weight_decay = self.opt.config["hparams"]['discriminators.weight_decay']
-        breakpoint()
+        
         # self.Dy     = accel(network.DCGAN_Dx( self.opt.config['Dy'],  self.opt,model_name='Dy')).cuda()
         # self.Dyy    = accel(network.DCGAN_Dx(self.opt.config['Dyy'], self.opt,model_name='Dyy')).cuda()
         # self.Dyz    = accel(network.DCGAN_DXZ(self.opt.config['Dyz'], self.opt,model_name='Dyz')).cuda()
@@ -50,7 +50,7 @@ class Discriminators(Agent):
 
         writer_dsy.add_graph(next(iter(self.Dsy.children())),torch.randn(10,3,4096).cuda())
         # writer_dyy.add_graph(next(iter(self.Dyy.children())),torch.randn(10,6,4096).cuda())
-        writer_dszb.add_graph(next(iter(self.Dszb.children())),torch.randn(10,32,128).cuda())
+        writer_dszb.add_graph(next(iter(self.Dszb.children())),torch.randn(10,1,1024).cuda())
         # writer_dzzb.add_graph(next(iter(self.Dzzb.children())), torch.randn(10,8,128).cuda())
         # writer_dyz.add_graph(next(iter(self.Dyz.children())), torch.randn(10,2,512).cuda())
     

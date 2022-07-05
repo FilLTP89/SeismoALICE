@@ -747,22 +747,40 @@ def plot_generate_hybrid(Qec,Pdc,Ghz,dev,vtm,trn_set,pfx='hybrid',outf='./imgs')
 def plot_distribution(tag,calc,tar, lim=[-5,5],bins = 20,save=False, number=3):
     calc = calc.cpu().data.numpy().copy()
     tar  = tar.cpu().data.numpy().copy()
-
+    
     _, v_size, *others = calc.shape
     number = v_size if number>=v_size else number
-    plt.figure(figsize=(6,int(number*3)))
-    fig, ax = plt.subplots(1, number)
-    for i in range(number):
-        ax[i].hist(calc[0,i,:], bins=bins, density=True, label='calc',fc=(0.8, 0, 0, 1))
-        ax[i].hist(tar[0,i,:], bins=bins, density=True, label='tar',fc=(1., 0.8, 0, 0.5))
-        ax[i].legend(loc = "upper right",frameon=False)
-        ax[i].set_xlim(lim)
-        ax[i].set_ylim([0,1.])
-        ax[i].set_xlabel(f'{tag}[{i}]')
 
-    if save:
-        plt.savefig(f'{tag}.png')
-    return fig
+    def _plot_many_hist():
+        plt.figure(figsize=(6,int(number*3)))
+        fig, ax = plt.subplots(1, number)
+        for i in range(number):
+            ax[i].hist(calc[0,i,:], bins=bins, density=True, label='calc',fc=(0.8, 0, 0, 1))
+            ax[i].hist(tar[0,i,:], bins=bins, density=True, label='tar',fc=(1., 0.8, 0, 0.5))
+            ax[i].legend(loc = "upper right",frameon=False)
+            ax[i].set_xlim(lim)
+            ax[i].set_ylim([0,1.])
+            ax[i].set_xlabel(f'{tag}[{i}]')
+        if save:
+            plt.savefig(f'{tag}.png')
+        return fig
+    
+    def _plot_single_hist():
+        fig = plt.figure(figsize=(6,8))
+        plt.hist(calc[0,0,:], bins=bins, density=True, label='calc',fc=(0.8, 0, 0, 1))
+        plt.hist(tar[0,0,:], bins=bins, density=True, label='tar',fc=(1., 0.8, 0, 0.5))
+        plt.legend(loc = "upper right",frameon=False)
+        plt.xlim(lim)
+        plt.ylim([0,1.])
+        plt.xlabel(f'{tag}')
+        if save:
+            plt.savefig(f'{tag}.png')
+        return fig
+    
+    if v_size == 1: 
+        return _plot_single_hist()
+    else:
+        return _plot_many_hist()
 
 def plot_spatial_rep(tag, z,index, save=False):
     z = z.cpu().data.numpy().copy()
@@ -780,11 +798,11 @@ def get_histogram(Fy, Gy, trn_set):
     Fy.eval(),Gy.eval()
     fig_latent = []
     fig_data  = []
-    data_vld_loader = trn_set
-    for b, batch_data in enumerate(data_vld_loader):
+    data_tst_loader, lat_tst_loader  = trn_set
+    for b, (batch_data, batch_latent)in enumerate(zip(data_tst_loader,lat_tst_loader)):
         y, *others  = batch_data
+        zyy,*others = batch_latent
         y           = y.to(app.DEVICE, non_blocking = True)
-        zyy,*others = generate_latent_variable_3D(batch_size=len(y))
         zyy         = zyy.to(app.DEVICE, non_blocking = True)
         wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std': 1.0})
         zyy_cal     = Fy(zcat(y,wny))
