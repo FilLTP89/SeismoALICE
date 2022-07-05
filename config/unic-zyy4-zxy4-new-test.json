@@ -10,15 +10,15 @@
         "test_epochs":5
     },
     "log_dir":{
-        "train_writer":"./runs_both/renew/wgan/bbt4043ad2/training/",
-        "valid_writer":"./runs_both/renew/wgan/bbt4043ad2/validation/",
-        "debug_writer":"./runs_both/renew/wgan/bbt4043ad2/debug/",
-        "debug.losses_writer":"./runs_both/renew/wgan/bbt4043ad2/losses/",
-        "debug.gradients_writer":"./runs_both/renew/wgan/bbt4043ad2/gradients/",
-        "debug.encoder_writer":"./runs_both/renew/wgan/bbt4043ad2/net/encoder",
-        "debug.decoder_writer":"./runs_both/renew/wgan/bbt4043ad2/net/decoder",
-        "debug.dsy_writer":"./runs_both/renew/wgan/bbt4043ad2/net/dsy/",
-        "debug.dszb_writer":"./runs_both/renew/wgan/bbt4043ad2/net/dszb"
+        "train_writer":"./runs_both/renew/wgan/bbt7a02111/training/",
+        "valid_writer":"./runs_both/renew/wgan/bbt7a02111/validation/",
+        "debug_writer":"./runs_both/renew/wgan/bbt7a02111/debug/",
+        "debug.losses_writer":"./runs_both/renew/wgan/bbt7a02111/losses/",
+        "debug.gradients_writer":"./runs_both/renew/wgan/bbt7a02111/gradients/",
+        "debug.encoder_writer":"./runs_both/renew/wgan/bbt7a02111/net/encoder",
+        "debug.decoder_writer":"./runs_both/renew/wgan/bbt7a02111/net/decoder",
+        "debug.dsy_writer":"./runs_both/renew/wgan/bbt7a02111/net/dsy/",
+        "debug.dszb_writer":"./runs_both/renew/wgan/bbt7a02111/net/dszb"
     },
      "F":{
         "nlayers"   :5, 

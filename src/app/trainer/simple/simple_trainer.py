@@ -114,10 +114,11 @@ class SimpleTrainer(BasicTrainer):
         for idx, batch_data  in _bar:
             y, *others = batch_data
             y          = y.to(app.DEVICE,non_blocking=True)
-            zyx,zyy,*others = generate_latent_variable_3D(batch_size=len(y))
-            zyx,zyy    = zyx.to(app.DEVICE,non_blocking=True),zyy.to(app.DEVICE,non_blocking=True)
+           
+            zyy,zyx,*others = generate_latent_variable_3D(batch_size=len(y))
+            zyy,zyx    = zyy.to(app.DEVICE,non_blocking=True),zyx.to(app.DEVICE,non_blocking=True)
             
-            pack = patch(y=y,zyy=zyy,zyx=zyx)
+            pack = patch(y=y,zyy=zyy,zyx=zyx, x=None)
             self.train_discriminators(ncritics=1, batch=pack,epoch=epoch, 
                 modality='train',net_mode=['eval','train'])
             self.train_generators(ncritics=1, batch=pack, epoch=epoch, 
@@ -136,9 +137,9 @@ class SimpleTrainer(BasicTrainer):
         for idx, batch_data in _bar:
             y, *others = batch_data
             y          = y.to(app.DEVICE, non_blocking   = True)
-            zyx, zyy,*others = generate_latent_variable_3D(batch_size=len(y))
-            zyx, zyy   = zyx.to(app.DEVICE, non_blocking = True), zyy.to(app.DEVICE, non_blocking = True)
-  
+            zyy, zyx,*others = generate_latent_variable_3D(batch_size=len(y))
+            zyy, zyx   = zyy.to(app.DEVICE, non_blocking = True), zyx.to(app.DEVICE, non_blocking = True)
+            
             pack = patch(y=y,zyy=zyy,zyx=zyx)
             self.train_discriminators(batch=pack,epoch=epoch, 
                         modality='eval',net_mode=['eval','eval'])

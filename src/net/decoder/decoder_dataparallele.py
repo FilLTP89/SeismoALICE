@@ -12,7 +12,7 @@ import copy
 from conv.dconv.dconv import Transpose_DConv_62
 from conv.oct_conv.oct_conv import OctaveBatchNormActivation
 from conv.oct_conv.oct_conv import OctaveTransposedConv
-from conv.resnet.convblock import ResidualBlock
+from common.common_nn import ResidualBlock
 
 
 
@@ -88,7 +88,7 @@ class Decoder(BasicDecoderDataParallel):
     """docstring for Decoder"""
     def __init__(self,ngpu,nz,nch,ndf,nly,channel,act, config, extra, dconv = "",\
                  ker=7,std=4,pad=0,opd=0,dil=1,grp=1,dpc=0.10,limit = 256, bn=True, path='',
-                 n_extra_layers=0,*args, **kwargs):
+                 n_extra_layers=1,*args, **kwargs):
         super(Decoder, self).__init__(*args, **kwargs)
         self.ngpu = ngpu
         self.gang = range(self.ngpu)
@@ -105,7 +105,7 @@ class Decoder(BasicDecoderDataParallel):
         
         if dconv:
             _dconv = Transpose_DConv_62(last_channel=channel[-1], bn = True, dpc = 0.0).network()
-
+        
         # Adding dense hidden layer 
         for i in range(1, nly+1):
             _dpc = 0.0 if i ==nly else dpc
@@ -113,14 +113,15 @@ class Decoder(BasicDecoderDataParallel):
             bias = False
             self.cnn1 += cnn1dt(channel[i-1],channel[i], acts[i-1],ker=ker[i-1],std=std[i-1],pad=pad[i-1],\
                 dil=dil[i-1], opd=opd[i-1], bn=_bn,dpc=_dpc,bias=bias)
-
-        for i in range(0,n_extra_layers):
-            self.cnn1 += [ResidualBlock(channel[-1], activation_function='relu')]
+        
+            for _ in range(0,n_extra_layers):
+                self.cnn1 += [ResidualBlock(in_channels=channel[i-1], out_channels=channel[i],activation='relu')]
         
         if dconv:
             self.cnn1  =  self.cnn1 + _dconv
 
         # self.cnn1 += [nn.BatchNorm1d(channel[-1])]
+        
         self.cnn1  = sqn(*self.cnn1)
         if path: 
             self.cnn1[-1] = self.model

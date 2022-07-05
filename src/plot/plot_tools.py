@@ -744,13 +744,15 @@ def plot_generate_hybrid(Qec,Pdc,Ghz,dev,vtm,trn_set,pfx='hybrid',outf='./imgs')
 #             cnt += 1
 
             # filtered signals
-def plot_distribution(tag,calc,tar, lim=[-5,5],bins = 20,save=False):
+def plot_distribution(tag,calc,tar, lim=[-5,5],bins = 20,save=False, number=3):
     calc = calc.cpu().data.numpy().copy()
     tar  = tar.cpu().data.numpy().copy()
+
     _, v_size, *others = calc.shape
-    plt.figure(figsize=(int(v_size*3),6))
-    fig, ax = plt.subplots(1, v_size)
-    for i in range(v_size):
+    number = v_size if number>=v_size else number
+    plt.figure(figsize=(6,int(number*3)))
+    fig, ax = plt.subplots(1, number)
+    for i in range(number):
         ax[i].hist(calc[0,i,:], bins=bins, density=True, label='calc',fc=(0.8, 0, 0, 1))
         ax[i].hist(tar[0,i,:], bins=bins, density=True, label='tar',fc=(1., 0.8, 0, 0.5))
         ax[i].legend(loc = "upper right",frameon=False)
@@ -782,13 +784,13 @@ def get_histogram(Fy, Gy, trn_set):
     for b, batch_data in enumerate(data_vld_loader):
         y, *others  = batch_data
         y           = y.to(app.DEVICE, non_blocking = True)
-        zyx, zyy,*others = generate_latent_variable_3D(batch_size=len(y))
-        zyx, zyy    = zyx.to(app.DEVICE, non_blocking = True), zyy.to(app.DEVICE, non_blocking = True)
+        zyy,*others = generate_latent_variable_3D(batch_size=len(y))
+        zyy         = zyy.to(app.DEVICE, non_blocking = True)
         wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std': 1.0})
         zyy_cal     = Fy(zcat(y,wny))
         y_cal       = Gy(zyy)
         fig_latent.append(plot_distribution(tag='zd',calc=zyy_cal,tar=zyy,lim=[-5,5], bins=10))
-        fig_data.append(plot_distribution(tag='y',calc=y_cal, tar=y, lim=[-1.20,1.20], bins=50))
+        fig_data.append(plot_distribution(tag='y',calc=y_cal, tar=y, lim=[-1.20,1.20], bins=50, number=4))
         
     return fig_latent, fig_data
 
@@ -965,7 +967,7 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
                 xt_data.data = xt_data[index[mask]]
                 # xf_data.data = xf_data[index[mask]]
                 # zt_data.data = zt_data[index[mask]]
-
+            
             Xt = Variable(xt_data).to(dev, non_blocking=True)
             # Xf = Variable(xf_data).to(dev, non_blocking=True)
             # zt = Variable(zt_data).to(dev, non_blocking=True)        

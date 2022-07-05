@@ -320,6 +320,7 @@ class ResConvBlock(Module):
 class ResidualBlock(Module):
     def __init__(self, in_channels, out_channels, activation='relu'):
         super(ResidualBlock,self).__init__()
+        
         self.in_channels = in_channels,
         self.out_channels = out_channels
         self.activation = activation
@@ -337,7 +338,6 @@ class ResidualBlock(Module):
         x = self.activate(x)
         return x
 
-
     def activation_function(self, activation):
         return  nn.ModuleDict([
             ['relu', nn.ReLU(inplace=True)],
@@ -345,6 +345,7 @@ class ResidualBlock(Module):
             ['selu', nn.SELU(inplace=True)],
             ['none', nn.Identity()]
         ])[activation]
+    
     @property
     def should_apply_shortcut(self):
         return self.in_channels != self.out_channels
@@ -419,9 +420,9 @@ def patch(y,zyy,zyx, x = None):
         y.data = y[index[mask]]
         if x is not None:
             x.data = x[index[mask]]
-        zyx.data, zyy.data  = zyx[index[mask]],zyy[index[mask]]
+        zyy.data, zyx.data  = zyy[index[mask]],zyx[index[mask]]
     if x == None:
-            return y,zyy,zyx
+        return y,zyy,zyx
     return y, x, zyy, zyx
         
 def penalty(loss,params,typ,lam=1.e-5):
@@ -518,7 +519,7 @@ def tie_weights(m):
         except: 
             pass
 
-def generate_latent_variable_3D(batch_size, nch_zd=4, nch_zf = 4, nzd=128, nzf = 128,std=1):
+def generate_latent_variable_3D(batch_size, nch_zd=32, nch_zf = 4, nzd=128, nzf = 128,std=1):
         zyy  = torch.zeros([batch_size,nch_zd,nzd]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
         zxx  = torch.zeros([batch_size,nch_zd,nzd]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
         zyx  = torch.zeros([batch_size,nch_zf,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
