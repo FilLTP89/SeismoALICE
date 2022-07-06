@@ -51,7 +51,7 @@ class ALICE(SimpleTrainer):
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
             
             # 1. We Generate conditional samples
-            wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+            wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,app.NOISE)
             zd_inp      = zcat(zxy,zyy)
             y_inp       = zcat(y,wny) 
             y_gen       = self.gen_agent.Gy(zxy,zyy)
@@ -63,7 +63,7 @@ class ALICE(SimpleTrainer):
                              self.bce_logit_loss(Dfake_yz,o0l(Dfake_yz))
 
             # 2. Reconstruction of signal distributions
-            wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+            wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,app.NOISE)
             y_gen       = zcat(y_gen,wny)
             y_rec       = self.gen_agent.Gy(zyx_F, zyy_F)
 
@@ -82,11 +82,11 @@ class ALICE(SimpleTrainer):
             Dloss               = Dloss_ali_y + Dloss_cross_entropy
             
             if modality == 'train':
+                zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
                 Dloss.backward(retain_graph=True)
                 self.disc_agent.optimizer.step()
                 self.disc_agent.track_gradient(epoch)
-                zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
-
+                
             self.losses_disc['epochs'       ] = epoch
             self.losses_disc['modality'     ] = modality
             self.losses_disc['Dloss'        ] = Dloss.tolist()
@@ -114,7 +114,7 @@ class ALICE(SimpleTrainer):
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
             
             # 1. We Generate conditional samples
-            wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+            wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,app.NOISE)
             zd_inp      = zcat(zxy,zyy)
             y_inp       = zcat(y,wny)
 
@@ -127,7 +127,7 @@ class ALICE(SimpleTrainer):
                          self.bce_logit_loss(Dfake_yz,o0l(Dfake_yz))
 
             # 2. Reconstruction of signal distributions
-            wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+            wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,app.NOISE)
             y_gen       = zcat(y_gen,wny)
             y_rec       = self.gen_agent.Gy(zyx_F, zyy_F)
 
@@ -148,10 +148,11 @@ class ALICE(SimpleTrainer):
             Gloss               = Gloss_ali_y + Gloss_cross_entropy + Gloss_rec
             
             if modality == 'train':
+                zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
                 Gloss.backward()
                 self.gen_agent.optimizer.step()
                 self.gen_agent.track_gradient(epoch)
-                zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
+                
             
             self.losses_gens['epochs'       ] = epoch
             self.losses_gens['modality'     ] = modality

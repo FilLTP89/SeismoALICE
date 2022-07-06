@@ -34,7 +34,6 @@ class SimpleTrainer(BasicTrainer):
         globals().update(opt.__dict__)
 
         self.cv         = cv
-        self.std        = 1.0
         self.trial      = trial
         self.strategy   = strategy
         self.opt        = opt

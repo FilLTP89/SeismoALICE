@@ -209,16 +209,16 @@ def plot_compare_ann2bb(Qec,Pfc,Qdc,Pdc,Fhz,Ghz,dev,vtm,trn_set,pfx='hybrid',out
         Xm = Variable(xm_data).to(dev)
         zd = Variable(zd_data).to(dev)
         zf = Variable(zf_data).to(dev)
-        wnxd,wnzd,_ = noise_generator(Xd.shape,zd.shape,dev,app.RNDM_ARGS)
-        wnxf,wnzf,_ = noise_generator(Xf.shape,zf.shape,dev,app.RNDM_ARGS)
-        _,wnzc,_ = noise_generator(Xd.shape,zd.shape,dev,app.RNDM_ARGS)
-        _,wnzb,_ = noise_generator(Xf.shape,zf.shape,dev,app.RNDM_ARGS)
+        wnxd,wnzd,_ = noise_generator(Xd.shape,zd.shape,dev,app.NOISE)
+        wnxf,wnzf,_ = noise_generator(Xf.shape,zf.shape,dev,app.NOISE)
+        _,wnzc,_ = noise_generator(Xd.shape,zd.shape,dev,app.NOISE)
+        _,wnzb,_ = noise_generator(Xf.shape,zf.shape,dev,app.NOISE)
 
         Xf_inp = zcat(Xf,wnxf)
         zff = Qec(Xf_inp)
         zdr = Ghz(zcat(zff,wnzb))
-        _,wnzd,_ = noise_generator(Xd.shape,zd.shape,dev,app.RNDM_ARGS)
-        _,wnzf,_ = noise_generator(Xf.shape,zf.shape,dev,app.RNDM_ARGS)
+        _,wnzd,_ = noise_generator(Xd.shape,zd.shape,dev,app.NOISE)
+        _,wnzf,_ = noise_generator(Xf.shape,zf.shape,dev,app.NOISE)
         Xr = Pdc(zcat(zdr,wnzd))
 
         Xd_fsa = tfft(Xd,vtm[1]-vtm[0]).cpu().data.numpy().copy()
@@ -400,10 +400,10 @@ def plot_generate_hybrid_new(Qec,Pfc,Qdc,Pdc,Fhz,Ghz,dev,vtm,trn_set,opt,pfx='hy
         Xf = Variable(xf_data).to(dev)
         zd = Variable(zd_data).to(dev)
         zf = Variable(zf_data).to(dev)
-        wnxd,wnzd,_ = noise_generator(Xd.shape,zd.shape,dev,app.RNDM_ARGS)
-        wnxf,wnzf,_ = noise_generator(Xf.shape,zf.shape,dev,app.RNDM_ARGS)
-        _,wnzc,_ = noise_generator(Xd.shape,zd.shape,dev,app.RNDM_ARGS)
-        _,wnzb,_ = noise_generator(Xf.shape,zf.shape,dev,app.RNDM_ARGS)
+        wnxd,wnzd,_ = noise_generator(Xd.shape,zd.shape,dev,app.NOISE)
+        wnxf,wnzf,_ = noise_generator(Xf.shape,zf.shape,dev,app.NOISE)
+        _,wnzc,_ = noise_generator(Xd.shape,zd.shape,dev,app.NOISE)
+        _,wnzb,_ = noise_generator(Xf.shape,zf.shape,dev,app.NOISE)
 
         #Xf_inp = zcat(Xf,wnxf)
         #Xd_inp = zcat(Xd,wnxd)
@@ -426,8 +426,8 @@ def plot_generate_hybrid_new(Qec,Pfc,Qdc,Pdc,Fhz,Ghz,dev,vtm,trn_set,opt,pfx='hy
         zdr = Ghz(zcat(zff,wnzb))
         zfr = Fhz(zcat(zdd,wnzd))
 
-        _,wnzd,_ = noise_generator(Xd.shape,zd.shape,dev,app.RNDM_ARGS)
-        _,wnzf,_ = noise_generator(Xf.shape,zf.shape,dev,app.RNDM_ARGS)
+        _,wnzd,_ = noise_generator(Xd.shape,zd.shape,dev,app.NOISE)
+        _,wnzf,_ = noise_generator(Xf.shape,zf.shape,dev,app.NOISE)
         Xfr = Pfc(zcat(zfr,wnzf))
         Xdr = Pdc(zcat(zdr,wnzd))
         
@@ -538,8 +538,8 @@ def plot_generate_hybrid(Qec,Pdc,Ghz,dev,vtm,trn_set,pfx='hybrid',outf='./imgs')
         Xf = Variable(xf_data).to(dev)
         zd = Variable(zd_data).to(dev)
         zf = Variable(zf_data).to(dev)
-        wnxd,wnzd,_ = noise_generator(Xd.shape,zd.shape,dev,app.RNDM_ARGS)
-        wnxf,wnzf,_ = noise_generator(Xf.shape,zf.shape,dev,app.RNDM_ARGS)
+        wnxd,wnzd,_ = noise_generator(Xd.shape,zd.shape,dev,app.NOISE)
+        wnxf,wnzf,_ = noise_generator(Xf.shape,zf.shape,dev,app.NOISE)
         X_inp = zcat(Xf,wnxf)
         zfr = Qec(X_inp)
         zdr = Ghz(zcat(zfr,wnzf))
@@ -804,7 +804,7 @@ def get_histogram(Fy, Gy, trn_set):
         zyy,*others = batch_latent
         y           = y.to(app.DEVICE, non_blocking = True)
         zyy         = zyy.to(app.DEVICE, non_blocking = True)
-        wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std': 1.0})
+        wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,app.NOISE)
         zyy_cal     = Fy(zcat(y,wny))
         y_cal       = Gy(zyy)
         fig_latent.append(plot_distribution(tag='zd',calc=zyy_cal,tar=zyy,lim=[-5,5], bins=10))
@@ -820,7 +820,7 @@ def get_latent_rep(Fy, Gy, trn_set):
         y           = y.to(app.DEVICE)
         if b>=1:
             break
-        wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std': 1.0})
+        wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,app.NOISE)
         zyy, zxy    =  Fy(zcat(y,wny))
         fig.append(plot_spatial_rep(tag='zhf z0/z1',z=zyy,index = [0,1]))
         # fig.append(plot_spatial_rep(tag='zhf z0/z2',z=zyy,index = [0,2]))
@@ -872,7 +872,7 @@ def visualize_unic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',out
         Xt = Variable(xt_data).to(dev, non_blocking=True)
         Xf = Variable(xf_data).to(dev, non_blocking=True)
         zt = Variable(zt_data).to(dev, non_blocking=True)
-        random_args = {'mean': 0., 'std': 1.0}
+        random_args = {'mean': 0., 'std': 0.01}
         wnx,*others = noise_generator(Xt.shape,zt.shape,dev,random_args)
         X_inp = zcat(Xt,wnx)
         zy,zdf_gen,*other =  Qec(X_inp)
@@ -953,7 +953,7 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
     dev = app.DEVICE
     Qec.eval(), Pdc.eval()
     Qec.to(dev),Pdc.to(dev)
-    random_args = {'mean':0., 'std':1.0}
+    
 
     EG  = []
     PG  = []
@@ -990,7 +990,7 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             # Xf = Variable(xf_data).to(dev, non_blocking=True)
             # zt = Variable(zt_data).to(dev, non_blocking=True)        
             nch, nz         = 1,1024
-            wnx,wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
+            wnx,wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],app.DEVICE,app.NOISE)
 
             X_inp = zcat(Xt,wnx)
             zy =  Qec(X_inp)
@@ -1019,10 +1019,6 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
                 cnt+=1
 
     elif 'filtered' in tag:
-        if std is None:
-            random_args = {'mean':0.,'std': 1.0}
-        else:
-            random_args = {'mean': 0., 'std': std}
         for _,batch in enumerate(trn_set):
             # _,xf_data,_,zf_data,_,_,_,*other = batch
             # xt_data,xf_data,zt_data,zf_data,_,_,_,*other = batch
@@ -1044,8 +1040,8 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             Xf = Variable(xf_data).to(dev, non_blocking=True)
             # zf = Variable(zf_data).to(dev, non_blocking=True)
             
-            nch_zf, nzf     =  8,128
-            wnx,*others = noise_generator(Xf.shape,[Xf.shape[0],nch_zf,nzf],dev,random_args)
+            nch_zf, nzf =  8,128
+            wnx,*others = noise_generator(Xf.shape,[Xf.shape[0],nch_zf,nzf],app.DEVICE,app.NOISE)
             
             X_inp = zcat(Xf,wnx)
             zhf_gen,zfd_gen,*other = Qec(X_inp)
@@ -1070,12 +1066,6 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
                     st2_isref=True,a=10.,k=1))
                 cnt+=1
     elif tag=='hybrid':
-        if std is None:
-            random_args = {'mean':0., 'std':1.0}
-        else:
-            random_args = {'mean':0., 'std':std}
-        # pass
-
         for _,batch in enumerate(trn_set):
             #_,xt_data,zt_data,_,_,_,_ = batch
             app.logger.debug("Plotting signals ...")
@@ -1103,15 +1093,15 @@ def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./i
             # zt = Variable(zt_data).to(dev, non_blocking=True)
 
             nch, nz = 4,128
-            wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
+            wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],app.DEVICE,app.NOISE)
             # encoder filtered signals
             Xf_inp  = zcat(Xf,wnx)
             zhf_gen, zdf_gen, *other = Qec(Xf_inp)
             # decoder passing guassian noise as hf 
-            wn = torch.empty(zhf_gen.shape).normal_(**app.RNDM_ARGS).to(dev)
+            wn = torch.empty(zhf_gen.shape).normal_(**app.NOISE).to(dev)
             _Xr     = Pdc(zdf_gen,wn)
             # encoder 
-            wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
+            wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],app.NOISE,app.NOISE)
             z2, z1  = Qec(zcat(_Xr,wnx))
             # decode and extracting signals
             Xr      = Pdc(z1,o0l(z2))
@@ -1157,12 +1147,12 @@ def plot_of_fake_broadband_signal(Fyx,Gy,vld_loader,dataroot):
         Xf = xf_data.to(app.DEVICE)
         # Xd = Xd.to(app.DEVICE)
         # Extraction of low frequency signal
-        wnx,*others = noise_generator(Xf.shape,Xf.shape,app.DEVICE,{'mean':0., 'std':1.0})
+        wnx,*others = noise_generator(Xf.shape,Xf.shape,app.DEVICE,app.NOISE)
         Xf_inp = zcat(Xf,wnx)
         _, zLF = Fyx(Xf_inp)
         # zHF,_ = self.Fyx(zcat(Xd,wnx))
         nch, nz = 4,128
-        wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**{'mean':0., 'std':1.0}).to(app.DEVICE)
+        wn = torch.empty([Xf.shape[0],nch,nz]).normal_(**app.NOISE).to(app.DEVICE)
         Xr = Gy(zLF,wn)
 
         cnt = 0
@@ -1272,9 +1262,9 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 break
             # zt_shape = [zt.shape[0], 16]
             # zt = torch.randn(*zt_shape).to(dev, non_blocking = True)
-            random_args = {'mean':0.,'std': 1.0}
+            
             nch, nz         = 4,128
-            wnx,*others = noise_generator(Xt.shape,Xt.shape,dev,random_args)
+            wnx,*others = noise_generator(Xt.shape,Xt.shape,app.DEVICE,app.NOISE)
 
             X_inp = zcat(Xt,wnx)
             zy =  Qec(X_inp)
@@ -1397,23 +1387,22 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             
     elif 'filtered' in tag:
         rndm_args = {'mean': 0., 'std': 1.0} if std == None else {'mean':0., 'std':std}
-        for _,(batch_data, batch_latent) in enumerate(zip(data_tst_loader, lat_tst_loader)):
+        for _,batch_data in enumerate(data_tst_loader):
             # _,xf_data,_,zf_data,_,_,_,*other = batch
             # xt_data,xf_data,zt_data,zf_data,_,_,_,*other = batch
             xt_data,xf_data,*other = batch_data
             zyx, zyy               = batch_latent
             # _,xf_data,zf_data,*other = batch
             # tweaked value
-            Xt = Variable(xt_data).to(dev, non_blocking=True)
-            Xf = Variable(xf_data).to(dev, non_blocking=True)
+            Xt = Variable(xt_data).to(app.DEVICE, non_blocking=True)
+            Xf = Variable(xf_data).to(app.DEVICE, non_blocking=True)
             # zf = Variable(zf_data).to(dev, non_blocking=True)
 
             if cnt == 3 and not save == False:
                 break
 
             nch_zf, nzf     =  8,128
-            random_args = {'mean':0.,'std': 1.0}
-            wnx,*others = noise_generator(Xf.shape,[Xf.shape[0],nch_zf,nzf],dev,random_args)
+            wnx,*others = noise_generator(Xf.shape,[Xf.shape[0],nch_zf,nzf],app.DEVICE,app.NOISE)
             X_inp = zcat(Xf,wnx)
             zx,zfd_gen,*other = Qec(X_inp)
             Xr = Pdc(zfd_gen,o0l(zx))
@@ -1483,13 +1472,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
                 plot_eg_pg(EG,PG, outf,pfx)
 
     elif tag=='hybrid':
-        if std is None:
-            random_args = {'mean':0., 'std':1.0}
-        else:
-            random_args = {'mean':0., 'std':std}
-        # pass
-
-        for _,(batch_data, batch_latent) in enumerate(zip(data_tst_loader, lat_tst_loader)):
+        for _,batch_data, in enumerate(data_tst_loader):
             #_,xt_data,zt_data,_,_,_,_ = batch
             app.logger.debug("Plotting signals ...")
 
@@ -1514,16 +1497,14 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             # breakpoint()
             Xt  = Variable(xf_data).to(dev, non_blocking=True)
             Xf  = Variable(xf_data).to(dev, non_blocking=True)
-            zyy = Variable(zyy).to(dev, non_blocking=True)
-            zyx = Variable(zyx).to(dev, non_blocking=True)
             # zt = Variable(zt_data).to(dev, non_blocking=True)
             nch, nz = 4,128
-            wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
+            wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],app.DEVICE,app.NOISE)
             Xf_inp  = zcat(Xf,wnx)
             zhf_gen, zdf_gen, *other = Qec(Xf_inp)
-            wn = torch.empty(zhf_gen.shape).normal_(**app.RNDM_ARGS).to(dev)
+            wn = torch.empty(zhf_gen.shape).normal_(**app.NOISE).to(dev)
             _Xr     = Pdc(zdf_gen,wn)
-            wnx,wnz,*others = noise_generator(Xt.shape,zhf_gen.shape,dev,random_args)
+            wnx,wnz,*others = noise_generator(Xt.shape,zhf_gen.shape,app.DEVICE,app.NOISE)
             z2, z1  = Qec(zcat(_Xr,wnx))
             if 'hack' in pfx:
                 zhf = wnz
@@ -1657,7 +1638,7 @@ def plot_gofs(tag,Fef,Gdf,Fed,Gdd,Fhz,Ghz,dev,vtm,trn_set,
             Xd = Variable(xd_data).to(dev)
             Xd.data[np.where(tnan(Xd).cpu().data.numpy())]=0.0
             zd = Variable(zd_data).to(dev)
-            wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,app.RNDM_ARGS)
+            wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,app.NOISE)
             X_inp = zcat(Xd,wnx)
             zdr = Fed(X_inp)
             #if tnan(zdr).any():
@@ -1693,7 +1674,7 @@ def plot_gofs(tag,Fef,Gdf,Fed,Gdd,Fhz,Ghz,dev,vtm,trn_set,
             Xd = Variable(xd_data).to(dev)
             Xd.data[np.where(tnan(Xd).cpu().data.numpy())]=0.0
             zd = Variable(zd_data).to(dev)
-            wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,app.RNDM_ARGS)
+            wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,app.NOISE)
             X_inp = zcat(Xd,wnx)
             zdr = Fef(X_inp)
             #if tnan(zdr).any():
@@ -1731,7 +1712,7 @@ def plot_gofs(tag,Fef,Gdf,Fed,Gdd,Fhz,Ghz,dev,vtm,trn_set,
             Xf = Variable(xf_data).to(dev)
             Xf.data[np.where(tnan(Xf).cpu().data.numpy())]=0.0
             zf = Variable(zf_data).to(dev)
-            wnxd,wnzd,wn1 = noise_generator(Xd.shape,zd.shape,dev,app.RNDM_ARGS)
+            wnxd,wnzd,wn1 = noise_generator(Xd.shape,zd.shape,dev,app.NOISE)
             X_inp = zcat(Xd,wnxd)
             zdr = Fed(X_inp)
             #if tnan(zdr).any():
@@ -1743,8 +1724,8 @@ def plot_gofs(tag,Fef,Gdf,Fed,Gdd,Fhz,Ghz,dev,vtm,trn_set,
             Xd = Xd.cpu().data.numpy().copy()
             Xr = Xr.cpu().data.numpy().copy()
             
-            _,wnzd,_ = noise_generator(Xd.shape,zd.shape,dev,app.RNDM_ARGS)
-            wnxf,wnzf,_ = noise_generator(Xf.shape,zf.shape,dev,app.RNDM_ARGS)
+            _,wnzd,_ = noise_generator(Xd.shape,zd.shape,dev,app.NOISE)
+            wnxf,wnzf,_ = noise_generator(Xf.shape,zf.shape,dev,app.NOISE)
             Xf_inp = zcat(Xf,wnxf)
             zff = Fef(Xf_inp)
             #if tnan(zff).any():
@@ -1806,8 +1787,8 @@ def plot_gofs(tag,Fef,Gdf,Fed,Gdd,Fhz,Ghz,dev,vtm,trn_set,
             Xf.data[np.where(tnan(Xf).cpu().data.numpy())]=0.0
             zf = Variable(zf_data).to(dev)
 
-            _,wnzd,_ = noise_generator(Xd.shape,zd.shape,dev,app.RNDM_ARGS)
-            wnxf,wnzf,_ = noise_generator(Xf.shape,zf.shape,dev,app.RNDM_ARGS)
+            _,wnzd,_ = noise_generator(Xd.shape,zd.shape,dev,app.NOISE)
+            wnxf,wnzf,_ = noise_generator(Xf.shape,zf.shape,dev,app.NOISE)
             Xf_inp = zcat(Xf,wnxf)
             zff = Fef(Xf_inp)
             #if tnan(zff).any():
@@ -1906,13 +1887,13 @@ def plot_features(tag,Qec,Pdc,nz,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
             xd_data,xf_data,zd_data,_,_,_,_,*other = batch
             Xd = Variable(xd_data).to(dev)
             zd = Variable(zd_data).to(dev)
-            wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,app.RNDM_ARGS)
+            wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,app.NOISE)
             X_inp = zcat(Xd,wnx)
             zg = Qec(X_inp)
             
             for c in range(zd.shape[1]):
                 hfg,(hax0,hax1) = plt.subplots(2,1,figsize=(8,8))
-                _,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,app.RNDM_ARGS)
+                _,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,app.NOISE)
                 zt = torch.zeros_like(zg).detach().to(dev)
                 zt[:,c,:]=zg[:,c,:]
                 xths = Pdc(zcat(zt,wnz))
@@ -1958,7 +1939,7 @@ def plot_features(tag,Qec,Pdc,nz,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
         for c in range(1):
             c=c+15 #range(zd.shape[1]):
             hfg1,(hax3,hax4) = plt.subplots(2,1,figsize=(8,8))
-            _,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,app.RNDM_ARGS)
+            _,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,app.NOISE)
             wnz.to(dev)
             wn1.to(dev)
             for w in range(1): #range(zd.shape[2]):
@@ -2123,13 +2104,13 @@ def plot_features(tag,Qec,Pdc,nz,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
             xd_data,xf_data,zd_data,_,_,_,_,*other = batch
             Xd = Variable(xd_data).to(dev)
             zd = Variable(zd_data).to(dev)
-            wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,app.RNDM_ARGS)
+            wnx,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,app.NOISE)
             X_inp = zcat(Xd,wnx)
             zg = Qec(X_inp)
             
             for c in range(zd.shape[1]):
                 hfg,(hax0,hax1) = plt.subplots(2,1,figsize=(8,8))
-                _,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,app.RNDM_ARGS)
+                _,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,app.NOISE)
                 zt = torch.zeros_like(zg).detach().to(dev)
                 zt[:,c,:]=zg[:,c,:]
                 xths = Pdc(zcat(zt,wnz))
@@ -2174,7 +2155,7 @@ def plot_features(tag,Qec,Pdc,nz,dev,vtm,trn_set,pfx='trial',outf='./imgs'):
         for c in range(1):
             c=c+5 #range(zd.shape[1]):
             hfg1,(hax3,hax4) = plt.subplots(2,1,figsize=(8,8))
-            _,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,app.RNDM_ARGS)
+            _,wnz,wn1 = noise_generator(Xd.shape,zd.shape,dev,app.NOISE)
             for w in range(1): #range(zd.shape[2]):
                 w = w +3
                 dwt = 2**5*(vtm[1]-vtm[0]) 
@@ -2430,8 +2411,8 @@ def seismo_test(tag,Fef,Gdd,Ghz,Fed,Ddxz,DsXd,Dszd,DsrXd,dev,trn_set,pfx,outf):
             Xf = Variable(xf_data).to(dev) # LF-signal
             zd = Variable(zd_data).to(dev)
             zf = Variable(zf_data).to(dev)
-            wnxd,wnzd,_ = noise_generator(Xd.shape,zd.shape,dev,app.RNDM_ARGS)
-            wnxf,wnzf,_ = noise_generator(Xf.shape,zf.shape,dev,app.RNDM_ARGS)
+            wnxd,wnzd,_ = noise_generator(Xd.shape,zd.shape,dev,app.NOISE)
+            wnxf,wnzf,_ = noise_generator(Xf.shape,zf.shape,dev,app.NOISE)
             X_inp = zcat(Xf,wnxf)
             zfr = Fef(X_inp)
             zdr = Ghz(zcat(zfr,wnzf))
@@ -2483,8 +2464,8 @@ def seismo_test(tag,Fef,Gdd,Ghz,Fed,Ddxz,DsXd,Dszd,DsrXd,dev,trn_set,pfx,outf):
             Xm = Variable(xm_data).to(dev)
             zd = Variable(zd_data).to(dev)
             zf = Variable(zf_data).to(dev)
-            wnxd,wnzd,_ = noise_generator(Xd.shape,zd.shape,dev,app.RNDM_ARGS)
-            wnxf,wnzf,_ = noise_generator(Xf.shape,zf.shape,dev,app.RNDM_ARGS)
+            wnxd,wnzd,_ = noise_generator(Xd.shape,zd.shape,dev,app.NOISE)
+            wnxf,wnzf,_ = noise_generator(Xf.shape,zf.shape,dev,app.NOISE)
             X_inp = zcat(Xf,wnxf)
             zfr = Fef(X_inp)
             zdr = Ghz(zcat(zfr,wnzf))

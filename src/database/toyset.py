@@ -12,7 +12,7 @@ class Toyset(Dataset):
     def __init__(self, time=40.96, delta_t = 0.01, nsy = 1280,
                 num_channels  = 3,latent_space  = [64,64],latent_channel= [16,32]):
         #time =
-        app.RNDM_ARGS = {'mean': 0, 'std': 1}
+        app.NOISE = {'mean': 0, 'std': 1}
         N = round(time/delta_t)
         t = np.linspace(0.,time, N)
         omega = 2*math.pi/time
@@ -27,11 +27,11 @@ class Toyset(Dataset):
         self._dataset_y = torch.empty(*[nsy,3,N])
         # self._latent_space_x = torch.empty(*[nsy,latent_channel[0],latent_space[0]])
         self._latent_space_x = torch.empty(*[nsy,latent_channel[0]])
-        self._latent_space_x = self._latent_space_x.normal_(app.RNDM_ARGS['mean'],app.RNDM_ARGS['std'])
+        self._latent_space_x = self._latent_space_x.normal_(app.NOISE['mean'],app.NOISE['std'])
 
         # self._latent_space_y = torch.empty(*[nsy,latent_channel[1],latent_space[1]])
         self._latent_space_y = torch.empty(*[nsy,latent_channel[1]])
-        self._latent_space_y = self._latent_space_y.normal_(app.RNDM_ARGS['mean'],app.RNDM_ARGS['std'])
+        self._latent_space_y = self._latent_space_y.normal_(app.NOISE['mean'],app.NOISE['std'])
 
         # for broadband
         for n in range(nsy):

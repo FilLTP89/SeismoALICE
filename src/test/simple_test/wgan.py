@@ -100,7 +100,7 @@ class WGAN(SimpleTrainer):
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
             
             # 1. We Generate conditional samples
-            wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+            wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,app.NOISE)
             zd_inp      = zyy
             y_inp       = zcat(y,wny)
 
@@ -114,7 +114,7 @@ class WGAN(SimpleTrainer):
             Gloss_wgan_zd= -(torch.mean(Dfake_zd.reshape(-1)))
 
             # 2. Reconstruction of signal distributions
-            wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+            wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,app.NOISE)
             y_gen       = zcat(y_gen,wny)
             y_rec       = self.gen_agent.Gy(zd_gen)
             zd_rec      = self.gen_agent.Fy(y_gen)
