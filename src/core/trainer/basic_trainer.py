@@ -7,7 +7,7 @@ class BasicTrainer:
     BasicTrainer for all trainer
     """
     def __init__(self, config, logger, models, losses,strategy, 
-                    actions=None,*args, **kwargs):
+                    actions=None,start_epoch=None,*args, **kwargs):
         super(BasicTrainer, self).__init__()
         self.config     = config 
         self.logger     = logger
@@ -15,15 +15,18 @@ class BasicTrainer:
         self.strategy   = strategy
         self.actions    = actions
         self.losses     = losses
-
+        breakpoint()
         self.root_checkpoint = self.config.root_checkpoint
         self.save_checkpoint = self.config.save_checkpoint
         
-        self.start_epoch = 1
-        if self.actions is not None: 
-            self.on_resuming_checkpoint()
+        self.start_epoch = 0
+        if self.actions is not None:
+            if start_epoch is not None:
+                self.start_epoch = start_epoch
+            self.on_resuming_checkpoint(self.start_epoch)
         else:
             self.logger.info("No resumed models")
+            self.start_epoch = 1
 
     @abstractmethod
     def on_training_epoch(self, epoch, *args, **kwargs):
@@ -69,22 +72,22 @@ class BasicTrainer:
                     state = {
                         'epoch'                 :epoch,
                         'model_state_dict'      :model.module.state_dict(),
-                        # 'optimizer_state_dict'  :optimizer.state_dict()
+                        'optimizer_state_dict'  :optimizer.state_dict()
                     }
                     filename = f'{self.root_checkpoint}checkpoint-{model.module.model_name}_epoch-{epoch}.pth'
                     torch.save(state, filename)
                     self.logger.debug("saving checkpoint-epoch : {}".format(filename))
 
-    def on_resuming_checkpoint(self, epoch, bar, *args, **kwargs):
-        bar.set_postfix(satus =f'loading models from {self.root_checkpoint} from {epoch}...')
+    def on_resuming_checkpoint(self, epoch, *args, **kwargs):
+        breakpoint()
+        self.logger.info(f'loading models from {self.root_checkpoint}...')
         for group_name, group_models in self.models.items():
-            bar.set_postfix(satus =f'loading models of {group_name}')
+            self.logger.info(f'loading models of {group_name} ...')
             for model, optimizer in group_models:
                 filename = f'{self.root_checkpoint}checkpoint-{model.module.model_name}_epoch-{epoch}.pth'
                 self.logger.info("Loading checkpoint-epoch : {}".format(filename))
                 checkpoint = torch.load(filename)
                 model.module.load_state_dict(checkpoint['model_state_dict'])
             # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-
         self.start_epoch = checkpoint['epoch']+1
-        self.logger.debug("Checkpoint loaded. Resume training from epoch {}".format(self.start_epoch))
+        self.logger.info("Checkpoint loaded. Resume training from epoch {}".format(self.start_epoch))

@@ -4,7 +4,7 @@ import logging
 
 DEVICE          = "cuda:0" if torch.cuda.is_available() else "cpu"
 SAVE            = True
-NOISE           = {'mean': 0., 'std': 0.01}
+NOISE           = {'mean': 0., 'std': 0.05}
 TRAIN_NOISE     = {'mean': 0., 'std': 0.01}
 PRED_NOISE      = {'mean': 0., 'std': 0.01}
 AVAIL_GPUS      = min(1, torch.cuda.device_count())

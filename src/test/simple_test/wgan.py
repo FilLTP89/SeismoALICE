@@ -39,7 +39,7 @@ class WGAN(SimpleTrainer):
         }
         super(WGAN, self).__init__(cv, trial = None,
         losses_disc = losses_disc, losses_gens = losses_gens,prob_disc   = prob_disc,
-        gradients_gens = gradients_gens, gradients_disc = gradients_disc)
+        gradients_gens = gradients_gens, gradients_disc = gradients_disc, actions=True, start_epoch=5000)
     
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,_ = batch
@@ -48,7 +48,7 @@ class WGAN(SimpleTrainer):
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
             
-            wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,{'mean':0., 'std':self.std})
+            wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,app.NOISE)
             zd_inp      = zyy
             y_inp       = zcat(y,wny) 
             

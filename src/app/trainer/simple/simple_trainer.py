@@ -89,7 +89,7 @@ class SimpleTrainer(BasicTrainer):
             settings  = self.opt, logger = self.logger, config = self.opt,
             models    = {'generators':self.gen_agent,'discriminators':self.disc_agent},
             losses    = {'generators':self.losses_disc, 'discriminators':self.losses_gens}, 
-            strategy  = self.strategy['simple'])
+            strategy  = self.strategy['simple'], *args, **kwargs)
         
         
         self.logger.info("Parameters of Generators ")
