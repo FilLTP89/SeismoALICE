@@ -50,7 +50,7 @@ class Discriminators(Agent):
 
         writer_dsy.add_graph(next(iter(self.Dsy.children())),torch.randn(10,3,4096).cuda())
         # writer_dyy.add_graph(next(iter(self.Dyy.children())),torch.randn(10,6,4096).cuda())
-        writer_dszb.add_graph(next(iter(self.Dszb.children())),torch.randn(10,1,1024).cuda())
+        writer_dszb.add_graph(next(iter(self.Dszb.children())),torch.randn(10,1,512).cuda())
         # writer_dzzb.add_graph(next(iter(self.Dzzb.children())), torch.randn(10,8,128).cuda())
         # writer_dyz.add_graph(next(iter(self.Dyz.children())), torch.randn(10,2,512).cuda())
     

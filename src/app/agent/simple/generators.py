@@ -43,4 +43,4 @@ class Generators(Agent):
         writer_encoder.add_graph(next(iter(self.Fy.children())),
                         torch.randn(10,6,4096).cuda())
         writer_decoder.add_graph(next(self.Gy.children()), 
-                        (torch.randn(10,1,1024).cuda()))
+                        (torch.randn(10,1,512).cuda()))
