@@ -18,7 +18,7 @@ import importlib
 from conv.resnet.resnet import ResNetEncoder
 from conv.oct_conv.oct_conv import OctaveBatchNormActivation
 from conv.oct_conv.oct_conv import OctaveConv
-from torchviz import make_dot
+
 
 
 class EncoderDataParallele(object):
