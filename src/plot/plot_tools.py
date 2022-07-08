@@ -752,35 +752,30 @@ def plot_distribution(tag,calc,tar, lim=[-5,5],bins = 20,save=False, number=3, e
     number = v_size if number>=v_size else number
 
     def _plot_many_hist():
-        for k in range(echantillons):
-            plt.figure(figsize=(6,int(number*3)))
-            fig, ax = plt.subplots(1, number)
-            for i in range(number):
-                ax[i].hist(calc[k,i,:], bins=bins, density=True, label='calc',fc=(0.8, 0, 0, 1))
-                ax[i].hist(tar[k,i,:], bins=bins, density=True, label='tar',fc=(1., 0.8, 0, 0.5))
-                ax[i].legend(loc = "upper right",frameon=False)
-                ax[i].set_xlim(lim)
-                ax[i].set_ylim([0,1.])
-                ax[i].set_xlabel(f'{tag}[{i}]')
-            figure.append(fig)
+        plt.figure(figsize=(6,int(number*3)))
+        fig, ax = plt.subplots(1, number)
+        for i in range(number):
+            ax[i].hist(calc[0,i,:], bins=bins, density=True, label='calc',fc=(0.8, 0, 0, 1))
+            ax[i].hist(tar[0,i,:], bins=bins, density=True, label='tar',fc=(1., 0.8, 0, 0.5))
+            ax[i].legend(loc = "upper right",frameon=False)
+            ax[i].set_xlim(lim)
+            ax[i].set_ylim([0,1.])
+            ax[i].set_xlabel(f'{tag}[{i}]')
         if save:
             plt.savefig(f'{tag}.png')
-        return figure
+        return fig
     
     def _plot_single_hist():
-        
-        for k in range(echantillons):
-            fig = plt.figure(figsize=(6,8))
-            plt.hist(calc[k,0,:], bins=bins, density=True, label='calc',fc=(0.8, 0, 0, 1))
-            plt.hist(tar[k,0,:], bins=bins, density=True, label='tar',fc=(1., 0.8, 0, 0.5))
-            plt.legend(loc = "upper right",frameon=False)
-            plt.xlim(lim)
-            plt.ylim([0,1.])
-            plt.xlabel(f'{tag}')
-            figure.append(fig)
+        fig = plt.figure(figsize=(6,8))
+        plt.hist(calc[0,0,:], bins=bins, density=True, label='calc',fc=(0.8, 0, 0, 1))
+        plt.hist(tar[0,0,:], bins=bins, density=True, label='tar',fc=(1., 0.8, 0, 0.5))
+        plt.legend(loc = "upper right",frameon=False)
+        plt.xlim(lim)
+        plt.ylim([0,1.])
+        plt.xlabel(f'{tag}') 
         if save:
             plt.savefig(f'{tag}.png')
-        return figure
+        return fig
     
     if v_size == 1: 
         return _plot_single_hist()
