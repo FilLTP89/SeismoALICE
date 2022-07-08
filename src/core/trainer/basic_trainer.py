@@ -15,7 +15,7 @@ class BasicTrainer:
         self.strategy   = strategy
         self.actions    = actions
         self.losses     = losses
-        breakpoint()
+        
         self.root_checkpoint = self.config.root_checkpoint
         self.save_checkpoint = self.config.save_checkpoint
         

@@ -39,7 +39,7 @@ class WGAN(SimpleTrainer):
         }
         super(WGAN, self).__init__(cv, trial = None,
         losses_disc = losses_disc, losses_gens = losses_gens,prob_disc   = prob_disc,
-        gradients_gens = gradients_gens, gradients_disc = gradients_disc, actions=True, start_epoch=5000)
+        gradients_gens = gradients_gens, gradients_disc = gradients_disc, actions=None, start_epoch=None)
     
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,_ = batch
@@ -69,9 +69,9 @@ class WGAN(SimpleTrainer):
             Dloss_wgan =  Dloss_wgan_y + Dloss_wgan_zd
             
             if modality == 'train':
-                self.disc_agent.track_gradient(epoch)
                 zerograd([self.disc_agent.optimizer])
                 Dloss_wgan.backward(retain_graph=True)
+                self.disc_agent.track_gradient(epoch)
                 self.disc_agent.optimizer.step()
                 
             # no clipweights spectral_norm is implemented
@@ -126,10 +126,11 @@ class WGAN(SimpleTrainer):
 
             Gloss = Gloss_wgan_y + Gloss_wgan_zd + Gloss_rec
             if modality == 'train':
-                self.gen_agent.track_gradient(epoch)
                 zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
                 Gloss.backward()
+                self.gen_agent.track_gradient(epoch)
                 self.gen_agent.optimizer.step()
+                
                 
             self.losses_gens['epochs'       ] = epoch
             self.losses_gens['modality'     ] = modality
