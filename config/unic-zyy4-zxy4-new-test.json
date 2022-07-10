@@ -1,12 +1,12 @@
 {   "hparams":
     {   
-        "generators.lr":0.00002,
+        "generators.lr":0.0002,
         "generators.weight_decay":0.0001,
-        "discriminators.lr":0.00002,
+        "discriminators.lr":0.0002,
         "discriminators.weight_decay":0.0001,
-        "training_epochs":5,
-        "validation_epochs":5,
-        "test_epochs":5
+        "training_epochs":25,
+        "validation_epochs":25,
+        "test_epochs":50
     },
     "log_dir":{
         "train_writer":"./runs_both/renew/wgan/bbt33eec8f/training/",
@@ -32,6 +32,7 @@
         "limit"     :256
     },
     "Gy":{
+        "name"      :"Resnet",
         "nlayers"   :4, 
         "channel"   :[1,128,64,32,3],
         "kernel"    :[4,4,4,3],

@@ -1,7 +1,7 @@
 import warnings
 warnings.filterwarnings("ignore")
 import common.ex_common_setup as cs
-from test.simple_test.wgan import WGAN
+from test.simple_test.wgan.train_wgan import WGAN
 # from test.simple_test.alice import ALICE
 def main():
     u'''[SETUP] common variables/datasets'''

@@ -151,18 +151,6 @@ class Decoder_Lite(BasicDecoderDataParallel):
         self.gang = range(self.ngpu)
         acts      = T.activation(act, nly)
         
-        # pdb.set_trace()
-        
-        # self.cnn1 += [nn.Linear(limit, 10, bias=False)]
-        # self.cnn1 += [nn.ReLU(inplace=True)]
-        # self.cnn1 += [nn.Linear(10, channel[0]*extra, bias=False)]
-        # self.cnn1 += [nn.ReLU(inplace=True)]
-        # self.cnn1 += [Explode((channel[0],extra))]
-        
-        # self.cnn1 += [nn.Linear(limit,extra*limit)]
-        # self.cnn1 += [nn.ReLU(inplace=True)]
-        # self.cnn1 += [Explode(shape=(extra,limit))]
-
         for i in range(1, nly+1):
             _dpc = 0.0 if i ==nly else dpc
             _bn  = False if i == nly else bn
@@ -189,28 +177,17 @@ class Decoder_Resnet(BasicDecoderDataParallel):
                  bn=True, path='',n_extra_layers=0,*args, **kwargs):
         super(Decoder_Resnet, self).__init__(*args, **kwargs)
         
-        self.cnn1 +=[
-            Linear(512,256),
-            nn.ReLU(),
-            Linear(256,128),
-            nn.ReLU(),
-            Linear(128,128),
-            nn.ReLU()
-        ]
-        self.cnn1 +=[UnSqueeze()]
-        self.cnn1 = nn.Sequential(*self.cnn1)
-
-        _net = DecoderResnet(in_signals_channels =1,
+        self.cnn1 = DecoderResnet(in_signals_channels =1,
                 out_signals_channels=3,
                 channels = [16, 32, 64], 
                 layers = [2,2,2], block=block_2x2
-            )
-        self.net =  _net
+        )
 
-    def forward(self,z_common, z_broadband):
-        z = self.cnn1(zcat(z_common, z_broadband))
-        z = self.net(z)
-        return z
+    def forward(self,z):
+        xr = self.cnn1(z)
+        if not self.training:
+            return xr.detach()
+        return xr
 
 class Decoder_Octave(BasicDecoderDataParallel):
     """docstring for Decoder_Octave"""

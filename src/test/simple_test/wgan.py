@@ -131,7 +131,6 @@ class WGAN(SimpleTrainer):
                 self.gen_agent.track_gradient(epoch)
                 self.gen_agent.optimizer.step()
                 
-                
             self.losses_gens['epochs'       ] = epoch
             self.losses_gens['modality'     ] = modality
             self.losses_gens['Gloss'        ] = Gloss.tolist()

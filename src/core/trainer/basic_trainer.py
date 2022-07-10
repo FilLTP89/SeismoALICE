@@ -79,7 +79,6 @@ class BasicTrainer:
                     self.logger.debug("saving checkpoint-epoch : {}".format(filename))
 
     def on_resuming_checkpoint(self, epoch, *args, **kwargs):
-        breakpoint()
         self.logger.info(f'loading models from {self.root_checkpoint}...')
         for group_name, group_models in self.models.items():
             self.logger.info(f'loading models of {group_name} ...')

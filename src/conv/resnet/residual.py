@@ -41,7 +41,7 @@ class ConvolutionTools(IStrategyConvolution):
         return channels*expansion
 
     def functions(self,*args, **kwargs):
-        func1, func2 =  activation_func('relu',*args, **kwargs), activation_func('relu',*args, **kwargs)
+        func1, func2 =  activation_func('leaky_relu',*args, **kwargs), activation_func('leaky_relu',*args, **kwargs)
         return func1, func2
 
     def padding(self):
@@ -281,7 +281,7 @@ class EncoderResnet(BasicModel):
         x = self.network(x)
 
         x = self.conv3(x)
-        x = self.leaky_relu2(x)
+        # x = self.leaky_relu2(x)
 
         return x
 
@@ -296,7 +296,7 @@ class DecoderResnet(BasicModel):
         self.tanh       = activation_func('tanh')
         self.layers     = layers
         self.conv1      = nn.ConvTranspose1d(in_signals_channels, self.channels[0], 
-                            kernel_size=7, stride=2, padding=3, output_padding=1,bias=False)
+                            kernel_size=7, stride=1, padding=3, output_padding=0,bias=False)
         self.bn1        = nn.BatchNorm1d(self.channels[0])
         self.conv2      = nn.ConvTranspose1d(in_channels = self.channels[0],out_channels=self.channels[0],
                              kernel_size=3, stride=2, padding=1, output_padding=1,bias=False)
@@ -322,7 +322,7 @@ class DecoderResnet(BasicModel):
         
         self.conv3  = nn.ConvTranspose1d(in_channels = self.conv_tools.expansion(self.channels[-1],4), 
                         out_channels= out_signals_channels, kernel_size = 3, 
-                        stride = 2, padding = 1, output_padding=1
+                        stride = 1, padding = 1, output_padding=0
                     ) 
 
     def _convolution_tools(self): 
