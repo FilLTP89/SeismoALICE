@@ -33,17 +33,20 @@ class Agent:
         gradient_values.update()
     
     def track_weight_change(self, writer, tag, model,epoch):
-        for idx in range(len(model)):
-            classname = model[idx].__class__.__name__
-            if (classname.find('Conv1d')!= -1 
-                    or 
-                classname.find('Linear')!= -1
-                    or
-                classname.find('ConvTranspose1d')!= -1) and writer != None:
-                writer.set_step(mode='debug',step=epoch)
-                writer.add_histogram(f'{tag}/{idx}', model[idx].weight, epoch)
-            else:
-                self.logger.debug("weights are not tracked ... ")
+        def extract_gradient(model):
+            for idx in range(len(model)):
+                classname = model[idx].__class__.__name__
+                if (classname.find('Conv1d')!= -1 
+                        or 
+                    classname.find('Linear')!= -1
+                        or
+                    classname.find('ConvTranspose1d')!= -1) and writer != None:
+                    writer.set_step(mode='debug',step=epoch)
+                    writer.add_histogram(f'{tag}/{idx}', model[idx].weight, epoch)
+                    if(classname.find('Sequential')!=-1):
+                        extract_gradient(model[idx])
+                else:
+                    self.logger.debug("weights are not tracked ... ")
         
     def track_gradient(self,*args,**kwargs):
         raise NotImplementedError

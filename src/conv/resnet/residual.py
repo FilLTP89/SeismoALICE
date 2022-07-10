@@ -225,8 +225,30 @@ class ResNet(nn.Module):
         self.layers = nn.Sequential(*self.layers)
         return self.layers, self.in_channels
 
+class ResidualContainer(BasicModel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.current_val    = 0
+        self._models        = []
+    
+    def __len__(self):
+        return len(self._models)
+    
+    def __iter__(self):
+        return iter(self._models)
+    
+    def __getitem__(self,idx):
+        return self._models[idx]
+    
+    def __next__(self):
+        if self.current_val>=len(self._models):
+            self.current_val=0
+            raise StopIteration
+        _model = self._models[self.current_val]
+        self.current_val +=1
+        return _model
 
-class EncoderResnet(BasicModel): 
+class EncoderResnet(ResidualContainer): 
     def __init__(self, in_signals_channels, out_signals_channels, channels,layers, block = block_3x3, *args, **kwargs): 
         super().__init__()
         # pdb.set_trace()
@@ -268,6 +290,8 @@ class EncoderResnet(BasicModel):
                     out_channels= out_signals_channels,
                     kernel_size = 3, stride = 1, padding = 1
                 )
+        
+        self._models = [self.conv1, self.bn1, self.leaky_relu1, self.conv2, self.network, self.conv3]
 
     def _convolution_tools(self): 
         return ConvolutionTools()
@@ -286,9 +310,10 @@ class EncoderResnet(BasicModel):
         return x
 
         
-class DecoderResnet(BasicModel):
+class DecoderResnet(ResidualContainer):
     def __init__(self, in_signals_channels, out_signals_channels, channels, layers, block=block_3x3, *args, **kwargs):
         super().__init__()
+        self.current_val=0
         self.in_channels= in_signals_channels
         self.channels   = channels
         self.conv_tools = self._convolution_tools()
@@ -324,6 +349,7 @@ class DecoderResnet(BasicModel):
                         out_channels= out_signals_channels, kernel_size = 3, 
                         stride = 1, padding = 1, output_padding=0
                     ) 
+        self._models = [self.conv1, self.bn1, self.relu, self.conv2, self.network, self.conv3, self.tanh]
 
     def _convolution_tools(self): 
         return ConvTransposeTools()
