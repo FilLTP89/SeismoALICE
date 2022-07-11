@@ -317,6 +317,7 @@ class DecoderResnet(ResidualContainer):
     def __init__(self, in_signals_channels, out_signals_channels, channels, layers, 
                         block=block_3x3, *args, **kwargs):
         super().__init__()
+        
         self.current_val=0
         self.in_channels= in_signals_channels
         self.channels   = channels
@@ -330,7 +331,7 @@ class DecoderResnet(ResidualContainer):
         self.conv2      = nn.ConvTranspose1d(in_channels = self.channels[0],out_channels=self.channels[0],
                              kernel_size=3, stride=2, padding=1, output_padding=1,bias=False)
         self.network    = []
-        self._expansion = 2 if isinstance(block, block_2x2) else 4
+        self._expansion = 4 if isinstance(block, block_2x2) else 2
         
         _layer, self.in_channels = ResNet(block=block, in_channels=self.channels[0],
                         num_residual_blocks=self.layers[0],
@@ -340,8 +341,7 @@ class DecoderResnet(ResidualContainer):
         self.network.append(_layer)
        
         for layer, channel in zip(self.layers[1:],self.channels[1:]):
-            
-            _layer, self.in_channels = ResNet(block=block, in_channels= channels,
+            _layer, self.in_channels = ResNet(block=block, in_channels= self.in_channels,
                         num_residual_blocks=layer,intermediate_channels= channel, stride=2, 
                         conv = partial(nn.ConvTranspose1d), conv_tools=self.conv_tools
                     )._make_layer(output_padding=1)
@@ -349,10 +349,9 @@ class DecoderResnet(ResidualContainer):
         
         self.network= nn.Sequential(*self.network)
         
-        self.conv3  = nn.ConvTranspose1d(in_channels = self.conv_tools.expansion(self.channels[-1],
-                        self._expansion), out_channels= out_signals_channels, kernel_size = 3, 
-                        stride = 1, padding = 1, output_padding=0
-                    ) 
+        self.conv3  = nn.ConvTranspose1d(in_channels = self.channels[-1], out_channels=out_signals_channels, 
+                        kernel_size = 3, stride = 1, padding = 1, output_padding=0)
+
         self._models = [self.conv1, self.bn1, self.relu, self.conv2, self.network, self.conv3, self.tanh]
 
     def _convolution_tools(self): 
