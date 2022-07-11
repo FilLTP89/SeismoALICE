@@ -449,6 +449,7 @@ class Encoder_Resnet(BasicEncoderDataParallele):
                  wf = False, *args, **kwargs):
         super(Encoder_Resnet, self).__init__(*args, **kwargs)
 
+        
         self.cnn1 = EncoderResnet(in_signals_channels=6,
                 out_signals_channels=1,channels = [16, 32, 64], 
                 layers =[2,2,2], block=block_2x2)

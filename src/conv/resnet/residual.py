@@ -71,7 +71,7 @@ class block_3x3(nn.Module):
     ):
         super(block_3x3, self).__init__()
         self.conv_tools = conv_tools
-        self.expansion  = 4
+        self._expansion  = 4
         self.conv1 = conv(in_channels, intermediate_channels, 
             kernel_size=1, stride=1, padding=0, bias=False
         )
@@ -88,14 +88,14 @@ class block_3x3(nn.Module):
         self.bn2 = nn.BatchNorm1d(intermediate_channels)
         self.conv3 = conv(
             intermediate_channels,
-            self.conv_tools.expansion(intermediate_channels, self.expansion),
+            self.conv_tools.expansion(intermediate_channels, self._expansion),
             kernel_size=1,
             stride=1,
             padding=0,
             bias=False
         )
-        self.bn3 = nn.BatchNorm1d(self.conv_tools.expansion(intermediate_channels,self.expansion))
-        self.activation1,activation2 = self.conv_tools.functions()
+        self.bn3 = nn.BatchNorm1d(self.conv_tools.expansion(intermediate_channels,self._expansion))
+        self.activation1,self.activation2 = self.conv_tools.functions()
         self.identity_downsample = identity_downsample
         self.stride = stride
 
@@ -115,7 +115,7 @@ class block_3x3(nn.Module):
             identity = self.identity_downsample(identity)
 
         x += identity
-        x = self.activation(x)
+        x = self.activation2(x)
         return x
 
 
@@ -125,7 +125,7 @@ class block_2x2(nn.Module):
         identity_downsample=None, stride=1, activation = 'leaky_relu', *args, **kwargs
     ):
         super(block_2x2, self).__init__()
-        self.expansion  = 4
+        self._expansion  = 2
         self.conv_tools = conv_tools
         
         self.conv1 = conv(
@@ -140,13 +140,13 @@ class block_2x2(nn.Module):
         self.bn1 = nn.BatchNorm1d(intermediate_channels)
         self.conv2 = conv(
             intermediate_channels,
-            self.conv_tools.expansion(intermediate_channels,self.expansion),
+            intermediate_channels,
             kernel_size=3,
             stride=1,
             padding=1,
             bias=False
         )
-        self.bn2 = nn.BatchNorm1d(self.conv_tools.expansion(intermediate_channels,self.expansion))
+        self.bn2 = nn.BatchNorm1d(intermediate_channels)
         self.activation1, self.activation2 = self.conv_tools.functions()
 
         self.identity_downsample = identity_downsample
@@ -163,7 +163,6 @@ class block_2x2(nn.Module):
 
         if self.identity_downsample is not None:
             identity = self.identity_downsample(identity)
-
         x += identity
         x = self.activation2(x)
         return x
@@ -174,44 +173,45 @@ class ResNet(nn.Module):
                     conv_tools=ConvolutionTools
                 ):
         super(ResNet,self).__init__()
-
-        self.identity_downsample  = None
-        self.num_residual_blocks  = num_residual_blocks
-        self.intermediate_channels= intermediate_channels
+        
+        self.identity_downsample    = None
+        self.num_residual_blocks    = num_residual_blocks
+        self.intermediate_channels  = intermediate_channels
         self.in_channels = in_channels
         self.layers = []
         self.stride = stride
         self.block  = block
         self.conv   = conv
-        self.conv_tools =conv_tools
+        self.conv_tools = conv_tools
+        self._expansion   = 4 if self.block == block_3x3 else 2
 
         # Either if we half the input space for ex, 56x56 -> 28x28 (stride=2), or channels changes
         # we need to adapt the Identity (skip connection) so it will be able to be added
         # to the layer that's ahead
     def _make_layer(self,*args, **kwargs):
-        if self.stride != 1 or self.in_channels != self.conv_tools.expansion(self.intermediate_channels,4):
+        _out_channel = self.in_channels
+        if self.stride != 1 or self.in_channels != self.conv_tools.expansion(self.intermediate_channels,self._expansion):
             identity_downsample = nn.Sequential(
                 self.conv(
                     self.in_channels,
-                    self.conv_tools.expansion(self.intermediate_channels, 4),
+                    self.intermediate_channels,
                     kernel_size=3,
                     stride=self.stride,
                     bias=False,
                     padding=self.conv_tools.padding(),
                     *args, **kwargs
                 ),
-                nn.BatchNorm1d(self.conv_tools.expansion(self.intermediate_channels,4)),
+                nn.BatchNorm1d(self.intermediate_channels),
             )
         self.layers.append(
             self.block(in_channels=self.in_channels, 
                     intermediate_channels=self.intermediate_channels, 
                     conv_tools=self.conv_tools, conv=self.conv, 
-                    identity_downsample = identity_downsample, stride=self.stride,*args,**kwargs
-                )
+                    identity_downsample = identity_downsample, stride=self.stride,*args,**kwargs)
             )
 
         # The expansion size is always 4 for ResNet 50,101,152
-        self.in_channels = self.conv_tools.expansion(self.intermediate_channels,4)
+        self.in_channels = self.intermediate_channels # self.conv_tools.expansion(self.intermediate_channels,self._expansion)
         # For example for first resnet layer: 256 will be mapped to 64 as intermediate layer,
         # then finally back to 256. Hence no identity downsample is needed, since stride = 1,
         # and also same amount of channels.
@@ -249,9 +249,11 @@ class ResidualContainer(BasicModel):
         return _model
 
 class EncoderResnet(ResidualContainer): 
-    def __init__(self, in_signals_channels, out_signals_channels, channels,layers, block = block_3x3, *args, **kwargs): 
+    def __init__(self, in_signals_channels, out_signals_channels, channels,layers, 
+                        block = block_3x3, *args, **kwargs): 
         super().__init__()
         # pdb.set_trace()
+       
         self.in_channels= in_signals_channels
         self.conv_tools = self._convolution_tools()
         self.channels   = channels
@@ -266,7 +268,8 @@ class EncoderResnet(ResidualContainer):
                             kernel_size=3, stride=2, padding=1, bias = False
                         )
         
-        self.network     = []
+        self.network    = []
+        self._expansion = 4 if isinstance(block, block_3x3) else 2
 
         # Essentially the entire ResNet architecture are in these 4 lines below
         _layer, self.in_channels = ResNet(block=block, in_channels=self.channels[0], 
@@ -275,9 +278,9 @@ class EncoderResnet(ResidualContainer):
                     conv = partial(nn.Conv1d), conv_tools= self.conv_tools
                     )._make_layer()
         self.network.append(_layer)
-       
+        
         for layer, channel in zip(self.layers[1:],self.channels[1:]):
-            _layer , self.in_channels = ResNet(block=block_2x2,in_channels=self.in_channels, 
+            _layer , self.in_channels = ResNet(block=block,in_channels=self.in_channels, 
                     num_residual_blocks=layer,
                     intermediate_channels= channel, stride=2, 
                     conv = partial(nn.Conv1d), conv_tools=self.conv_tools
@@ -286,9 +289,9 @@ class EncoderResnet(ResidualContainer):
 
         self.network = nn.Sequential(*self.network)
         #ending layer
-        self.conv3 = nn.Conv1d(in_channels = self.channels[-1]*4, 
+        self.conv3 = nn.Conv1d(in_channels = self.channels[-1], 
                     out_channels= out_signals_channels,
-                    kernel_size = 3, stride = 1, padding = 1
+                    kernel_size = 3, stride = 1, padding = 1, bias= False
                 )
         
         self._models = [self.conv1, self.bn1, self.leaky_relu1, self.conv2, self.network, self.conv3]
@@ -311,7 +314,8 @@ class EncoderResnet(ResidualContainer):
 
         
 class DecoderResnet(ResidualContainer):
-    def __init__(self, in_signals_channels, out_signals_channels, channels, layers, block=block_3x3, *args, **kwargs):
+    def __init__(self, in_signals_channels, out_signals_channels, channels, layers, 
+                        block=block_3x3, *args, **kwargs):
         super().__init__()
         self.current_val=0
         self.in_channels= in_signals_channels
@@ -326,7 +330,7 @@ class DecoderResnet(ResidualContainer):
         self.conv2      = nn.ConvTranspose1d(in_channels = self.channels[0],out_channels=self.channels[0],
                              kernel_size=3, stride=2, padding=1, output_padding=1,bias=False)
         self.network    = []
-
+        self._expansion = 2 if isinstance(block, block_2x2) else 4
         
         _layer, self.in_channels = ResNet(block=block, in_channels=self.channels[0],
                         num_residual_blocks=self.layers[0],
@@ -336,17 +340,17 @@ class DecoderResnet(ResidualContainer):
         self.network.append(_layer)
        
         for layer, channel in zip(self.layers[1:],self.channels[1:]):
-            _layer, self.in_channels = ResNet(block=block, in_channels=self.in_channels,
-                        num_residual_blocks=layer,
-                        intermediate_channels= channel, stride=2, 
+            
+            _layer, self.in_channels = ResNet(block=block, in_channels= channels,
+                        num_residual_blocks=layer,intermediate_channels= channel, stride=2, 
                         conv = partial(nn.ConvTranspose1d), conv_tools=self.conv_tools
                     )._make_layer(output_padding=1)
             self.network.append(_layer)
         
         self.network= nn.Sequential(*self.network)
         
-        self.conv3  = nn.ConvTranspose1d(in_channels = self.conv_tools.expansion(self.channels[-1],4), 
-                        out_channels= out_signals_channels, kernel_size = 3, 
+        self.conv3  = nn.ConvTranspose1d(in_channels = self.conv_tools.expansion(self.channels[-1],
+                        self._expansion), out_channels= out_signals_channels, kernel_size = 3, 
                         stride = 1, padding = 1, output_padding=0
                     ) 
         self._models = [self.conv1, self.bn1, self.relu, self.conv2, self.network, self.conv3, self.tanh]
@@ -372,10 +376,8 @@ def test():
     # net = ResNet50(img_channel=3, num_classes=1000)
     # y = net(torch.randn(4, 3, 224, 224)).to("cuda")
     # print(y.size())
-
-    net = EncoderResnet(in_signals_channels = 32, out_signals_channels=8,
-            channels = [32,64], layers = [2,2], block = block_2x2
-        )
+    breakpoint()
+    net = EncoderResnet(in_signals_channels = 6, out_signals_channels=1,channels = [16,32,64], layers = [2,2,2], block = block_2x2)
     t   = torch.randn(10, 32, 1024)
     print(t.shape)
     y   =  net(t)

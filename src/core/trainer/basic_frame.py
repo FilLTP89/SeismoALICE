@@ -47,6 +47,7 @@ class Agent:
                     self.track_weight_change(writer,f'{tag}/Sequential',model[idx],epoch)
                 else:
                     self.logger.debug("weights are not tracked ... ")
+        extract_gradient(model)
         
     def track_gradient(self,*args,**kwargs):
         raise NotImplementedError
