@@ -179,7 +179,7 @@ class Decoder_Resnet(BasicDecoderDataParallel):
         
         self.cnn1 = DecoderResnet(in_signals_channels =1,
                 out_signals_channels=3,
-                channels = [16, 32, 64], 
+                channels = [64,32,16], 
                 layers = [2,2,2], block=block_2x2
         )
 

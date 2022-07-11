@@ -257,13 +257,13 @@ class EncoderResnet(ResidualContainer):
         self.channels   = channels
         self.layers     = layers
         self.conv1      = nn.Conv1d(in_signals_channels, self.channels[0], kernel_size=7,
-                             stride=2, padding=3, bias=False
+                             stride=1, padding=3, bias=False
                         )
         self.bn1        = nn.BatchNorm1d(self.channels[0])
         self.leaky_relu1, self.leaky_relu2  = self.conv_tools.functions()
         self.conv2      = nn.Conv1d(in_channels = self.channels[0], 
                             out_channels= self.channels[0],
-                            kernel_size=3, stride=2, padding=1
+                            kernel_size=3, stride=2, padding=1, bias = False
                         )
         
         self.network     = []

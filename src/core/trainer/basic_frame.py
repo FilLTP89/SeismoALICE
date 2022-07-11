@@ -43,8 +43,8 @@ class Agent:
                     classname.find('ConvTranspose1d')!= -1) and writer != None:
                     writer.set_step(mode='debug',step=epoch)
                     writer.add_histogram(f'{tag}/{idx}', model[idx].weight, epoch)
-                    if(classname.find('Sequential')!=-1):
-                        extract_gradient(model[idx])
+                if(classname.find('Sequential')!=-1):
+                    self.track_weight_change(writer,f'{tag}/Sequential',model[idx],epoch)
                 else:
                     self.logger.debug("weights are not tracked ... ")
         

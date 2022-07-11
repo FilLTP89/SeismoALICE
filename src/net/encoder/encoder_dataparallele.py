@@ -440,60 +440,24 @@ class Encoder_Octave(BasicEncoderDataParallele):
         return z_h, z_l, z_0
 
 
-class Encoder_ResNet(BasicEncoderDataParallele):
+class Encoder_Resnet(BasicEncoderDataParallele):
     """docstring for Encoder"""
     def __init__(self, ngpu,dev,nz,nch,ndf,act,channel,\
                  nly, config,ker=7,std=4,pad=0,dil=1,grp=1,bn=True,
                  dpc=0.0,limit = 256, path='',dconv = "",\
                  with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2,
                  wf = False, *args, **kwargs):
-        super(Encoder_ResNet, self).__init__(*args, **kwargs)
-        self.ngpu= ngpu
-        self.gang = range(ngpu)
-        self.wf = wf
-        
-        self.device = tdev("cuda" if torch.cuda.is_available() else "cpu")
+        super(Encoder_Resnet, self).__init__(*args, **kwargs)
 
-        acts = T.activation(act, nly)
-        # pdb.set_trace()
-
-        self.cnn_common  = ResNetEncoder(in_channels = channel[0], blocks_sizes= channel[1:],
-                                         deepths=limit, activation='leaky_relu')
-
-        self.zyx         = ResNetEncoder(in_channels = channel[-1], blocks_sizes=config["common"]["channel"], 
-                                        deepths=config["common"]["limit"], activation='leaky_relu')
-
-        self.zy          = ResNetEncoder(in_channels = channel[-1], blocks_sizes=config["broadband"]["channel"],
-                                         deepths=config["broadband"]["limit"], activation='leaky_relu')
-
-        self.zx          = ResNetEncoder(in_channels = channel[-1], blocks_sizes=config["filtered"]["channel"],
-                                         deepths=config["filtered"]["limit"], activation='leaky_relu')
-        # pdb.set_trace()
-        self.cnn_common.to(self.device)
-        self.zy.to(self.device)
-        self.zyx.to(self.device)
-        self.zx.to(self.device)
+        self.cnn1 = EncoderResnet(in_signals_channels=6,
+                out_signals_channels=1,channels = [16, 32, 64], 
+                layers =[2,2,2], block=block_2x2)
 
     def forward(self,x):
-        # pdb.set_trace()
-        if x.is_cuda and self.ngpu >=1:
-
-            z   = pll(self.cnn_common,x,self.gang)
-            zy  = pll(self.zy,  z, self.gang)
-            zyx = pll(self.zyx, z, self.gang)
-            zx  = pll(self.zx, z, self.gang)
-            # z   = self.cnn_common(x)
-            # zy  = self.zy(z)
-            # zyx = self.zyx(z)
-            # zx  = self.zx(z)
-        else:
-            z   = self.cnn_common(x)
-            zy  = self.zy(z)
-            zyx = self.zyx(z)
-            zx  = self.zx(z)
+        z = self.cnn1(x)
         if not self.training:
-            zy, zyx, zx = zy.detach(), zyx.detach(), zx.detach()
-        return zy, zyx, zx 
+            return z.detach()
+        return z
 
 
 class Encoder_Lite(object):
