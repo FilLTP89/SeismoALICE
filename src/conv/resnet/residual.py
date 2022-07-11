@@ -182,7 +182,7 @@ class ResNet(nn.Module):
         self.stride = stride
         self.block  = block
         self.conv   = conv
-        self.conv_tools = conv_tools
+        self.conv_tools   = conv_tools
         self._expansion   = 4 if self.block == block_3x3 else 2
 
         # Either if we half the input space for ex, 56x56 -> 28x28 (stride=2), or channels changes

@@ -1,8 +1,8 @@
 {   "hparams":
     {   
-        "generators.lr":0.0002,
+        "generators.lr":0.0001,
         "generators.weight_decay":0.0001,
-        "discriminators.lr":0.0002,
+        "discriminators.lr":0.0003,
         "discriminators.weight_decay":0.0001,
         "training_epochs":5,
         "validation_epochs":5,

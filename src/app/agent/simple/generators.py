@@ -14,7 +14,7 @@ class Generators(Agent):
         self.glr    = self.opt.config["hparams"]['generators.lr']
         self.weight_decay = self.opt.config["hparams"]['generators.weight_decay']
         
-        breakpoint()
+        
         self.Fy = accel(network.Encoder(self.opt.config['F'], self.opt,model_name='F')).cuda()
         self.Gy = accel(network.Decoder(self.opt.config['Gy'],self.opt,model_name='Gy')).cuda()
 
