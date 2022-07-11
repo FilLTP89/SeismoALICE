@@ -1,9 +1,7 @@
-from pstats import Stats
-from re import S
 import torch
 from tqdm import tqdm as tq
 from plot.plot_tools import get_gofs, plot_generate_classic
-from plot.plot_tools import get_histogram, get_latent_rep
+from plot.plot_tools import get_histogram
 from core.trainer.basic_trainer import BasicTrainer
 from core.metric.metric import MetricTracker
 from core.writer.writer import Writer
@@ -11,7 +9,7 @@ from tools.generate_noise import noise_generator
 from core.logger.logger import setup_logging
 from configuration import app
 from torch.nn import DataParallel as DP
-from common.common_nn import generate_latent_variable_3D, get_accuracy,patch
+from common.common_nn import get_accuracy,patch
 from common.common_nn import count_parameters
 from common.common_torch import *
 from database.latentset import get_latent_dataset
@@ -45,7 +43,6 @@ class SimpleTrainer(BasicTrainer):
         self.gradients_disc  = gradients_disc
         self.prob_disc       = prob_disc
         
-
         self.logger.info("Setting Tensorboard for the training dataset ...")
         loss_writer             = Writer(log_dir=self.opt.config['log_dir']['debug.losses_writer'], 
                                     logger=self.logger)
@@ -94,8 +91,9 @@ class SimpleTrainer(BasicTrainer):
         
         self.logger.info("Parameters of Generators ")
         count_parameters(self.gen_agent.generators)
-        self.logger.info(f"Learning rate Encoder : {self.opt.config['hparams']['generators.lr']}")
-
+        self.logger.info(f"Learning rate Encoder : {self.opt.config['hparams']['generators.encoder.lr']}")
+        self.logger.info(f"Learning rate Decoder : {self.opt.config['hparams']['generators.decoder.lr']}")
+        
         self.logger.info("Parameters of Discriminators")
         count_parameters(self.disc_agent.discriminators)
         self.logger.info(f"Learning rate : {self.opt.config['hparams']['discriminators.lr']}")

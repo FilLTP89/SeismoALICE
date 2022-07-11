@@ -11,7 +11,8 @@ class Generators(Agent):
         self.generators = []
         self.gradients_tracker = gradients_tracker
         self.debug_writer = debug_writer
-        self.glr    = self.opt.config["hparams"]['generators.lr']
+        self.elr    = self.opt.config["hparams"]['generators.encoder.lr']
+        self.dlr    = self.opt.config["hparams"]['generators.decoder.lr']
         self.weight_decay = self.opt.config["hparams"]['generators.weight_decay']
         
         
@@ -20,12 +21,16 @@ class Generators(Agent):
 
         self.generators = [self.Fy, self.Gy]
         self.current_val= 0
-        self.optimizer = reset_net(self.generators,
-                optim='adam',alpha=0.9,lr=self.glr,b1=0.5,b2=0.9999,weight_decay=self.weight_decay
+        self.optimizer_encoder = reset_net([self.Fy],
+                optim='adam',alpha=0.9,lr=self.elr,b1=0.5,b2=0.9999,weight_decay=self.weight_decay
+            )
+        self.optimizer_decoder = reset_net([self.Gy],
+                optim='adam',alpha=0.9,lr=self.dlr,b1=0.5,b2=0.9999,weight_decay=self.weight_decay
             )
 
         self._architecture()
-        super(Generators,self).__init__(self.generators, self.optimizer, config, logger, accel,*args, **kwargs)
+        super(Generators,self).__init__(self.generators, [self.optimizer_encoder,self.optimizer_decoder], 
+            config, logger, accel,*args, **kwargs)
 
     
     def track_gradient(self,epoch):
