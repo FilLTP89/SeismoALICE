@@ -325,7 +325,6 @@ class DecoderResnet(ResidualContainer):
         self.conv_tools = self._convolution_tools()
         self.relu, _    = self.conv_tools.functions()
         self.tanh       = activation_func('tanh')
-        self.softshrinking = activation_func('softshrink')
         self.layers     = layers
         self.conv1      = nn.ConvTranspose1d(in_signals_channels, self.channels[0], 
                             kernel_size=7, stride=1, padding=3, output_padding=0,bias=False)
@@ -370,7 +369,6 @@ class DecoderResnet(ResidualContainer):
         x = self.conv3(x)
 
         x = self.tanh(x)
-        x = self.softshrinking(x)
 
         return x
 
