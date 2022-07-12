@@ -16,6 +16,7 @@ def activation_func(activation, slope=0.1):
         ['tanh', nn.Tanh()],
         ['leaky_relu', nn.LeakyReLU(negative_slope=slope, inplace=True)],
         ['selu', nn.SELU(inplace=True)],
+        ['softshrink', nn.Softshrink(lambd=10e-2)],
         ['none', nn.Identity()]
     ])[activation]
 
@@ -324,6 +325,7 @@ class DecoderResnet(ResidualContainer):
         self.conv_tools = self._convolution_tools()
         self.relu, _    = self.conv_tools.functions()
         self.tanh       = activation_func('tanh')
+        self.softshrinking = activation_func('softshrink')
         self.layers     = layers
         self.conv1      = nn.ConvTranspose1d(in_signals_channels, self.channels[0], 
                             kernel_size=7, stride=1, padding=3, output_padding=0,bias=False)
@@ -350,7 +352,7 @@ class DecoderResnet(ResidualContainer):
         self.network= nn.Sequential(*self.network)
         
         self.conv3  = nn.ConvTranspose1d(in_channels = self.channels[-1], out_channels=out_signals_channels, 
-                        kernel_size = 3, stride = 1, padding = 1, output_padding=0)
+                        kernel_size = 3, stride = 1, padding = 1, output_padding=0, bias=False)
 
         self._models = [self.conv1, self.bn1, self.relu, self.conv2, self.network, self.conv3, self.tanh]
 
@@ -368,6 +370,7 @@ class DecoderResnet(ResidualContainer):
         x = self.conv3(x)
 
         x = self.tanh(x)
+        x = self.softshrinking(x)
 
         return x
 

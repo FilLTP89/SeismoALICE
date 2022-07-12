@@ -72,7 +72,7 @@ class BasicTrainer:
                     state = {
                         'epoch'                 :epoch,
                         'model_state_dict'      :model.module.state_dict(),
-                        'optimizer_state_dict'  :optimizer.state_dict()
+                        # 'optimizer_state_dict'  :optimizer.state_dict()
                     }
                     filename = f'{self.root_checkpoint}checkpoint-{model.module.model_name}_epoch-{epoch}.pth'
                     torch.save(state, filename)
