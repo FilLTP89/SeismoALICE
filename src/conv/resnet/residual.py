@@ -10,7 +10,7 @@ class based in the implemented code from :
 https://github.com/aladdinpersson/Machine-Learning-Collection/blob/master/ML/Pytorch/CNN_architectures/pytorch_resnet.py
 """
 
-def activation_func(activation, slope=0.1):
+def activation_func(activation, slope=0.2, *args, **kwargs):
     return  nn.ModuleDict([
         ['relu', nn.ReLU(inplace=True)],
         ['tanh', nn.Tanh()],
