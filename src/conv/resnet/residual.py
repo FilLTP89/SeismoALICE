@@ -10,14 +10,15 @@ class based in the implemented code from :
 https://github.com/aladdinpersson/Machine-Learning-Collection/blob/master/ML/Pytorch/CNN_architectures/pytorch_resnet.py
 """
 
-def activation_func(activation, slope=0.2, *args, **kwargs):
+def activation_func(activation, slope=0.25, *args, **kwargs):
     return  nn.ModuleDict([
-        ['relu', nn.ReLU(inplace=True)],
-        ['tanh', nn.Tanh()],
-        ['leaky_relu', nn.LeakyReLU(negative_slope=slope, inplace=True)],
-        ['selu', nn.SELU(inplace=True)],
-        ['softshrink', nn.Softshrink(lambd=10e-2)],
-        ['none', nn.Identity()]
+        ['relu',        nn.ReLU(inplace=True)],
+        ['tanh',        nn.Tanh()],
+        ['leaky_relu',  nn.LeakyReLU(negative_slope=slope, inplace=True)],
+        ['prelu',       nn.PReLU(*args, **kwargs)],
+        ['selu',        nn.SELU(inplace=True)],
+        ['softshrink',  nn.Softshrink(lambd=10e-2)],
+        ['none',        nn.Identity()]
     ])[activation]
 
 class IStrategyConvolution(object):
@@ -42,7 +43,7 @@ class ConvolutionTools(IStrategyConvolution):
         return channels*expansion
 
     def functions(self,*args, **kwargs):
-        func1, func2 =  activation_func('leaky_relu',*args, **kwargs), activation_func('leaky_relu',*args, **kwargs)
+        func1, func2 =  activation_func('prelu',*args, **kwargs), activation_func('prelu',*args, **kwargs)
         return func1, func2
 
     def padding(self):
@@ -148,7 +149,8 @@ class block_2x2(nn.Module):
             bias=False
         )
         self.bn2 = nn.BatchNorm1d(intermediate_channels)
-        self.activation1, self.activation2 = self.conv_tools.functions()
+
+        self.activation1, self.activation2 = self.conv_tools.functions(num_parameters=intermediate_channels)
 
         self.identity_downsample = identity_downsample
         self.stride = stride
