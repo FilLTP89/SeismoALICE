@@ -22,10 +22,9 @@ class Generators(Agent):
         self.generators = [self.Fy, self.Gy]
         self.current_val= 0
         self.optimizer_encoder = reset_net([self.Fy],
-                optim='adam',alpha=0.9,lr=self.elr,b1=0.5,b2=0.9999)
+                optim='adam',alpha=0.9,lr=self.elr,b1=0.,b2=0.90)
         self.optimizer_decoder = reset_net([self.Gy],
-                optim='adam',alpha=0.9,lr=self.dlr,b1=0.5,b2=0.9999,weight_decay=self.weight_decay
-            )
+                optim='adam',alpha=0.9,lr=self.dlr,b1=0.,b2=0.90)
 
         self._architecture()
         super(Generators,self).__init__(self.generators, [self.optimizer_encoder,self.optimizer_decoder], 

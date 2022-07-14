@@ -946,15 +946,11 @@ def visualize_unic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',out
 
 
 
-
-
-
 def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./imgs',save = True, std=None):
     dev = app.DEVICE
     Qec.eval(), Pdc.eval()
     Qec.to(dev),Pdc.to(dev)
     
-
     EG  = []
     PG  = []
     cnt = 0

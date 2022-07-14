@@ -55,9 +55,9 @@ class Pix2Pix(UnicTrainer):
             zd_inp      = zcat(zyy)
 
             # 1. Pix2Pix
-            y_gen       = self.gen_agent.Gy(zxy)
             zd_gen      = self.gen_agent.Fx(x_inp)
-
+            y_gen       = self.gen_agent.Gy(zd_gen)
+            
             Dreal_xy, Dfake_xy = self.disc_agent.discriminate_xy(x,y,y_gen)
             Dloss_xy    = self.bce_logit_loss(Dreal_xy.reshape(-1),o1l(Dfake_xy.reshape(-1))) +\
                             self.bce_logit_loss(Dfake_xy.reshape(-1),o0l(Dfake_xy.reshape(-1)))
@@ -67,7 +67,8 @@ class Pix2Pix(UnicTrainer):
                             self.bce_logit_loss(Dfake_zd.reshape(-1),o0l(Dfake_zd.reshape(-1)))
             
             # 2. Summation of losses
-            Dloss       = Dloss_xy + Dloss_zd
+            Dloss_pix2pix      = Dloss_xy + Dloss_zd
+            Dloss              = Dloss_pix2pix
             
             if modality == 'train':
                 zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
@@ -80,6 +81,7 @@ class Pix2Pix(UnicTrainer):
             self.losses_disc['Dloss'    ] = Dloss.tolist()
             self.losses_disc['Dloss_xy' ] = Dloss_xy.tolist()
             self.losses_disc['Dloss_zd' ] = Dloss_zd.tolist()
+            self.losses_disc['Dloss_pix2pix'] = Dloss_pix2pix.tolist()
             self.losses_disc_tracker.update()
 
             self.prob_disc['epochs'  ] = epoch
@@ -96,14 +98,15 @@ class Pix2Pix(UnicTrainer):
         for _ in range(1):
             zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder,
                          self.disc_agent.optimizer])
+            
+            # 1. Pix2Pix
             wnx,*others = noise_generator(x.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std})
             x_inp       =  zcat(x,wnx)
             zd_inp      = zcat(zyy)
 
-            # 1. Pix2Pix
-            y_gen       = self.gen_agent.Gy(zxy)
             zd_gen      = self.gen_agent.Fx(x_inp)
-
+            y_gen       = self.gen_agent.Gy(zd_gen)
+            
             _, Dfake_xy = self.disc_agent.discriminate_xy(x,y,y_gen)
             Gloss_xy    = self.bce_logit_loss(Dfake_xy.reshape(-1),o1l(Dfake_xy.reshape(-1)))
             
