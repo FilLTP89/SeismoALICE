@@ -59,12 +59,12 @@ class Pix2Pix(UnicTrainer):
             zd_gen      = self.gen_agent.Fx(x_inp)
 
             Dreal_xy, Dfake_xy = self.disc_agent.discriminate_xy(x,y,y_gen)
-            Dloss_xy    = self.bce_logit_loss(Dreal_xy,o1l(Dfake_xy)) +\
-                            self.bce_logit_loss(Dfake_xy,o0l(Dfake_xy))
+            Dloss_xy    = self.bce_logit_loss(Dreal_xy.reshape(-1),o1l(Dfake_xy.reshape(-1))) +\
+                            self.bce_logit_loss(Dfake_xy.reshape(-1),o0l(Dfake_xy.reshape(-1)))
             
             Dreal_zd, Dfake_zd = self.disc_agent.discriminate_marginal_zd(zxy,zd_gen)
-            Dloss_zd    = self.bce_logit_loss(Dreal_zd,o1l(Dfake_zd))+\
-                            self.bce_logit_loss(Dfake_zd,o0l(Dfake_zd))
+            Dloss_zd    = self.bce_logit_loss(Dreal_zd.reshape(-1),o1l(Dfake_zd.reshape(-1)))+\
+                            self.bce_logit_loss(Dfake_zd.reshape(-1),o0l(Dfake_zd.reshape(-1)))
             
             # 2. Summation of losses
             Dloss       = Dloss_xy + Dloss_zd
@@ -94,7 +94,8 @@ class Pix2Pix(UnicTrainer):
     def train_generators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,x,zyy,zxy = batch
         for _ in range(1):
-            zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder, self.disc_agent.optimizer])
+            zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder,
+                         self.disc_agent.optimizer])
             wnx,*others = noise_generator(x.shape,zxy.shape,app.DEVICE,{'mean':0., 'std':self.std})
             x_inp       =  zcat(x,wnx)
             zd_inp      = zcat(zyy)
@@ -104,10 +105,10 @@ class Pix2Pix(UnicTrainer):
             zd_gen      = self.gen_agent.Fx(x_inp)
 
             _, Dfake_xy = self.disc_agent.discriminate_xy(x,y,y_gen)
-            Gloss_xy    = self.bce_logit_loss(Dfake_xy,o1l(Dfake_xy))
+            Gloss_xy    = self.bce_logit_loss(Dfake_xy.reshape(-1),o1l(Dfake_xy.reshape(-1)))
             
             _, Dfake_zd  = self.disc_agent.discriminate_marginal_zd(zxy,zd_gen)
-            Gloss_zd    = self.bce_logit_loss(Dfake_zd,o1l(Dfake_zd))
+            Gloss_zd    = self.bce_logit_loss(Dfake_zd.reshape(-1),o1l(Dfake_zd.reshape(-1)))
 
             # 2. Reconstruction
             Gloss_rec_y = torch.mean(torch.abs(y-y_gen))
@@ -119,7 +120,8 @@ class Pix2Pix(UnicTrainer):
             Gloss           = Gloss_pix2pix + Gloss_rec*app.LAMBDA_IDENTITY
 
             if modality == 'train':
-                zerograd([self.gen_agent.optimize_encoder, self.gen_agent.optimizer_decoder, self.disc_agent.optimizer])
+                zerograd([self.gen_agent.optimize_encoder, self.gen_agent.optimizer_decoder,
+                         self.disc_agent.optimizer])
                 Gloss.backward()
                 self.gen_agent.optimizer.step()
                 self.gen_agent.track_gradient(epoch)
