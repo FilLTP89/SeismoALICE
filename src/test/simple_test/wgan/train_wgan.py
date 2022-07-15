@@ -124,7 +124,7 @@ class WGAN(SimpleTrainer):
 
             Gloss_rec   = Gloss_rec_y + Gloss_rec_zd
 
-            Gloss = Gloss_wgan_y + Gloss_wgan_zd + Gloss_rec*app.LAMBDA_IDENTITY
+            Gloss = Gloss_wgan_y + Gloss_wgan_zd + Gloss_rec
             if modality == 'train':
                 zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder, self.disc_agent.optimizer])
                 Gloss.backward()

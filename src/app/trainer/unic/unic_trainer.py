@@ -24,7 +24,9 @@ class UnicTrainer(BasicTrainer):
         His goal is to trainer encoder_unic and decoder unic over. 
         So it should be call withe app.unic.generators and app.unic.discriminators agents
     """
-    def __init__(self,cv,losses_disc, losses_gens, gradients_gens, gradients_disc, prob_disc, trial=None):
+    def __init__(self,cv,losses_disc, losses_gens, gradients_gens, 
+                    gradients_disc, prob_disc, trial=None):
+        
         globals().update(cv)
         globals().update(opt.__dict__)
 

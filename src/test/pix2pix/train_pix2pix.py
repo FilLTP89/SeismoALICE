@@ -62,7 +62,7 @@ class Pix2Pix(UnicTrainer):
             Dloss_xy    = self.bce_logit_loss(Dreal_xy.reshape(-1),o1l(Dfake_xy.reshape(-1))) +\
                             self.bce_logit_loss(Dfake_xy.reshape(-1),o0l(Dfake_xy.reshape(-1)))
             
-            Dreal_zd, Dfake_zd = self.disc_agent.discriminate_marginal_zd(zxy,zd_gen)
+            Dreal_zd, Dfake_zd = self.disc_agent.discriminate_zd(zxy,zd_gen)
             Dloss_zd    = self.bce_logit_loss(Dreal_zd.reshape(-1),o1l(Dfake_zd.reshape(-1)))+\
                             self.bce_logit_loss(Dfake_zd.reshape(-1),o0l(Dfake_zd.reshape(-1)))
             
@@ -138,6 +138,13 @@ class Pix2Pix(UnicTrainer):
             self.losses_gens['Gloss_rec_y'  ] = Gloss_rec_y.tolist()
             self.losses_gens['Gloss_rec_zd' ] = Gloss_rec_zd.tolist()
             self.losses_gen_tracker.update()
+    
+    def on_test_epoch(self, epoch, bar):
+        with torch.no_grad(): 
+            # Over-write the parent method
+            torch.manual_seed(100)
+
+            
 
 
 

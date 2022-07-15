@@ -28,8 +28,7 @@ class Discriminators(Agent):
         # self.discriminators = [self.Dy, self.Dyy, self.Dyz, self.Dzb, self.Dzzb]
 
         self.optimizer = reset_net(self.discriminators,lr = self.rlr,
-                    optim='adam', b1=0.5, b2=0.9999, alpha=0.90,
-                    weight_decay=self.weight_decay)
+                    optim='adam', b1=0., b2=0.9, alpha=0.90)
         self._architecture(app.EXPLORE)
         super(Discriminators,self).__init__(self.discriminators,self.optimizer, config, logger, accel,*args, **kwargs)
     

@@ -18,7 +18,6 @@ from factory.conv_factory import Network, DataParalleleFactory
 from app.agent.simple.generators import Generators
 from app.agent.simple.discriminators import Discriminators
 
-@st.cache
 class SimpleTrainer(BasicTrainer):
     """ This class is an extension of the BasicTrainer class.
         The BasicTrainer works a template pattern.So the base logic to launch
