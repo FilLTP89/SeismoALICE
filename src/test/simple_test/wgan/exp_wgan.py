@@ -1,4 +1,6 @@
+import torch
 import streamlit as st
+import matplotlib.pyplot as plt
 from app.trainer.simple.simple_trainer import SimpleTrainer
 from configuration import app
 
@@ -47,8 +49,53 @@ class StreamWGAN(SimpleTrainer):
 
     def stream_presentation(self):
         st.write("""
-            ### Explore WGAN dataset and Generations' values
+            ### Explore The WGAN with Gradient Penality
 
             This page will give an over view of the WGAN GP training test.
 
             """)
+        
+        self.stream_generate_values_from_z()
+    
+    def stream_generate_values_from_z(self):
+        st.write(""" Generate noise """)
+        result = st.button("Generate signal from Noise")
+
+        if result:
+            z_tar       = torch.randn(1,1,512).to(app.DEVICE)
+            st.write("shape of noise :")
+            st.write(z_tar.shape)
+
+            y_gen       = self.gen_agent.Fy(z_tar) 
+            z_gen       = self.gen_agent.Gy(y_gen)
+            
+            st.write(" Comparaison between noise")
+            z_gen = z_gen.cpu().data.numpy()
+            z_tar = z_tar.cpu().data.numpy()
+            
+            plt.figure(figsize=(6,6))
+            fig1, ax = plt.subplots()
+            ax.hist(z_gen[0,0,:], bins=30, density=True, label='cal', fc=(0.8, 0, 0, 1))
+            ax.hist(z_tar[0,0,:], bins=10, density=True, label='targ',fc=(1., 0.8, 0, 0.8))
+            ax.set_xlim([-4,4])
+            ax.set_ylim([0,0.5])
+            ax.set_xlabel('z')
+
+            st.pyplot(fig1)
+
+            st.write(f" Generate images from noise shape {y_gen.shape}")
+            plt.figure(figsize=(12,8))
+            _, c, w = y_gen.shape
+            y_gen = y_gen.cpu().data.numpy()
+
+            fig2, ax = plt.subplots(1,c)
+            for i in range(c):
+                ax[i].plot(y_gen[0,i,:])
+                ax[i].set_xlabel('t')
+                ax[i].set_ylabel('A(t)')
+                ax[i].set_ylim([-1,1])
+                ax[i].set_xlim([0,w])
+
+            st.pyplot(fig2)
+            
+
