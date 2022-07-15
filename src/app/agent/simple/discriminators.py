@@ -30,7 +30,7 @@ class Discriminators(Agent):
         self.optimizer = reset_net(self.discriminators,lr = self.rlr,
                     optim='adam', b1=0.5, b2=0.9999, alpha=0.90,
                     weight_decay=self.weight_decay)
-        self._architecture()
+        self._architecture(app.EXPLORE)
         super(Discriminators,self).__init__(self.discriminators,self.optimizer, config, logger, accel,*args, **kwargs)
     
     def track_gradient(self,epoch):
@@ -41,18 +41,19 @@ class Discriminators(Agent):
             self.track_weight_change(writer =  self.debug_writer, tag = net.module.model_name,
             model= net.module.cnn.eval(), epoch = epoch)
     
-    def _architecture(self):
-        writer_dsy   = SummaryWriter(self.opt.config['log_dir']['debug.dsy_writer'])
-        # writer_dyy  = SummaryWriter(self.opt.config['log_dir']['debug.dyy_writer'])
-        writer_dszb  = SummaryWriter(self.opt.config['log_dir']['debug.dszb_writer'])
-        # writer_dzzb = SummaryWriter(self.opt.config['log_dir']['debug.dzzb_writer'])
-        # writer_dyz  = SummaryWriter(self.opt.config['log_dir']['debug.dyz_writer'])
+    def _architecture(self, explore):
+        if explore: 
+            writer_dsy   = SummaryWriter(self.opt.config['log_dir']['debug.dsy_writer'])
+            # writer_dyy  = SummaryWriter(self.opt.config['log_dir']['debug.dyy_writer'])
+            writer_dszb  = SummaryWriter(self.opt.config['log_dir']['debug.dszb_writer'])
+            # writer_dzzb = SummaryWriter(self.opt.config['log_dir']['debug.dzzb_writer'])
+            # writer_dyz  = SummaryWriter(self.opt.config['log_dir']['debug.dyz_writer'])
 
-        writer_dsy.add_graph(next(iter(self.Dsy.children())),torch.randn(10,3,4096).cuda())
-        # writer_dyy.add_graph(next(iter(self.Dyy.children())),torch.randn(10,6,4096).cuda())
-        writer_dszb.add_graph(next(iter(self.Dszb.children())),torch.randn(10,1,512).cuda())
-        # writer_dzzb.add_graph(next(iter(self.Dzzb.children())), torch.randn(10,8,128).cuda())
-        # writer_dyz.add_graph(next(iter(self.Dyz.children())), torch.randn(10,2,512).cuda())
+            writer_dsy.add_graph(next(iter(self.Dsy.children())),torch.randn(10,3,4096).cuda())
+            # writer_dyy.add_graph(next(iter(self.Dyy.children())),torch.randn(10,6,4096).cuda())
+            writer_dszb.add_graph(next(iter(self.Dszb.children())),torch.randn(10,1,512).cuda())
+            # writer_dzzb.add_graph(next(iter(self.Dzzb.children())), torch.randn(10,8,128).cuda())
+            # writer_dyz.add_graph(next(iter(self.Dyz.children())), torch.randn(10,2,512).cuda())
     
     def discriminate_yz(self,y,yr,z,zr):
         # Discriminate real

@@ -2,7 +2,7 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 from core.trainer.basic_frame import Agent
 from common.common_nn import reset_net
-
+from configuration import app
 
 class Generators(Agent):
     def __init__(self,network,config,logger, accel,opt, gradients_tracker,debug_writer,*args, **kwargs):
@@ -26,7 +26,7 @@ class Generators(Agent):
         self.optimizer_decoder = reset_net([self.Gy],
                 optim='adam',alpha=0.9,lr=self.dlr,b1=0.,b2=0.90)
 
-        self._architecture()
+        self._architecture(app.EXPLORE)
         super(Generators,self).__init__(self.generators, [self.optimizer_encoder,self.optimizer_decoder], 
             config, logger, accel,*args, **kwargs)
 
@@ -41,10 +41,11 @@ class Generators(Agent):
         self.track_weight_change(writer =  self.debug_writer, tag = 'Gy', 
             model= self.Gy.module.cnn1.eval(),epoch = epoch)
 
-    def _architecture(self):
-        writer_encoder = SummaryWriter(self.opt.config['log_dir']['debug.encoder_writer'])
-        writer_decoder = SummaryWriter(self.opt.config['log_dir']['debug.decoder_writer'])
-        writer_encoder.add_graph(next(iter(self.Fy.children())),
-                        torch.randn(10,6,4096).cuda())
-        writer_decoder.add_graph(next(self.Gy.children()), 
-                        (torch.randn(10,1,512).cuda()))
+    def _architecture(self, explore):
+        if explore:
+            writer_encoder = SummaryWriter(self.opt.config['log_dir']['debug.encoder_writer'])
+            writer_decoder = SummaryWriter(self.opt.config['log_dir']['debug.decoder_writer'])
+            writer_encoder.add_graph(next(iter(self.Fy.children())),
+                            torch.randn(10,6,4096).cuda())
+            writer_decoder.add_graph(next(self.Gy.children()), 
+                            (torch.randn(10,1,512).cuda()))

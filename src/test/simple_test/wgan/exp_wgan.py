@@ -1,13 +1,14 @@
 import torch
 import streamlit as st
 import matplotlib.pyplot as plt
+from common.common_nn import zcat
+from tools.generate_noise import noise_generator
 from app.trainer.simple.simple_trainer import SimpleTrainer
 from configuration import app
 
-
 class StreamWGAN(SimpleTrainer):
     def __init__(self,cv, trial=None):
-        
+        breakpoint()
         losses_disc = {
             'epochs':'',           'modality':'',
             'Dloss':'',        
@@ -54,20 +55,19 @@ class StreamWGAN(SimpleTrainer):
             This page will give an over view of the WGAN GP training test.
 
             """)
-        
-        self.stream_generate_values_from_z()
-    
-    def stream_generate_values_from_z(self):
         st.write(""" Generate noise """)
         result = st.button("Generate signal from Noise")
 
         if result:
             z_tar       = torch.randn(1,1,512).to(app.DEVICE)
-            st.write("shape of noise :")
+            st.write("shape of noises :")
             st.write(z_tar.shape)
-
-            y_gen       = self.gen_agent.Fy(z_tar) 
-            z_gen       = self.gen_agent.Gy(y_gen)
+            
+            y_gen       = self.gen_agent.Gy(z_tar)
+            st.write("shape of y")
+            st.write(y_gen.shape)
+            wny,*others = noise_generator(y_gen.shape,z_tar.shape,app.DEVICE,app.NOISE)
+            z_gen       = self.gen_agent.Fy(zcat(y_gen,wny))
             
             st.write(" Comparaison between noise")
             z_gen = z_gen.cpu().data.numpy()
@@ -97,5 +97,9 @@ class StreamWGAN(SimpleTrainer):
                 ax[i].set_xlim([0,w])
 
             st.pyplot(fig2)
+        # self.stream_generate_values_from_z()
+    
+    def stream_generate_values_from_z(self):
+        pass
             
 

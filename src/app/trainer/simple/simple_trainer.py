@@ -1,4 +1,5 @@
 import torch
+import streamlit as st
 from tqdm import tqdm as tq
 from plot.plot_tools import get_gofs, plot_generate_classic
 from plot.plot_tools import get_histogram
@@ -17,6 +18,7 @@ from factory.conv_factory import Network, DataParalleleFactory
 from app.agent.simple.generators import Generators
 from app.agent.simple.discriminators import Discriminators
 
+@st.cache
 class SimpleTrainer(BasicTrainer):
     """ This class is an extension of the BasicTrainer class.
         The BasicTrainer works a template pattern.So the base logic to launch

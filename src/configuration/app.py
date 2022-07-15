@@ -4,6 +4,7 @@ import logging
 
 DEVICE          = "cuda:0" if torch.cuda.is_available() else "cpu"
 SAVE            = True
+EXPLORE         = False
 NOISE           = {'mean': 0., 'std': 1.0}
 AVAIL_GPUS      = min(1, torch.cuda.device_count())
 NUM_WORKERS     = int(os.cpu_count() / 2)
