@@ -18,14 +18,14 @@ source load_conda_env_gpu.sh P100
 
 #python ./src/aae_drive_bbfl.py --dataroot='./database/stead' --dataset='nt4096_ls4_nf8_nzd32.pth' --cutoff=1. --imageSize=4096 --latentSize=4  --niter=5000 --cuda --ngpu=2 --nzd=32 --rlr=0.0001 --glr=0.0001 --outf='./imgs_bb_ls4_nf8_nzd32' --workers=8 --nsy=50 --batchSize=10 --actions='./actions_bb.txt' --strategy='./strategy_bb.txt' --save_checkpoint=2000 --config='./config/config_bb_ls4_nf8_ndz32.json'> log_bb.txt
 python ./src/aae/aae_test.py \
-    --dataroot='./database/tweaked/data/test/nsy1280/' \
+    --dataroot='./database/tweaked/data/test/nsy12800/' \
     --dataset='nt4096_ls128_nzf8_nzd32.pth' \
     --cutoff=30. --imageSize=4096 --latentSize=64 \
     --niter=5001 --cuda --nodes=1 \
     --local_rank=0 --ngpu=2 --ip_address=$ip1 --nzd=16 --nzf=8 \
     --rlr=0.00025164314945158394 --glr=0.006187098496095162 --manualSeed=42\
     --outf='./imgs_bb_ls64_nf8_nzd32/unic/config_27/ter/unic/classic/zyy24/nsy1280/' \
-    --workers=8 --nsy=1280 --batchSize=256 \
+    --workers=8 --nsy=12800 --batchSize=256 \
     --actions='./action/actions_unic.txt' --strategy='./strategy/strategy_unic.txt' \
     --save_checkpoint=500 \
     --summary_dir='./runs_both/broadband/zyy16/back-test/nsy1280/test-dxy/dummy/v1_lossl1_only/test/dis_in_train_fn_ali_4_repeat_3'\

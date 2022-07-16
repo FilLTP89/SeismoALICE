@@ -5,13 +5,14 @@ from common.common_nn import reset_net,zcat
 from tools.generate_noise import noise_generator
 from configuration import app
 class Discriminators(Agent):
-    def __init__(self,network,config,logger, accel, opt, gradients_tracker,debug_writer,*args, **kwargs):
+    def __init__(self,network,config,logger, accel, opt, gradients_tracker,debug_writer,
+                strategy,*args, **kwargs):
         self.config = config
         self.opt    = opt
         self.std    = 1.0
-        self.debug_writer = debug_writer
-        self.gradients_tracker = gradients_tracker
-        self.discriminators  = []
+        self.debug_writer       = debug_writer
+        self.discriminators     = []
+        self.gradients_tracker  = gradients_tracker
 
         self.rlr = self.opt.config["hparams"]['discriminators.lr']
         self.weight_decay = self.opt.config["hparams"]['discriminators.weight_decay']
@@ -54,7 +55,7 @@ class Discriminators(Agent):
             # writer_dzzb.add_graph(next(iter(self.Dzzb.children())), torch.randn(10,8,128).cuda())
             # writer_dyz.add_graph(next(iter(self.Dyz.children())), torch.randn(10,2,512).cuda())
     
-    def discriminate_yz(self,y,yr,z,zr):
+    def discriminate_conjoint_yz(self,y,yr,z,zr):
         # Discriminate real
         ftz         = self.Dzb(zr) #--OK : no batchNorm
         ftx         = self.Dy(y) # --OK : with batchNorm
@@ -69,16 +70,6 @@ class Discriminators(Agent):
         ftzx        = self.Dyz(zrc)
         Dzx         = ftzx
         return Dxz,Dzx 
-    
-    def discriminate_yy(self,y,yr):
-        Dreal = self.Dyy(zcat(y,y))
-        Dfake = self.Dyy(zcat(y,yr))
-        return Dreal, Dfake
-
-    def discriminate_zzb(self,z,zr):
-        Dreal = self.Dzzb(zcat(z,z))
-        Dfake = self.Dzzb(zcat(z,zr))
-        return Dreal, Dfake
 
     def discriminate_marginal_y(self,y,yr):
         # We apply in frist convolution from the y signal ...
