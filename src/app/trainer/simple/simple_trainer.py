@@ -27,8 +27,8 @@ class SimpleTrainer(BasicTrainer):
         To train simultaneously on two different types of dataset like (broadband
         and filtered) see UnicTrainer implementation instead.
     """
-    def __init__(self,cv,losses_disc, losses_gens, gradients_gens, gradients_disc, prob_disc,
-                    trial=None,*args,**kwargs):
+    def __init__(self,cv,losses_disc, losses_gens, gradients_gens, gradients_disc, 
+                    prob_disc, strategy_discriminator, trial=None, *args,**kwargs):
         globals().update(cv)
         globals().update(opt.__dict__)
 
@@ -73,7 +73,7 @@ class SimpleTrainer(BasicTrainer):
         self.logger.info("Creating Discriminator Agent ...")
         self.disc_agent = Discriminators(network=network, config=self.opt.config, logger=self.logger,
                         accel=DP, opt=self.opt, gradients_tracker = self.gradients_tracker_disc,
-                        debug_writer = self.debug_writer)
+                        debug_writer = self.debug_writer, strategy = strategy_discriminator)
 
         self.logger.info("Loading the dataset ...")
         self.data_trn_loader, self.data_vld_loader,self.data_tst_loader = trn_loader, vld_loader, tst_loader

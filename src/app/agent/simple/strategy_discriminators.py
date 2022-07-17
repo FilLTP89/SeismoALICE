@@ -5,23 +5,23 @@ class IStrategyDiscriminator(ABC):
         pass
     
     @abstractmethod
-    def optimizer(self,*args,**kwargs):
+    def _optimizer(self,*args,**kwargs):
         raise NotImplementedError
     
     
-    def discriminate_conjoint_yz(self,*args,**kwargs):
+    def _discriminate_conjoint_yz(self,*args,**kwargs):
         pass
     
     
-    def discriminate_marginal_z(self,*args,**kwargs):
+    def _discriminate_marginal_z(self,*args,**kwargs):
         pass
     
     
-    def discriminate_marginal_y(self,*args,**kwargs):
+    def _discriminate_marginal_y(self,*args,**kwargs):
         pass
     
     @abstractmethod
-    def architecture(self,*args,**kwargs):
+    def _architecture(self,*args,**kwargs):
         raise NotImplementedError
     
     @abstractmethod

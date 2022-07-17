@@ -1,19 +1,20 @@
 import torch
 from app.trainer.simple.simple_trainer import SimpleTrainer
-from common.common_nn import zerograd,zcat,modalite, Exp
+from common.common_nn import zerograd,zcat,modalite
 from tools.generate_noise import noise_generator
+from test.simple_test.alice.strategy_discriminator_alice import StrategyDiscriminatorALICE
 from common.common_torch import *
 from configuration import app
 
 class ALICE(SimpleTrainer):
     def __init__(self,cv, trial=None):
-        
         losses_disc = {
             'epochs':'',           'modality':'',
             'Dloss':'',            'Dloss_cross_entropy':'',             
             'Dloss_ali_y':'',      'Dloss_cross_entropy_y':''
             'Dloss_cross_entropy_zd'
         }
+
         losses_gens = {
             'epochs':'',                'modality':'',
             'Gloss':'',                 'Gloss_cross_entropy':'',
@@ -41,7 +42,8 @@ class ALICE(SimpleTrainer):
         }
         super(ALICE, self).__init__(cv, trial = None, 
             losses_disc = losses_disc, losses_gens = losses_gens, prob_disc  = prob_disc,
-            gradients_gens = gradients_gens, gradients_disc = gradients_disc)
+            gradients_gens = gradients_gens, gradients_disc = gradients_disc, 
+            strategy_discriminators = StrategyDiscriminatorALICE)
     
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,zxy = batch
