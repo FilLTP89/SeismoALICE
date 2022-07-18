@@ -40,6 +40,9 @@ class MetricTracker:
         #get a specific column and average value for a specified epochs 
         _datum = self._data.loc[self._data['modality']== mode]
         return _datum[_datum['epochs'] == epoch][column].mean()
+    
+    def __str__(self):
+        return self._data.head()
 
     def update(self):
         # this function should save values in a row

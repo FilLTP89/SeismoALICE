@@ -1,6 +1,7 @@
+from time import gmtime
 import torch
 from app.trainer.simple.simple_trainer import SimpleTrainer
-from common.common_nn import zerograd,zcat,modalite
+from common.common_nn import zerograd,zcat,modalite, clipweights
 from test.simple_test.wgan.strategy_discriminator_wgan import StrategyDiscriminatorWGAN
 from tools.generate_noise import noise_generator
 from common.common_model import gradient_penalty
@@ -12,10 +13,12 @@ class WGAN(SimpleTrainer):
         
         losses_disc = {
             'epochs':'',           'modality':'',
-            'Dloss':'',     
+            'Dloss':'',
+
             'Dloss_wgan_y':'',     'Dloss_wgan_zd':'',
             'Dloss_wgan_yz':''
         }
+
         losses_gens = {
             'epochs':'',           'modality':'',
             'Gloss':'',            'Gloss_wgan_y':'',
@@ -26,21 +29,21 @@ class WGAN(SimpleTrainer):
         }
 
         prob_disc = {
-            'epochs':'',                'modality':'',
-            'Dreal_y':'',               'Dfake_y':'',
-            'Dreal_zd':'',              'Dfake_zd':'',
+            'epochs':'',            'modality':'',
+            'Dreal_y':'',           'Dfake_y':'',
+            'Dreal_zd':'',          'Dfake_zd':'',
 
-            'GPy':'',                   'GPzb':'',
-            'GPyz':''
+            'GPy':'',               'GPzb':''
         }
 
         gradients_gens = {
             'epochs':'',    'modality':'',
             'F':'',         'Gy':'',
         }
+
         gradients_disc = {
             'epochs':'',    'modality':'',
-            'Dsyz':'',       'Dsy':'',
+            'Dsyz':'',      'Dsy':'',
             'Dszb':'',
         }
         super(WGAN, self).__init__(cv, trial = None,
@@ -51,7 +54,6 @@ class WGAN(SimpleTrainer):
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,_ = batch
         for _ in range(1):
-            breakpoint()
             zerograd([self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
@@ -65,22 +67,19 @@ class WGAN(SimpleTrainer):
             zd_gen      = zyy_F
 
             Dreal_y, Dfake_y = self.disc_agent.discriminate_marginal_y(y, y_gen)
-            GPy = gradient_penalty(self.disc_agent.Dsy, y, y_gen,app.DEVICE) \
+            GPy = gradient_penalty(self.disc_agent.Dsy, y, y_gen, app.DEVICE) \
                     if modality == 'train' else torch.zeros([])
             Dloss_wgan_y= -(torch.mean(Dreal_y.reshape(-1)) - torch.mean(Dfake_y.reshape(-1))) +\
-                                GPy*app.LAMBDA_GP
+                    GPy*app.LAMBDA_GP
             
             Dreal_zd,Dfake_zd = self.disc_agent.discriminate_marginal_zd(zd_inp,zd_gen) 
             GPzb= gradient_penalty(self.disc_agent.Dszb, zd_inp, zd_gen, app.DEVICE) \
                     if modality == 'train' else torch.zeros([])
-            Dloss_wgan_zd = -(torch.mean(Dreal_zd.reshape(-1)) - torch.mean(Dfake_zd.reshape(-1))) +\
+            Dloss_wgan_zd= -(torch.mean(Dreal_zd.reshape(-1)) - torch.mean(Dfake_zd.reshape(-1))) +\
                                  GPzb*app.LAMBDA_GP
             
             Dreal_yz,Dfake_yz = self.disc_agent.discriminate_conjoint_yz(y,y_gen, zd_inp,zd_gen)
-            GPyz= gradient_penalty(self.disc_agent.Dsyz, (y,zd_gen), (y_gen,zd_inp), app.DEVICE) \
-                    if modality == 'train' else torch.zeros([])
-            Dloss_wgan_yz = -(torch.mean(Dreal_yz.reshape(-1)) - torch.mean(Dfake_yz.reshape(-1)))+\
-                            GPyz*app.LAMBDA_GP
+            Dloss_wgan_yz = -(torch.mean(Dreal_yz.reshape(-1)) - torch.mean(Dfake_yz.reshape(-1)))
 
             Dloss_wgan =  Dloss_wgan_yz + Dloss_wgan_y + Dloss_wgan_zd
             
@@ -89,13 +88,14 @@ class WGAN(SimpleTrainer):
                 Dloss_wgan.backward(retain_graph=True)
                 self.disc_agent.track_gradient(epoch)
                 self.disc_agent.optimizer.step()
+                clipweights([self.disc_agent.Dsyz])
                 
             self.losses_disc['epochs'       ] = epoch
             self.losses_disc['modality'     ] = modality
-
             self.losses_disc['Dloss'        ] = Dloss_wgan.tolist()
             self.losses_disc['Dloss_wgan_y' ] = Dloss_wgan_y.tolist()
             self.losses_disc['Dloss_wgan_zd'] = Dloss_wgan_zd.tolist()
+            self.losses_disc['Dloss_wgan_yz'] = Dloss_wgan_yz.tolist()
             self.losses_disc_tracker.update()
 
             self.prob_disc['epochs'  ] = epoch
@@ -104,8 +104,6 @@ class WGAN(SimpleTrainer):
             self.prob_disc['Dfake_y' ] = Dfake_y.mean().tolist()
             self.prob_disc['Dreal_zd'] = Dreal_zd.mean().tolist()
             self.prob_disc['Dfake_zd'] = Dfake_zd.mean().tolist()
-
-            self.prob_disc['GPyz'    ] = GPyz.mean().tolist()
             self.prob_disc['GPy'     ] = GPy.mean().tolist()
             self.prob_disc['GPzb'    ] = GPzb.mean().tolist()
             self.prob_disc_tracker.update()
@@ -145,7 +143,6 @@ class WGAN(SimpleTrainer):
             Gloss_rec_zd= torch.mean(torch.abs(zd_inp-zd_rec))
 
             Gloss_rec   = Gloss_rec_y + Gloss_rec_zd
-
             Gloss       = Gloss_wgan_yz + Gloss_wgan_y + Gloss_wgan_zd + Gloss_rec*app.LAMBDA_IDENTITY
 
             if modality == 'train':
@@ -161,6 +158,7 @@ class WGAN(SimpleTrainer):
             self.losses_gens['Gloss'        ] = Gloss.tolist()
             self.losses_gens['Gloss_wgan_y' ] = Gloss_wgan_y.tolist()
             self.losses_gens['Gloss_wgan_zd'] = Gloss_wgan_zd.tolist()
+            self.losses_gens['Gloss_wgan_yz'] = Gloss_wgan_yz.tolist()
             self.losses_gens['Gloss_rec'    ] = Gloss_rec.tolist()
             self.losses_gens['Gloss_rec_y'  ] = Gloss_rec_y.tolist()
             self.losses_gens['Gloss_rec_zd' ] = Gloss_rec_zd.tolist()

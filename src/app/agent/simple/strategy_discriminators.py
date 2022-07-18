@@ -27,3 +27,7 @@ class IStrategyDiscriminator(ABC):
     @abstractmethod
     def _get_discriminators(self,*args,**kwargs):
         raise NotImplementedError
+
+    @abstractmethod
+    def _get_name_discriminators(self):
+        raise NotImplementedError

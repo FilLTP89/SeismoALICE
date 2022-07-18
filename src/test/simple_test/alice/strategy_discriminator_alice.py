@@ -15,6 +15,7 @@ class StrategyDiscriminatorALICE(IStrategyDiscriminator):
         self.Dyy    = accel(network.DCGAN_Dx(self.opt.config['Dyy'],self.opt, model_name='Dyy')).cuda()
 
         self._discriminators = [self.Dyz,self.Dzzb,self.Dyy, self.Dsy, self.Dszb]
+        self._name_discriminators = ['Dyz','Dzzb','Dyy','Dsy', 'Dszb']
         super(StrategyDiscriminatorALICE,self).__init__(*args,**kwargs)
 
     def _discriminate_conjoint_yz(self,y,y_gen,z, z_gen,*args,**kwargs):
@@ -50,6 +51,9 @@ class StrategyDiscriminatorALICE(IStrategyDiscriminator):
     
     def _get_discriminators(self):
         return self._discriminators
+    
+    def _get_name_discriminators(self):
+        return self._name_discriminators
     
     def _optimizer(self):
         return reset_net(self._discriminators,lr = self.rlr, optim='adam', b1=0., b2=0.9, alpha=0.90)

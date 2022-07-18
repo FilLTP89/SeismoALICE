@@ -5,9 +5,9 @@
         "generators.weight_decay":0.0001,
         "discriminators.lr":0.0004,
         "discriminators.weight_decay":0.0001,
-        "training_epochs":5,
-        "validation_epochs":5,
-        "test_epochs":5
+        "training_epochs":25,
+        "validation_epochs":25,
+        "test_epochs":25
     },
     "log_dir":{
         "train_writer":"./runs_both/renew/wgan/bbt82fd4f9/training/",
