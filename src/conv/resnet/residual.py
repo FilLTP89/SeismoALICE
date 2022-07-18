@@ -1,4 +1,5 @@
 import torch
+import copy
 import torch.nn as nn
 from functools import partial
 from core.net.basic_model import BasicModel
@@ -288,7 +289,7 @@ class EncoderResnet(ResidualContainer):
                     intermediate_channels= channel, stride=2, 
                     conv = partial(nn.Conv1d), conv_tools=self.conv_tools
                     )._make_layer()
-            self.network.append(_layer)
+            self.network.append(copy.deepcopy(_layer))
 
         self.network = nn.Sequential(*self.network)
         #ending layer
@@ -348,7 +349,7 @@ class DecoderResnet(ResidualContainer):
                         num_residual_blocks=layer,intermediate_channels= channel, stride=2, 
                         conv = partial(nn.ConvTranspose1d), conv_tools=self.conv_tools
                     )._make_layer(output_padding=1)
-            self.network.append(_layer)
+            self.network.append(copy.deepcopy(_layer))
         
         self.network= nn.Sequential(*self.network)
         
