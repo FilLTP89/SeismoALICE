@@ -1,10 +1,11 @@
 import torch
 from app.trainer.simple.simple_trainer import SimpleTrainer
 from common.common_nn import zerograd,zcat,modalite
-from test.simple_test.wgan.strategy_discriminators_wgan import StrategyDiscriminatorWGAN
+from test.simple_test.wgan.strategy_discriminator_wgan import StrategyDiscriminatorWGAN
 from tools.generate_noise import noise_generator
 from common.common_model import gradient_penalty
 from configuration import app
+
 
 class WGAN(SimpleTrainer):
     def __init__(self,cv, trial=None):
@@ -44,7 +45,7 @@ class WGAN(SimpleTrainer):
         }
         super(WGAN, self).__init__(cv, trial = None,
         losses_disc = losses_disc, losses_gens = losses_gens,prob_disc   = prob_disc,
-        strategy_discriminators = StrategyDiscriminatorWGAN, 
+        strategy_discriminator = StrategyDiscriminatorWGAN, 
         gradients_gens = gradients_gens, gradients_disc = gradients_disc, actions=None, start_epoch=None)
     
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):

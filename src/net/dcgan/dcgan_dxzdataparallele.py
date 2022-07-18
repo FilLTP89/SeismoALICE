@@ -23,7 +23,7 @@ class DCGAN_DXZDataParallele(object):
         
     @staticmethod
     def getDCGAN_DXZDataParallele(name, ngpu, nly, channel, act, path, nc=1024,\
-        ker=2,std=2,pad=0, dil=0,grp=0,limit = 256, extra =  128, batch_size=128,\
+        ker=2,std=2,pad=0, dil=0,grp=0,limit = 256, extra =  128, batch_size=128, config=None,\
         bn=True,wf=False, dpc=0.25, n_extra_layers= 0, bias = False, prob = False, *args, **kwargs):
 
         if name is not None:
@@ -35,7 +35,7 @@ class DCGAN_DXZDataParallele(object):
                 class_ = getattr(module,classname)
                 return class_(ngpu=ngpu, nc=nc, nly=nly, channel = channel,\
                                 ker=ker,std=std,pad=pad, dil=dil, act = act, extra=extra,\
-                                grp=grp, bn=bn, wf=wf, dpc=dpc,path=path, prob=prob,\
+                                grp=grp, bn=bn, wf=wf, dpc=dpc,path=path, prob=prob, config = config,\
                                 n_extra_layers=n_extra_layers, limit = limit, bias= bias, *args, **kwargs)
             except Exception as e:
                 raise e
@@ -43,7 +43,7 @@ class DCGAN_DXZDataParallele(object):
         else:
             return DCGAN_DXZ(ngpu=ngpu, nc=nc, nly=nly, path = path, channel = channel, act = act,\
                  ker=ker,std=std,pad=pad, dil=dil, grp=grp, extra=extra,\
-                 bn=bn, wf=wf, dpc=dpc, prob = prob,\
+                 bn=bn, wf=wf, dpc=dpc, prob = prob, config=config,\
                  n_extra_layers=n_extra_layers, limit = limit, bias=bias, *args, **kwargs)
 
 class BasicDCGAN_DXZDataParallele(BasicModel):
@@ -96,7 +96,7 @@ class DCGAN_DXZ(BasicDCGAN_DXZDataParallele):
     """docstring for DCGAN_DXZ"""
     def __init__(self,ngpu, nly, channel, act, nc=1024,\
         ker=2,std=2,pad=0, dil=1,grp=1, path='', extra=128,batch_size = 128,\
-        bn=True,wf=False, dpc=0.25, limit =1024, prob = False,\
+        bn=True,wf=False, dpc=0.25, limit =1024, prob = False, config=None, \
         n_extra_layers= 1, bias=False, *args, **kwargs):
         super(DCGAN_DXZ, self).__init__(*args, **kwargs)
         self.ngpu =  ngpu
@@ -215,7 +215,7 @@ class DCGAN_DXZ_Flatten(BasicDCGAN_DXZDataParallele):
     """docstring for    DCGAN_Dx"""
     def __init__(self,ngpu, nly, channel, act, nc=1024,\
         ker=2,std=2,pad=0, dil=1,grp=1, path='',extra=128,batch_size = 128,\
-        bn=True,wf=False, dpc=0.25, limit =1024, prob = False,\
+        bn=True,wf=False, dpc=0.25, limit =1024, prob = False, config=None, \
         n_extra_layers= 1, bias=False, *args, **kwargs):
         super(DCGAN_DXZ_Flatten, self).__init__(*args, **kwargs)
         
@@ -265,29 +265,51 @@ class DCGAN_DXZ_Flatten(BasicDCGAN_DXZDataParallele):
             z = z.detach()
         return z
     
-class DCGAN_DXZ_Flatten_Lite(BasicDCGAN_DXZDataParallele):
+class DCGAN_DXZ_Concat(BasicDCGAN_DXZDataParallele):
     """docstring for    DCGAN_Dx"""
     def __init__(self,ngpu, nly, channel, act, nc=1024,\
         ker=2,std=2,pad=0, dil=1,grp=1, path='',extra=128,batch_size = 128,\
-        bn=True,wf=False, dpc=0.25, limit =1024, prob = False,\
+        bn=True,wf=False, dpc=0.25, limit =1024, prob = False, config=None,\
         n_extra_layers= 1, bias=False, *args, **kwargs):
-        super(DCGAN_DXZ_Flatten_Lite, self).__init__(*args, **kwargs)
+        super(DCGAN_DXZ_Concat, self).__init__(*args, **kwargs)
+        breakpoint()
+        self.cnn_x  = self._branche(**config['signal'])
+        self.cnn_z  = self._branche(**config['latent'])
+        self.cnn    = self._branche(**config['common'],wf=True)
 
-        activation = T.activation(act, nly)
-        self.cnn  = []
+    def forward(self, x, z):
+        ftx = self.cnn_x(x)
+        ftz = self.cnn_z(z)
+        ft  = self.cnn(zcat(ftx,ftz))
+
+        if not self.training:
+            ft =  ft.detach()
+        return ft
+    
+    def _branche(self, nc, nlayers, channel, padding, dilation,kernel, strides, act, 
+            bn, dpc, wf = False, spectral_norm=False,prob=False, *args, **kwargs):
+        act = T.activation(act,nlayers)
+        normalization = partial(nn.InstanceNorm1d)
         
-        if prob:
-            self.cnn +=[
-                nn.Flatten(start_dim = 1, end_dim=2),
-                # Shallow(shape=(batch_size,lout*channel[-1])),
-                Linear(limit*channel[-2],channel[-1]),
-                nn.Sigmoid()
+        _cnn = [
+                nn.Conv1d(in_channels=channel[0],
+                out_channels=channel[1], kernel_size = kernel[0], stride = strides[0], 
+                padding = padding[0], bias=False),
+                act[0]
             ]
 
-        self.cnn = nn.Sequential(*self.cnn)
-
-    def forward(self,x):
-        z = self.cnn(x)
-        if not self.training:
-            z = z.detach()
-        return z
+        _cnn += self.block_conv(channel[1:], 
+            kernel = kernel[1:], strides = strides[1:], dilation = dilation[1:], padding = padding[1:], 
+            dpc = dpc, activation  = act[1:], bn = bn, bias = False, 
+            spectral_norm = spectral_norm, normalization = normalization, affine=True)
+        
+        if wf:
+            _cnn += [
+                        nn.Conv1d(in_channels=channel[-1],out_channels=1,kernel_size = 3, 
+                        stride = 1, padding=1, bias=False), 
+                        nn.LeakyReLU(1.0, inplace=True)
+                    ]
+        if prob:
+            self.cnn += [nn.Sigmoid()]
+        
+        return nn.Sequential(*_cnn)

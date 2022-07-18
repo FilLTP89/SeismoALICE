@@ -1,3 +1,4 @@
+from distutils.command.config import config
 import json
 from net.encoder.encoder_modelparallele import EncoderModelParallele
 from net.encoder.encoder_dataparallele  import EncoderDataParallele
@@ -306,7 +307,8 @@ class DataParalleleFactory(ConvNetFactory):
             prob    = prob,\
             bias    = bias,\
             extra   = extra,\
-            n_extra_layers=0,batch_size = opt.batchSize,*args, **kwargs)
+            config  = config_dcgan_dxz,\
+            n_extra_layers=0, batch_size = opt.batchSize,*args, **kwargs)
 
     
 class Network(object):

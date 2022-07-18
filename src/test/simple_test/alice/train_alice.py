@@ -43,7 +43,7 @@ class ALICE(SimpleTrainer):
         super(ALICE, self).__init__(cv, trial = None, 
             losses_disc = losses_disc, losses_gens = losses_gens, prob_disc  = prob_disc,
             gradients_gens = gradients_gens, gradients_disc = gradients_disc, 
-            strategy_discriminators = StrategyDiscriminatorALICE)
+            strategy_discriminator = StrategyDiscriminatorALICE)
     
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,zxy = batch
