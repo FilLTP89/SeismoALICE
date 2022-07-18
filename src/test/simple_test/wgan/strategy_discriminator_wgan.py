@@ -14,6 +14,7 @@ class StrategyDiscriminatorWGAN(IStrategyDiscriminator):
         self.Dsy    = accel(network.DCGAN_Dx(self.opt.config['Dsy'], self.opt,model_name='Dsy')).cuda()
         self.Dszb   = accel(network.DCGAN_Dz(self.opt.config['Dszb'],self.opt,model_name='Dszb')).cuda()
         self._discriminators = [self.Dsyz, self.Dsy, self.Dszb]
+        self._name_discriminators = ['Dsyz','Dsy', 'Dszb']
         
         super(StrategyDiscriminatorWGAN,self).__init__(*args,**kwargs)
 
@@ -46,6 +47,9 @@ class StrategyDiscriminatorWGAN(IStrategyDiscriminator):
     
     def _get_discriminators(self):
         return self._discriminators
+
+    def _get_name_discriminators(self):
+        return self._name_discriminators
     
     def _optimizer(self):
         return reset_net(self._discriminators,lr = self.rlr, optim='adam', b1=0., b2=0.9, alpha=0.90)

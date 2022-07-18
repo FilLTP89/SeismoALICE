@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -J test
+#SBATCH -J wgan
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
 #SBATCH --gres=gpu:2

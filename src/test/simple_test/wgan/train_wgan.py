@@ -64,12 +64,6 @@ class WGAN(SimpleTrainer):
             zyy_F       = self.gen_agent.Fy(y_inp)
             zd_gen      = zyy_F
 
-            Dreal_yz,Dfake_yz = self.disc_agent.discriminate_conjoint_yz(y,y_gen, zd_inp,zd_gen)
-            GPyz= gradient_penalty(self.disc_agent.Dsyz, (y,zd_gen), (y_gen,zd_inp), app.DEVICE) \
-                    if modality == 'train' else torch.zeros([])
-            Dloss_wgan_yz = -(torch.mean(Dreal_yz.reshape(-1)) - torch.mean(Dfake_yz.reshape(-1)))+\
-                            GPyz*app.LAMBDA_GP
-
             Dreal_y, Dfake_y = self.disc_agent.discriminate_marginal_y(y, y_gen)
             GPy = gradient_penalty(self.disc_agent.Dsy, y, y_gen,app.DEVICE) \
                     if modality == 'train' else torch.zeros([])
@@ -81,6 +75,12 @@ class WGAN(SimpleTrainer):
                     if modality == 'train' else torch.zeros([])
             Dloss_wgan_zd = -(torch.mean(Dreal_zd.reshape(-1)) - torch.mean(Dfake_zd.reshape(-1))) +\
                                  GPzb*app.LAMBDA_GP
+            
+            Dreal_yz,Dfake_yz = self.disc_agent.discriminate_conjoint_yz(y,y_gen, zd_inp,zd_gen)
+            GPyz= gradient_penalty(self.disc_agent.Dsyz, (y,zd_gen), (y_gen,zd_inp), app.DEVICE) \
+                    if modality == 'train' else torch.zeros([])
+            Dloss_wgan_yz = -(torch.mean(Dreal_yz.reshape(-1)) - torch.mean(Dfake_yz.reshape(-1)))+\
+                            GPyz*app.LAMBDA_GP
 
             Dloss_wgan =  Dloss_wgan_yz + Dloss_wgan_y + Dloss_wgan_zd
             
@@ -126,14 +126,14 @@ class WGAN(SimpleTrainer):
             y_gen       = self.gen_agent.Gy(zyy)
             zd_gen      = self.gen_agent.Fy(y_inp)
 
-            _, Dfake_yz = self.disc_agent.discriminate_conjoint_yz(y,y_gen, zd_inp,zd_gen)
-            Gloss_wgan_yz = -(torch.mean(Dfake_yz.reshape(-1)))
-
             _, Dfake_y  = self.disc_agent.discriminate_marginal_y(y, y_gen)
             Gloss_wgan_y  = -(torch.mean(Dfake_y.reshape(-1)))
 
             _, Dfake_zd = self.disc_agent.discriminate_marginal_zd(zd_inp,zd_gen)
             Gloss_wgan_zd = -(torch.mean(Dfake_zd.reshape(-1)))
+
+            _, Dfake_yz = self.disc_agent.discriminate_conjoint_yz(y,y_gen, zd_inp,zd_gen)
+            Gloss_wgan_yz = -(torch.mean(Dfake_yz.reshape(-1)))
 
             # 2. Reconstruction of signal distributions
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,app.NOISE)

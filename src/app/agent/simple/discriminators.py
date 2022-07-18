@@ -11,7 +11,7 @@ class Discriminators(Agent):
         self.debug_writer       = debug_writer
         self.discriminators     = []
         self.gradients_tracker  = gradients_tracker
-        
+
         self.strategy   = strategy(network,accel,opt)
         self.optimizer  = self.strategy._optimizer()
         self.discriminators = self.strategy._get_discriminators()
@@ -50,3 +50,10 @@ class Discriminators(Agent):
     def discriminate_crosss_entropy_zd(self,z,zr):
         Dreal, Dfake = self.strategy._discriminate_cross_entropy_zd(z,zr)
         return Dreal, Dfake
+
+    def __getattr__(self,name):
+        if name in self.strategy._get_name_discriminators():
+            disc = getattr(self.strategy,name, None)
+            return disc
+        else:
+            raise ValueError(f"The discriminator agent doesn't have the attribute {name}")
