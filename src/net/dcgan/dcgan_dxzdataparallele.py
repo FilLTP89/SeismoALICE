@@ -1,4 +1,5 @@
 from torch.nn.modules import activation
+import json
 from core.net.basic_model import BasicModel
 u'''AE design'''
 from torch.nn.modules import activation
@@ -272,10 +273,10 @@ class DCGAN_DXZ_Concat(BasicDCGAN_DXZDataParallele):
         bn=True,wf=False, dpc=0.25, limit =1024, prob = False, config=None,\
         n_extra_layers= 1, bias=False, *args, **kwargs):
         super(DCGAN_DXZ_Concat, self).__init__(*args, **kwargs)
-        breakpoint()
+        
         self.cnn_x  = self._branche(**config['signal'])
         self.cnn_z  = self._branche(**config['latent'])
-        self.cnn    = self._branche(**config['common'],wf=True)
+        self.cnn    = self._branche(**config)
 
     def forward(self, x, z):
         ftx = self.cnn_x(x)
@@ -286,7 +287,7 @@ class DCGAN_DXZ_Concat(BasicDCGAN_DXZDataParallele):
             ft =  ft.detach()
         return ft
     
-    def _branche(self, nc, nlayers, channel, padding, dilation,kernel, strides, act, 
+    def _branche(self, nlayers, channel, padding, dilation,kernel, strides, act, 
             bn, dpc, wf = False, spectral_norm=False,prob=False, *args, **kwargs):
         act = T.activation(act,nlayers)
         normalization = partial(nn.InstanceNorm1d)
@@ -294,7 +295,7 @@ class DCGAN_DXZ_Concat(BasicDCGAN_DXZDataParallele):
         _cnn = [
                 nn.Conv1d(in_channels=channel[0],
                 out_channels=channel[1], kernel_size = kernel[0], stride = strides[0], 
-                padding = padding[0], bias=False),
+                padding = padding[0], bias=False, dilation = dilation[0]),
                 act[0]
             ]
 
@@ -303,13 +304,13 @@ class DCGAN_DXZ_Concat(BasicDCGAN_DXZDataParallele):
             dpc = dpc, activation  = act[1:], bn = bn, bias = False, 
             spectral_norm = spectral_norm, normalization = normalization, affine=True)
         
-        if wf:
+        if json.loads(wf.lower()):
             _cnn += [
                         nn.Conv1d(in_channels=channel[-1],out_channels=1,kernel_size = 3, 
                         stride = 1, padding=1, bias=False), 
                         nn.LeakyReLU(1.0, inplace=True)
                     ]
-        if prob:
-            self.cnn += [nn.Sigmoid()]
+        if json.loads(prob.lower()):
+            _cnn += [nn.Sigmoid()]
         
         return nn.Sequential(*_cnn)

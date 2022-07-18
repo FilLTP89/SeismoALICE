@@ -51,6 +51,7 @@ class WGAN(SimpleTrainer):
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,_ = batch
         for _ in range(1):
+            breakpoint()
             zerograd([self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
@@ -64,7 +65,7 @@ class WGAN(SimpleTrainer):
             zd_gen      = zyy_F
 
             Dreal_yz,Dfake_yz = self.disc_agent.discriminate_conjoint_yz(y,y_gen, zd_inp,zd_gen)
-            GPyz= gradient_penalty(self.disc_agent.Dsyz, zcat(y,zd_gen), zcat(y_gen,zd_inp),app.DEVICE) \
+            GPyz= gradient_penalty(self.disc_agent.Dsyz, (y,zd_gen), (y_gen,zd_inp), app.DEVICE) \
                     if modality == 'train' else torch.zeros([])
             Dloss_wgan_yz = -(torch.mean(Dreal_yz.reshape(-1)) - torch.mean(Dfake_yz.reshape(-1)))+\
                             GPyz*app.LAMBDA_GP

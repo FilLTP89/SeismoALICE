@@ -11,8 +11,7 @@ class Discriminators(Agent):
         self.debug_writer       = debug_writer
         self.discriminators     = []
         self.gradients_tracker  = gradients_tracker
-
-        breakpoint()
+        
         self.strategy   = strategy(network,accel,opt)
         self.optimizer  = self.strategy._optimizer()
         self.discriminators = self.strategy._get_discriminators()
