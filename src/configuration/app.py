@@ -4,7 +4,7 @@ import logging
 
 DEVICE          = "cuda:0" if torch.cuda.is_available() else "cpu"
 SAVE            = True
-EXPLORE         = False
+EXPLORE         = True
 NOISE           = {'mean': 0., 'std': 1.0}
 AVAIL_GPUS      = min(1, torch.cuda.device_count())
 NUM_WORKERS     = int(os.cpu_count() / 2)
@@ -21,8 +21,8 @@ LAMBDA_2        = 10.E+3
 LOGGING_LEVEL   = logging.INFO
 LAMBDA_ALI      = 1.
 LOGGING_FORMAT  = '%(levelname)s:%(message)s'
-LAMBDA_IDENTITY   = 10.
-LAMBDA_CONSISTENCY= 0.9
+LAMBDA_IDENTITY_Y = 10.
+LAMBDA_IDENTITY_Z = 0.5
 LAMBDA_GP         = 10.
 GAMMA             = 1000.
 OPTIMAL_VAL     = 0.6108643020548934

@@ -13,7 +13,7 @@
 source load_conda_env_gpu.sh P100  
 export PYTHONPATH="./src"
 
-python ./src/aae/aae_test.py \
+python ./src/aae/aae_simple_test_wgan.py \
     --dataroot='./database/tweaked/data/test/nsy12800/' \
     --dataset='nt4096_ls128_nzf8_nzd32.pth' \
     --cutoff=30. --imageSize=4096 --latentSize=64 \
