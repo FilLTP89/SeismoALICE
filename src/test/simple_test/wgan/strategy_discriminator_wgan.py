@@ -10,24 +10,20 @@ class StrategyDiscriminatorWGAN(IStrategyDiscriminator):
         self.rlr    = self.opt.config["hparams"]['discriminators.lr']
         self.weight_decay = self.opt.config["hparams"]['discriminators.weight_decay']
 
-        self.Dsyz   = accel(network.DCGAN_DXZ(self.opt.config['Dsyz'],self.opt,model_name='Dsyz')).cuda()
         self.Dsy    = accel(network.DCGAN_Dx(self.opt.config['Dsy'], self.opt,model_name='Dsy')).cuda()
         self.Dszb   = accel(network.DCGAN_Dz(self.opt.config['Dszb'],self.opt,model_name='Dszb')).cuda()
         self._discriminators = [self.Dsyz, self.Dsy, self.Dszb]
-        self._name_discriminators = ['Dsyz','Dsy', 'Dszb']
+        self._name_discriminators = ['Dsy', 'Dszb']
         
         super(StrategyDiscriminatorWGAN,self).__init__(*args,**kwargs)
 
     def _discriminate_conjoint_yz(self,y,y_gen,z, z_gen,*args,**kwargs):
-        Dreal_yz = self.Dsyz(y,z_gen)
-        Dfake_yz = self.Dsyz(y_gen,z)
-        return Dreal_yz, Dfake_yz
+        pass
     
     def _discriminate_marginal_z(self,z, zr,*args,**kwargs):
         Dreal_z = self.Dszb(z)
         Dfake_z = self.Dszb(zr)
         return Dreal_z, Dfake_z
-    
     
     def _discriminate_marginal_y(self,y, yr, *args,**kwargs):
         Dreal_y = self.Dsy(y)
