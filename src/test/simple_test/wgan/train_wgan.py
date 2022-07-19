@@ -17,35 +17,33 @@ class WGAN(SimpleTrainer):
             'Dloss':'',
 
             'Dloss_wgan_y':'',     'Dloss_wgan_zd':'',
-            'Dloss_wgan_yz':''
         }
 
         losses_gens = {
             'epochs':'',           'modality':'',
             'Gloss':'',            'Gloss_wgan_y':'',
-            'Gloss_wgan_zd':'',    'Gloss_wgan_yz':'',
+            'Gloss_wgan_zd':'', 
 
             'Gloss_rec':'',        'Gloss_rec_y':'',     
             'Gloss_rec_zd':'',    
         }
 
         prob_disc = {
-            'epochs':'',            'modality':'',
-            'Dreal_y':'',           'Dfake_y':'',
-            'Dreal_zd':'',          'Dfake_zd':'',
+            'epochs':'',    'modality':'',
+            'Dreal_y':'',   'Dfake_y':'',
+            'Dreal_zd':'',  'Dfake_zd':'',
 
-            'GPy':'',               'GPzb':''
+            'GPy':'',       'GPzb':''
         }
 
         gradients_gens = {
             'epochs':'',    'modality':'',
-            'F':'',         'Gy':'',
+            'Fy':'',         'Gy':'',
         }
 
         gradients_disc = {
             'epochs':'',    'modality':'',
-            'Dsyz':'',      'Dsy':'',
-            'Dszb':'',
+            'Dsy':'',       'Dszb':'',
         }
         super(WGAN, self).__init__(cv, trial = None,
         losses_disc = losses_disc, losses_gens = losses_gens,prob_disc   = prob_disc,

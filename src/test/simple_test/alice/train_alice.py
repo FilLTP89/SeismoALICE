@@ -3,6 +3,7 @@ from app.trainer.simple.simple_trainer import SimpleTrainer
 from common.common_nn import zerograd,zcat,modalite
 from tools.generate_noise import noise_generator
 from test.simple_test.alice.strategy_discriminator_alice import StrategyDiscriminatorALICE
+from test.simple_test.alice.strategy_generator_alice import StrategyGeneratorALICE
 from common.common_torch import *
 from configuration import app
 
@@ -42,13 +43,15 @@ class ALICE(SimpleTrainer):
         }
         super(ALICE, self).__init__(cv, trial = None, 
             losses_disc = losses_disc, losses_gens = losses_gens, prob_disc  = prob_disc,
-            gradients_gens = gradients_gens, gradients_disc = gradients_disc, 
-            strategy_discriminator = StrategyDiscriminatorALICE)
+            strategy_discriminator = StrategyDiscriminatorALICE,
+            strategy_generator = StrategyGeneratorALICE,
+            gradients_gens = gradients_gens, gradients_disc = gradients_disc)
     
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,zxy = batch
         for _ in range(1):
-            zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
+            zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder,
+             self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
             
@@ -84,7 +87,8 @@ class ALICE(SimpleTrainer):
             Dloss               = Dloss_ali_y + Dloss_cross_entropy
             
             if modality == 'train':
-                zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
+                zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder,
+                    self.disc_agent.optimizer])
                 Dloss.backward(retain_graph=True)
                 self.disc_agent.optimizer.step()
                 self.disc_agent.track_gradient(epoch)
@@ -111,7 +115,8 @@ class ALICE(SimpleTrainer):
     def train_generators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,zxy = batch
         for _ in range(1):
-            zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
+            zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder,
+                self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
             
@@ -150,7 +155,8 @@ class ALICE(SimpleTrainer):
             Gloss               = Gloss_ali_y + Gloss_cross_entropy + Gloss_rec
             
             if modality == 'train':
-                zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
+                zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder,
+                    self.disc_agent.optimizer])
                 Gloss.backward()
                 self.gen_agent.optimizer.step()
                 self.gen_agent.track_gradient(epoch)

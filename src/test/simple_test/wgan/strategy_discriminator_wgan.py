@@ -12,7 +12,7 @@ class StrategyDiscriminatorWGAN(IStrategyDiscriminator):
 
         self.Dsy    = accel(network.DCGAN_Dx(self.opt.config['Dsy'], self.opt,model_name='Dsy')).cuda()
         self.Dszb   = accel(network.DCGAN_Dz(self.opt.config['Dszb'],self.opt,model_name='Dszb')).cuda()
-        self._discriminators = [self.Dsyz, self.Dsy, self.Dszb]
+        self._discriminators = [self.Dsy, self.Dszb]
         self._name_discriminators = ['Dsy', 'Dszb']
         
         super(StrategyDiscriminatorWGAN,self).__init__(*args,**kwargs)
@@ -32,14 +32,10 @@ class StrategyDiscriminatorWGAN(IStrategyDiscriminator):
     
     def _architecture(self, explore,*args,**kwargs):
         if explore:
-            writer_dsyz  = SummaryWriter(self.opt.config['log_dir']['debug.dsyz_writer'])
             writer_dsy   = SummaryWriter(self.opt.config['log_dir']['debug.dsy_writer'])
             writer_dszb  = SummaryWriter(self.opt.config['log_dir']['debug.dszb_writer'])
-
             writer_dsy.add_graph(next(iter(self.Dsy.children())),torch.randn(10,3,4096).cuda())
             writer_dszb.add_graph(next(iter(self.Dszb.children())),torch.randn(10,1,512).cuda())
-            writer_dsyz.add_graph(next(iter(self.Dsyz.children())),(torch.randn(10,3,4096).cuda(),\
-                torch.randn(10,1,512).cuda()))
     
     def _get_discriminators(self):
         return self._discriminators

@@ -7,6 +7,7 @@ from configuration import app
 class Generators(Agent):
     def __init__(self,network,config,logger, accel,opt, gradients_tracker,debug_writer,
                     strategy, *args, **kwargs):
+        
         self.current_val= 0
         self.config = config
         self.opt    = opt
@@ -16,8 +17,8 @@ class Generators(Agent):
         
         self.strategy = strategy(network,accel,opt)
         self.generators = self.strategy._get_generators()
-        self.optimizer_encoder = self.strategy._get_optimizer_encoder()
-        self.optimizer_decoder = self.strategy._get_optimizer_decoder()
+        self.optimizer_encoder = self.strategy._optimizer_encoder()
+        self.optimizer_decoder = self.strategy._optimizer_decoder()
 
         self._architecture(app.EXPLORE)
         super(Generators,self).__init__(self.generators, [self.optimizer_encoder,
@@ -28,7 +29,7 @@ class Generators(Agent):
         self.track_gradient_change(self.gradients_tracker,self.generators,epoch)
     
     def track_weight(self, epoch):
-        self.track_weight_change(writer =  self.debug_writer, tag = 'F[cnn_common]', 
+        self.track_weight_change(writer =  self.debug_writer, tag = 'Fy', 
             model= self.Fy.module.cnn1.eval(),epoch = epoch)
         
         self.track_weight_change(writer =  self.debug_writer, tag = 'Gy', 

@@ -69,7 +69,7 @@ class SimpleTrainer(BasicTrainer):
         self.logger.info("Creating Generators Agent ...")
         self.gen_agent  = Generators(network=network, config=self.opt.config, logger=self.logger,
                         accel=DP, opt=self.opt, gradients_tracker = self.gradients_tracker_gen,
-                        debug_writer = self.debug_writer, strategy=strategy_generator)
+                        debug_writer = self.debug_writer, strategy = strategy_generator)
 
         self.logger.info("Creating Discriminator Agent ...")
         self.disc_agent = Discriminators(network=network, config=self.opt.config, logger=self.logger,
