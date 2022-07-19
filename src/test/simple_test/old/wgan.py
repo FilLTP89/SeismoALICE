@@ -1,61 +1,49 @@
-from time import gmtime
 import torch
 from app.trainer.simple.simple_trainer import SimpleTrainer
 from common.common_nn import zerograd,zcat,modalite, clipweights
-from test.simple_test.wgan.strategy_discriminator_wgan import StrategyDiscriminatorWGAN
-from test.simple_test.wgan.strategy_generator_wgan import StrategyGeneratorWGAN
 from tools.generate_noise import noise_generator
 from common.common_model import gradient_penalty
 from configuration import app
-
 
 class WGAN(SimpleTrainer):
     def __init__(self,cv, trial=None):
         
         losses_disc = {
             'epochs':'',           'modality':'',
-            'Dloss':'',
-
-            'Dloss_wgan_y':'',     'Dloss_wgan_zd':'',
-            'Dloss_wgan_yz':''
+            'Dloss':'',        
+            'Dloss_wgan_y':'',     'Dloss_wgan_zd':''
         }
-
         losses_gens = {
             'epochs':'',           'modality':'',
             'Gloss':'',            'Gloss_wgan_y':'',
-            'Gloss_wgan_zd':'',    'Gloss_wgan_yz':'',
+            'Gloss_wgan_zd':'',
 
             'Gloss_rec':'',        'Gloss_rec_y':'',     
             'Gloss_rec_zd':'',    
         }
 
         prob_disc = {
-            'epochs':'',            'modality':'',
-            'Dreal_y':'',           'Dfake_y':'',
-            'Dreal_zd':'',          'Dfake_zd':'',
-
-            'GPy':'',               'GPzb':''
+            'epochs':'',                'modality':'',
+            'Dreal_y':'',               'Dfake_y':'',
+            'Dreal_zd':'',              'Dfake_zd':'',
+            'GPy':'',                   'GPzb':''
         }
 
         gradients_gens = {
             'epochs':'',    'modality':'',
             'F':'',         'Gy':'',
         }
-
         gradients_disc = {
             'epochs':'',    'modality':'',
-            'Dsyz':'',      'Dsy':'',
-            'Dszb':'',
+            'Dsy':'',       'Dszb':''
         }
         super(WGAN, self).__init__(cv, trial = None,
         losses_disc = losses_disc, losses_gens = losses_gens,prob_disc   = prob_disc,
-        strategy_discriminator  = StrategyDiscriminatorWGAN, 
-        strategy_generator      = StrategyGeneratorWGAN,
         gradients_gens = gradients_gens, gradients_disc = gradients_disc, actions=None, start_epoch=None)
     
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,_ = batch
-        for _ in range(1):
+        for _ in range(5):
             zerograd([self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
@@ -65,39 +53,33 @@ class WGAN(SimpleTrainer):
             y_inp       = zcat(y,wny) 
             
             y_gen       = self.gen_agent.Gy(zyy)
-            zyy_F       = self.gen_agent.Fy(y_inp)
+            zyy_F = self.gen_agent.Fy(y_inp)
             zd_gen      = zyy_F
 
             Dreal_y, Dfake_y = self.disc_agent.discriminate_marginal_y(y, y_gen)
-            GPy = gradient_penalty(self.disc_agent.Dsy, y, y_gen, app.DEVICE) \
-                    if modality == 'train' else torch.zeros([])
-            Dloss_wgan_y= -(torch.mean(Dreal_y.reshape(-1)) - torch.mean(Dfake_y.reshape(-1))) +\
-                    GPy*app.LAMBDA_GP
+            GPy              = gradient_penalty(self.disc_agent.Dsy, y, y_gen,app.DEVICE) if modality == 'train' else torch.zeros([])
+            Dloss_wgan_y     = -(torch.mean(Dreal_y.reshape(-1)) - torch.mean(Dfake_y.reshape(-1))) +\
+                                 GPy*app.LAMBDA_GP
             
-            Dreal_zd,Dfake_zd = self.disc_agent.discriminate_marginal_zd(zd_inp,zd_gen) 
-            GPzb= gradient_penalty(self.disc_agent.Dszb, zd_inp, zd_gen, app.DEVICE) \
-                    if modality == 'train' else torch.zeros([])
-            Dloss_wgan_zd= -(torch.mean(Dreal_zd.reshape(-1)) - torch.mean(Dfake_zd.reshape(-1))) +\
+            Dreal_zd, Dfake_zd = self.disc_agent.discriminate_marginal_zd(zd_inp,zd_gen) 
+            GPzb             = gradient_penalty(self.disc_agent.Dszb, zd_inp, zd_gen, app.DEVICE) if modality == 'train' else torch.zeros([])
+            Dloss_wgan_zd    = -(torch.mean(Dreal_zd.reshape(-1)) - torch.mean(Dfake_zd.reshape(-1))) +\
                                  GPzb*app.LAMBDA_GP
-            
-            Dreal_yz,Dfake_yz = self.disc_agent.discriminate_conjoint_yz(y,y_gen, zd_inp,zd_gen)
-            Dloss_wgan_yz = -(torch.mean(Dreal_yz.reshape(-1)) - torch.mean(Dfake_yz.reshape(-1)))
 
-            Dloss_wgan =  Dloss_wgan_yz + Dloss_wgan_y + Dloss_wgan_zd
+            Dloss_wgan =  Dloss_wgan_y + Dloss_wgan_zd
             
             if modality == 'train':
                 zerograd([self.disc_agent.optimizer])
                 Dloss_wgan.backward(retain_graph=True)
                 self.disc_agent.track_gradient(epoch)
                 self.disc_agent.optimizer.step()
-                clipweights([self.disc_agent.Dsyz])
                 
+            # no clipweights spectral_norm is implemented
             self.losses_disc['epochs'       ] = epoch
             self.losses_disc['modality'     ] = modality
             self.losses_disc['Dloss'        ] = Dloss_wgan.tolist()
             self.losses_disc['Dloss_wgan_y' ] = Dloss_wgan_y.tolist()
             self.losses_disc['Dloss_wgan_zd'] = Dloss_wgan_zd.tolist()
-            self.losses_disc['Dloss_wgan_yz'] = Dloss_wgan_yz.tolist()
             self.losses_disc_tracker.update()
 
             self.prob_disc['epochs'  ] = epoch
@@ -113,8 +95,7 @@ class WGAN(SimpleTrainer):
     def train_generators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,_ = batch
         for _ in range(1):
-            zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder, 
-                self.disc_agent.optimizer])
+            zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
             
@@ -127,13 +108,10 @@ class WGAN(SimpleTrainer):
             zd_gen      = self.gen_agent.Fy(y_inp)
 
             _, Dfake_y  = self.disc_agent.discriminate_marginal_y(y, y_gen)
-            Gloss_wgan_y  = -(torch.mean(Dfake_y.reshape(-1)))
+            Gloss_wgan_y= -(torch.mean(Dfake_y.reshape(-1)))
 
             _, Dfake_zd = self.disc_agent.discriminate_marginal_zd(zd_inp,zd_gen)
-            Gloss_wgan_zd = -(torch.mean(Dfake_zd.reshape(-1)))
-
-            _, Dfake_yz = self.disc_agent.discriminate_conjoint_yz(y,y_gen, zd_inp,zd_gen)
-            Gloss_wgan_yz = -(torch.mean(Dfake_yz.reshape(-1)))
+            Gloss_wgan_zd= -(torch.mean(Dfake_zd.reshape(-1)))
 
             # 2. Reconstruction of signal distributions
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,app.NOISE)
@@ -145,22 +123,19 @@ class WGAN(SimpleTrainer):
             Gloss_rec_zd= torch.mean(torch.abs(zd_inp-zd_rec))
 
             Gloss_rec   = Gloss_rec_y + Gloss_rec_zd
-            Gloss       = Gloss_wgan_yz + Gloss_wgan_y + Gloss_wgan_zd + Gloss_rec*app.LAMBDA_IDENTITY
 
+            Gloss = Gloss_wgan_y + Gloss_wgan_zd + Gloss_rec
             if modality == 'train':
-                zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder, 
-                    self.disc_agent.optimizer])
+                zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
                 Gloss.backward()
                 self.gen_agent.track_gradient(epoch)
-                self.gen_agent.optimizer_encoder.step()
-                self.gen_agent.optimizer_decoder.step()
+                self.gen_agent.optimizer.step()
                 
             self.losses_gens['epochs'       ] = epoch
             self.losses_gens['modality'     ] = modality
             self.losses_gens['Gloss'        ] = Gloss.tolist()
             self.losses_gens['Gloss_wgan_y' ] = Gloss_wgan_y.tolist()
             self.losses_gens['Gloss_wgan_zd'] = Gloss_wgan_zd.tolist()
-            self.losses_gens['Gloss_wgan_yz'] = Gloss_wgan_yz.tolist()
             self.losses_gens['Gloss_rec'    ] = Gloss_rec.tolist()
             self.losses_gens['Gloss_rec_y'  ] = Gloss_rec_y.tolist()
             self.losses_gens['Gloss_rec_zd' ] = Gloss_rec_zd.tolist()

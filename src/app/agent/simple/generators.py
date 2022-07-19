@@ -5,30 +5,23 @@ from common.common_nn import reset_net
 from configuration import app
 
 class Generators(Agent):
-    def __init__(self,network,config,logger, accel,opt, gradients_tracker,debug_writer,*args, **kwargs):
+    def __init__(self,network,config,logger, accel,opt, gradients_tracker,debug_writer,
+                    strategy, *args, **kwargs):
+        self.current_val= 0
         self.config = config
         self.opt    = opt
         self.generators = []
         self.gradients_tracker = gradients_tracker
         self.debug_writer = debug_writer
-        self.elr    = self.opt.config["hparams"]['generators.encoder.lr']
-        self.dlr    = self.opt.config["hparams"]['generators.decoder.lr']
-        self.weight_decay = self.opt.config["hparams"]['generators.weight_decay']
-    
         
-        self.Fy = accel(network.Encoder(self.opt.config['F'], self.opt,model_name='F')).cuda()
-        self.Gy = accel(network.Decoder(self.opt.config['Gy'],self.opt,model_name='Gy')).cuda()
-        
-        self.generators = [self.Fy, self.Gy]
-        self.current_val= 0
-        self.optimizer_encoder = reset_net([self.Fy],
-                optim='adam',alpha=0.9,lr=self.elr,b1=0.,b2=0.90)
-        self.optimizer_decoder = reset_net([self.Gy],
-                optim='adam',alpha=0.9,lr=self.dlr,b1=0.,b2=0.90)
+        self.strategy = strategy(network,accel,opt)
+        self.generators = self.strategy._get_generators()
+        self.optimizer_encoder = self.strategy._get_optimizer_encoder()
+        self.optimizer_decoder = self.strategy._get_optimizer_decoder()
 
         self._architecture(app.EXPLORE)
-        super(Generators,self).__init__(self.generators, [self.optimizer_encoder,self.optimizer_decoder], 
-            config, logger, accel,*args, **kwargs)
+        super(Generators,self).__init__(self.generators, [self.optimizer_encoder,
+                self.optimizer_decoder], config, logger, accel,*args, **kwargs)
 
     
     def track_gradient(self,epoch):
@@ -42,10 +35,11 @@ class Generators(Agent):
             model= self.Gy.module.cnn1.eval(),epoch = epoch)
 
     def _architecture(self, explore):
-        if explore:
-            writer_encoder = SummaryWriter(self.opt.config['log_dir']['debug.encoder_writer'])
-            writer_decoder = SummaryWriter(self.opt.config['log_dir']['debug.decoder_writer'])
-            writer_encoder.add_graph(next(iter(self.Fy.children())),
-                            torch.randn(10,6,4096).cuda())
-            writer_decoder.add_graph(next(self.Gy.children()), 
-                            (torch.randn(10,1,512).cuda()))
+        self.strategy._architecture(explore)
+
+    def __getattr__(self,name):
+        if name in self.strategy._get_name_generators():
+            disc = getattr(self.strategy,name, None)
+            return disc
+        else:
+            raise ValueError(f"The generators agent doesn't have the attribute {name}")

@@ -20,7 +20,7 @@ python ./src/aae/aae_test.py \
     --niter=5001 --cuda --nodes=1 \
     --local_rank=0 --ngpu=2 --ip_address=$ip1 --nzd=16 --nzf=8 \
     --rlr=0.00025164314945158394 --glr=0.006187098496095162 --manualSeed=42\
-    --outf='./imgs_bb_ls64_nf8_nzd32/unic/config_27/ter/unic/classic/zyy24/nsy1280/' \
+    --outf='./imgs/simple/wgan/bb/' \
     --workers=8 --nsy=12800 --batchSize=256 \
     --actions='./action/actions_unic.txt' --strategy='./strategy/strategy_unic.txt' \
     --save_checkpoint=500 \

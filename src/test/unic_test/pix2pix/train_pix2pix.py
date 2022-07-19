@@ -4,6 +4,7 @@ from common.common_nn import zerograd,zcat,modalite
 from tools.generate_noise import noise_generator
 from common.common_torch import *
 from configuration import app
+from test.simple_test.wgan.strategy_discriminator_pix2pix import StrategyDiscriminatoPix2Pix
 
 class Pix2Pix(UnicTrainer):
     def __init__(self,cv, trial=None):
@@ -41,7 +42,8 @@ class Pix2Pix(UnicTrainer):
 
         super(Pix2Pix, self).__init__(cv, trial = None,
         losses_disc = losses_disc, losses_gens = losses_gens, prob_disc  = prob_disc,
-        gradients_gens = gradients_gens, gradients_disc = gradients_disc)
+        strategy_discriminator = StrategyDiscriminatoPix2Pix, gradients_gens = gradients_gens, 
+        gradients_disc = gradients_disc)
     
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,x,zyy,zxy = batch
@@ -58,11 +60,11 @@ class Pix2Pix(UnicTrainer):
             zd_gen      = self.gen_agent.Fx(x_inp)
             y_gen       = self.gen_agent.Gy(zd_gen)
             
-            Dreal_xy, Dfake_xy = self.disc_agent.discriminate_xy(x,y,y_gen)
+            Dreal_xy, Dfake_xy = self.disc_agent.discriminate_conjoint_yz(x,y,y_gen)
             Dloss_xy    = self.bce_logit_loss(Dreal_xy.reshape(-1),o1l(Dfake_xy.reshape(-1))) +\
                             self.bce_logit_loss(Dfake_xy.reshape(-1),o0l(Dfake_xy.reshape(-1)))
             
-            Dreal_zd, Dfake_zd = self.disc_agent.discriminate_zd(zxy,zd_gen)
+            Dreal_zd, Dfake_zd = self.disc_agent.discriminate_marginal_zd(zxy,zd_gen)
             Dloss_zd    = self.bce_logit_loss(Dreal_zd.reshape(-1),o1l(Dfake_zd.reshape(-1)))+\
                             self.bce_logit_loss(Dfake_zd.reshape(-1),o0l(Dfake_zd.reshape(-1)))
             
@@ -138,11 +140,7 @@ class Pix2Pix(UnicTrainer):
             self.losses_gens['Gloss_rec_y'  ] = Gloss_rec_y.tolist()
             self.losses_gens['Gloss_rec_zd' ] = Gloss_rec_zd.tolist()
             self.losses_gen_tracker.update()
-    
-    def on_test_epoch(self, epoch, bar):
-        with torch.no_grad(): 
-            # Over-write the parent method
-            torch.manual_seed(100)
+
 
             
 

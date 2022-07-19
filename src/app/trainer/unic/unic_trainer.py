@@ -25,7 +25,7 @@ class UnicTrainer(BasicTrainer):
         So it should be call withe app.unic.generators and app.unic.discriminators agents
     """
     def __init__(self,cv,losses_disc, losses_gens, gradients_gens, 
-                    gradients_disc, prob_disc, trial=None):
+                    gradients_disc, strategy_discriminator, strategy_generator ,prob_disc, trial=None):
         
         globals().update(cv)
         globals().update(opt.__dict__)
@@ -65,15 +65,14 @@ class UnicTrainer(BasicTrainer):
         
         network   = Network(DataParalleleFactory())
         self.logger.info("Creating Generators Agent ...")
-        self.gen_agent  = Generators(
-                        network=network, config=self.opt.config, logger=self.logger,
+        self.gen_agent  = Generators(network=network, config=self.opt.config, logger=self.logger,
                         accel=DP, opt=self.opt, gradients_tracker = self.gradients_tracker_gen,
-                        debug_writer = self.debug_writer)
+                        debug_writer = self.debug_writer, strategy= strategy_discriminator)
 
         self.logger.info("Creating Discriminator Agent ...")
         self.disc_agent = Discriminators(network=network, config=self.opt.config, logger=self.logger,
                         accel=DP, opt=self.opt, gradients_tracker = self.gradients_tracker_disc,
-                        debug_writer = self.debug_writer)
+                        debug_writer = self.debug_writer, strategy=strategy_generator)
 
         self.logger.info("Loading the dataset ...")
         self.data_trn_loader,  self.data_vld_loader, self.data_tst_loader = trn_loader,vld_loader,tst_loader

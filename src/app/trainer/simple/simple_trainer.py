@@ -28,7 +28,8 @@ class SimpleTrainer(BasicTrainer):
         and filtered) see UnicTrainer implementation instead.
     """
     def __init__(self,cv,losses_disc, losses_gens, gradients_gens, gradients_disc, 
-                    prob_disc, strategy_discriminator, trial=None, *args,**kwargs):
+                    prob_disc, strategy_discriminator, strategy_generator, 
+                    trial=None, *args,**kwargs):
         globals().update(cv)
         globals().update(opt.__dict__)
 
@@ -68,7 +69,7 @@ class SimpleTrainer(BasicTrainer):
         self.logger.info("Creating Generators Agent ...")
         self.gen_agent  = Generators(network=network, config=self.opt.config, logger=self.logger,
                         accel=DP, opt=self.opt, gradients_tracker = self.gradients_tracker_gen,
-                        debug_writer = self.debug_writer)
+                        debug_writer = self.debug_writer, strategy=strategy_generator)
 
         self.logger.info("Creating Discriminator Agent ...")
         self.disc_agent = Discriminators(network=network, config=self.opt.config, logger=self.logger,
@@ -78,7 +79,7 @@ class SimpleTrainer(BasicTrainer):
         self.logger.info("Loading the dataset ...")
         self.data_trn_loader, self.data_vld_loader,self.data_tst_loader = trn_loader, vld_loader, tst_loader
         self.lat_trn_loader, self.lat_vld_loader, self.lat_tst_loader   = get_latent_dataset(nsy=self.opt.nsy,\
-                        batch_size=self.opt.batchSize)
+            batch_size=self.opt.batchSize)
 
         self.bce_loss        = torch.nn.BCELoss(reduction='mean')
         self.bce_logit_loss  = torch.nn.BCEWithLogitsLoss(reduction='mean')

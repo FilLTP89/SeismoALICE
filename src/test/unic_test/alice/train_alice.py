@@ -4,6 +4,8 @@ from common.common_nn import zerograd,zcat,modalite
 from tools.generate_noise import noise_generator
 from common.common_torch import *
 from configuration import app
+from test.unic_test.alice.strategy_discriminator_alice import StrategyDiscriminatorALICE
+from test.unic_test.alice.strategy_generator_alice import StrategyGeneratorALICE
 
 class ALICE(UnicTrainer):
     def __init__(self,cv, trial=None):
@@ -48,6 +50,8 @@ class ALICE(UnicTrainer):
 
         super(ALICE, self).__init__(cv, trial = None,
         losses_disc = losses_disc, losses_gens = losses_gens, prob_disc  = prob_disc,
+        strategy_discriminator  = StrategyDiscriminatorALICE,
+        strategy_generator      = StrategyGeneratorALICE,
         gradients_gens = gradients_gens, gradients_disc = gradients_disc)
     
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
