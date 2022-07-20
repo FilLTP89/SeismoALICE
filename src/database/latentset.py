@@ -52,7 +52,7 @@ class GaussianDataset(Dataset):
     def __getitem__(self,index):
         return (self._latent_space_zhf[index,:],self._latent_space_zlf[index,:])
 
-class MixedGaussianDistributionDataset(Dataset):
+class MixedGaussianDataset(Dataset):
     """ MixedGaussianDistributionDataset
         This class is created to evaluate if the discriminator are able to distinguish between 
         N(0,I) and another  gaussian distribution. A classifier logic training on the discriminator should be used to
@@ -92,7 +92,7 @@ class MixedGaussianUniformDataset(Dataset):
         return (self._latent_space_gaussian_normal[index,:],self._latent_space_distribution[index,:])
 
 def get_latent_dataset(dataset = LatentDataset, nsy=1280, batch_size=64, *args, **kwargs):
-    _dataset    = LatentDataset(nsy=nsy,*args,**kwargs)
+    _dataset    = dataset(nsy=nsy,*args,**kwargs)
     train_part,vld_part,tst_part = int(0.80*len(_dataset)),int(0.10*len(_dataset)),int(0.10*len(_dataset))
     train_set, vld_set, tst_set  = torch.utils.data.random_split(_dataset, [train_part,vld_part,tst_part])
 
