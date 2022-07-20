@@ -18,8 +18,7 @@ from factory.conv_factory import Network, DataParalleleFactory
 from app.agent.simple.discriminators import Discriminators
 
 class UnitaryTrainerGenerator(BasicTrainer):
-    def __init__(self,cv,losses_disc, losses_gens, gradients_gens, gradients_disc, 
-                    prob_disc, strategy_discriminator, strategy_generator, 
+    def __init__(self,cv,losses_disc, gradients_disc, prob_disc, strategy_discriminator,
                     trial=None, *args,**kwargs):
         globals().update(cv)
         globals().update(opt.__dict__)
@@ -102,7 +101,7 @@ class UnitaryTrainerGenerator(BasicTrainer):
             self.gradients_tracker_disc.write(epoch=epoch,modality = ['train'])
         
         Dloss = self.losses_disc_tracker.get('Dloss',epoch,'train')
-        bar.set_postfix(Dloss=Dloss,)
+        bar.set_postfix(Dloss=Dloss)
     
     def on_validation_epoch(self, epoch, bar):
         _bar = tq(enumerate(zip(self.data_vld_loader,self.lat_vld_loader)),
@@ -121,6 +120,14 @@ class UnitaryTrainerGenerator(BasicTrainer):
         if epoch%self.opt.config['hparams']['validation_epochs'] == 0:
             self.losses_disc_tracker.write(epoch=epoch, modality = ['train','eval'])
             self.prob_disc_tracker.write(epoch=epoch, modality = ['train','eval'])
+    
+    def on_test_epoch(self, epoch, bar,*args,**kwargs):
+        with torch.no_grad(): 
+            torch.manual_seed(100)
+            if epoch%self.opt.config["hparams"]['test_epochs'] == 0:
+                self.validation_writer.set_step(mode='test', step=epoch)
+                self.test_discriminators(self,bar, self.validation_writer, *args, **kwargs)
+                self.disc_agent.track_weight(epoch)
 
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         """ The SimpleTrainer class is extended to support different strategy
@@ -128,15 +135,10 @@ class UnitaryTrainerGenerator(BasicTrainer):
         """
         raise NotImplementedError
     
-    def on_test_epoch(self, epoch, bar):
-        with torch.no_grad(): 
-            torch.manual_seed(100)
-            if epoch%self.opt.config["hparams"]['test_epochs'] == 0:
-                # get accuracy
-                self.validation_writer.set_step(mode='test', step=epoch)
-                # get accuracy predictions for discriminators
-                
-                # bar.set_postfix(accuracy=accuracy)
-
-                # get weight of generators and discriminators
-                self.disc_agent.track_weight(epoch)
+    def test_discriminators(self,bar, writer, *args, **kwargs):
+        """ The test of discriminators could be different depend if we have pix2pix, ALICE, WGAN 
+            and other kind of strategy in the bibliography 
+        """
+        raise NotImplementedError
+    
+    

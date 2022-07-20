@@ -24,12 +24,12 @@ class StrategyDiscriminatorALICE(IStrategyDiscriminator):
         Dfake_yz = self.Dyz(zcat(self.Dsy(y_gen), self.Dszb(z)))
         return Dreal_yz, Dfake_yz
     
-    def discriminate_crosss_entropy_z(self,z, zr,*args,**kwargs):
+    def _discriminate_crosss_entropy_z(self,z, zr,*args,**kwargs):
         Dreal_z = self.Dzzb(zcat(z,z))
         Dfake_z = self.Dzzb(zcat(z,zr))
         return Dreal_z, Dfake_z
     
-    def discriminate_crosss_entropy_y(self,y, yr, *args,**kwargs):
+    def _discriminate_crosss_entropy_y(self,y, yr, *args,**kwargs):
         Dreal_y = self.Dyy(y,y)
         Dfake_y = self.Dyy(y,yr)
         return Dreal_y, Dfake_y
@@ -56,5 +56,5 @@ class StrategyDiscriminatorALICE(IStrategyDiscriminator):
         return self._name_discriminators
     
     def _optimizer(self):
-        return reset_net(self._discriminators,lr = self.rlr, optim='adam', b1=0., b2=0.9,
+        return reset_net(self._discriminators,lr = self.rlr, optim='adam', b1=0.5, b2=0.999,
             alpha=0.90, weights_decay=self.weight_decay)

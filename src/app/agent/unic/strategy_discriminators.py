@@ -8,28 +8,40 @@ class IStrategyDiscriminator(ABC):
     def _optimizer(self,*args,**kwargs):
         raise NotImplementedError
     
-    
-    def _discriminate_conjoint_yz(self,*args,**kwargs):
+    def _discriminate_conjoint_xy(self,*args,**kwargs):
         pass
 
+    def _discriminate_conjoint_yz(self,*args,**kwargs):
+        pass
 
     def _discriminate_conjoint_xz(self,*args,**kwargs):
         pass
     
+    def _discriminate_crosss_entropy_zd(self,*args,**kwargs):
+        pass
+
+    def _discriminate_crosss_entropy_y(self,*args,**kwargs):
+        pass
+
+    def _discriminate_crosss_entropy_zf(self,*args,**kwargs):
+        pass
+
+    def _discriminate_crosss_entropy_x(self,*args,**kwargs):
+        pass
     
     def _discriminate_marginal_zd(self,*args,**kwargs):
         pass
     
-    
     def _discriminate_marginal_y(self,*args,**kwargs):
         pass
 
-    
     def _discriminate_marginal_zf(self,*args,**kwargs):
         pass
     
-    
     def _discriminate_marginal_x(self,*args,**kwargs):
+        pass
+    
+    def _discriminate_marginal_zxy(self,*args,**kwargs):
         pass
     
     @abstractmethod

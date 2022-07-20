@@ -18,8 +18,7 @@ from factory.conv_factory import Network, DataParalleleFactory
 from app.agent.simple.generators import Generators
 
 class UnitaryTrainerGenerator(BasicTrainer):
-    def __init__(self,cv,losses_disc, losses_gens, gradients_gens, gradients_disc, 
-                    prob_disc, strategy_discriminator, strategy_generator, 
+    def __init__(self,cv,losses_gens, gradients_gens, strategy_generator, 
                     trial=None, *args,**kwargs):
         globals().update(cv)
         globals().update(opt.__dict__)
@@ -30,8 +29,8 @@ class UnitaryTrainerGenerator(BasicTrainer):
         self.opt        = opt
         self.logger     = setup_logging()
 
-        self.losses_gens     = losses_gens
-        self.gradients_gens  = gradients_gens
+        self.losses_gens    = losses_gens
+        self.gradients_gens = gradients_gens
 
         self.logger.info("Setting Tensorboard for the training dataset ...")
         loss_writer             = Writer(log_dir=self.opt.config['log_dir']['debug.losses_writer'], 
@@ -125,44 +124,20 @@ class UnitaryTrainerGenerator(BasicTrainer):
             WGAN, WGAN-GP, ALICE-explicite, ALICE-implicite
         """
         raise NotImplementedError
+    
+    def test_generators(self, bar, writer, *args, **kwargs):
+        """ The tes for generator : encoder/decoder could be different depend of
+            the wished strategy
+        """
+        raise NotImplementedError
 
-    def on_test_epoch(self, epoch, bar):
+    def on_test_epoch(self, epoch, bar , *args, **kwargs):
         with torch.no_grad(): 
             torch.manual_seed(self.opt.manualSeed)
             if epoch%self.opt.config["hparams"]['test_epochs'] == 0:
-                # get accuracy
                 self.validation_writer.set_step(mode='test', step=epoch)
-                bar.set_postfix(status='saving accuracy and images ... ')
-
-                figure_histo_z,figure_histo_y = get_histogram(Fy=self.gen_agent.Fy, 
-                Gy = self.gen_agent.Gy, trn_set = (self.data_tst_loader, self.lat_tst_loader))
-                bar.set_postfix(status='saving z distribution ...')
-                self.validation_writer.add_figure('z Histogram', figure_histo_z)
-                bar.set_postfix(status='saving y distribution ...')
-                self.validation_writer.add_figure('y Histogram ', figure_histo_y)
-
-                accuracy_bb = get_accuracy(tag='broadband',plot_function=get_gofs,
-                    encoder = self.gen_agent.Fy,
-                    decoder = self.gen_agent.Gy,
-                    vld_loader = self.data_tst_loader,
-                    pfx ="vld_set_bb_unique",opt= self.opt,
-                    outf = self.opt.outf, save = False
-                )
-                self.validation_writer.add_scalar('Accuracy/Broadband',accuracy_bb,epoch)
-                bar.set_postfix(accuracy_bb=accuracy_bb)
-
-                # get weight of generators and discriminators
+                self.test_generators(self,bar, self.validation_writer, *args, **kwargs)
                 self.gen_agent.track_weight(epoch)
-                
-                # plot filtered reconstruction signal and gof
-                figure_bb, gof_bb = plot_generate_classic(tag ='broadband',
-                        Qec= self.gen_agent.Fy, Pdc= self.gen_agent.Gy,
-                        trn_set= self.data_tst_loader,
-                        pfx="vld_set_bb_unique",
-                        opt=self.opt, outf= self.opt.outf, save=False)
-                bar.set_postfix(status='saving images STFD/GOF Broadband ...')
-                self.validation_writer.add_figure('STFD Broadband', figure_bb)
-                self.validation_writer.add_figure('GOF Broadband', gof_bb)
 
 
 

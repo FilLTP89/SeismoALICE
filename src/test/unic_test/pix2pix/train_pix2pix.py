@@ -5,6 +5,7 @@ from tools.generate_noise import noise_generator
 from common.common_torch import *
 from configuration import app
 from test.simple_test.wgan.strategy_discriminator_pix2pix import StrategyDiscriminatoPix2Pix
+from test.simple_test.wgan.strategy_generator_pix2pix import StrategyGeneratorPix2Pix
 
 class Pix2Pix(UnicTrainer):
     def __init__(self,cv, trial=None):
@@ -42,7 +43,9 @@ class Pix2Pix(UnicTrainer):
 
         super(Pix2Pix, self).__init__(cv, trial = None,
         losses_disc = losses_disc, losses_gens = losses_gens, prob_disc  = prob_disc,
-        strategy_discriminator = StrategyDiscriminatoPix2Pix, gradients_gens = gradients_gens, 
+        strategy_discriminator = StrategyDiscriminatoPix2Pix, 
+        strategy_generator = StrategyGeneratorPix2Pix, 
+        gradients_gens = gradients_gens, 
         gradients_disc = gradients_disc)
     
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
@@ -57,7 +60,7 @@ class Pix2Pix(UnicTrainer):
             zd_inp      = zcat(zyy)
 
             # 1. Pix2Pix
-            zd_gen      = self.gen_agent.Fx(x_inp)
+            zd_gen      = self.gen_agent.Fxy(x_inp)
             y_gen       = self.gen_agent.Gy(zd_gen)
             
             Dreal_xy, Dfake_xy = self.disc_agent.discriminate_conjoint_yz(x,y,y_gen)

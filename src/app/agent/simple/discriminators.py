@@ -1,7 +1,6 @@
 from core.trainer.basic_frame import Agent
 from configuration import app
 
-
 class Discriminators(Agent):
     def __init__(self,network,config,logger, accel, opt, gradients_tracker,debug_writer,
                 strategy, *args, **kwargs):
