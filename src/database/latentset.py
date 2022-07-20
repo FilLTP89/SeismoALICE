@@ -52,6 +52,45 @@ class GaussianDataset(Dataset):
     def __getitem__(self,index):
         return (self._latent_space_zhf[index,:],self._latent_space_zlf[index,:])
 
+class MixedGaussianDistributionDataset(Dataset):
+    """ MixedGaussianDistributionDataset
+        This class is created to evaluate if the discriminator are able to distinguish between 
+        N(0,I) and another  gaussian distribution. A classifier logic training on the discriminator should be used to
+        test wether or not the discriminator is powerful enough
+    """
+    def __init__(self,latent_space_shape=[[1,512],[1, 512]],nsy = 1280, mean=0., 
+                        std = 1.0, dist = torch.tensor.normal_, seed=None,*args, **kwargs):
+        if seed is not None:
+            torch.manual_seed(seed)
+        self._latent_space_gaussian_normal = torch.empty(*[nsy,*latent_space_shape[0]]).normal_(mean=0.,std=1.0)
+        self._latent_space_distribution = torch.empty(*[nsy,*latent_space_shape[0]]).normal_(mean=mean,std=std)
+
+    def __len__(self): 
+        return len(self._latent_space_gaussian_normal)
+
+    def __getitem__(self,index):
+        return (self._latent_space_gaussian_normal[index,:],self._latent_space_distribution[index,:])
+
+class MixedGaussianUniformDataset(Dataset):
+    """ MixedGaussianUniformDataset
+        This class is created to evaluate, as the MixedGaussianDistriution class, wether the discriminator
+        could distinguish between a gaussan distribution and another kind of distribution that is not gaussian.
+        It the discriminator is not powerful enough to make that distinction, somthing skeewed up in 
+        the architecture of the discriminator
+    """
+    def __init__(self,latent_space_shape=[[1,512],[1, 512]],nsy = 1280,start=0., 
+                        end = 1.0, seed=None,*args, **kwargs):
+        if seed is not None:
+            torch.manual_seed(seed)
+        self._latent_space_gaussian_normal  = torch.empty(*[nsy,*latent_space_shape[0]]).normal_(mean=0.,std=1.0)
+        self._latent_space_distribution     = torch.empty(*[nsy,*latent_space_shape[0]]).uniform_(start,end)
+
+    def __len__(self): 
+        return len(self._latent_space_gaussian_normal)
+
+    def __getitem__(self,index):
+        return (self._latent_space_gaussian_normal[index,:],self._latent_space_distribution[index,:])
+
 def get_latent_dataset(dataset = LatentDataset, nsy=1280, batch_size=64, *args, **kwargs):
     _dataset    = LatentDataset(nsy=nsy,*args,**kwargs)
     train_part,vld_part,tst_part = int(0.80*len(_dataset)),int(0.10*len(_dataset)),int(0.10*len(_dataset))
