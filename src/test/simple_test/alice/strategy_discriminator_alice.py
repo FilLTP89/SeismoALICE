@@ -5,6 +5,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 class StrategyDiscriminatorALICE(IStrategyDiscriminator):
     def __init__(self,network,accel,opt,*args, **kwargs):
+        breakpoint()
         self.opt    = opt
         self.rlr    = self.opt.config["hparams"]['discriminators.lr']
         self.weight_decay = self.opt.config["hparams"]['discriminators.weight_decay']
@@ -27,7 +28,6 @@ class StrategyDiscriminatorALICE(IStrategyDiscriminator):
         Dreal_z = self.Dzzb(zcat(z,z))
         Dfake_z = self.Dzzb(zcat(z,zr))
         return Dreal_z, Dfake_z
-    
     
     def discriminate_crosss_entropy_y(self,y, yr, *args,**kwargs):
         Dreal_y = self.Dyy(y,y)

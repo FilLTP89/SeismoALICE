@@ -7,7 +7,7 @@ from plot.plot_tools import plot_generate_classic
 from app.trainer.simple.simple_trainer import SimpleTrainer
 from configuration import app
 
-class StreamWGAN(SimpleTrainer):
+class ExpWGAN(SimpleTrainer):
     def __init__(self,cv, trial=None):
         losses_disc = {
             'epochs':'',           'modality':'',
@@ -38,7 +38,7 @@ class StreamWGAN(SimpleTrainer):
             'epochs':'',    'modality':'',
             'Dsy':'',       'Dszb':''
         }
-        super(StreamWGAN, self).__init__(cv, trial = None,
+        super(ExpWGAN, self).__init__(cv, trial = None,
         losses_disc = losses_disc, losses_gens = losses_gens,prob_disc   = prob_disc,
         gradients_gens = gradients_gens, gradients_disc = gradients_disc, actions=True, start_epoch=5000)
 

@@ -281,7 +281,7 @@ class EncoderResnet(ResidualContainer):
                     intermediate_channels=self.channels[0], stride=1, 
                     conv = partial(nn.Conv1d), conv_tools= self.conv_tools
                     )._make_layer()
-        self.network.append(_layer)
+        self.network.append(copy.deepcopy(_layer))
         
         for layer, channel in zip(self.layers[1:],self.channels[1:]):
             _layer , self.in_channels = ResNet(block=block,in_channels=self.in_channels, 
@@ -342,7 +342,7 @@ class DecoderResnet(ResidualContainer):
                         intermediate_channels=self.channels[0], stride=1, 
                         conv = partial(nn.ConvTranspose1d), conv_tools=self.conv_tools
                     )._make_layer()
-        self.network.append(_layer)
+        self.network.append(copy.deepcopy(_layer))
        
         for layer, channel in zip(self.layers[1:],self.channels[1:]):
             _layer, self.in_channels = ResNet(block=block, in_channels= self.in_channels,
