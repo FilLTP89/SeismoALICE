@@ -112,13 +112,11 @@ def setup():
         pass
     
     if opt.manualSeed is None:
-        opt.manualSeed = random.randint(1, 10000)
-    print("Random Seed: ", opt.manualSeed)
-    random.seed(opt.manualSeed)
-    mseed(opt.manualSeed)
-    
-    cudnn.benchmark = False
-    cudnn.deterministic = True
+        cudnn.benchmark = True
+    # Use this only on debugging mode
+        #cudnn.benchmark = False
+        #cudnn.deterministic = True
+        torch.cuda.manual_seed(opt.manualSeed)
     
     if tcuda.is_available() and not opt.cuda:
         print("WARNING: You have a CUDA device, so you should probably run with --cuda")
