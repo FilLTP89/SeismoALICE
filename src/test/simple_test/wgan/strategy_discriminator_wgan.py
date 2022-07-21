@@ -16,9 +16,6 @@ class StrategyDiscriminatorWGAN(IStrategyDiscriminator):
         self._name_discriminators = ['Dsy', 'Dszb']
         
         super(StrategyDiscriminatorWGAN,self).__init__(*args,**kwargs)
-
-    def _discriminate_conjoint_yz(self,y,y_gen,z, z_gen,*args,**kwargs):
-        pass
     
     def _discriminate_marginal_z(self,z, zr,*args,**kwargs):
         Dreal_z = self.Dszb(z)

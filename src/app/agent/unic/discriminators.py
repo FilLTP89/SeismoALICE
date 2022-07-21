@@ -24,6 +24,9 @@ class Discriminators(Agent):
         for net in self.discriminators:
             self.track_weight_change(writer =  self.debug_writer, tag = net.name,
             model= net,epoch = epoch)
+    
+    def discriminate_conjoint_xy(self,x,xr, y,yr):
+        return self.strategy._discriminate_conjoint_xy(x,xr,y,yr)
         
     def discriminate_xz(self,x,xr,z,zr):
         return self.strategy._discriminate_xz(x,xr,z,zr)

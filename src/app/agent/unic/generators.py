@@ -43,3 +43,10 @@ class Generators(Agent):
 
     def _architecture(self,explore):
         self.strategy._architecture(explore)
+    
+    def __getattr__(self,name):
+        if name in self.strategy._get_name_generators():
+            disc = getattr(self.strategy,name, None)
+            return disc
+        else:
+            raise ValueError(f"The generators agent doesn't have the attribute {name}")

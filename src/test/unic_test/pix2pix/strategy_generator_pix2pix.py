@@ -3,7 +3,7 @@ from app.agent.unic.strategy_generators import IStrategyGenerator
 from common.common_nn import reset_net, zcat
 from torch.utils.tensorboard import SummaryWriter
 
-class StrategyGeneratorALICE(IStrategyGenerator):
+class StrategyGeneratorPix2Pix(IStrategyGenerator):
     def __init__(self,network, accel, opt, *args, **kwargs):
         self.opt = opt
         
@@ -14,10 +14,10 @@ class StrategyGeneratorALICE(IStrategyGenerator):
         self.Fxy = accel(network.Encoder(self.opt.config['Fyx'], self.opt,model_name='F')).cuda()
         self.Gy = accel(network.Decoder(self.opt.config['Gy'],self.opt,model_name='Gy')).cuda()
 
-        self._generators = [self.Fy, self.Gy]
+        self._generators = [self.Fxy, self.Gy]
         self._name_generators = ['Fy', 'Gy']
 
-        super(StrategyGeneratorALICE, self).__init__(*args, **kwargs)
+        super(StrategyGeneratorPix2Pix, self).__init__(*args, **kwargs)
 
     
     def _optimizer_encoder(self,*args,**kwargs):

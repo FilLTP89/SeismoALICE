@@ -4,8 +4,8 @@ from common.common_nn import zerograd,zcat,modalite
 from tools.generate_noise import noise_generator
 from common.common_torch import *
 from configuration import app
-from test.simple_test.wgan.strategy_discriminator_pix2pix import StrategyDiscriminatoPix2Pix
-from test.simple_test.wgan.strategy_generator_pix2pix import StrategyGeneratorPix2Pix
+from test.simple_test.pix2pix.strategy_discriminator_pix2pix import StrategyDiscriminatoPix2Pix
+from test.simple_test.pix2pix.strategy_generator_pix2pix import StrategyGeneratorPix2Pix
 
 class Pix2Pix(UnicTrainer):
     def __init__(self,cv, trial=None):
