@@ -11,16 +11,14 @@ class StrategyDiscriminatorPix2Pix(IStrategyDiscriminator):
         self.weight_decay = self.opt.config["hparams"]['generators.weight_decay']
     
         self.Dxy = accel(network.DCGAN_Dx(self.opt.config['Dxy'], self.opt,model_name='Dsy')).cuda()
-        self.Dsy = accel(network.DCGAN_Dx(self.opt.config['Dsy'], self.opt,model_name='Dsy')).cuda()
-        self.Dsx = accel(network.DCGAN_Dx(self.opt.config['Dsx'], self.opt,model_name='Dsx')).cuda()
         self.Dsz = accel(network.DCGAN_Dz(self.opt.config['Dsz'], self.opt,model_name='Dsz')).cuda()
         self._discriminators = [self.Dsy, self.Dsy]
-        self._name_discriminators = ['Dxy', 'Dsy','Dsx','Dsz']
+        self._name_discriminators = ['Dxy','Dsz']
         super(StrategyDiscriminatorPix2Pix,self).__init__(*args,**kwargs)
     
-    def _discriminate_conjointe_xy(self,x,xr,y,yr):
-        Dreal = self.Dxy(zcat(self.Dsx(x),self.Dsy(yr)))
-        Dfake = self.Dxy(zcat(self.Dsx(xr),self.Dsy(y)))
+    def _discriminate_conjointe_xy(self,x,y,yr):
+        Dreal = self.Dxy(zcat(x,y))
+        Dfake = self.Dxy(zcat(x,yr))
         return Dreal,Dfake
     
     def _discriminate_marginal_zd(self,z, zr):
@@ -30,14 +28,10 @@ class StrategyDiscriminatorPix2Pix(IStrategyDiscriminator):
     
     def _architecture(self, explore,*args,**kwargs):
         if explore:
-            writer_dsy  = SummaryWriter(self.opt.config['log_dir']['debug.dsy_writer'])
-            writer_dsx  = SummaryWriter(self.opt.config['log_dir']['debug.dsy_writer'])
             writer_dxy  = SummaryWriter(self.opt.config['log_dir']['debug.dxy_writer'])
             writer_dsz  = SummaryWriter(self.opt.config['log_dir']['debug.dsz_writer'])
 
-            writer_dsy.add_graph(next(iter(self.Dsy.children())),torch.randn(10,3,4096).cuda())
-            writer_dsx.add_graph(next(iter(self.Dsx.children())),torch.randn(10,3,4096).cuda())
-            writer_dxy.add_graph(next(iter(self.Dxy.children())),torch.randn(10,6,512).cuda())
+            writer_dxy.add_graph(next(iter(self.Dxy.children())),torch.randn(10,6,4096).cuda())
             writer_dsz.add_graph(next(iter(self.Dsz.children())),torch.randn(10,1,512).cuda())
 
     def _get_discriminators(self):

@@ -17,7 +17,7 @@ from database.latentset import get_latent_dataset, MixedGaussianUniformDataset
 from factory.conv_factory import Network, DataParalleleFactory
 from app.agent.simple.discriminators import Discriminators
 
-class UnitaryTrainerGenerator(BasicTrainer):
+class UnitaryTrainerDiscriminator(BasicTrainer):
     def __init__(self,cv,losses_disc, gradients_disc, prob_disc, strategy_discriminator,
                     trial=None, *args,**kwargs):
         globals().update(cv)
@@ -34,15 +34,15 @@ class UnitaryTrainerGenerator(BasicTrainer):
         self.prob_disc       = prob_disc
 
         self.logger.info("Setting Tensorboard for the training dataset ...")
-        loss_writer             = Writer(log_dir=self.opt.config['log_dir']['debug.losses_writer'], 
+        loss_writer             = Writer(log_dir=self.opt.config['log_dir']["unitary"]['debug.losses_writer'], 
                                     logger=self.logger)
-        gradients_writer        = Writer(log_dir=self.opt.config['log_dir']['debug.gradients_writer'],
+        gradients_writer        = Writer(log_dir=self.opt.config['log_dir']["unitary"]['debug.gradients_writer'],
                                     logger=self.logger)
-        self.training_writer    = Writer(log_dir=self.opt.config['log_dir']['train_writer'],
+        self.training_writer    = Writer(log_dir=self.opt.config['log_dir']["unitary"]['train_writer'],
                                     logger=self.logger)
-        self.validation_writer  = Writer(log_dir=self.opt.config['log_dir']['valid_writer'],
+        self.validation_writer  = Writer(log_dir=self.opt.config['log_dir']["unitary"]['valid_writer'],
                                     logger=self.logger)
-        self.debug_writer       = Writer(log_dir=self.opt.config['log_dir']['debug_writer'], 
+        self.debug_writer       = Writer(log_dir=self.opt.config['log_dir']["unitary"]['debug_writer'], 
                                     logger=self.logger)
 
         self.logger.info("Tracking metrics ...")
@@ -65,7 +65,7 @@ class UnitaryTrainerGenerator(BasicTrainer):
         self.bce_loss        = torch.nn.BCELoss(reduction='mean')
         self.bce_logit_loss  = torch.nn.BCEWithLogitsLoss(reduction='mean')
         
-        super(UnitaryTrainerGenerator,self).__init__(
+        super(UnitaryTrainerDiscriminator,self).__init__(
             settings  = self.opt, logger = self.logger, config = self.opt,
             models    = {'discriminators':self.disc_agent},
             losses    = {'discriminators':self.losses_disc}, 
