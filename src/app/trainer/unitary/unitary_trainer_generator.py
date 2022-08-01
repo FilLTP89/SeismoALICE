@@ -61,6 +61,7 @@ class UnitaryTrainerGenerator(BasicTrainer):
 
         self.bce_loss        = torch.nn.BCELoss(reduction='mean')
         self.bce_logit_loss  = torch.nn.BCEWithLogitsLoss(reduction='mean')
+        self.l1_loss         = torch.nn.L1Loss(reduction='mean')
 
         super(UnitaryTrainerGenerator,self).__init__(
             settings  = self.opt, logger = self.logger, config = self.opt,
@@ -124,10 +125,10 @@ class UnitaryTrainerGenerator(BasicTrainer):
             torch.manual_seed(self.opt.manualSeed)
             if epoch%self.opt.config["hparams"]['test_epochs'] == 0:
                 self.validation_writer.set_step(mode='test', step=epoch)
-                self.test_generators(self,bar, self.validation_writer, *args, **kwargs)
+                self.test_generators(self,bar, self.validation_writer, epoch, *args, **kwargs)
                 self.gen_agent.track_weight(epoch)
 
-    def train_generators(self,batch,epoch, modality, net_mode, *args, **kwargs):
+    def train_generators(self, batch, epoch, modality, net_mode, *args, **kwargs):
         """ The SimpleTrainer class is extended to support different strategy
             WGAN, WGAN-GP, ALICE-explicite, ALICE-implicite
         """

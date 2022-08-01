@@ -12,10 +12,9 @@ class StrategyGeneratorPix2Pix(IStrategyGenerator):
         self.weight_decay = self.opt.config["hparams"]['generators.weight_decay']
     
         self.Fxy = accel(network.Encoder(self.opt.config['Fxy'], self.opt,model_name='Fxy')).cuda()
-        self.Gxy = accel(network.Decoder(self.opt.config['Gxy'],self.opt,model_name='Gxy')).cuda()
 
-        self._generators = [self.Fxy, self.Gxy]
-        self._name_generators = ['Fy', 'Gy']
+        self._generators = [self.Fxy]
+        self._name_generators = ['Fxy']
 
         super(StrategyGeneratorPix2Pix, self).__init__(*args, **kwargs)
 
@@ -25,18 +24,14 @@ class StrategyGeneratorPix2Pix(IStrategyGenerator):
             weight_decay=self.weight_decay)
 
     def _optimizer_decoder(self,*args, **kwargs):
-        return reset_net([self.Gxy],optim='adam',alpha=0.9,lr=self.dlr,b1=0.5,b2=0.999, 
-            weights_decay=self.weight_decay)
+        pass
 
     def _architecture(self,explore,*args,**kwargs):
         if explore:
-            writer_encoder = SummaryWriter(self.opt.config['log_dir']['debug.encoder_writer'])
-            writer_decoder = SummaryWriter(self.opt.config['log_dir']['debug.decoder_writer'])
+            writer_encoder = SummaryWriter(self.opt.config['log_dir']['debug.encoder_writer'])            
             writer_encoder.add_graph(next(iter(self.Fxy.children())),
-                            torch.randn(10,6,4096).cuda())
-            writer_decoder.add_graph(next(self.Gxy.children()), 
-                            (torch.randn(10,1,512).cuda()))
-    
+                            torch.randn(10,3,4096).cuda())
+
     def _get_generators(self,*args, **kwargs):
         return self._generators
 
