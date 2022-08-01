@@ -15,7 +15,7 @@ from common.common_nn import count_parameters
 from common.common_torch import *
 from database.latentset import get_latent_dataset
 from factory.conv_factory import Network, DataParalleleFactory
-from app.agent.simple.generators import Generators
+from app.agent.unic.generators import Generators
 
 class UnitaryTrainerGenerator(BasicTrainer):
     def __init__(self,cv,losses_gens, gradients_gens, strategy_generator, 
@@ -67,7 +67,7 @@ class UnitaryTrainerGenerator(BasicTrainer):
             settings  = self.opt, logger = self.logger, config = self.opt,
             models    = {'generators':self.gen_agent},
             losses    = {'generators':self.losses_gens}, 
-            strategy  = self.strategy['unitary'], *args, **kwargs)
+            strategy  = self.strategy['simple'], *args, **kwargs)
 
         self.logger.info("Parameters of Generators ")
         count_parameters(self.gen_agent.generators)
@@ -81,22 +81,24 @@ class UnitaryTrainerGenerator(BasicTrainer):
         
         self.logger.info(f"Root summary")
         for _, root in self.opt.config['log_dir'].items():
-            self.logger.info(f"Summary:{root}")
-
+            if isinstance(root,dict):
+                for (_,subroot) in root.items():
+                    self.logger.info(f"\t Summary{subroot}")
+            else:
+                self.logger.info(f"Summary:{root}")
     
     def on_training_epoch(self, epoch, bar):
         _bar = tq(enumerate(zip(self.data_trn_loader,self.lat_trn_loader)),
         position=1,leave=False, desc='train.', total=len(self.data_trn_loader))
         for idx, (batch_data,batch_latent)  in _bar:
-            y, *others      = batch_data
+            y,x, *others      = batch_data
             zyy,zyx,*others = batch_latent
-            y  = y.to(app.DEVICE,non_blocking=True)
+            y, x  = y.to(app.DEVICE,non_blocking=True), x.to(app.DEVICE, non_blocking = True)
             zyy,zyx  = zyy.to(app.DEVICE,non_blocking=True),zyx.to(app.DEVICE,non_blocking=True)
             
-            pack = patch(y=y,zyy=zyy,zyx=zyx, x=None)
+            pack = patch(y=y,zyy=zyy,zyx=zyx, x=x)
 
-            self.train_generators(ncritics=1, batch=pack, epoch=epoch, 
-                modality='train',net_mode=['train','train'])
+            self.train_generators(ncritics=1, batch=pack, epoch=epoch, modality='train',net_mode=['train','train'])
 
         if epoch%self.opt.config['hparams']['training_epochs'] == 0:
             self.gradients_tracker_gen.write(epoch=epoch, modality = ['train'])
@@ -108,15 +110,13 @@ class UnitaryTrainerGenerator(BasicTrainer):
         _bar = tq(enumerate(zip(self.data_vld_loader,self.lat_vld_loader)),
         position=1, leave=False, desc='valid.', total=len(self.data_vld_loader))
         for idx, (batch_data, batch_latent) in _bar:
-            y,*others      = batch_data
+            y,x,*others = batch_data
             zyy,zyx,*others= batch_latent
-            y          = y.to(app.DEVICE, non_blocking   = True)
+            y, x       = y.to(app.DEVICE, non_blocking   = True), x.to(app.DEVICE, non_blocking = True)
             zyy, zyx   = zyy.to(app.DEVICE, non_blocking = True), zyx.to(app.DEVICE, non_blocking = True)
             
-            pack = patch(y=y,zyy=zyy,zyx=zyx)
-    
-            self.train_generators(batch=pack, epoch=epoch, 
-                        modality='eval',net_mode=['eval','eval'])
+            pack = patch(y=y,zyy=zyy,zyx=zyx,x=x)
+            self.train_generators(batch=pack, epoch=epoch, modality='eval',net_mode=['eval','eval'])
         if epoch%self.opt.config['hparams']['validation_epochs'] == 0:
             self.losses_gen_tracker.write(epoch=epoch, modality = ['train','eval'])
     
@@ -125,7 +125,7 @@ class UnitaryTrainerGenerator(BasicTrainer):
             torch.manual_seed(self.opt.manualSeed)
             if epoch%self.opt.config["hparams"]['test_epochs'] == 0:
                 self.validation_writer.set_step(mode='test', step=epoch)
-                self.test_generators(self,bar, self.validation_writer, epoch, *args, **kwargs)
+                self.test_generators(bar=bar, writer=self.validation_writer, epoch=epoch, *args, **kwargs)
                 self.gen_agent.track_weight(epoch)
 
     def train_generators(self, batch, epoch, modality, net_mode, *args, **kwargs):
@@ -134,7 +134,7 @@ class UnitaryTrainerGenerator(BasicTrainer):
         """
         raise NotImplementedError
     
-    def test_generators(self, bar, writer, *args, **kwargs):
+    def test_generators(self, bar, writer, epoch, *args, **kwargs):
         """ The tes for generator : encoder/decoder could be different depend of
             the wished strategy
         """

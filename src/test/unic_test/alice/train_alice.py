@@ -115,10 +115,11 @@ class ALICE(UnicTrainer):
             Dloss = Dloss_ali + Dloss_cross_entropy
 
             if modality == 'train':
+                zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
                 Dloss.backward()
                 self.disc_agent.optimizer.step()
                 self.disc_agent.track_gradient(epoch)
-                zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
+                
 
             self.losses_disc['epochs'       ] = epoch
             self.losses_disc['modality'     ] = modality
@@ -212,10 +213,11 @@ class ALICE(UnicTrainer):
             Gloss = Gloss_ali + Gloss_cross_entropy + Gloss_rec
 
             if modality == 'train':
+                zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
                 Gloss.backward()
                 self.gen_agent.optimizer.step()
                 self.gen_agent.track_gradient(epoch)
-                zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
+                
 
             self.losses_gens['epochs'       ] = epoch
             self.losses_gens['modality'     ] = modality

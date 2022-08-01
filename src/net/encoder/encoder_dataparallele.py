@@ -462,17 +462,19 @@ class Encoder_Resnet(BasicEncoderDataParallele):
         return z
 
 
-class Encoder_Unet(object):
+class Encoder_Unet(BasicEncoderDataParallele):
     """docstring for Encoder_Lite"""
     def __init__(self, ngpu,dev,nz,nch,ndf,act,channel,\
                  nly, config,ker=7,std=4,pad=0,dil=1,grp=1,bn=True,
                  dpc=0.0,limit = 256, path='',dconv = "",\
                  with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2,
                  wf = False, *args, **kwargs):
-        super(Encoder_Unet, self).__init__()
+        super(Encoder_Unet, self).__init__(*args, **kwargs)
         self.cnn1 = Generator(in_channels=channel[0], features=channel[1])
 
     def forward(self, input): 
         output = self.cnn1(input)
+        if not self.training:
+            return output.detach()
         return output        
 

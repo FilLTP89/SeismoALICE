@@ -28,19 +28,17 @@ class Generators(Agent):
         self.track_gradient_change(self.gradients_tracker,self.generators,epoch)
     
     def track_weight(self, epoch):
-        try:
-            self.track_weight_change(writer =  self.debug_writer, tag = 'F[cnn_common]', 
-                model= self.Fxy.module.cnn_common.eval(),epoch = epoch)
-            self.track_weight_change(writer =  self.debug_writer, tag = 'F[cnn_broadband]', 
-                model= self.Fxy.module.cnn_broadband.eval(),epoch = epoch)
-        except:
-            self.track_weight_change(writer =  self.debug_writer, tag = 'Fxy', 
-                model= self.Fxy.module.cnn_broadband.eval(),epoch = epoch)
-        else:
-            app.logger.error("The encoder is not detected")
-            
-        self.track_weight_change(writer =  self.debug_writer, tag = 'Gy', 
-            model= self.Gy.module.eval(),epoch = epoch)
+        for gen in self.generators:
+            try:
+                self.track_weight_change(writer =  self.debug_writer, tag = 'F[cnn_common]', 
+                    model= gen.module.cnn_common.eval(),epoch = epoch)
+                self.track_weight_change(writer =  self.debug_writer, tag = 'F[cnn_broadband]', 
+                    model= gen.module.cnn_broadband.eval(),epoch = epoch)
+            except:
+                self.track_weight_change(writer =  self.debug_writer, tag = 'Fxy', 
+                    model= gen.module.eval(),epoch = epoch)
+            else:
+                raise ValueError("The Encoder or Decoder doesn't have the attribute targeted")
 
     def _architecture(self,explore):
         self.strategy._architecture(explore)

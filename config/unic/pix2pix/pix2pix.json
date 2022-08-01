@@ -29,7 +29,7 @@
      "Fxy":{
         "name"      :"Unet",
         "nlayers"   :1, 
-        "channel"   :[6,64],
+        "channel"   :[3,64],
         "kernel"    :[4,4],
         "strides"   :[2,2],
         "dilation"  :[1,1],
@@ -54,5 +54,5 @@
         "wf"        :"False",
         "prob"      :"False",
         "bn"        :"True",
-        "limit"     :256}, 
+        "limit"     :256} 
 }

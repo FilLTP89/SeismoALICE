@@ -946,10 +946,13 @@ def visualize_unic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',out
 
 
 
-def get_gofs(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./imgs',save = True, std=None):
+def get_gofs(tag, Qec, trn_set, Pdc=None, opt=None, vtm = None, pfx='trial',outf='./imgs',save = True, std=None):
     dev = app.DEVICE
-    Qec.eval(), Pdc.eval()
-    Qec.to(dev),Pdc.to(dev)
+    Qec.eval(), 
+    Qec.to(dev),
+    if Pdc is not None:
+        Pdc.eval()
+        Pdc.to(dev)
     
     EG  = []
     PG  = []
@@ -1245,14 +1248,17 @@ def plot_of_fake_broadband_signal(Fyx,Gy,vld_loader,dataroot):
     return figure
 
 
-def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',
-    outf='./imgs',save = True, Qed=None,std=None):
+def plot_generate_classic(tag, Qec, trn_set, opt=None, vtm = None, pfx='trial',
+    outf='./imgs',save = True,Pdc=None,  Qed=None,std=None):
     
     dev = app.DEVICE
     data_tst_loader = trn_set
 
-    Qec.eval(),Pdc.eval()
-    Qec.to(dev),Pdc.to(dev)
+    Qec.eval()
+    Qec.to(dev)
+    if Pdc is not None:
+        Pdc.eval()
+        Pdc.to(dev)
     
     cnt=0
     EG = []
@@ -1644,7 +1650,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             if cnt == 1 and save == False:
                 break
 
-            Xr = Pdc(Xt)
+            Xr = Qec(Xt)
             #Xp = Pdc(z_pre)
             Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()
