@@ -118,6 +118,14 @@ class UnitaryTrainerGenerator(BasicTrainer):
                         modality='eval',net_mode=['eval','eval'])
         if epoch%self.opt.config['hparams']['validation_epochs'] == 0:
             self.losses_gen_tracker.write(epoch=epoch, modality = ['train','eval'])
+    
+    def on_test_epoch(self, epoch, bar , *args, **kwargs):
+        with torch.no_grad(): 
+            torch.manual_seed(self.opt.manualSeed)
+            if epoch%self.opt.config["hparams"]['test_epochs'] == 0:
+                self.validation_writer.set_step(mode='test', step=epoch)
+                self.test_generators(self,bar, self.validation_writer, *args, **kwargs)
+                self.gen_agent.track_weight(epoch)
 
     def train_generators(self,batch,epoch, modality, net_mode, *args, **kwargs):
         """ The SimpleTrainer class is extended to support different strategy
@@ -130,16 +138,3 @@ class UnitaryTrainerGenerator(BasicTrainer):
             the wished strategy
         """
         raise NotImplementedError
-
-    def on_test_epoch(self, epoch, bar , *args, **kwargs):
-        with torch.no_grad(): 
-            torch.manual_seed(self.opt.manualSeed)
-            if epoch%self.opt.config["hparams"]['test_epochs'] == 0:
-                self.validation_writer.set_step(mode='test', step=epoch)
-                self.test_generators(self,bar, self.validation_writer, *args, **kwargs)
-                self.gen_agent.track_weight(epoch)
-
-
-
-
-

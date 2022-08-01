@@ -15,7 +15,7 @@ from common.common_nn import count_parameters
 from common.common_torch import *
 from database.latentset import get_latent_dataset, MixedGaussianUniformDataset
 from factory.conv_factory import Network, DataParalleleFactory
-from app.agent.simple.discriminators import Discriminators
+from app.agent.unic.discriminators import Discriminators
 
 class UnitaryTrainerDiscriminator(BasicTrainer):
     def __init__(self,cv,losses_disc, gradients_disc, prob_disc, strategy_discriminator,
@@ -82,7 +82,11 @@ class UnitaryTrainerDiscriminator(BasicTrainer):
         
         self.logger.info(f"Root summary")
         for _, root in self.opt.config['log_dir'].items():
-            self.logger.info(f"Summary:{root}")
+            if isinstance(root,dict):
+                for (_,subroot) in root.items():
+                    self.logger.info(f"\t Summary{subroot}")
+            else:
+                self.logger.info(f"Summary:{root}")
     
     def on_training_epoch(self, epoch, bar):
         _bar = tq(enumerate(zip(self.data_trn_loader,self.lat_trn_loader)),

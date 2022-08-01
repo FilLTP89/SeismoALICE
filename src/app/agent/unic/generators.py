@@ -21,7 +21,8 @@ class Generators(Agent):
         self.optimizer_decoder = self.strategy._optimizer_decoder()
 
         self._architecture(app.EXPLORE)
-        super(Generators,self).__init__(config, logger, accel,*args, **kwargs)
+        super(Generators,self).__init__(self.generators, [self.optimizer_encoder,
+                self.optimizer_decoder], config, logger, accel,*args, **kwargs)
     
     def track_gradient(self,epoch):
         self.track_gradient_change(self.gradients_tracker,self.generators,epoch)

@@ -308,5 +308,34 @@ class DCGAN_Dx_Flatten(BasicDCGAN_DxDataParallel):
     def forward(self,x): 
         return self.cnn(x)
 
+class DCGAN_Dx_PatchGAN(BasicDCGAN_DxDataParallel):
+    def __init__(self,ngpu, nc, ncl, ndf, nly,act, channel, fpd=1, isize=256, limit = 256,\
+                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.0, batch_size =128,\
+                 path = '', prob = False,n_extra_layers=0, *args,**kwargs):
+        super(DCGAN_Dx_PatchGAN, self).__init__(*args, **kwargs)
 
+        self.initial = nn.Sequential(
+            nn.Conv1d(channel[0],channel[1],kernel_size=4, stride=2, padding=1, padding_mode="reflect"),
+            nn.LeakyReLU(0.2),
+        )
+        layers = []
+        in_channels = channel[1]
+        for feature in channel[2:]:
+            layers.append(
+                PatchCNNBlock(in_channels, feature, stride=1 if feature == channel[-1] else 2),
+            )
+            in_channels = feature
+
+        layers.append(
+            nn.Conv1d(
+                in_channels, 1, kernel_size=4, stride=1, padding=1, padding_mode="reflect"
+            ),
+        )
+        self.cnn = nn.Sequential(*layers)
+
+    def forward(self, x, y):
+        z = torch.cat([x, y], dim=1)
+        z = self.initial(z)
+        z = self.cnn(z)
+        return z
 

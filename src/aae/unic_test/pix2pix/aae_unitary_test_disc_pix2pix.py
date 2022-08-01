@@ -1,7 +1,7 @@
 import warnings
 warnings.filterwarnings("ignore")
 import common.ex_common_setup as cs
-from test.unic_test.pix2pix.exp_unitary_discriminator import ExpPix2PixDiscriminator
+from test.unic_test.pix2pix.exp_unitary_discriminator_pix2pix import ExpPix2PixDiscriminator
 
 def main():
     u'''[SETUP] common variables/datasets'''

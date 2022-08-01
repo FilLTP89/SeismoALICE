@@ -15,18 +15,19 @@ class Discriminators(Agent):
         self.optimizer  = self.strategy._optimizer()
         self.discriminators = self.strategy._get_discriminators()
 
-        super(Discriminators,self).__init__(config, logger, accel,*args, **kwargs)
+        super(Discriminators,self).__init__(self.discriminators, self.optimizer, config, logger,
+            accel,*args, **kwargs)
     
     def track_gradient(self,epoch):
         self.track_gradient_change(self.gradients_tracker,self.discriminators,epoch)
     
     def track_weight(self,epoch):
         for net in self.discriminators:
-            self.track_weight_change(writer =  self.debug_writer, tag = net.name,
-            model= net,epoch = epoch)
+            self.track_weight_change(writer =  self.debug_writer, tag = net.module.model_name,
+            model= net.module,epoch = epoch)
     
-    def discriminate_conjoint_xy(self,x,xr, y,yr):
-        return self.strategy._discriminate_conjoint_xy(x,xr,y,yr)
+    def discriminate_conjointe_xy(self,x,y,yr):
+        return self.strategy._discriminate_conjointe_xy(x,y,yr)
         
     def discriminate_xz(self,x,xr,z,zr):
         return self.strategy._discriminate_xz(x,xr,z,zr)

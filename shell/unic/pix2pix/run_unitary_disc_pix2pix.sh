@@ -6,8 +6,8 @@
 #SBATCH --mem=150GB
 #SBATCH --time=24:00:00
 #SBATCH --partition=gpu
-#SBATCH --output=owgan.txt
-#SBATCH --error=ewgan.txt 
+#SBATCH --output=./output/unic/pix2pix/out_disc.txt
+#SBATCH --error=./error/unic/pix2pix/error_disc.txt
 #SBATCH --mail-type=FAIL
 #SBATCH --export=NONE  
 

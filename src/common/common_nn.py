@@ -247,6 +247,24 @@ def DenseBlock(in_channels,out_channels,\
     
     return block
 
+
+class PatchCNNBlock(nn.Module):
+    """ ConvBlock specialy design for PatchGAN architcture discriminator
+    """
+    def __init__(self, in_channels, out_channels, stride):
+        super(PatchCNNBlock, self).__init__()
+        self.conv = nn.Sequential(
+            nn.Conv1d(
+                in_channels, out_channels, 4, stride, 1, bias=False, padding_mode="reflect"
+            ),
+            nn.BatchNorm1d(out_channels),
+            nn.LeakyReLU(0.2),
+        )
+
+    def forward(self, x):
+        return self.conv(x)
+    
+
 class ConvBlock(Module):
     def __init__(self, ni, no, ker, std, bias=False,
                  act = None, bn=True, normalization = partial(BatchNorm1d), 
