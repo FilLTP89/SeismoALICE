@@ -1650,7 +1650,7 @@ def plot_generate_classic(tag, Qec, trn_set, opt=None, vtm = None, pfx='trial',
             if cnt == 1 and save == False:
                 break
 
-            Xr = Qec(Xt)
+            Xr = Qec(Xf)
             #Xp = Pdc(z_pre)
             Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()

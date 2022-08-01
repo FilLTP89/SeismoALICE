@@ -42,11 +42,11 @@ class Discriminators(Agent):
         Dreal, Dfake = self.strategy._discriminate_marginal_z(z,zr)
         return Dreal, Dfake
     
-    def discriminate_crosss_entropy_y(self,y, yr):
+    def discriminate_cross_entropy_y(self,y, yr):
         Dreal, Dfake = self.strategy._discriminate_crosss_entropy_y(y,yr)
         return Dreal, Dfake
     
-    def discriminate_crosss_entropy_zd(self,z,zr):
+    def discriminate_cross_entropy_zd(self,z,zr):
         Dreal, Dfake = self.strategy._discriminate_cross_entropy_zd(z,zr)
         return Dreal, Dfake
 

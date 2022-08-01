@@ -116,7 +116,7 @@
         "name"      :"Lite",
         "nlayers"   :3,
         "nc"        :128,
-        "channel"   :[16,32,64,128],
+        "channel"   :[2,32,64,128],
         "kernel"    :[3,3,3],
         "strides"   :[2,2,2],
         "dilation"  :[1,1,1],

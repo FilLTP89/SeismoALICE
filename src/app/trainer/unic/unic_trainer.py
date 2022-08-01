@@ -79,6 +79,7 @@ class UnicTrainer(BasicTrainer):
         self.lat_trn_loader, self.lat_vld_loader, self.lat_tst_loader   = get_latent_dataset(self.opt.nsy, self.opt.batchSize)
         self.bce_loss         = torch.nn.BCELoss(reduction='mean').cuda()
         self.bce_logit_loss   = torch.nn.BCEWithLogitsLoss(reduction='mean').cuda()
+        self.l1_loss          = torch.nn.L1Loss(reduction='mean').cuda()
 
         super(UnicTrainer,self).__init__(
             settings  = self.opt, logger = self.logger, config = self.opt,

@@ -5,7 +5,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 class StrategyDiscriminatorALICE(IStrategyDiscriminator):
     def __init__(self,network,accel,opt,*args, **kwargs):
-        breakpoint()
+        
         self.opt    = opt
         self.rlr    = self.opt.config["hparams"]['discriminators.lr']
         self.weight_decay = self.opt.config["hparams"]['discriminators.weight_decay']

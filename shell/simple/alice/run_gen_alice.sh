@@ -6,14 +6,14 @@
 #SBATCH --mem=150GB
 #SBATCH --time=24:00:00
 #SBATCH --partition=gpu
-#SBATCH --output=oalice.txt
-#SBATCH --error=ealice.txt 
+#SBATCH --output=./output/simple/alice/out_gen.txt
+#SBATCH --error=./error/simple/alice/error_gen.txt 
 #SBATCH --mail-type=FAIL
 #SBATCH --export=NONE  
 source load_conda_env_gpu.sh P100  
 export PYTHONPATH="./src"
 
-python ./src/aae/simple_test/alice/aae_simple_test_alice.py\
+python ./src/aae/simple_test/alice/aae_unitary_test_gen_alice.py\
     --dataroot='./database/tweaked/data/test/nsy12800/' \
     --dataset='nt4096_ls128_nzf8_nzd32.pth' \
     --cutoff=30. --imageSize=4096 --latentSize=64 \

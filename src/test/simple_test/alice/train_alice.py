@@ -63,7 +63,7 @@ class ALICE(SimpleTrainer):
             zyy_F,zyx_F,*other = self.gen_agent.Fy(y_inp)
             zd_gen      = zcat(zyx_F,zyy_F)
             
-            Dreal_yz, Dfake_yz = self.disc_agent.discriminate_yz(y,y_gen,zd_inp,zd_gen)
+            Dreal_yz, Dfake_yz = self.disc_agent.discriminate_conjoint_yz(y,y_gen,zd_inp,zd_gen)
             Dloss_ali_y =  self.bce_logit_loss(Dreal_yz,o1l(Dreal_yz)) +\
                              self.bce_logit_loss(Dfake_yz,o0l(Dfake_yz))
 
@@ -75,11 +75,11 @@ class ALICE(SimpleTrainer):
             zyy_rec,zyx_rec = self.gen_agent.Fy(y_gen)
             zd_rec      = zcat(zyx_rec,zyy_rec)
 
-            Dreal_y, Dfake_y        = self.disc_agent.discriminate_yy(y, y_rec)
+            Dreal_y, Dfake_y        = self.disc_agent.discriminate_crosss_entropy_y(y, y_rec)
             Dloss_cross_entropy_y   = self.bce_logit_loss(Dreal_y,o1l(Dreal_y))+\
                     self.bce_logit_loss(Dfake_y,o0l(Dfake_y))
 
-            Dreal_zd, Dfake_zd      = self.disc_agent.discriminate_zzb(zd_inp,zd_rec)
+            Dreal_zd, Dfake_zd      = self.disc_agent.discriminate_crosss_entropy_zd(zd_inp,zd_rec)
             Dloss_cross_entropy_zd  = self.bce_logit_loss(Dreal_zd,o1l(Dreal_zd))+\
                     self.bce_logit_loss(Dfake_zd,o0l(Dfake_zd))
 
@@ -104,19 +104,18 @@ class ALICE(SimpleTrainer):
 
             self.prob_disc['epochs'  ] = epoch
             self.prob_disc['modality'] = modality
-            self.prob_disc['Dreal_yz'] = Dreal_yz.median().tolist()
-            self.prob_disc['Dfake_yz'] = Dfake_yz.median().tolist()
-            self.prob_disc['Dreal_y' ] = Dreal_y.median().tolist()
-            self.prob_disc['Dfake_y' ] = Dfake_y.median().tolist()
-            self.prob_disc['Dreal_zd'] = Dreal_zd.median().tolist()
-            self.prob_disc['Dfake_zd'] = Dfake_zd.median().tolist()
+            self.prob_disc['Dreal_yz'] = torch.sigmoid(Dreal_yz).mean().tolist()
+            self.prob_disc['Dfake_yz'] = torch.sigmoid(Dfake_yz).mean().tolist()
+            self.prob_disc['Dreal_y' ] = torch.sigmoid(Dreal_y).mean().tolist()
+            self.prob_disc['Dfake_y' ] = torch.sigmoid(Dfake_y).mean().tolist()
+            self.prob_disc['Dreal_zd'] = torch.sigmoid(Dreal_zd).mean().tolist()
+            self.prob_disc['Dfake_zd'] = torch.sigmoid(Dfake_zd).mean().tolist()
             self.prob_disc_tracker.update()
             
     def train_generators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,zyy,zxy = batch
         for _ in range(1):
-            zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder,
-                self.disc_agent.optimizer])
+            zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder,self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
             
@@ -129,7 +128,7 @@ class ALICE(SimpleTrainer):
             zyy_F,zyx_F,*other = self.gen_agent.Fy(y_inp)
             zd_gen      = zcat(zyx_F,zyy_F)
 
-            Dreal_yz, Dfake_yz  = self.disc_agent.discriminate_yz(y, y_gen,zd_inp,zd_gen)
+            Dreal_yz, Dfake_yz  = self.disc_agent.discriminate_conjoint_yz(y, y_gen,zd_inp,zd_gen)
             Gloss_ali_y = self.bce_logit_loss(Dreal_yz,o1l(Dreal_yz)) +\
                          self.bce_logit_loss(Dfake_yz,o0l(Dfake_yz))
 
@@ -144,19 +143,18 @@ class ALICE(SimpleTrainer):
             Gloss_rec_y = torch.mean(torch.abs(y-y_rec))
             Gloss_rec_zd= torch.mean(torch.abs(zd_inp-zd_rec))
             
-            _, Dfake_y        = self.disc_agent.discriminate_yy(y, y_rec)
+            _, Dfake_y        = self.disc_agent.discriminate_crosss_entropy_y(y, y_rec)
             Gloss_cross_entropy_y   = self.bce_logit_loss(Dfake_y,o1l(Dfake_y))
 
-            _, Dfake_zd      = self.disc_agent.discriminate_zzb(zd_inp,zd_rec)
+            _, Dfake_zd      = self.disc_agent.discriminate_crosss_entropy_zd(zd_inp,zd_rec)
             Gloss_cross_entropy_zd  = self.bce_logit_loss(Dfake_zd,o1l(Dfake_zd))
 
             Gloss_rec           = Gloss_rec_y + Gloss_rec_zd
             Gloss_cross_entropy = Gloss_cross_entropy_y + Gloss_cross_entropy_zd
-            Gloss               = Gloss_ali_y + Gloss_cross_entropy + Gloss_rec
+            Gloss               = Gloss_ali_y + Gloss_cross_entropy + Gloss_rec*app.LAMBDA_IDENTITY
             
             if modality == 'train':
-                zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder,
-                    self.disc_agent.optimizer])
+                zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder,self.disc_agent.optimizer])
                 Gloss.backward()
                 self.gen_agent.optimizer.step()
                 self.gen_agent.track_gradient(epoch)
