@@ -93,15 +93,19 @@ class UnicTrainer(BasicTrainer):
 
         self.logger.info("Parameters of Discriminators")
         count_parameters(self.disc_agent.discriminators)
-        self.logger.info(f"Learning rate : {self.opt.config['hparams']['discriminators.lr']}")
+        self.logger.info(f"Learning rate        : {self.opt.config['hparams']['discriminators.lr']}")
 
-        self.logger.info(f"Number of GPU : {torch.cuda.device_count()} GPUs")
-        self.logger.info(f"Root checkpoint {self.opt.root_checkpoint}")
-        self.logger.info(f"Saving epoch every {self.opt.save_checkpoint} iterations")
+        self.logger.info(f"Number of GPU        : {torch.cuda.device_count()} GPUs")
+        self.logger.info(f"Root checkpoint      :{self.opt.root_checkpoint}")
+        self.logger.info(f"Saving network every :{self.opt.save_checkpoint} iterations")
         
         self.logger.info(f"Root summary")
         for _, root in self.opt.config['log_dir'].items():
-            self.logger.info(f"Summary:{root}")
+            if isinstance(root,dict):
+                for (_,subroot) in root.items():
+                    self.logger.info(f"\t Summary{subroot}")
+            else:
+                self.logger.info(f"Summary:{root}")
 
     def on_training_epoch(self, epoch, bar):
         _bar = tq(enumerate(zip(self.data_trn_loader,self.lat_trn_loader)),
