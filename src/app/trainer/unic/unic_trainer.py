@@ -12,7 +12,7 @@ from tqdm import tqdm as tq
 from torch.nn import DataParallel as DP
 from common.common_nn import patch,get_accuracy
 from common.common_nn import count_parameters
-from database.latentset import get_latent_dataset
+from database.latentset import get_latent_dataset, LatentDataset
 from common.common_torch import *
 from factory.conv_factory import Network, DataParalleleFactory
 from app.agent.unic.generators import Generators
@@ -67,16 +67,17 @@ class UnicTrainer(BasicTrainer):
         self.logger.info("Creating Generators Agent ...")
         self.gen_agent  = Generators(network=network, config=self.opt.config, logger=self.logger,
                         accel=DP, opt=self.opt, gradients_tracker = self.gradients_tracker_gen,
-                        debug_writer = self.debug_writer, strategy= strategy_discriminator)
+                        debug_writer = self.debug_writer, strategy= strategy_generator)
 
         self.logger.info("Creating Discriminator Agent ...")
         self.disc_agent = Discriminators(network=network, config=self.opt.config, logger=self.logger,
                         accel=DP, opt=self.opt, gradients_tracker = self.gradients_tracker_disc,
-                        debug_writer = self.debug_writer, strategy=strategy_generator)
+                        debug_writer = self.debug_writer, strategy=strategy_discriminator)
 
         self.logger.info("Loading the dataset ...")
         self.data_trn_loader,  self.data_vld_loader, self.data_tst_loader = trn_loader,vld_loader,tst_loader
-        self.lat_trn_loader, self.lat_vld_loader, self.lat_tst_loader   = get_latent_dataset(self.opt.nsy, self.opt.batchSize)
+        self.lat_trn_loader, self.lat_vld_loader, self.lat_tst_loader   = get_latent_dataset(
+            dataset=LatentDataset,nsy=self.opt.nsy,batch_size=self.opt.batchSize)
         self.bce_loss         = torch.nn.BCELoss(reduction='mean').cuda()
         self.bce_logit_loss   = torch.nn.BCEWithLogitsLoss(reduction='mean').cuda()
         self.l1_loss          = torch.nn.L1Loss(reduction='mean').cuda()
@@ -89,21 +90,22 @@ class UnicTrainer(BasicTrainer):
         
         self.logger.info("Parameters of Generators ")
         count_parameters(self.gen_agent.generators)
-        self.logger.info(f"Learning rate : {self.opt.config['hparams']['generators.lr']}")
+        self.logger.info(f"Learning rate : {self.opt.config['hparams']['generators.encoder.lr']}")
+        self.logger.info(f"Learning rate : {self.opt.config['hparams']['generators.decoder.lr']}")
 
         self.logger.info("Parameters of Discriminators")
         count_parameters(self.disc_agent.discriminators)
         self.logger.info(f"Learning rate        : {self.opt.config['hparams']['discriminators.lr']}")
 
         self.logger.info(f"Number of GPU        : {torch.cuda.device_count()} GPUs")
-        self.logger.info(f"Root checkpoint      :{self.opt.root_checkpoint}")
-        self.logger.info(f"Saving network every :{self.opt.save_checkpoint} iterations")
+        self.logger.info(f"Root checkpoint      : {self.opt.root_checkpoint}")
+        self.logger.info(f"Saving network every : {self.opt.save_checkpoint} epochs")
         
         self.logger.info(f"Root summary")
         for _, root in self.opt.config['log_dir'].items():
             if isinstance(root,dict):
                 for (_,subroot) in root.items():
-                    self.logger.info(f"\t Summary{subroot}")
+                    self.logger.info(f"Summary{subroot}")
             else:
                 self.logger.info(f"Summary:{root}")
 
@@ -135,7 +137,7 @@ class UnicTrainer(BasicTrainer):
         _bar = tq(enumerate(zip(self.data_vld_loader,self.lat_vld_loader)),
                     position=1, leave=False, desc='valid.', 
                     total=len(self.data_vld_loader))
-        for idx, (batch_data,batch_latent) in enumerate(self.data_vld_loader):
+        for idx, (batch_data,batch_latent) in _bar:
             y, x, *others   = batch_data
             zyy,zyx, *other = batch_latent
             y,x     = y.to(app.DEVICE, non_blocking = True), x.to(app.DEVICE, non_blocking = True)

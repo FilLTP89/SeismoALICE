@@ -6,24 +6,21 @@ from tools.generate_noise import noise_generator
 from common.common_nn import get_accuracy
 from common.common_torch import *
 from configuration import app
-from test.unic_test.pix2pix.strategy_discriminator_pix2pix import StrategyDiscriminatoPix2Pix
+from test.unic_test.pix2pix.strategy_discriminator_pix2pix import StrategyDiscriminatorPix2Pix
 from test.unic_test.pix2pix.strategy_generator_pix2pix import StrategyGeneratorPix2Pix
 
 class Pix2Pix(UnicTrainer):
     def __init__(self,cv, trial=None):
         losses_disc = {
             'epochs':'',                'modality':'',
-            'Dloss':'',
-            'Dloss_xy':'',              'Dloss_zd':'', 
+            'Dloss':'',                 'Dloss_xy':'' 
         }
 
         losses_gens = {
             'epochs':'',                'modality':'',
-            'Gloss':'',                 'Gloss_xy':'',
-            'Gloss_zd':'',      
-
-            'Gloss_rec':'',             'Gloss_rec_y':'',
-            'Gloss_rec_zd':'',
+            'Gloss':'',                 'Gloss_pix2pix':'',         
+            'Gloss_xy':'',              'Gloss_rec':'',
+            'Gloss_rec_y':''
         }
 
         prob_disc = {
@@ -33,17 +30,17 @@ class Pix2Pix(UnicTrainer):
 
         gradients_gens = {
             'epochs':'',    'modality':'',
-            'Fx':'',        'Gy':'',
+            'Fxy':'',
         }
 
         gradients_disc = {
             'epochs':'',    'modality':'',
-            'Dsxy':'',      'Dszb':'',
+            'Dxy':'',
         }
 
         super(Pix2Pix, self).__init__(cv, trial = None,
         losses_disc = losses_disc, losses_gens = losses_gens, prob_disc  = prob_disc,
-        strategy_discriminator = StrategyDiscriminatoPix2Pix, 
+        strategy_discriminator = StrategyDiscriminatorPix2Pix, 
         strategy_generator = StrategyGeneratorPix2Pix, 
         gradients_gens = gradients_gens, 
         gradients_disc = gradients_disc)
@@ -51,7 +48,7 @@ class Pix2Pix(UnicTrainer):
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,x,zyy,zxy = batch
         for _ in range(1):
-            zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
+            zerograd([self.gen_agent.optimizer_encoder, self.disc_agent.optimizer])
             modalite(self.gen_agent.generators,       mode = net_mode[0])
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
 
@@ -69,7 +66,7 @@ class Pix2Pix(UnicTrainer):
             Dloss              = Dloss_pix2pix/2
             
             if modality == 'train':
-                zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
+                zerograd([self.gen_agent.optimizer_encoder, self.disc_agent.optimizer])
                 Dloss.backward()
                 self.disc_agent.optimizer.step()
                 self.disc_agent.track_gradient(epoch)
@@ -90,9 +87,10 @@ class Pix2Pix(UnicTrainer):
     def train_generators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         y,x,zyy,zxy = batch
         for _ in range(1):
-            zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder,
-                         self.disc_agent.optimizer])
-            
+            zerograd([self.gen_agent.optimizer_encoder,self.disc_agent.optimizer])
+            modalite(self.gen_agent.generators,       mode = net_mode[0])
+            modalite(self.disc_agent.discriminators,  mode = net_mode[1])
+
             # 1. Pix2Pix
             wnx,*others = noise_generator(x.shape,y.shape,app.DEVICE,app.NOISE)
             x_inp = zcat(x,wnx)
@@ -109,12 +107,11 @@ class Pix2Pix(UnicTrainer):
             Gloss           = Gloss_pix2pix + Gloss_rec
 
             if modality == 'train':
-                zerograd([self.gen_agent.optimize_encoder, self.gen_agent.optimizer_decoder,
-                         self.disc_agent.optimizer])
+                zerograd([self.gen_agent.optimizer_encoder,self.disc_agent.optimizer])
                 Gloss.backward()
-                self.gen_agent.optimizer.step()
+                self.gen_agent.optimizer_encoder.step()
                 self.gen_agent.track_gradient(epoch)
-
+            
             self.losses_gens['epochs'       ] = epoch
             self.losses_gens['modality'     ] = modality
             self.losses_gens['Gloss'        ] = Gloss.tolist()
@@ -125,25 +122,28 @@ class Pix2Pix(UnicTrainer):
             self.losses_gen_tracker.update()
 
     def on_test_epoch(self, epoch, bar):
+        # method is overwritten
         with torch.no_grad(): 
             torch.manual_seed(100)
             if epoch%self.opt.config["hparams"]['test_epochs'] == 0:
+                self.validation_writer.set_step(mode='test', step=epoch)
+                bar.set_postfix(status='saving accuracy and images ... ')
                 accuracy_hb = get_accuracy(tag='pix2pix',plot_function=get_gofs,
-                encoder = self.gen_agent.Fxy,
-                decoder = None,
-                vld_loader = self.data_tst_loader,
-                pfx ="vld_set_bb_unique",opt= self.opt,
-                outf = self.opt.outf, save = False
-            )
-            bar.set_postfix(accuracy_hb=accuracy_hb)
-            self.validation_writer.add_scalar('Accuracy/Filtered2Broadband',accuracy_hb,epoch)
-            
-            # plot hybrid filtred reconstruction signal and gof
-            figure_hf, gof_hf = plot_generate_classic(tag ='pix2pix',
-                Qec= self.gen_agent.Fxy, Pdc= None,
-                trn_set=self.data_tst_loader, pfx="vld_set_bb_unique",
-                opt=self.opt, outf= self.opt.outf, save=False)
-            bar.set_postfix(status='saving images STFD/GOF Pix2Pix ...')
-            self.validation_writer.add_figure('STFD Hybrid Filtered', figure_hf)
-            self.validation_writer.add_figure('GOF Hybrid Filtered', gof_hf)
+                    encoder = self.gen_agent.Fxy,
+                    decoder = None,
+                    vld_loader = self.data_tst_loader,
+                    pfx ="vld_set_bb_unique",opt= self.opt,
+                    outf = self.opt.outf, save = False
+                )
+                bar.set_postfix(accuracy_hb=accuracy_hb)
+                self.validation_writer.add_scalar('Accuracy/Filtered2Broadband',accuracy_hb,epoch)
+                
+                # plot hybrid filtred reconstruction signal and gof
+                figure_hf, gof_hf = plot_generate_classic(tag ='pix2pix',
+                    Qec= self.gen_agent.Fxy, Pdc= None,
+                    trn_set=self.data_tst_loader, pfx="vld_set_bb_unique",
+                    opt=self.opt, outf= self.opt.outf, save=False)
+                bar.set_postfix(status='saving images STFD/GOF Pix2Pix ...')
+                self.validation_writer.add_figure('STFD Hybrid Filtered', figure_hf)
+                self.validation_writer.add_figure('GOF Hybrid Filtered', gof_hf)
 
