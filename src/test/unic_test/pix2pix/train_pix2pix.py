@@ -29,8 +29,6 @@ class Pix2Pix(UnicTrainer):
         prob_disc = {
             'epochs':'',            'modality':'',
             'Dreal_xy':'',          'Dfake_xy':'',
-            'Dreal_x':'',           'Dfake_x':'',
-            'Dreal_zd':'',          'Dfake_zd':'',
         }
 
         gradients_gens = {
@@ -58,15 +56,17 @@ class Pix2Pix(UnicTrainer):
             modalite(self.disc_agent.discriminators,  mode = net_mode[1])
 
             # 1. Pix2Pix
-            y_gen      = self.gen_agent.Fxy(x)
+            wnx,*others = noise_generator(x.shape,y.shape,app.DEVICE,app.NOISE)
+            x_inp = zcat(x,wnx)
+            y_gen      = self.gen_agent.Fxy(x_inp)
 
             Dreal_xy, Dfake_xy = self.disc_agent.discriminate_conjointe_xy(x,y,y_gen)
             Dloss_xy    = self.bce_logit_loss(Dreal_xy.reshape(-1),o1l(Dfake_xy.reshape(-1))) +\
                             self.bce_logit_loss(Dfake_xy.reshape(-1),o0l(Dfake_xy.reshape(-1)))
             
             # 2. Summation of losses
-            Dloss_pix2pix      = Dloss_xy/2
-            Dloss              = Dloss_pix2pix
+            Dloss_pix2pix      = Dloss_xy
+            Dloss              = Dloss_pix2pix/2
             
             if modality == 'train':
                 zerograd([self.gen_agent.optimizer, self.disc_agent.optimizer])
@@ -83,8 +83,8 @@ class Pix2Pix(UnicTrainer):
 
             self.prob_disc['epochs'  ] = epoch
             self.prob_disc['modality'] = modality
-            self.prob_disc['Dreal_xy'] = Dreal_xy.mean().tolist()
-            self.prob_disc['Dfake_xy'] = Dfake_xy.mean().tolist()
+            self.prob_disc['Dreal_xy'] = torch.sigmoid(Dreal_xy).mean().tolist()
+            self.prob_disc['Dfake_xy'] = torch.sigmoid(Dfake_xy).mean().tolist()
             self.prob_disc_tracker.update()
             
     def train_generators(self,batch,epoch,modality,net_mode,*args,**kwargs):
@@ -94,17 +94,19 @@ class Pix2Pix(UnicTrainer):
                          self.disc_agent.optimizer])
             
             # 1. Pix2Pix
-            y_gen      = self.gen_agent.Fxy(x)
+            wnx,*others = noise_generator(x.shape,y.shape,app.DEVICE,app.NOISE)
+            x_inp = zcat(x,wnx)
+            y_gen      = self.gen_agent.Fxy(x_inp)
             _, Dfake_xy = self.disc_agent.discriminate_conjointe_xy(x,y,y_gen)
             Gloss_xy    = self.bce_logit_loss(Dfake_xy.reshape(-1),o1l(Dfake_xy.reshape(-1)))
             
             # 2. Reconstruction
-            Gloss_rec_y = self.l1_loss(y,y_gen)
+            Gloss_rec_y = self.l1_loss(y,y_gen)*app.LAMBDA_IDENTITY
             
             # 3. Summation of losses
             Gloss_pix2pix   = Gloss_xy
             Gloss_rec       = Gloss_rec_y
-            Gloss           = Gloss_pix2pix + Gloss_rec*app.LAMBDA_IDENTITY
+            Gloss           = Gloss_pix2pix + Gloss_rec
 
             if modality == 'train':
                 zerograd([self.gen_agent.optimize_encoder, self.gen_agent.optimizer_decoder,
