@@ -60,7 +60,7 @@ class UnitaryTrainerDiscriminator(BasicTrainer):
 
         self.data_trn_loader, self.data_vld_loader,self.data_tst_loader = trn_loader, vld_loader, tst_loader
         self.lat_trn_loader, self.lat_vld_loader, self.lat_tst_loader   = get_latent_dataset(
-            dataset=MixedGaussianUniformDataset, nsy=self.opt.nsy,batch_size=self.opt.batchSize)
+            dataset=MixedGaussianUniformDataset,nsy=self.opt.nsy,batch_size=self.opt.batchSize)
         
         self.bce_loss        = torch.nn.BCELoss(reduction='mean')
         self.bce_logit_loss  = torch.nn.BCEWithLogitsLoss(reduction='mean')
@@ -78,7 +78,7 @@ class UnitaryTrainerDiscriminator(BasicTrainer):
         self.logger.info(f"Number of GPU        : {torch.cuda.device_count()} GPUs")
         self.logger.info(f"Batch Size per GPU   : {self.opt.batchSize//torch.cuda.device_count()}")
         self.logger.info(f"Root checkpoint      : {self.opt.root_checkpoint}")
-        self.logger.info(f"Saving epoch every   : {self.opt.save_checkpoint} iterations")
+        self.logger.info(f"Saving network every : {self.opt.save_checkpoint} epochs")
         
         self.logger.info(f"Root summary")
         for _, root in self.opt.config['log_dir'].items():
