@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH -J wgan
+#SBATCH -J pix2pix
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
 #SBATCH --gres=gpu:2
 #SBATCH --mem=150GB
 #SBATCH --time=24:00:00
 #SBATCH --partition=gpu
-#SBATCH --output=./output/unic/pix2pix/out_disc.txt
-#SBATCH --error=./error/unic/pix2pix/error_disc.txt
+#SBATCH --output=./output/unic/pix2pix/out_gen.txt
+#SBATCH --error=./error/unic/pix2pix/error_gen.txt
 #SBATCH --mail-type=FAIL
 #SBATCH --export=NONE  
 

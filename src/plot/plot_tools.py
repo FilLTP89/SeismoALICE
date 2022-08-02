@@ -1147,7 +1147,9 @@ def get_gofs(tag, Qec, trn_set, Pdc=None, opt=None, vtm = None, pfx='trial',outf
             Xt = Variable(xt_data).to(dev, non_blocking=True)
             Xf = Variable(xf_data).to(dev, non_blocking=True)
             # zt = Variable(zt_data).to(dev, non_blocking=True)
-            Xr = Qec(Xf)
+            wnx,*others = noise_generator(Xf.shape,Xf.shape,app.DEVICE,app.NOISE)
+            X_inp = zcat(Xf, wnx)
+            Xr = Qec(X_inp)
             vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
             Xt = Xt.cpu().data.numpy().copy()
             Xf = Xf.cpu().data.numpy().copy()
@@ -1649,8 +1651,9 @@ def plot_generate_classic(tag, Qec, trn_set, opt=None, vtm = None, pfx='trial',
 
             if cnt == 1 and save == False:
                 break
-
-            Xr = Qec(Xf)
+            wnx,*others = noise_generator(Xf.shape,Xf.shape,app.DEVICE,app.NOISE)
+            X_inp = zcat(Xf, wnx)
+            Xr = Qec(X_inp)
             #Xp = Pdc(z_pre)
             Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
             Xf_fsa = tfft(Xf,vtm[1]-vtm[0]).cpu().data.numpy().copy()

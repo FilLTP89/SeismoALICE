@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -J wgan
+#SBATCH -J pix2pix
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
 #SBATCH --gres=gpu:2

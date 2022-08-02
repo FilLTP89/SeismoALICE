@@ -19,8 +19,7 @@ class StrategyGeneratorPix2Pix(IStrategyGenerator):
         super(StrategyGeneratorPix2Pix, self).__init__(*args, **kwargs)
 
     def _optimizer_encoder(self,*args,**kwargs):
-        return reset_net([self.Fxy], optim='adam',alpha=0.9,lr=self.elr,b1=0.5,b2=0.999, 
-            weight_decay=self.weight_decay)
+        return reset_net([self.Fxy], optim='adam',alpha=0.9,lr=self.elr,b1=0.5,b2=0.999)
 
     def _optimizer_decoder(self,*args, **kwargs):
         pass

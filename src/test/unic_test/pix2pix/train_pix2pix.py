@@ -1,7 +1,9 @@
 import torch
 from app.trainer.unic.unic_trainer import UnicTrainer
 from common.common_nn import zerograd,zcat,modalite
+from plot.plot_tools import get_gofs, plot_generate_classic
 from tools.generate_noise import noise_generator
+from common.common_nn import get_accuracy
 from common.common_torch import *
 from configuration import app
 from test.unic_test.pix2pix.strategy_discriminator_pix2pix import StrategyDiscriminatoPix2Pix
@@ -120,8 +122,26 @@ class Pix2Pix(UnicTrainer):
             self.losses_gens['Gloss_rec_y'  ] = Gloss_rec_y.tolist()
             self.losses_gen_tracker.update()
 
-
+    def on_test_epoch(self, epoch, bar):
+        with torch.no_grad(): 
+            torch.manual_seed(100)
+            if epoch%self.opt.config["hparams"]['test_epochs'] == 0:
+                accuracy_hb = get_accuracy(tag='pix2pix',plot_function=get_gofs,
+                encoder = self.gen_agent.Fxy,
+                decoder = None,
+                vld_loader = self.data_tst_loader,
+                pfx ="vld_set_bb_unique",opt= self.opt,
+                outf = self.opt.outf, save = False
+            )
+            bar.set_postfix(accuracy_hb=accuracy_hb)
+            self.validation_writer.add_scalar('Accuracy/Filtered2Broadband',accuracy_hb,epoch)
             
-
-
+            # plot hybrid filtred reconstruction signal and gof
+            figure_hf, gof_hf = plot_generate_classic(tag ='pix2pix',
+                Qec= self.gen_agent.Fxy, Pdc= None,
+                trn_set=self.data_tst_loader, pfx="vld_set_bb_unique",
+                opt=self.opt, outf= self.opt.outf, save=False)
+            bar.set_postfix(status='saving images STFD/GOF Pix2Pix ...')
+            self.validation_writer.add_figure('STFD Hybrid Filtered', figure_hf)
+            self.validation_writer.add_figure('GOF Hybrid Filtered', gof_hf)
 
