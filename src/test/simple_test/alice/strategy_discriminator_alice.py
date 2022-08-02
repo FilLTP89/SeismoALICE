@@ -9,6 +9,7 @@ class StrategyDiscriminatorALICE(IStrategyDiscriminator):
         self.opt    = opt
         self.rlr    = self.opt.config["hparams"]['discriminators.lr']
         self.weight_decay = self.opt.config["hparams"]['discriminators.weight_decay']
+        
         self.Dyz    = accel(network.DCGAN_DXZ(self.opt.config['Dyz'],self.opt,model_name='Dyz')).cuda()
         self.Dsy    = accel(network.DCGAN_Dx(self.opt.config['Dsy'], self.opt,model_name='Dsy')).cuda()
         self.Dszb   = accel(network.DCGAN_Dz(self.opt.config['Dszb'],self.opt,model_name='Dszb')).cuda()
@@ -24,14 +25,14 @@ class StrategyDiscriminatorALICE(IStrategyDiscriminator):
         Dfake_yz = self.Dyz(zcat(self.Dsy(y_gen), self.Dszb(z)))
         return Dreal_yz, Dfake_yz
     
-    def _discriminate_crosss_entropy_z(self,z, zr,*args,**kwargs):
+    def _discriminate_cross_entropy_zd(self,z, zr):
         Dreal_z = self.Dzzb(zcat(z,z))
         Dfake_z = self.Dzzb(zcat(z,zr))
         return Dreal_z, Dfake_z
     
-    def _discriminate_crosss_entropy_y(self,y, yr, *args,**kwargs):
-        Dreal_y = self.Dyy(y,y)
-        Dfake_y = self.Dyy(y,yr)
+    def _discriminate_cross_entropy_y(self,y, yr):
+        Dreal_y = self.Dyy(zcat(y,y))
+        Dfake_y = self.Dyy(zcat(y,yr))
         return Dreal_y, Dfake_y
     
     def _architecture(self, explore,*args,**kwargs):

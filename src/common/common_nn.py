@@ -703,7 +703,7 @@ class T(object):
                  'Dsx' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)],
                  'Dfx' :[nn.LeakyReLU(0.2,inplace=True) for t in range(1, nly+1)],
                  'Dsz' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly+1)],
-                 'Dyz' :[nn.Tanh()]+[nn.LeakyReLU(0.2,inplace=True) for t in range(1, nly)],
+                 'Dyz' :[nn.LeakyReLU(0.2,inplace=True) for t in range(1, nly)] + [nn.LeakyReLU(1.0,inplace=True)],
                  'Drx' :[nn.LeakyReLU(1.0,inplace=True) for t in range(1, nly)] + [nn.Sigmoid()],
                  'Dss' :[nn.LeakyReLU(0.2,inplace=True) for t in range(1, nly)] + [nn.Sigmoid()],
                  'Drz' :[nn.LeakyReLU(0.2,inplace=True) for t in range(1, nly+1)] + [nn.Sigmoid()],

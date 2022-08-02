@@ -17,16 +17,16 @@ class IStrategyDiscriminator(ABC):
     def _discriminate_conjoint_xz(self,*args,**kwargs):
         pass
     
-    def _discriminate_crosss_entropy_zd(self,*args,**kwargs):
+    def _discriminate_cross_entropy_zd(self,*args,**kwargs):
         pass
 
-    def _discriminate_crosss_entropy_y(self,*args,**kwargs):
+    def _discriminate_cross_entropy_y(self,*args,**kwargs):
         pass
 
-    def _discriminate_crosss_entropy_zf(self,*args,**kwargs):
+    def _discriminate_cross_entropy_zf(self,*args,**kwargs):
         pass
 
-    def _discriminate_crosss_entropy_x(self,*args,**kwargs):
+    def _discriminate_cross_entropy_x(self,*args,**kwargs):
         pass
     
     def _discriminate_marginal_zd(self,*args,**kwargs):

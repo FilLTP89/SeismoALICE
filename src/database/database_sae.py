@@ -64,7 +64,7 @@ def _transform(fsc,x):
     return y
 
 def _standard_scaler():
-    print('StandardScaling...')
+    #print('StandardScaling...')
     fsc = StandardScaler()
     return fsc
 

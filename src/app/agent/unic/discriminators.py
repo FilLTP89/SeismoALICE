@@ -33,13 +33,25 @@ class Discriminators(Agent):
         return self.strategy._discriminate_xz(x,xr,z,zr)
     
     def discriminate_yz(self,y,yr,z,zr):
-        return self.strategy._discriminate_yz(y,yr,z,z)
+        return self.strategy._discriminate_yz(y,yr,z,zr)
 
     def discriminate_marginal_y(self,y,yr):
         return self.strategy._discriminate_marginal_y(y,yr)
     
     def discriminate_marginal_zd(self,z,zr):
         return self.strategy._discriminate_marginal_zd(z,zr)
+    
+    def discriminate_cross_entropy_y(self,y,yr):
+        return self.strategy._discriminate_cross_entropy_y(y,yr)
+    
+    def discriminate_cross_entropy_x(self,x,xr):
+        return self.strategy.discriminate_cross_entropy_x(x,xr) 
+    
+    def discriminate_cross_entropy_zd(self,z,zr):
+        return self.strategy._discriminate_cross_entropy_zd(z,zr)
+    
+    def discriminate_cross_entropy_zf(self,z,zr):
+        return self.strategy.discriminate_cross_entropy_zf(z,zr)
 
     def discriminate_marginal_x(self,x,xr):
         return self.strategy._discriminate_marginal_x(x,xr)

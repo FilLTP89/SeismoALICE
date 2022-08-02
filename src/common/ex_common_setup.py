@@ -27,6 +27,7 @@ from torch import FloatTensor as tFT
 from torch import LongTensor as tLT
 from torch import manual_seed as mseed
 import torch.distributed as dist
+from art import *
 from torch.utils.data import DataLoader as tud_dload
 # from database.fastloader import FastTensorDataLoader
 from torch.utils.data import BatchSampler as tud_bsmp
@@ -43,6 +44,7 @@ import json
 # import pdb
 
 def setup():
+    tprint('SeismoAI',font='nancyj-fancy')
     parser = argparse.ArgumentParser()
     parser.add_argument('--actions', default='../actions_bb.txt',help='define actions txt')
     parser.add_argument('--strategy', default='../strategy_bb.txt',help='define strategy txt')
@@ -88,6 +90,8 @@ def setup():
     opt.world_size = opt.ngpu*opt.nodes
 
     u'''Set-up GPU and CUDA'''
+    
+    
     opt.cuda = True if (tcuda.is_available() and opt.cuda) else False
     # device = tdev("cuda:0" if opt.cuda else "cpu")
     opt.nch = 3
