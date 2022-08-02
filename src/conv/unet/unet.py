@@ -25,7 +25,7 @@ class Block(nn.Module):
 
 
 class Generator(nn.Module):
-    def __init__(self, in_channels=3, features=64):
+    def __init__(self, in_channels=3, features=64, out_channels=3):
         super().__init__()
         self.initial_down = nn.Sequential(
             nn.Conv1d(in_channels, features, 4, 2, 1, padding_mode="reflect"),
@@ -69,7 +69,7 @@ class Generator(nn.Module):
         )
         self.up7 = Block(features * 2 * 2, features, down=False, act="relu", use_dropout=False)
         self.final_up = nn.Sequential(
-            nn.ConvTranspose1d(features * 2, in_channels, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose1d(features * 2, out_channels, kernel_size=4, stride=2, padding=1),
             nn.Tanh(),
         )
 

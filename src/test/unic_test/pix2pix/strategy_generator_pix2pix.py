@@ -28,7 +28,7 @@ class StrategyGeneratorPix2Pix(IStrategyGenerator):
         if explore:
             writer_encoder = SummaryWriter(self.opt.config['log_dir']['debug.encoder_writer'])            
             writer_encoder.add_graph(next(iter(self.Fxy.children())),
-                            torch.randn(10,3,4096).cuda())
+                            torch.randn(10,6,4096).cuda())
 
     def _get_generators(self,*args, **kwargs):
         return self._generators
