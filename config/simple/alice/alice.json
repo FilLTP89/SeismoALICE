@@ -19,12 +19,18 @@
         "debug.decoder_writer":"./runs_both/renew/simple/alice/net/decoder",
         "debug.dsy_writer":"./runs_both/renew/simple/alice//net/dsy/",
         "debug.dszb_writer":"./runs_both/renew/simple/alice/net/dszb",
-            "unitary":{
-                "train_writer":"./runs_both/renew/simple/alice/unitary/training/",
-                "valid_writer":"./runs_both/renew/simple/alice/unitary/validation/",
-                "debug_writer":"./runs_both/renew/simple/alice/unitary/debug/",
-                "debug.losses_writer":"./runs_both/renew/simple/alice/unitary/losses/",
-                "debug.gradients_writer":"./runs_both/renew/simple/unitary/gradients/"}
+            "unitary.gen":{
+                "train_writer":"./runs_both/renew/simple/alice/unitary/gen/training/",
+                "valid_writer":"./runs_both/renew/simple/alice/unitary/gen/validation/",
+                "debug_writer":"./runs_both/renew/simple/alice/unitary/gen/debug/",
+                "debug.losses_writer":"./runs_both/renew/simple/alice/unitary/gen/losses/",
+                "debug.gradients_writer":"./runs_both/renew/simple/unitary/gen/gradients/"},
+             "unitary.disc":{
+                "train_writer":"./runs_both/renew/simple/alice/unitary/disc/training/",
+                "valid_writer":"./runs_both/renew/simple/alice/unitary/disc/validation/",
+                "debug_writer":"./runs_both/renew/simple/alice/unitary/disc/debug/",
+                "debug.losses_writer":"./runs_both/renew/simple/alice/unitary/disc/losses/",
+                "debug.gradients_writer":"./runs_both/renew/simple/unitary/disc/gradients/"}
  
     },
 

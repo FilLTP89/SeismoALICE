@@ -33,15 +33,15 @@ class UnitaryTrainerGenerator(BasicTrainer):
         self.gradients_gens = gradients_gens
 
         self.logger.info("Setting Tensorboard for the training dataset ...")
-        loss_writer             = Writer(log_dir=self.opt.config['log_dir']["unitary"]['debug.losses_writer'], 
+        loss_writer             = Writer(log_dir=self.opt.config['log_dir']["unitary.gen"]['debug.losses_writer'], 
                                     logger=self.logger)
-        gradients_writer        = Writer(log_dir=self.opt.config['log_dir']["unitary"]['debug.gradients_writer'],
+        gradients_writer        = Writer(log_dir=self.opt.config['log_dir']["unitary.gen"]['debug.gradients_writer'],
                                     logger=self.logger)
-        self.training_writer    = Writer(log_dir=self.opt.config['log_dir']["unitary"]['train_writer'],
+        self.training_writer    = Writer(log_dir=self.opt.config['log_dir']["unitary.gen"]['train_writer'],
                                     logger=self.logger)
-        self.validation_writer  = Writer(log_dir=self.opt.config['log_dir']["unitary"]['valid_writer'],
+        self.validation_writer  = Writer(log_dir=self.opt.config['log_dir']["unitary.gen"]['valid_writer'],
                                     logger=self.logger)
-        self.debug_writer       = Writer(log_dir=self.opt.config['log_dir']["unitary"]['debug_writer'], 
+        self.debug_writer       = Writer(log_dir=self.opt.config['log_dir']["unitary.gen"]['debug_writer'], 
                                     logger=self.logger)
 
         self.logger.info("Tracking metrics ...")

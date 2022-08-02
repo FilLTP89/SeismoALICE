@@ -19,12 +19,18 @@
         "debug.decoder_writer":"./runs_both/renew/pix2pix/net/decoder",
         "debug.dxy_writer":"./runs_both/renew/pix2pix/net/dyx/",
         "debug.dsz_writer":"./runs_both/renew/pix2pix/net/dszb/",
-            "unitary":{
-                "train_writer":"./runs_both/renew/pix2pix/unitary/training/",
-                "valid_writer":"./runs_both/renew/pix2pix/unitary/validation/",
-                "debug_writer":"./runs_both/renew/pix2pix/unitary/debug/",
-                "debug.losses_writer":"./runs_both/renew/pix2pix/unitary/losses/",
-                "debug.gradients_writer":"./runs_both/renew/pix2pix/unitary/gradients/"}
+            "unitary.gen":{
+                "train_writer":"./runs_both/renew/pix2pix/unitary/gen/training/",
+                "valid_writer":"./runs_both/renew/pix2pix/unitary/gen/validation/",
+                "debug_writer":"./runs_both/renew/pix2pix/unitary/gen/debug/",
+                "debug.losses_writer":"./runs_both/renew/pix2pix/unitary/gen/losses/",
+                "debug.gradients_writer":"./runs_both/renew/pix2pix/unitary/gen/gradients/"},
+            "unitary.disc":{
+                "train_writer":"./runs_both/renew/pix2pix/unitary/disc/training/",
+                "valid_writer":"./runs_both/renew/pix2pix/unitary/disc/validation/",
+                "debug_writer":"./runs_both/renew/pix2pix/unitary/disc/debug/",
+                "debug.losses_writer":"./runs_both/renew/pix2pix/unitary/disc/losses/",
+                "debug.gradients_writer":"./runs_both/renew/pix2pix/unitary/disc/gradients/"}
     },
      "Fxy":{
         "name"      :"Unet",
