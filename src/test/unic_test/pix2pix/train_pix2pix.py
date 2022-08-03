@@ -55,10 +55,10 @@ class Pix2Pix(UnicTrainer):
             # 1. Pix2Pix
             wnx,*others = noise_generator(x.shape,y.shape,app.DEVICE,app.NOISE)
             x_inp = zcat(x,wnx)
-            y_gen      = self.gen_agent.Fxy(x_inp)
+            y_gen = self.gen_agent.Fxy(x_inp)
 
             Dreal_xy, Dfake_xy = self.disc_agent.discriminate_conjointe_xy(x,y,y_gen)
-            Dloss_xy    = self.bce_logit_loss(Dreal_xy.reshape(-1),o1l(Dfake_xy.reshape(-1))) +\
+            Dloss_xy= self.bce_logit_loss(Dreal_xy.reshape(-1),o1l(Dfake_xy.reshape(-1))) +\
                             self.bce_logit_loss(Dfake_xy.reshape(-1),o0l(Dfake_xy.reshape(-1)))
             
             # 2. Summation of losses

@@ -49,7 +49,7 @@
         "name"      :"PatchGAN",
         "nlayers"   :5,
         "nc"        :4096, 
-        "channel"   :[6,64,128,256,512],
+        "channel"   :[9,64,128,256,512],
         "kernel"    :[4,4,4,4,4],
         "strides"   :[2,2,2,2,2],
         "dilation"  :[1,1,1,1,1],
