@@ -848,7 +848,7 @@ def plot_error(error, outf):
     plt.close()
 
 
-def visualize_unic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./imgs',save = True):
+def visualize_signal(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',outf='./imgs',save = True):
     dev = app.DEVICE
     Qec.eval(), Pdc.eval()
     Qec.to(dev),Pdc.to(dev)

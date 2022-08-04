@@ -31,6 +31,7 @@ class Generator(nn.Module):
             nn.Conv1d(in_channels, features, 4, 2, 1, padding_mode="reflect"),
             nn.LeakyReLU(0.2),
         )
+        
         self.down1 = Block(features, features * 2, down=True, act="leaky", use_dropout=False)
         self.down2 = Block(
             features * 2, features * 4, down=True, act="leaky", use_dropout=False

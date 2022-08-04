@@ -57,7 +57,7 @@ class Pix2Pix(UnicTrainer):
             x_inp       = zcat(x,wnx)
             y_gen       = self.gen_agent.Fxy(x_inp)
 
-            Dreal_xy, Dfake_xy = self.disc_agent.discriminate_conjointe_xy(x,y,y_gen)
+            Dreal_xy, Dfake_xy = self.disc_agent.discriminate_conjointe_xy(x_inp,y,y_gen)
             Dloss_xy    = self.bce_logit_loss(Dreal_xy.reshape(-1),o1l(Dfake_xy.reshape(-1))) +\
                             self.bce_logit_loss(Dfake_xy.reshape(-1),o0l(Dfake_xy.reshape(-1)))
             
@@ -95,7 +95,7 @@ class Pix2Pix(UnicTrainer):
             wnx,*others = noise_generator(x.shape,y.shape,app.DEVICE,app.NOISE)
             x_inp       = zcat(x,wnx)
             y_gen       = self.gen_agent.Fxy(x_inp)
-            _, Dfake_xy = self.disc_agent.discriminate_conjointe_xy(x,y,y_gen)
+            _, Dfake_xy = self.disc_agent.discriminate_conjointe_xy(x_inp,y,y_gen)
             Gloss_xy    = self.bce_logit_loss(Dfake_xy.reshape(-1),o1l(Dfake_xy.reshape(-1)))
             
             # 2. Reconstruction
