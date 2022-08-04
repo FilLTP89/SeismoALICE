@@ -128,7 +128,7 @@ class UnicTrainer(BasicTrainer):
         if epoch%self.opt.config['hparams']['training_epochs'] == 0:
             self.gradients_tracker_gen.write(epoch=epoch, modality = ['train'])
             self.gradients_tracker_disc.write(epoch=epoch,modality = ['train'])
-            self.prob_disc_tracker.write(epoch=epoch, modality = ['train','eval'])
+            
             
         Gloss = self.losses_gen_tracker.get('Gloss',epoch,'train')
         Dloss = self.losses_disc_tracker.get('Dloss',epoch,'train')
@@ -151,6 +151,7 @@ class UnicTrainer(BasicTrainer):
         if epoch%self.opt.config['hparams']['validation_epochs'] == 0:
             self.losses_disc_tracker.write( epoch=epoch, modality = ['train','eval'])
             self.losses_gen_tracker.write(  epoch=epoch, modality = ['train','eval'])
+            self.prob_disc_tracker.write(epoch=epoch, modality = ['train','eval'])
 
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
         """ The UnicTrainer class is extended to support different strategy
