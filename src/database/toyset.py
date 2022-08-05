@@ -8,7 +8,7 @@ from numpy.fft import fft, ifft, fftfreq, fftshift
 from configuration import app
 from torch.utils.data import Dataset
 
-class Toyset(Dataset): 
+class SinusoidSet(Dataset): 
     def __init__(self, time=40.96, delta_t = 0.01, nsy = 1280,
                 num_channels  = 3,latent_space  = [64,64],latent_channel= [16,32]):
         #time =
@@ -51,10 +51,11 @@ class Toyset(Dataset):
                     self._latent_space_y[index,:,],\
                     self._latent_space_x[index,:,])
 
-"""
-    Defining here some toy signal, for which we clearly know the equations.
-"""
+
 def signal(time = 40.96,delta_t = 0.01, _noise = False, drawing = False):
+    """
+        Defining here some toy signal, for which we clearly know the equations.
+    """
     # number of time step
     N     = round(time/delta_t)
     # discretization of time
@@ -81,11 +82,11 @@ def signal(time = 40.96,delta_t = 0.01, _noise = False, drawing = False):
 
 def sinus(time = 40.96, delta_t = 0.01, _noise = False, drawing = False):
     # number of time steps
-    np.random.seed(100)
+    
     N = round(time/delta_t)
     # discretization of the time steps 
     t = np.linspace(0.,time, N)
-    omega = 2*math.pi/time
+    omega = np.random.random_sample()*math.pi/time
 
     signal = np.sin(omega*t)
     noise  =  0  if _noise ==  False else np.random.normal(0.,1.0,len(t))
@@ -109,7 +110,7 @@ def filtered(x):
     return fgust
 
 def get_dataset(dataset, nsy = 64, batch_size = 64, rank = 0, world_size = 1):
-    dataset = Toyset(nsy = nsy)
+    dataset = SinusoidSet(nsy = nsy)
     batch_size = batch_size
     train_part = int(0.80*len(dataset))
     vld_part   = len(dataset) - train_part

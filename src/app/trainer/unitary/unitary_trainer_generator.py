@@ -67,7 +67,7 @@ class UnitaryTrainerGenerator(BasicTrainer):
             settings  = self.opt, logger = self.logger, config = self.opt,
             models    = {'generators':self.gen_agent},
             losses    = {'generators':self.losses_gens}, 
-            strategy  = self.strategy['unic'], *args, **kwargs)
+            strategy  = self.strategy['unique'], *args, **kwargs)
 
         self.logger.info("Parameters of Generators ")
         count_parameters(self.gen_agent.generators)

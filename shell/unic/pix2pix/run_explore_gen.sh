@@ -14,7 +14,7 @@
 ##
 export PYTHONPATH="./src"
 source load_conda_env_gpu.sh P100  
-streamlit run ./src/aae/unic_test/pix2pix/aae_explore_gen.py --server.port 9913 -- \
+streamlit run ./src/aae/unic_test/pix2pix/aae_explore_gen.py --server.port 8913 -- \
     --dataroot='./database/tweaked/data/test/nsy1280/' \
     --dataset='nt4096_ls128_nzf8_nzd32.pth' \
     --cutoff=30. --imageSize=4096 --latentSize=64 \

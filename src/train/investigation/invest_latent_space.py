@@ -18,7 +18,7 @@ from torch.utils.data.dataloader import DataLoader
 import torch.nn as nn 
 from torch.utils.tensorboard import SummaryWriter
 from factory.conv_factory import *
-from database.toyset import Toyset, get_dataset
+from database.toyset import SinusoidSet, get_dataset
 from configuration import app
 from tqdm import  tqdm,trange
 import numpy as np

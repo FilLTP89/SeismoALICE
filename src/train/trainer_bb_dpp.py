@@ -27,7 +27,7 @@ from factory.conv_factory import *
 import GPUtil
 from torch.nn.parallel import DistributedDataParallel as DDP
 import time
-from database.toyset import Toyset
+from database.toyset import SinusoidSet
 import torch.distributed as dist
 import numpy as np
 from tqdm import  tqdm,trange
@@ -744,7 +744,7 @@ class trainer(object):
 
 
 def get_dataset(dataset, nsy = 64, batch_size = 64, rank = 0, world_size = 1):
-    dataset = Toyset(nsy = nsy)
+    dataset = SinusoidSet(nsy = nsy)
     batch_size = batch_size
     train_part = int(0.80*len(dataset))
     vld_part   = len(dataset) - train_part

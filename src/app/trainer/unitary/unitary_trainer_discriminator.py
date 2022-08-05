@@ -69,7 +69,7 @@ class UnitaryTrainerDiscriminator(BasicTrainer):
             settings  = self.opt, logger = self.logger, config = self.opt,
             models    = {'discriminators':self.disc_agent},
             losses    = {'discriminators':self.losses_disc}, 
-            strategy  = self.strategy['simple'], *args, **kwargs)
+            strategy  = self.strategy['unique'], *args, **kwargs)
 
         self.logger.info("Parameters of Discriminators")
         count_parameters(self.disc_agent.discriminators)
