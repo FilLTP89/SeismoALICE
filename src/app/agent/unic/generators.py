@@ -35,7 +35,7 @@ class Generators(Agent):
                 self.track_weight_change(writer= self.debug_writer, tag= 'F[master]', model= gen.module.master.eval(),epoch = epoch)
             except Exception as e:
                 self.track_weight_change(writer= self.debug_writer, tag = 'gen', model= gen.module.eval(),epoch = epoch)   
-
+                
     def _architecture(self,explore):
         self.strategy._architecture(explore)
     

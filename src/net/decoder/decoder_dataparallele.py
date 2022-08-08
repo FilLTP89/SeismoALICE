@@ -177,7 +177,7 @@ class Decoder_Resnet(BasicDecoderDataParallel):
                  bn=True, path='',n_extra_layers=0,*args, **kwargs):
         super(Decoder_Resnet, self).__init__(*args, **kwargs)
         
-        self.cnn1 = DecoderResnet(in_signals_channels =1,
+        self.cnn1 = DecoderResnet(in_signals_channels =channel[0],
                 out_signals_channels=3,
                 channels = [64,32,16], 
                 layers = [2,2,2], block=block_2x2

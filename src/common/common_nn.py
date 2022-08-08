@@ -567,7 +567,7 @@ def scheduler(scheduler_name,optimizer,*args,**kwargs):
     elif scheduler_name == 'LinearLR':
         scale_fn = torch.optim.lr_scheduler.LinearLR(optimizer,*args,**kwargs)
     else:
-        scale_fn = optimizer
+        scale_fn = torch.optim.lr_scheduler.ConstantLR(optimizer,*args,**kwargs)
     return scale_fn
 
 def reset_net(nets,func=set_weights,lr=0.0002,b1=b1,b2=b2,

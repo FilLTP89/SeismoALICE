@@ -365,8 +365,8 @@ class Encoder_Unic_Resnet(BasicEncoderDataParallele):
 
         
         self.master = nn.Sequential(*self.cnn1)
-        self.branch_common      = nn.Sequential(*self.branch_common)
-        self.branch_broadband   = nn.Sequential(*self.branch_broadband)
+        # self.branch_common      = nn.Sequential(*self.branch_common)
+        # self.branch_broadband   = nn.Sequential(*self.branch_broadband)
 
         self.cnn_common         = EncoderResnet(in_signals_channels = channel_com[0], out_signals_channels=channel_com[-1],
                                     channels = [32,64], layers = [2,2], block = block_2x2)
