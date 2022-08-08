@@ -951,7 +951,7 @@ def get_gofs(tag, Qec, trn_set, Pdc=None, opt=None, vtm = None, pfx='trial',outf
             X_inp = zcat(Xt,wnx)
             if str(pfx).find('hack')!=-1:
                 zy, zxy =  Qec(X_inp)
-                Xr  = Pdc(zcat(zy,zxy))
+                Xr  = Pdc(zcat(zxy,zy))
             else:
                 zy = Qec(X_inp)
                 Xr = Pdc(zy)
