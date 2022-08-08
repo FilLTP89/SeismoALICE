@@ -34,22 +34,45 @@
  
     },
 
-    "F":{
-        "name"      :"Resnet",
-        "nlayers"   :4, 
-        "channel"   :[6,32,64,128,1],
-        "kernel"    :[4,4,4,3],
+    "Fy":{
+        "name"      :"Unic",
+        "nlayers"   :3, 
+        "channel"   :[6,16,32,64],
+        "kernel"    :[3,3,3,3],
         "strides"   :[2,2,2,1],
         "dilation"  :[1,1,1,1],
         "padding"   :[1,1,1,1],
         "dpc"       :0.0,
         "extra"     :0,
         "act"       :"Fed",
-        "limit"     :256},
+        "limit"     :256,
+            "common":{
+                "nlayers"   :3,
+                "channel"   :[64,128,256,1],
+                "kernel"    :[3,3,3],
+                "strides"   :[1,1,1],
+                "dilation"  :[1,1,1],
+                "padding"   :[1,1,1],
+                "dpc"       :0.0,
+                "act"       :"Fed",
+                "extra"     :0
+            },
+            "broadband":{
+                "nlayers"   :3,
+                "channel"   :[64,128,256,1],
+                "kernel"    :[3,3,3],
+                "strides"   :[1,1,1],
+                "dilation"  :[1,1,1],
+                "padding"   :[1,1,1],
+                "dpc"       :0.0,
+                "act"       :"Fed",
+                "extra"     :0
+            }
+        },
     "Gy":{
-        "name"      :"Resnet",
+        "name"      :"Lite",
         "nlayers"   :4, 
-        "channel"   :[1,128,64,32,3],
+        "channel"   :[2,128,64,32,3],
         "kernel"    :[4,4,4,3],
         "strides"   :[2,2,2,1],
         "dilation"  :[1,1,1,1],

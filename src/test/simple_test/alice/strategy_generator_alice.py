@@ -11,7 +11,7 @@ class StrategyGeneratorALICE(IStrategyGenerator):
         self.dlr    = self.opt.config["hparams"]['generators.decoder.lr']
         self.weight_decay = self.opt.config["hparams"]['generators.weight_decay']
     
-        self.Fy = accel(network.Encoder(self.opt.config['F'], self.opt,model_name='F')).cuda()
+        self.Fy = accel(network.Encoder(self.opt.config['Fy'], self.opt,model_name='Fy')).cuda()
         self.Gy = accel(network.Decoder(self.opt.config['Gy'],self.opt,model_name='Gy')).cuda()
 
         self._generators = [self.Fy, self.Gy]
@@ -35,7 +35,7 @@ class StrategyGeneratorALICE(IStrategyGenerator):
             writer_encoder.add_graph(next(iter(self.Fy.children())),
                             torch.randn(10,6,4096).cuda())
             writer_decoder.add_graph(next(self.Gy.children()), 
-                            (torch.randn(10,1,512).cuda()))
+                            (torch.randn(10,2,512).cuda()))
     
     def _get_generators(self,*args, **kwargs):
         return self._generators

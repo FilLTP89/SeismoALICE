@@ -928,9 +928,6 @@ def get_gofs(tag, Qec, trn_set, Pdc=None, opt=None, vtm = None, pfx='trial',outf
 
             if str(pfx).find('Niigata')!=-1:
                 xt_data = batch
-            elif str(pfx).find('hack')!=-1:
-                # for filtered signals
-                _,xt_data,*other = batch
             else:
                 # for broadband signals
                 xt_data,*other = batch
@@ -949,15 +946,14 @@ def get_gofs(tag, Qec, trn_set, Pdc=None, opt=None, vtm = None, pfx='trial',outf
             Xt = Variable(xt_data).to(dev, non_blocking=True)
             # Xf = Variable(xf_data).to(dev, non_blocking=True)
             # zt = Variable(zt_data).to(dev, non_blocking=True)        
-            nch, nz         = 1,1024
+            nch, nz         = 1,512
             wnx,wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],app.DEVICE,app.NOISE)
-
             X_inp = zcat(Xt,wnx)
-            zy =  Qec(X_inp)
-
             if str(pfx).find('hack')!=-1:
-                Xr  = Pdc(zdf_gen,o0l(zy))
+                zy, zxy =  Qec(X_inp)
+                Xr  = Pdc(zcat(zy,zxy))
             else:
+                zy = Qec(X_inp)
                 Xr = Pdc(zy)
             #Xp = Pdc(z_pre)
             # Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
@@ -1251,16 +1247,13 @@ def plot_generate_classic(tag, Qec, trn_set, opt=None, vtm = None, pfx='trial',
                     "this signals will be withdrawn from the training "
                     "but style be present in the dataset. \n"
                     "Then, remember to correct your dataset")
-                mask   = [not torch.isnan(torch.max(y[e,:])).tolist() for e in range(len(y))]
-                index  = np.array(range(len(y)))
+                mask   = [not torch.isnan(torch.max(xt_data[e,:])).tolist() for e in range(len(xt_data))]
+                index  = np.array(range(len(xt_data)))
                 xt_data.data = xt_data[index[mask]]
                 xf_data.data = xf_data[index[mask]]
 
             # xt_data,zt_data,*other = batch
             # trying to force the CNN to regenerate filtered signals
-            if str(pfx).find("hack") !=-1:
-                xt_data = xf_data
-            
             Xt = Variable(xt_data).to(dev, non_blocking=True)
             Xf = Variable(xf_data).to(dev, non_blocking=True)
             
@@ -1272,13 +1265,12 @@ def plot_generate_classic(tag, Qec, trn_set, opt=None, vtm = None, pfx='trial',
             
             nch, nz         = 4,128
             wnx,*others = noise_generator(Xt.shape,Xt.shape,app.DEVICE,app.NOISE)
-
             X_inp = zcat(Xt,wnx)
-            zy =  Qec(X_inp)
-
             if str(pfx).find('hack')!=-1:
-                Xr = Pdc(zdf_gen,o0l(zy))
+                zy,zxy =  Qec(X_inp)
+                Xr = Pdc(zcat(zxy,zy))
             else:
+                zy =  Qec(X_inp)
                 Xr = Pdc(zy)
             #Xp = Pdc(z_pre)
             Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
