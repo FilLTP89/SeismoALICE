@@ -131,7 +131,7 @@ class Pix2Pix(UnicTrainer):
                 accuracy_hb = get_accuracy(tag='pix2pix',plot_function=get_gofs,
                     encoder = self.gen_agent.Fxy,
                     decoder = None,
-                    vld_loader = self.data_tst_loader,
+                    _vld_loader = self.data_tst_loader,
                     pfx ="vld_set_bb_unique",opt= self.opt,
                     outf = self.opt.outf, save = False
                 )

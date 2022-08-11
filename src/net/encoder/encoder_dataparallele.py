@@ -81,24 +81,33 @@ class BasicEncoderDataParallele(BasicModel):
         lin = nch
         for pad, dil, ker, std in zip(padding, dilation, kernel_size, stride):
             lin = int((lin + 2* pad - dil*(ker-1)-1)/std + 1)
-
         return lin
 
     def block_conv(self, channel, kernel, strides, dilation, padding, dpc, activation, *args, **kwargs):
+        cnn = []
         pack = zip(channel[:-1], channel[1:], kernel, strides, dilation, padding, activation)
-        for in_channels, out_channels, kernel_size, stride, padding, acts in pack:
-            cnn += cnn1d(in_channels=in_channels, 
-                        out_channels=out_channels,
-                        ker =kernel_size,
-                        std = stride,
-                        pad = padding,
-                        dil = dilation,*args, **kwargs)
-        return cnn
+        for in_channels, out_channels, kernel_size, stride, dilation, padding, acts in pack:
+            cnn += cnn1d(in_channels = in_channels, out_channels = out_channels,
+                        ker = kernel_size, std = stride, pad = padding,
+                        act = acts, dpc = dpc, dil = dilation,*args, **kwargs)
+        return nn.Sequential(*cnn)
 
-    def block_linear(self, in_channels, out_channels, acts):
-        for in_channels, out_channels, acts in zip(channel[:-1], channel[1:], activation):
+    def blockPReLU(self, channel, kernel, strides, dilation, padding, dpc, activation, *args, **kwargs):
+        cnn = []
+        pack = zip(channel[:-1], channel[1:], kernel, strides, dilation, padding, activation)
+        for in_channels, out_channels, kernel_size, stride, dilation, padding, acts in pack:
+            cnn += [nn.Conv1d(in_channels = in_channels, out_channels = out_channels, 
+                kernel_size=kernel_size, stride=stride, padding = padding, dilation = dilation),
+                nn.BatchNorm1d(out_channels),
+                nn.PReLU(out_channels),
+                Dropout(dpc)
+            ]
+        return nn.Sequential(*cnn)
+
+    def block_linear(self, channel, acts, dpc):
+        for in_channels, out_channels, _acts in zip(channel[:-1], channel[1:], acts):
             cnn += [nn.Linear(in_channels, out_channels)]
-            cnn += [acts]
+            cnn += [_acts]
             cnn += [Dpout(dpc=dpc)]
         return cnn
 
@@ -478,3 +487,34 @@ class Encoder_Unet(BasicEncoderDataParallele):
             return output.detach()
         return output        
 
+class Encoder_PReLU(BasicEncoderDataParallele):
+    def __init__(self, ngpu,dev,nz,nch,ndf,act,channel,\
+                 nly, config,ker=7,std=4,pad=0,dil=1,grp=1,bn=True,
+                 dpc=0.0,limit = 256, path='',dconv = "",\
+                 with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2,
+                 wf = False, *args, **kwargs):
+        super(Encoder_PReLU, self).__init__(*args, **kwargs)
+        acts = T.activation(act, nly)
+
+        self.injection = nn.Sequential(*[
+            nn.Conv1d(in_channels=3,out_channels=channel[1],kernel_size=4, stride=2,
+                padding=1, dilation=1,bias=False),
+            nn.BatchNorm1d(channel[1]),
+            torch.nn.PReLU(num_parameters = channel[1])
+            ])
+        self.initial = nn.Sequential(*[
+            nn.Conv1d(in_channels=channel[0],out_channels=channel[1],kernel_size=ker[0], stride=std[0],
+                padding=pad[0], dilation=dil[0],bias=False),
+            nn.BatchNorm1d(channel[1]),
+            nn.PReLU(num_parameters=channel[1])
+            ])
+        self.cnn1 = self.blockPReLU(channel = channel[1:], kernel = ker[1:], strides = std[1:], 
+                    dilation = dil[1:], padding = pad[1:], dpc = dpc, activation = acts[1:])
+
+    def forward(self,input,noise):
+        x1 = self.initial(input)
+        x2 = self.injection(noise)
+        x  = x1 + x2
+        z  = self.cnn1(x)
+        return z
+        

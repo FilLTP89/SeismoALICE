@@ -44,7 +44,7 @@ class ConvolutionTools(IStrategyConvolution):
         return channels*expansion
 
     def functions(self,*args, **kwargs):
-        func1, func2 =  activation_func('prelu',*args, **kwargs), activation_func('prelu',*args, **kwargs)
+        func1, func2 =  activation_func('leaky_relu',*args, **kwargs), activation_func('leaky_relu',*args, **kwargs)
         return func1, func2
 
     def padding(self):
@@ -164,7 +164,7 @@ class block_2x2(nn.Module):
         x = self.activation1(x)
         x = self.conv2(x)
         x = self.bn2(x)
-
+        
         if self.identity_downsample is not None:
             identity = self.identity_downsample(identity)
         x += identity
@@ -211,7 +211,7 @@ class ResNet(nn.Module):
             self.block(in_channels=self.in_channels, 
                     intermediate_channels=self.intermediate_channels, 
                     conv_tools=self.conv_tools, conv=self.conv, 
-                    identity_downsample = identity_downsample, stride=self.stride,*args,**kwargs)
+                    identity_downsample = copy.deepcopy(identity_downsample), stride=self.stride,*args,**kwargs)
             )
 
         # The expansion size is always 4 for ResNet 50,101,152

@@ -72,6 +72,21 @@ class BasicDecoderDataParallel(BasicModel):
         n = nly-2-increment+1
         val = int(nzd*2**n) if n >=0 else nch
         return val if val<= limit else limit
+    
+    def blockPReLU(self, channel, kernel, strides, dilation, padding, outpadding, dpc, *args, **kwargs):
+        cnn = []
+        pack = zip(channel[:-1], channel[1:], kernel, 
+        strides, dilation, padding, outpadding)
+        
+        for in_channels, out_channels, kernel_size, stride, dilation, padding, outpad in pack:
+            cnn += [nn.ConvTranspose1d(in_channels = in_channels, out_channels = out_channels, 
+                        kernel_size=kernel_size, stride=stride, padding = padding, 
+                        dilation = dilation, output_padding=outpad),
+                    nn.BatchNorm1d(out_channels),
+                    nn.PReLU(out_channels),
+                    Dropout(dpc)
+            ]
+        return nn.Sequential(*cnn)
 
     def forward(self,x):
         pass
@@ -331,4 +346,27 @@ class Decoder_Unic(BasicDecoderDataParallel):
 
         if not self.training:
             x = x.detach()
+        return x
+
+
+class Decoder_PReLU(BasicDecoderDataParallel):
+    """docstring for Decoder_Unic"""
+    def __init__(self,ngpu,nz,nch,ndf,nly,config,channel,act, extra, dconv = "",\
+                 ker=7,std=4,pad=0,opd=0,dil=1,grp=1,dpc=0.10,limit = 256, bn=True, 
+                 path='',n_extra_layers=0,*args, **kwargs):
+        super(Decoder_PReLU, self).__init__(*args, **kwargs)
+        
+        self.initial = nn.Sequential(*[
+            nn.ConvTranspose1d(in_channels=channel[0],out_channels=channel[1],kernel_size=ker[0], stride=std[0],
+                padding=pad[0], dilation=dil[0],bias=False),
+            nn.BatchNorm1d(channel[1]),
+            nn.PReLU(num_parameters=channel[1])
+        ])
+
+        self.cnn1 = self.blockPReLU(channel = channel[1:], kernel = ker[1:], strides = std[1:], 
+                    dilation = dil[1:], padding = pad[1:], dpc = dpc, outpadding = opd[1:])
+    
+    def forward(self,z):
+        z = self.initial(z)
+        x = self.cnn1(z)
         return x

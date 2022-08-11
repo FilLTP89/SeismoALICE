@@ -22,7 +22,7 @@ python ./src/aae/simple_test/alice/aae_simple_test_alice.py\
     --rlr=0.00025164314945158394 --glr=0.006187098496095162 --manualSeed=42\
     --outf='./imgs_bb_ls64_nf8_nzd32/unic/config_27/ter/unic/classic/zyy24/nsy1280/' \
     --workers=8 --nsy=12800 --batchSize=256 \
-    --actions='./action/actions_unic.txt' --strategy='./strategy/strategy_unic.txt' \
+    --actions='./action/actions_simple.txt' --strategy='./strategy/strategy_simple.txt' \
     --save_checkpoint=500 \
     --root_checkpoint='./network/test/alice/bb/'\
     --config='./config/simple/alice/alice.json' 

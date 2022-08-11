@@ -119,7 +119,7 @@ class UnicTrainer(BasicTrainer):
             zyy,zyx, *other = batch_latent
             y,x     = y.to(app.DEVICE, non_blocking = True), x.to(app.DEVICE, non_blocking = True)
             zyx,zyy = zyx.to(app.DEVICE,non_blocking=True),zyy.to(app.DEVICE,non_blocking=True)
-            pack = pack = patch(y=y,x=x,zyy=zyy,zyx=zyx)
+            pack = patch(y=y,x=x,zyy=zyy,zyx=zyx)
             self.train_discriminators(ncritics=1, batch=pack,epoch=epoch, 
                 modality='train',net_mode=['eval','train'])
             self.train_generators(ncritics=1, batch=pack, epoch=epoch, 
@@ -174,7 +174,7 @@ class UnicTrainer(BasicTrainer):
                 accuracy_hb = get_accuracy(tag='hybrid',plot_function=get_gofs,
                     encoder = self.gen_agent.Fxy,
                     decoder = self.gen_agent.Gy,
-                    vld_loader = self.data_tst_loader,
+                    _vld_loader = self.data_tst_loader,
                     pfx ="vld_set_bb_unique",opt= self.opt,
                     outf = self.opt.outf, save = False
                 )
@@ -184,7 +184,7 @@ class UnicTrainer(BasicTrainer):
                 accuracy_bb = get_accuracy(tag='broadband',plot_function=get_gofs,
                     encoder = self.gen_agent.Fxy,
                     decoder = self.gen_agent.Gy,
-                    vld_loader = self.data_tst_loader,
+                    _vld_loader = self.data_tst_loader,
                     pfx ="vld_set_bb_unique",opt= self.opt,
                     outf = self.opt.outf, save = False
                 )
@@ -194,7 +194,7 @@ class UnicTrainer(BasicTrainer):
                 accuracy_fl = get_accuracy(tag='broadband',plot_function=get_gofs,
                     encoder = self.gen_agent.Fxy,
                     decoder = self.gen_agent.Gy,
-                    vld_loader = self.data_tst_loader,
+                    _vld_loader = self.data_tst_loader,
                     pfx ="vld_set_bb_unique_hack",opt= self.opt,
                     outf = self.opt.outf, save = False
                 )

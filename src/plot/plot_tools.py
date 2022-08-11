@@ -795,9 +795,14 @@ def plot_spatial_rep(tag, z,index, save=False):
     return fig
 
 def get_histogram(Fy, Gy, trn_set):
-    Fy.eval(),Gy.eval()
+    
+    Fy.eval()
     fig_latent = []
-    fig_data  = []
+    fig_data   = []
+
+    if Gy is not None:
+        Gy.eval()
+
     data_tst_loader, lat_tst_loader  = trn_set
     for b, (batch_data, batch_latent)in enumerate(zip(data_tst_loader,lat_tst_loader)):
         y, *others  = batch_data
@@ -805,10 +810,13 @@ def get_histogram(Fy, Gy, trn_set):
         y           = y.to(app.DEVICE, non_blocking = True)
         zyy         = zyy.to(app.DEVICE, non_blocking = True)
         wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,app.NOISE)
+        
         zyy_cal     = Fy(zcat(y,wny))
-        y_cal       = Gy(zyy)
-        fig_latent.append(plot_distribution(tag='zd',calc=zyy_cal,tar=zyy,lim=[-5,5], bins=20))
-        fig_data.append(plot_distribution(tag='y',calc=y_cal, tar=y, lim=[-1.20,1.20], bins=25, number=4))
+        fig_latent.append(plot_distribution(tag='zd std = %2.2f'%(zyy_cal.std()),calc=zyy_cal,tar=zyy,lim=[-5,5], bins=20))
+        
+        if Gy is not None:
+            y_cal  = Gy(zyy)
+            fig_data.append(plot_distribution(tag='y',calc=y_cal, tar=y, lim=[-1.20,1.20], bins=25, number=4))
         
     return fig_latent, fig_data
 
@@ -905,7 +913,39 @@ def visualize_signal(opt,Xf,Xr=None, vtm = None, pfx='trial',outf='./imgs',save 
         cnt+=1
     return figure
 
+def get_latent_precision(tag, Qec, trn_set, Pdc=None, opt=None, vtm = None, pfx='trial',outf='./imgs',save = True, std=None):
+    dev = app.DEVICE
+    Qec.eval(), Qec.to(dev)
+    Pdc.eval(), Pdc.to(dev)
+    
+    EG, PG  = [], []
+    cnt = 0
 
+    if opt is not None:
+        vtm = np.linspace(0, 40.96, 512)
+    
+    for _,batch in enumerate(trn_set):
+        zy,*other = batch
+        zy = Variable(zy).to(dev, non_blocking=True)   
+        
+        Xr  = Pdc(zy)
+        wnx,*others = noise_generator(Xr.shape,zy.shape,app.DEVICE,app.NOISE)
+        zyr = Qec(zcat(Xr, wnx))
+        
+        vfr = np.arange(0,vtm.size,1)/(vtm[1]-vtm[0])/(vtm.size-1)
+        zy  = zy.cpu().data.numpy().copy()
+        zyr = zyr.cpu().data.numpy().copy()
+
+        for (io, ig) in zip(range(zy.shape[0]),range(zyr.shape[0])):
+            ot,gt  = zy[io, 0, :], zyr[ig, 0, :]
+            if cnt == 10 and str(pfx).find('investigate')==-1:
+                break
+            EG.append(eg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
+                    st2_isref=True,a=10.,k=1))
+            PG.append(pg(ot,gt,dt=vtm[1]-vtm[0],fmin=0.1,fmax=30.0,nf=100,w0=6,norm='global',
+                    st2_isref=True,a=10.,k=1))
+            cnt+=1
+    return EG, PG
 
 def get_gofs(tag, Qec, trn_set, Pdc=None, opt=None, vtm = None, pfx='trial',outf='./imgs',save = True, std=None):
     dev = app.DEVICE
@@ -947,13 +987,13 @@ def get_gofs(tag, Qec, trn_set, Pdc=None, opt=None, vtm = None, pfx='trial',outf
             # Xf = Variable(xf_data).to(dev, non_blocking=True)
             # zt = Variable(zt_data).to(dev, non_blocking=True)        
             nch, nz         = 1,512
-            wnx,wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],app.DEVICE,app.NOISE)
-            X_inp = zcat(Xt,wnx)
+            wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],1, 512],app.DEVICE,app.NOISE)
+            
             if str(pfx).find('hack')!=-1:
-                zy, zxy =  Qec(X_inp)
+                zy, zxy =  Qec(zcat(Xt,wnx))
                 Xr  = Pdc(zcat(zxy,zy))
             else:
-                zy = Qec(X_inp)
+                zy = Qec(zcat(Xt,wnx))
                 Xr = Pdc(zy)
             #Xp = Pdc(z_pre)
             # Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()
@@ -1264,13 +1304,13 @@ def plot_generate_classic(tag, Qec, trn_set, opt=None, vtm = None, pfx='trial',
             # zt = torch.randn(*zt_shape).to(dev, non_blocking = True)
             
             nch, nz         = 4,128
-            wnx,*others = noise_generator(Xt.shape,Xt.shape,app.DEVICE,app.NOISE)
-            X_inp = zcat(Xt,wnx)
+            wnx,wnz,*others = noise_generator(Xt.shape,[Xt.shape[0],1,512],app.DEVICE,app.NOISE)
+            
             if str(pfx).find('hack')!=-1:
-                zy,zxy =  Qec(X_inp)
+                zy,zxy =  Qec(Xt,wnx)
                 Xr = Pdc(zcat(zxy,zy))
             else:
-                zy =  Qec(X_inp)
+                zy =  Qec(zcat(Xt,wnx))
                 Xr = Pdc(zy)
             #Xp = Pdc(z_pre)
             Xt_fsa = tfft(Xt,vtm[1]-vtm[0]).cpu().data.numpy().copy()

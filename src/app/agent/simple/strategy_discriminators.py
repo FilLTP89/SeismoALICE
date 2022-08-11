@@ -19,6 +19,12 @@ class IStrategyDiscriminator(ABC):
     
     def _discriminate_marginal_y(self,*args,**kwargs):
         pass
+
+    def _discriminate_cross_entropy_zd(self,*args,**kwargs):
+        pass
+
+    def _discriminate_cross_entropy_y(self,*args,**kwargs):
+        pass
     
     @abstractmethod
     def _architecture(self,*args,**kwargs):

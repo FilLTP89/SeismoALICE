@@ -30,12 +30,15 @@ class Generators(Agent):
     def track_weight(self, epoch):
         for gen in self.generators:
             try:
-                self.track_weight_change(writer= self.debug_writer, tag= 'F[cnn_common]', model= gen.module.cnn_common.eval(),epoch = epoch)
-                self.track_weight_change(writer= self.debug_writer, tag= 'F[cnn_broadband]', model= gen.module.cnn_broadband.eval(),epoch = epoch)
-                self.track_weight_change(writer= self.debug_writer, tag= 'F[master]', model= gen.module.master.eval(),epoch = epoch)
-            except Exception as e:
-                self.track_weight_change(writer= self.debug_writer, tag = 'gen', model= gen.module.eval(),epoch = epoch)   
-                
+                self.track_weight_change(writer= self.debug_writer, tag = 'gen', model= gen.module.eval(),epoch = epoch)
+            except Exception:
+                try:
+                    self.track_weight_change(writer= self.debug_writer, tag= 'F[cnn_common]', model= gen.module.cnn_common.eval(),epoch = epoch)
+                    self.track_weight_change(writer= self.debug_writer, tag= 'F[cnn_broadband]', model= gen.module.cnn_broadband.eval(),epoch = epoch)
+                    self.track_weight_change(writer= self.debug_writer, tag= 'F[master]', model= gen.module.master.eval(),epoch = epoch)
+                except Exception:
+                    raise AttributeError(f"The generator doesn't have this specified attribute")
+    
     def _architecture(self,explore):
         self.strategy._architecture(explore)
     

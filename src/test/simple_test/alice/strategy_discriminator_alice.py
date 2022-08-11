@@ -44,11 +44,11 @@ class StrategyDiscriminatorALICE(IStrategyDiscriminator):
             writer_dsy   = SummaryWriter(self.opt.config['log_dir']['debug.dsy_writer'])
             writer_dszb  = SummaryWriter(self.opt.config['log_dir']['debug.dszb_writer'])
 
-            writer_dyz.add_graph(next(iter(self.Dyz.children())), torch.randn(10,128,64).cuda())
-            writer_dzz.add_graph(next(iter(self.Dzzb.children())),torch.randn(10,2,128).cuda())
-            writer_dyy.add_graph(next(iter(self.Dyy.children())), torch.randn(10,2,4096).cuda())
-            writer_dsy.add_graph(next(iter(self.Dsy.children())), torch.randn(10,6,4096).cuda())
-            writer_dszb.add_graph(next(iter(self.Dszb.children())),torch.randn(10,2,512).cuda())
+            writer_dyz.add_graph(next(iter(self.Dyz.children())), torch.randn(10,2,512).cuda())
+            writer_dzz.add_graph(next(iter(self.Dzzb.children())),torch.randn(10,2,512).cuda())
+            writer_dyy.add_graph(next(iter(self.Dyy.children())), torch.randn(10,6,4096).cuda())
+            writer_dsy.add_graph(next(iter(self.Dsy.children())), torch.randn(10,3,4096).cuda())
+            writer_dszb.add_graph(next(iter(self.Dszb.children())),torch.randn(10,1,512).cuda())
     
     def _get_discriminators(self):
         return self._discriminators

@@ -339,3 +339,44 @@ class DCGAN_Dx_PatchGAN(BasicDCGAN_DxDataParallel):
         z = self.cnn(z)
         return z
 
+class DCGAN_Dx_LSGAN(BasicDCGAN_DxDataParallel):
+    def __init__(self,ngpu, nc, ncl, ndf, nly,act, channel, fpd=1, isize=256, limit = 256,\
+                 ker=2,std=2,pad=0, dil=1,grp=1,bn=True,wf=False, dpc=0.0, batch_size =128,\
+                 path = '', prob = False,n_extra_layers=0, *args,**kwargs):
+        super(DCGAN_Dx_LSGAN)
+        """
+            Based on https://github.com/eriklindernoren/PyTorch-GAN/blob/master/implementations/bicyclegan/models.py
+        """
+        def discriminator_block(in_filters, out_filters, normalize=True):
+            """Returns downsampling layers of each discriminator block
+            """
+            layers = [nn.Conv1d(in_filters, out_filters, 4, stride=2, padding=1)]
+            if normalize:
+                layers.append(nn.BatchNorm1d(out_filters, 0.8))
+            layers.append(nn.LeakyReLU(0.2))
+            return layers
+
+        channels = channel[0]
+        # Extracts discriminator models
+        self.models = nn.ModuleList()
+        for i in range(3):
+            self.models.add_module(
+                "disc_%d" % i,
+                nn.Sequential(
+                    *discriminator_block(channels, 64, normalize=False),
+                    *discriminator_block(64, 128),
+                    *discriminator_block(128, 256),
+                    *discriminator_block(256, 512),
+                    nn.Conv1d(512, 1, 3, padding=1)
+                ),
+            )
+    
+    def forward(self,x):
+        outputs=[]
+        for m in self.models:
+            outputs.append(m(x))
+        return outputs
+    
+    def compute_loss(self,x, lb):
+        return sum([torch.mean(out - lb)**2 for out in self.forward(x)])
+        

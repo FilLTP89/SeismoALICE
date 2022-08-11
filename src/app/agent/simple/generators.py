@@ -29,7 +29,7 @@ class Generators(Agent):
         self.track_gradient_change(self.gradients_tracker,self.generators,epoch)
     
     def track_weight(self, epoch):
-        self.track_weight_change(writer =  self.debug_writer, tag = 'Fy', 
+        self.track_weight_change(writer = self.debug_writer, tag = 'Fy', 
             model= self.Fy.module.cnn1.eval(),epoch = epoch)
         
         self.track_weight_change(writer =  self.debug_writer, tag = 'Gy', 

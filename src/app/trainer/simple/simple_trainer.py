@@ -107,7 +107,11 @@ class SimpleTrainer(BasicTrainer):
         
         self.logger.info(f"Root summary")
         for _, root in self.opt.config['log_dir'].items():
-            self.logger.info(f"Summary:{root}")
+            if isinstance(root,dict):
+                for (_,subroot) in root.items():
+                    self.logger.info(f"Summary{subroot}")
+            else:
+                self.logger.info(f"Summary:{root}")
 
     
     def on_training_epoch(self, epoch, bar):
@@ -172,17 +176,15 @@ class SimpleTrainer(BasicTrainer):
                 self.validation_writer.set_step(mode='test', step=epoch)
                 bar.set_postfix(status='saving accuracy and images ... ')
 
-                figure_histo_z,figure_histo_y = get_histogram(Fy=self.gen_agent.Fy, 
+                figure_histo_z, _ = get_histogram(Fy=self.gen_agent.Fy, 
                 Gy = self.gen_agent.Gy, trn_set = (self.data_tst_loader, self.lat_tst_loader))
                 bar.set_postfix(status='saving z distribution ...')
                 self.validation_writer.add_figure('z Histogram', figure_histo_z)
-                bar.set_postfix(status='saving y distribution ...')
-                self.validation_writer.add_figure('y Histogram ', figure_histo_y)
 
                 accuracy_bb = get_accuracy(tag='broadband',plot_function=get_gofs,
                     encoder = self.gen_agent.Fy,
                     decoder = self.gen_agent.Gy,
-                    vld_loader = self.data_tst_loader,
+                    _vld_loader = self.data_tst_loader,
                     pfx ="vld_set_bb_unique",opt= self.opt,
                     outf = self.opt.outf, save = False
                 )

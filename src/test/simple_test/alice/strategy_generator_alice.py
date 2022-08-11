@@ -30,10 +30,8 @@ class StrategyGeneratorALICE(IStrategyGenerator):
         if explore:
             writer_encoder = SummaryWriter(self.opt.config['log_dir']['debug.encoder_writer'])
             writer_decoder = SummaryWriter(self.opt.config['log_dir']['debug.decoder_writer'])
-            writer_encoder.add_graph(next(iter(self.Fy.children())),
-                            torch.randn(10,6,4096).cuda())
-            writer_decoder.add_graph(next(self.Gy.children()), 
-                            (torch.randn(10,2,512).cuda()))
+            writer_encoder.add_graph(next(iter(self.Fy.children())),torch.randn(10,6,4096).cuda())
+            writer_decoder.add_graph(next(self.Gy.children()),(torch.randn(10,1,512).cuda()))
     
     def _get_generators(self,*args, **kwargs):
         return self._generators
