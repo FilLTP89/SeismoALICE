@@ -73,6 +73,8 @@ def gradient_penalty(critic, real, fake, device):
     # Return gradient penalty
     return ((gradients_norm - 1) ** 2).mean()
 
+
+
 # Choosing `num_centers` random data points as the initial centers
 def random_init(dataset, num_centers, device):
     num_points = dataset.size(0)

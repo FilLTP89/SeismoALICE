@@ -18,7 +18,22 @@
         "debug.encoder_writer":"./runs_both/renew/wgan/bbt199a004/net/encoder",
         "debug.decoder_writer":"./runs_both/renew/wgan/bbt199a004/net/decoder",
         "debug.dsy_writer":"./runs_both/renew/wgan/bbt199a004/net/dsy/",
-        "debug.dszb_writer":"./runs_both/renew/wgan/bbt199a004/net/dszb"
+        "debug.dszb_writer":"./runs_both/renew/wgan/bbt199a004/net/dszb",
+        "unitary.gen":{
+                "train_writer":"./runs_both/renew/simple/alice/unitary/gen/training/",
+                "valid_writer":"./runs_both/renew/simple/alice/unitary/gen/validation/",
+                "debug_writer":"./runs_both/renew/simple/alice/unitary/gen/debug/",
+                "debug.losses_writer":"./runs_both/renew/simple/alice/unitary/gen/losses/",
+                "debug.gradients_writer":"./runs_both/renew/simple/unitary/gen/gradients/",
+                "debug.encoder_writer":"./runs_both/renew/simple/alice/net/encoder",
+                "debug.decoder_writer":"./runs_both/renew/simple/alice/net/decoder"
+            },
+             "unitary.disc":{
+                "train_writer":"./runs_both/renew/simple/alice/unitary/disc/training/",
+                "valid_writer":"./runs_both/renew/simple/alice/unitary/disc/validation/",
+                "debug_writer":"./runs_both/renew/simple/alice/unitary/disc/debug/",
+                "debug.losses_writer":"./runs_both/renew/simple/alice/unitary/disc/losses/",
+                "debug.gradients_writer":"./runs_both/renew/simple/unitary/disc/gradients/"}
     },
      "F":{
         "name"      :"Resnet",

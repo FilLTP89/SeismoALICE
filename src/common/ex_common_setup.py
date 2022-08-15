@@ -115,11 +115,13 @@ def setup():
         opt.config =  None
         pass
     
+    
     if opt.manualSeed is None:
-        cudnn.benchmark = True
+    #Use this for normal Use
+        # cudnn.benchmark = True
     # Use this only on debugging mode
-        #cudnn.benchmark = False
-        #cudnn.deterministic = True
+        cudnn.benchmark = False
+        cudnn.deterministic = True
         torch.cuda.manual_seed(opt.manualSeed)
     
     if tcuda.is_available() and not opt.cuda:

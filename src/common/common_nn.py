@@ -543,7 +543,7 @@ def generate_latent_variable_1D(batch,nzd = 384,nzf = 128, std=1):
     zxy  = torch.zeros([batch,nzf]).normal_(mean=0,std=std).to(app.DEVICE, non_blocking = True)
     return zyy, zyx, zxx, zxy
 
-def get_accuracy(tag, plot_function,encoder, decoder, _vld_loader,*args, **kwargs):
+def get_accuracy(tag, plot_function,encoder, decoder, vld_loader,*args, **kwargs):
     with torch.no_grad():
         def _eval(EG,PG): 
             val = np.sqrt(np.power([10 - eg for eg in EG],2)+\
@@ -553,7 +553,7 @@ def get_accuracy(tag, plot_function,encoder, decoder, _vld_loader,*args, **kwarg
 
         EG_h, PG_h  = plot_function(tag = tag, 
             Qec = encoder, Pdc = decoder, 
-            trn_set = _vld_loader, 
+            trn_set = vld_loader, 
             *args, **kwargs)
 
         return _eval(EG_h,PG_h)

@@ -13,7 +13,7 @@ from torch.nn import DataParallel as DP
 from common.common_nn import get_accuracy,patch
 from common.common_nn import count_parameters
 from common.common_torch import *
-from database.latentset import get_latent_dataset, MixedGaussianUniformDataset
+from database.latentset import get_latent_dataset, MixedGaussianDataset
 from factory.conv_factory import Network, DataParalleleFactory
 from app.agent.unic.discriminators import Discriminators
 
@@ -60,7 +60,7 @@ class UnitaryTrainerDiscriminator(BasicTrainer):
 
         self.data_trn_loader, self.data_vld_loader,self.data_tst_loader = trn_loader, vld_loader, tst_loader
         self.lat_trn_loader, self.lat_vld_loader, self.lat_tst_loader   = get_latent_dataset(
-            dataset=MixedGaussianUniformDataset,nsy=self.opt.nsy,batch_size=self.opt.batchSize)
+            dataset=MixedGaussianDataset,nsy=self.opt.nsy,batch_size=self.opt.batchSize)
         
         self.bce_loss        = torch.nn.BCELoss(reduction='mean')
         self.bce_logit_loss  = torch.nn.BCEWithLogitsLoss(reduction='mean')
@@ -84,7 +84,7 @@ class UnitaryTrainerDiscriminator(BasicTrainer):
         for _, root in self.opt.config['log_dir'].items():
             if isinstance(root,dict):
                 for (_,subroot) in root.items():
-                    self.logger.info(f"\t Summary{subroot}")
+                    self.logger.info(f"Summary:{subroot}")
             else:
                 self.logger.info(f"Summary:{root}")
     
@@ -130,7 +130,7 @@ class UnitaryTrainerDiscriminator(BasicTrainer):
             torch.manual_seed(100)
             if epoch%self.opt.config["hparams"]['test_epochs'] == 0:
                 self.validation_writer.set_step(mode='test', step=epoch)
-                self.test_discriminators(self,bar, self.validation_writer, *args, **kwargs)
+                self.test_discriminators(bar,self.validation_writer, epoch, *args, **kwargs)
                 self.disc_agent.track_weight(epoch)
 
     def train_discriminators(self,batch,epoch,modality,net_mode,*args,**kwargs):
@@ -139,7 +139,7 @@ class UnitaryTrainerDiscriminator(BasicTrainer):
         """
         raise NotImplementedError
     
-    def test_discriminators(self,bar, writer, *args, **kwargs):
+    def test_discriminators(self,bar, writer,epoch, *args, **kwargs):
         """ The test of discriminators could be different depend if we have pix2pix, ALICE, WGAN 
             and other kind of strategy in the bibliography 
         """

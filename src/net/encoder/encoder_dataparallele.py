@@ -517,4 +517,28 @@ class Encoder_PReLU(BasicEncoderDataParallele):
         x  = x1 + x2
         z  = self.cnn1(x)
         return z
+
+class Encoder_LR(BasicEncoderDataParallele):
+    def __init__(self, ngpu,dev,nz,nch,ndf,act,channel,\
+                 nly, config,ker=7,std=4,pad=0,dil=1,grp=1,bn=True,
+                 dpc=0.0,limit = 256, path='',dconv = "",\
+                 with_noise=False,dtm=0.01,ffr=0.16,wpc=5.e-2,
+                 wf = False, *args, **kwargs):
+        super(Encoder_LR, self).__init__(*args, **kwargs)
+        acts = T.activation(act, nly)
+
+        self.feature_extractor = EncoderResnet(in_signals_channels=6,
+            out_signals_channels=channel[-1],channels = [16, 32, 64], 
+            layers =[2,2,2], block=block_2x2)
         
+        self.fc_mu      = nn.Linear(channel[-1],512)
+        self.fc_logvar  = nn.Linear(channel[-1],512)
+
+    def forward(self,x):
+        z   = self.feature_extractor(x)
+        z   = z.view(z.size(0),-1)
+        mu  = self.fc_mu(z)
+        logvar = self.fc_logvar(z)
+        if not self.training:
+            mu, logvar = mu.detach(), logvar.detach()
+        return mu, logvar

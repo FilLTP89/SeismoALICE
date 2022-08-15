@@ -162,7 +162,7 @@ class ALICE(BasicTrainer):
                 accuracy_hb = get_accuracy(tag='hybrid',plot_function=get_gofs,
                     encoder = self.gen_agent.Fxy,
                     decoder = self.gen_agent.Gy,
-                    _vld_loader = self.test_loader,
+                    vld_loader = self.test_loader,
                     pfx ="vld_set_bb_unique",opt= self.opt,
                     outf = self.opt.outf, save = False
                 )
@@ -172,7 +172,7 @@ class ALICE(BasicTrainer):
                 accuracy_bb = get_accuracy(tag='broadband',plot_function=get_gofs,
                     encoder = self.gen_agent.Fxy,
                     decoder = self.gen_agent.Gy,
-                    _vld_loader = self.test_loader,
+                    vld_loader = self.test_loader,
                     pfx ="vld_set_bb_unique",opt= self.opt,
                     outf = self.opt.outf, save = False
                 )
@@ -182,7 +182,7 @@ class ALICE(BasicTrainer):
                 accuracy_fl = get_accuracy(tag='broadband',plot_function=get_gofs,
                     encoder = self.gen_agent.Fxy,
                     decoder = self.gen_agent.Gy,
-                    _vld_loader = self.test_loader,
+                    vld_loader = self.test_loader,
                     pfx ="vld_set_bb_unique_hack",opt= self.opt,
                     outf = self.opt.outf, save = False
                 )

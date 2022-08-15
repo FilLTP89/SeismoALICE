@@ -111,7 +111,7 @@ class ModelParalleleFactory(ConvNetFactory):
                                      channel = config_dcgan_dx['channel'],\
                                      grp=1,bn=bn,wf=wf, dpc=dpc,
                                      path=path,
-                                     n_extra_layers=0)
+                                     n_extra_layers=0,*args, **kwargs)
         return dcgan_dx
 
     def createDCGAN_Dz(self, config_dcgan_dz, opt, *args, **kwargs):
@@ -131,7 +131,7 @@ class ModelParalleleFactory(ConvNetFactory):
                                      channel = config_dcgan_dz['channel'],\
                                      dil= config_dcgan_dz["dilation"],\
                                      path = path,
-                                     grp=1,bn=bn,wf=wf, bias = False)
+                                     grp=1,bn=bn,wf=wf, bias = False, *args, **kwargs)
         return dcgan_dz
 
     def createDCGAN_DXZ(self,config_dcgan_dxz, opt, *args, **kwargs):
@@ -151,7 +151,7 @@ class ModelParalleleFactory(ConvNetFactory):
                                      channel = config_dcgan_dxz['channel'],\
                                      n_extra_layers=0,
                                      path = path,
-                                     dpc=dpc,wf=wf,bn = bn, bias = True, opt=None)
+                                     dpc=dpc,wf=wf,bn = bn, bias = True, opt=None, *args, **kwargs)
         return  dcgan_dxz
 
 class DataParalleleFactory(ConvNetFactory):

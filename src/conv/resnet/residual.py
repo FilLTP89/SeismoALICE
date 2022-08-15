@@ -234,6 +234,14 @@ class ResidualContainer(BasicModel):
         super().__init__(*args, **kwargs)
         self.current_val    = 0
         self._models        = []
+
+    def apply(self,fn):
+        self._init_weight(fn)
+
+    def _init_weight(self,fn):
+        for idx, resnet_layer in enumerate(self.modules()):
+            for _, layer in enumerate(resnet_layer.modules()):
+                fn(layer)
     
     def __len__(self):
         return len(self._models)
@@ -256,7 +264,6 @@ class EncoderResnet(ResidualContainer):
     def __init__(self, in_signals_channels, out_signals_channels, channels,layers, 
                         block = block_3x3, *args, **kwargs): 
         super().__init__()
-        # pdb.set_trace()
        
         self.in_channels= in_signals_channels
         self.conv_tools = self._convolution_tools()
@@ -299,6 +306,8 @@ class EncoderResnet(ResidualContainer):
                 )
         
         self._models = [self.conv1, self.bn1, self.leaky_relu1, self.conv2, self.network, self.conv3]
+
+    
 
     def _convolution_tools(self): 
         return ConvolutionTools()

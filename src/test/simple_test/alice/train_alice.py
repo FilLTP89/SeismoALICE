@@ -63,9 +63,9 @@ class ALICE(SimpleTrainer):
             y_inp       = zcat(y,wny) 
             y_gen       = self.gen_agent.Gy(zd_inp)
             zd_gen      = self.gen_agent.Fy(y_inp)
-            Dreal_yz, Dfake_yz = self.disc_agent.discriminate_conjoint_yz(y,y_gen,zd_inp,zd_gen)
-            Dloss_ali_y = self.bce_logit_loss(Dreal_yz,o1l(Dreal_yz))+\
-                            self.bce_logit_loss(Dfake_yz,o0l(Dfake_yz))
+            Dreal_yz, Dfake_yz      = self.disc_agent.discriminate_conjoint_yz(y,y_gen,zd_inp,zd_gen)
+            Dloss_ali_y             = 0.5*self.bce_logit_loss(Dreal_yz.reshape(-1),o1l(Dreal_yz.reshape(-1)))+\
+                        0.5*self.bce_logit_loss(Dfake_yz.reshape(-1),o0l(Dfake_yz.reshape(-1)))
 
             # 2. Reconstruction of signal distributions
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,app.NOISE)
@@ -74,12 +74,12 @@ class ALICE(SimpleTrainer):
             zd_rec      = self.gen_agent.Fy(y_gen)
             
             Dreal_y, Dfake_y        = self.disc_agent.discriminate_cross_entropy_y(y, y_rec)
-            Dloss_cross_entropy_y   = self.bce_logit_loss(Dreal_y,o1l(Dreal_y))+\
-                        self.bce_logit_loss(Dfake_y,o0l(Dfake_y))
+            Dloss_cross_entropy_y   = 0.5*self.bce_logit_loss(Dreal_y.reshape(-1),o1l(Dreal_y.reshape(-1)))+\
+                        0.5*self.bce_logit_loss(Dfake_y.reshape(-1),o0l(Dfake_y.reshape(-1)))
             
             Dreal_zd, Dfake_zd      = self.disc_agent.discriminate_cross_entropy_zd(zd_inp,zd_rec)
-            Dloss_cross_entropy_zd  = self.bce_logit_loss(Dreal_zd,o1l(Dreal_zd))+\
-                        self.bce_logit_loss(Dfake_zd,o0l(Dfake_zd))
+            Dloss_cross_entropy_zd  = 0.5*self.bce_logit_loss(Dreal_zd.reshape(-1),o1l(Dreal_zd.reshape(-1)))+\
+                        0.5*self.bce_logit_loss(Dfake_zd.reshape(-1),o0l(Dfake_zd.reshape(-1)))
             Dloss_cross_entropy = Dloss_cross_entropy_y + Dloss_cross_entropy_zd
             Dloss               = Dloss_ali_y + Dloss_cross_entropy
             
@@ -126,8 +126,8 @@ class ALICE(SimpleTrainer):
             zd_gen      = self.gen_agent.Fy(y_inp)
 
             Dreal_yz, Dfake_yz  = self.disc_agent.discriminate_conjoint_yz(y, y_gen,zd_inp,zd_gen)
-            Gloss_ali_y = self.bce_logit_loss(Dreal_yz,o1l(Dreal_yz)) +\
-                            self.bce_logit_loss(Dfake_yz,o0l(Dfake_yz))
+            Gloss_ali_y         = 0.005*self.bce_logit_loss(Dreal_yz.reshape(-1),o0l(Dreal_yz.reshape(-1))) +\
+                        0.005*self.bce_logit_loss(Dfake_yz.reshape(-1),o1l(Dfake_yz.reshape(-1)))
 
             # 2. Reconstruction of signal distributions
             wny,*others = noise_generator(y.shape,zyy.shape,app.DEVICE,app.NOISE)
@@ -135,18 +135,18 @@ class ALICE(SimpleTrainer):
             y_rec       = self.gen_agent.Gy(zd_gen)
             zd_rec      = self.gen_agent.Fy(y_gen)
 
-            Gloss_rec_y = torch.mean(torch.abs(y-y_rec))
-            Gloss_rec_zd= torch.mean(torch.abs(zd_inp-zd_rec))
+            Gloss_rec_y = self.l1_loss(y,y_rec)
+            Gloss_rec_zd= self.l1_loss(zd_inp,zd_rec)
             
-            _, Dfake_y  = self.disc_agent.discriminate_cross_entropy_y(y, y_rec)
-            Gloss_cross_entropy_y = self.bce_logit_loss(Dfake_y,o1l(Dfake_y))
+            _, Dfake_y              = self.disc_agent.discriminate_cross_entropy_y(y, y_rec)
+            Gloss_cross_entropy_y   = 0.005*self.bce_logit_loss(Dfake_y.reshape(-1),o1l(Dfake_y.reshape(-1)))
 
-            _, Dfake_zd = self.disc_agent.discriminate_cross_entropy_zd(zd_inp,zd_rec)
-            Gloss_cross_entropy_zd  = self.bce_logit_loss(Dfake_zd,o1l(Dfake_zd))
+            _, Dfake_zd             = self.disc_agent.discriminate_cross_entropy_zd(zd_inp,zd_rec)
+            Gloss_cross_entropy_zd  = 0.005*self.bce_logit_loss(Dfake_zd.reshape(-1),o1l(Dfake_zd.reshape(-1)))
 
             Gloss_rec           = Gloss_rec_y + Gloss_rec_zd
             Gloss_cross_entropy = Gloss_cross_entropy_y + Gloss_cross_entropy_zd
-            Gloss               = Gloss_ali_y + Gloss_cross_entropy + Gloss_rec*app.LAMBDA_IDENTITY
+            Gloss               = Gloss_ali_y + Gloss_cross_entropy + Gloss_rec
            
             if modality == 'train':
                 zerograd([self.gen_agent.optimizer_encoder, self.gen_agent.optimizer_decoder,

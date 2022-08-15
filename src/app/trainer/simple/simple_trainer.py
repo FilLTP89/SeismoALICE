@@ -83,6 +83,7 @@ class SimpleTrainer(BasicTrainer):
 
         self.bce_loss        = torch.nn.BCELoss(reduction='mean')
         self.bce_logit_loss  = torch.nn.BCEWithLogitsLoss(reduction='mean')
+        self.l1_loss         = torch.nn.L1Loss(reduction='mean')
 
         super(SimpleTrainer,self).__init__(
             settings  = self.opt, logger = self.logger, config = self.opt,
@@ -184,7 +185,7 @@ class SimpleTrainer(BasicTrainer):
                 accuracy_bb = get_accuracy(tag='broadband',plot_function=get_gofs,
                     encoder = self.gen_agent.Fy,
                     decoder = self.gen_agent.Gy,
-                    _vld_loader = self.data_tst_loader,
+                    vld_loader = self.data_tst_loader,
                     pfx ="vld_set_bb_unique",opt= self.opt,
                     outf = self.opt.outf, save = False
                 )

@@ -24,7 +24,7 @@ class LatentDataset(Dataset):
 
 class UniformLatentDatatset(Dataset):
     def __init__(self,latent_space_shape=[[1,512],[4, 1024]],nsy = 1280, mean=0., 
-                        std = 1.0, seed=None,*args, **kwargs):
+                        std = 0.5, seed=None,*args, **kwargs):
         if seed is not None:
             torch.manual_seed(seed)
         
@@ -59,7 +59,7 @@ class MixedGaussianDataset(Dataset):
         test wether or not the discriminator is powerful enough
     """
     def __init__(self,latent_space_shape=[[1,512],[1, 512]],nsy = 1280, mean=0., 
-                        std = 1.0, seed=None,*args, **kwargs):
+                        std = .5, seed=None,*args, **kwargs):
         if seed is not None:
             torch.manual_seed(seed)
         self._latent_space_gaussian_normal = torch.empty(*[nsy,*latent_space_shape[0]]).normal_(mean=0.,std=1.0)

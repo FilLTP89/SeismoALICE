@@ -58,4 +58,4 @@ class StrategyDiscriminatorALICE(IStrategyDiscriminator):
     
     def _optimizer(self):
         return reset_net(self._discriminators,lr = self.rlr, optim='adam', b1=0.5, b2=0.999,
-            alpha=0.90, weights_decay=self.weight_decay)
+            alpha=0.90)

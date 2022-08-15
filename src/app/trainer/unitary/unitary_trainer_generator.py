@@ -79,11 +79,11 @@ class UnitaryTrainerGenerator(BasicTrainer):
         self.logger.info(f"Root checkpoint      : {self.opt.root_checkpoint}")
         self.logger.info(f"Saving epoch every   : {self.opt.save_checkpoint} iterations")
         
-        self.logger.info(f"Root summary")
+        self.logger.info(f"Root Summary")
         for _, root in self.opt.config['log_dir'].items():
             if isinstance(root,dict):
                 for (_,subroot) in root.items():
-                    self.logger.info(f"\t Summary{subroot}")
+                    self.logger.info(f"Summary:{subroot}")
             else:
                 self.logger.info(f"Summary:{root}")
     

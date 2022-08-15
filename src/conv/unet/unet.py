@@ -25,13 +25,19 @@ class Block(nn.Module):
 
 
 class Generator(nn.Module):
-    def __init__(self, in_channels=3, features=64, out_channels=3):
+    def __init__(self, in_channels=3, features=64, out_channels=3,with_noise=False,
+            latent_dim = 512, w = 1):
         super().__init__()
+        self.w = w
+        self.with_noise   = with_noise
         self.initial_down = nn.Sequential(
             nn.Conv1d(in_channels, features, 4, 2, 1, padding_mode="reflect"),
             nn.LeakyReLU(0.2),
         )
-        
+        if self.with_noise:
+            self.fc = nn.Sequential(
+                nn.Linear(latent_dim, w)
+            )
         self.down1 = Block(features, features * 2, down=True, act="leaky", use_dropout=False)
         self.down2 = Block(
             features * 2, features * 4, down=True, act="leaky", use_dropout=False
@@ -75,6 +81,10 @@ class Generator(nn.Module):
         )
 
     def forward(self, x):
+        if self.with_noise and isinstance(x, tuple):
+            x, z = x
+            z = self.fc(z).view(z.size(0),1,self.w)
+            x =  torch.cat((x,z),1)
         d1 = self.initial_down(x)
         d2 = self.down1(d1)
         d3 = self.down2(d2)

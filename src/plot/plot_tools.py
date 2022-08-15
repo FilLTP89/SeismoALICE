@@ -834,6 +834,14 @@ def get_latent_rep(Fy, Gy, trn_set):
         # fig.append(plot_spatial_rep(tag='zhf z0/z2',z=zyy,index = [0,2]))
     return fig
 
+def get_distribution(trn_set):
+    fig_latent = []
+    for b, batch_data in enumerate(trn_set):
+        if b>=4: break
+        z_normal, z_dist,*others  = batch_data
+        z_normal, z_dist = z_normal.to(app.DEVICE, non_blocking = True), z_dist.to(app.DEVICE, non_blocking = True)
+        fig_latent.append(plot_distribution(tag='zd std = %2.2f'%(z_dist.std()),calc=z_dist,tar=z_normal,lim=[-5,5], bins=20))
+    return fig_latent
 
 def plot_error(error, outf):
     import matplotlib.pyplot as plt

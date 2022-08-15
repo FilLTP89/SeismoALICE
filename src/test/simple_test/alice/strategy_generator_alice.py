@@ -21,10 +21,12 @@ class StrategyGeneratorALICE(IStrategyGenerator):
 
     
     def _optimizer_encoder(self,*args,**kwargs):
-        return reset_net([self.Fy], optim='adam',alpha=0.9,lr=self.elr,b1=0.5,b2=0.999)
+        return reset_net([self.Fy], optim='adam',alpha=0.9,lr=self.elr,b1=0.5,b2=0.999, 
+                weight_decay=self.weight_decay)
 
     def _optimizer_decoder(self,*args, **kwargs):
-        return reset_net([self.Gy],optim='adam',alpha=0.9,lr=self.dlr,b1=0.5,b2=0.999)
+        return reset_net([self.Gy],optim='adam',alpha=0.9,lr=self.dlr,b1=0.5,b2=0.999, 
+                weight_decay=self.weight_decay)
 
     def _architecture(self,explore,*args,**kwargs):
         if explore:

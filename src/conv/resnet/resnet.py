@@ -131,7 +131,8 @@ class ResNetEncoder(nn.Module):
                           block=block, *args, **kwargs) 
               for (in_channels, out_channels), n in zip(self.in_out_block_sizes, deepths[1:])]       
         ])
-        # pdb.set_trace()
+
+        
 
     def forward(self, x):
         # pdb.set_trace()

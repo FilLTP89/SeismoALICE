@@ -14,6 +14,7 @@ class StrategyDiscriminatorBiCycleGAN(IStrategyDiscriminator):
 
         self._discriminators        = [self.DVAE, self.DLR]
         self._name_discriminators   = ['DVEA', 'DLR']
+        self.optimizer_vae, self.optimizer_lr = self._optimizer()
         
         super(StrategyDiscriminatorBiCycleGAN, self).__init__(*args, **kwargs)
     
@@ -30,5 +31,13 @@ class StrategyDiscriminatorBiCycleGAN(IStrategyDiscriminator):
     def _get_name_discriminators(self):
         return self._name_discriminators
     
+    def _discriminate_marginal_y(self, y, yr):
+        return self.DVAE(y), self.DVAE(yr)
+    
+    def _discriminate_marginal_zd(self,z, zr):
+        return self.DLR(z), self.DLR(zr)
+    
     def _optimizer(self):
-        return reset_net(self._discriminators,lr = self.rlr, optim='adam', b1=0.5, b2=0.999, alpha=0.90)
+        optimizer_vae   = reset_net([self.DVAE],lr = self.rlr, optim='adam', b1=0.5, b2=0.999, alpha=0.90)
+        optimizer_lr    = reset_net([self.DLR], lr = self.rlr, optim='adam', b1=0.5, b2=0.999, alpha=0.90)
+        return optimizer_vae, optimizer_lr
