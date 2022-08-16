@@ -220,7 +220,6 @@ class DataParalleleFactory(ConvNetFactory):
             *args, **kwargs)
 
     def createDCGAN_Dx(self, config_dcgan_dx, opt, *args, **kwargs):
-
         #another class could be called here if is not the generic class
         name    = config_dcgan_dx["name"] if "name" in config_dcgan_dx else None
         nc      = config_dcgan_dx["nc"] if "nc" in config_dcgan_dx else opt.nch
@@ -229,6 +228,9 @@ class DataParalleleFactory(ConvNetFactory):
         path    = config_dcgan_dx["path"] if "path" in config_dcgan_dx else ""
         extra   = config_dcgan_dx["extra"] if "extra" in config_dcgan_dx else 128
         bn      = json.loads(config_dcgan_dx["bn"].lower()) if "bn" in config_dcgan_dx else False
+        type_bn = config_dcgan_dx["type_bn"]
+        weight_norm =  json.loads(config_dcgan_dx["weight_norm"].lower()) if "bn" in config_dcgan_dx else False
+        weight_norm_type = config_dcgan_dx["weight_norm_type"]
         prob    = json.loads(config_dcgan_dx["prob"].lower()) if "prob" in config_dcgan_dx else False
         #DCGAN_Dx class is called here
         return DCGAN_DxDataParallele.getDCGAN_DxDataParallele(name=name, ngpu = opt.ngpu,\
@@ -247,6 +249,9 @@ class DataParalleleFactory(ConvNetFactory):
             extra   = extra,\
             grp     = 0,\
             bn      = bn,\
+            type_bn = type_bn,\
+            weight_norm = weight_norm,\
+            weight_norm_type = weight_norm_type,\
             wf      = wf,\
             dpc     = dpc,
             batch_size = opt.batchSize,\
@@ -262,6 +267,9 @@ class DataParalleleFactory(ConvNetFactory):
         dpc     = config_dcgan_dz["dpc"] if "dpc" in config_dcgan_dz else 0.25
         path    = config_dcgan_dz["path"] if "path" in config_dcgan_dz else ""
         extra   = config_dcgan_dz["extra"] if "extra" in config_dcgan_dz else 128
+        type_bn = config_dcgan_dz["type_bn"]
+        weight_norm =  json.loads(config_dcgan_dz["weight_norm"].lower()) if "bn" in config_dcgan_dz else False
+        weight_norm_type = config_dcgan_dz["weight_norm_type"]
         bn      = json.loads(config_dcgan_dz["bn"].lower()) if "bn" in config_dcgan_dz else False
         prob    = json.loads(config_dcgan_dz["prob"].lower()) if "prob" in config_dcgan_dz else False
         return DCGAN_DzDataParallele.getDCGAN_DzDataParallele( name =  name, ngpu = opt.ngpu,\
@@ -275,7 +283,13 @@ class DataParalleleFactory(ConvNetFactory):
             limit = config_dcgan_dz['limit'],\
             dil     = config_dcgan_dz['dilation'],\
             channel = config_dcgan_dz['channel'],\
-            grp     =0, bn=bn,wf=wf, dpc=dpc,
+            grp     =0,\
+            bn      =bn,
+            type_bn = type_bn,\
+            weight_norm = weight_norm,\
+            weight_norm_type = weight_norm_type,\
+            wf      =wf, 
+            dpc     =dpc,
             path    = path,\
             prob    = prob,\
             extra   = extra,
@@ -293,6 +307,9 @@ class DataParalleleFactory(ConvNetFactory):
         path  = config_dcgan_dxz["path"] if "path" in config_dcgan_dxz else ""
         extra = config_dcgan_dxz["extra"] if "extra" in config_dcgan_dxz else 128
         bn    = json.loads(config_dcgan_dxz["bn"].lower()) if "bn" in config_dcgan_dxz else False
+        type_bn = config_dcgan_dxz["type_bn"]
+        weight_norm =  json.loads(config_dcgan_dxz["weight_norm"].lower()) if "bn" in config_dcgan_dxz else False
+        weight_norm_type = config_dcgan_dxz["weight_norm_type"]
         return DCGAN_DXZDataParallele.getDCGAN_DXZDataParallele(name = name, ngpu=opt.ngpu, nc=nc, 
             nly     = config_dcgan_dxz['nlayers'],\
             ker     = config_dcgan_dxz['kernel'],\
@@ -302,13 +319,20 @@ class DataParalleleFactory(ConvNetFactory):
             limit   = config_dcgan_dxz['limit'],\
             dil     = config_dcgan_dxz['dilation'],\
             channel = config_dcgan_dxz['channel'],\
-            grp     = 0, bn=bn,wf=wf, dpc=dpc,\
+            grp     = 0, 
+            bn      = bn,
+            type_bn = type_bn,\
+            weight_norm = weight_norm,\
+            weight_norm_type = weight_norm_type,\
+            wf      = wf, 
+            dpc     = dpc,\
             path    = path,\
             prob    = prob,\
             bias    = bias,\
             extra   = extra,\
             config  = config_dcgan_dxz,\
-            n_extra_layers=0, batch_size = opt.batchSize,*args, **kwargs)
+            n_extra_layers = 0, 
+            batch_size = opt.batchSize,*args, **kwargs)
 
     
 class Network(object):
