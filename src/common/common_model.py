@@ -73,6 +73,23 @@ def gradient_penalty(critic, real, fake, device):
     # Return gradient penalty
     return ((gradients_norm - 1) ** 2).mean()
 
+def consistency_regularization(netD, real_data, lambda_val=2, M_val = 0.0):
+    '''
+    Consistency regularization complements the gradient penalty by biasing towards
+    the real-data along the manifold connecting the real and fake data.
+    ---------------------
+    :param netD: Discriminator network that returns the output of the last layer
+                and the pen-ultimate layer.
+    :param real_data: Real data - Variable
+    :param lambda_val: coefficient for the consistency_regularization term
+    :param M_val: constant offset M ~ [0, 0.2]
+    :return: consistency regularization term
+    '''
+    dx1, dx1_ = netD(real_data)
+    dx2, dx2_ = netD(real_data) # Different from dx1 because of stochastic dropout
+    CT = (dx1 - dx2)**2 + 0.1*(dx1_ - dx2_)**2
+    cons_reg = torch.max(torch.zeros(CT.size()), lambda_val*CT - M_val).mean()
+    return cons_reg
 
 
 # Choosing `num_centers` random data points as the initial centers

@@ -186,20 +186,18 @@ class Explode(Module):
 
 
 def cnn1d(in_channels,out_channels,\
-          act=LeakyReLU(1.0,inplace=True),spectral_norm=False,\
-          bn=True,ker=7,std=4,pad=0,normalization=partial(BatchNorm1d),\
-          dil=1,grp=1,dpc=0.1,wn=False,dev=tdev("cpu"),bias = False, *args, **kwargs):
+    act=LeakyReLU(1.0,inplace=True),is_weight_regularization=False,\
+    bn=True,ker=7,std=4,pad=0, regularization_weight= partial(torch.nn.utils.spectral_norm),\
+    normalization=partial(BatchNorm1d),dil=1,grp=1,dpc=0.1,wn=False,dev=tdev("cpu"),bias = False, *args, **kwargs):
 
-    block = [Conv1d(in_channels=in_channels,\
-                    out_channels=out_channels,\
-                    kernel_size=ker,stride=std,\
-                    padding=pad,dilation=dil,groups=grp,\
-                    bias=bias)]
-    #if wn:
-    #    block.insert(0,AddNoise(dev=dev))
-    if spectral_norm:
-        block = [torch.nn.utils.spectral_norm(copy.deepcopy(block[0]))]
+    block = [Conv1d(in_channels=in_channels,out_channels=out_channels,\
+            kernel_size=ker,stride=std,padding=pad,dilation=dil,groups=grp,bias=bias)]
     
+    #weight regularization for the block CNN
+    if is_weight_regularization:
+        block = [regularization_weight(copy.deepcopy(block[0]))]
+    
+    # type of normalization for  block CNN
     if bn:
         if isinstance(normalization,nn.InstanceNorm1d):
             block.append(normalization(out_channels, affine=True))

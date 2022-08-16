@@ -102,7 +102,7 @@ class BasicDCGAN_DxDataParallel(BasicModel):
                         dpc = __dpc,
                         bias = bias,
                         normalization =normalization,
-                        spectral_norm = spectral_norm,
+                        regularization_weight = spectral_norm,
                         *args, **kwargs)
         return _cnn
 

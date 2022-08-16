@@ -8,15 +8,22 @@ class BasicModel(nn.Module):
         super(BasicModel, self).__init__()
         self.model_name = model_name
         
-    def normalization_type(self,type='batch'):
+    def layer_output_normalization_type(self,type='batch'):
         type_norm={
                     "batch"     : partial(nn.BatchNorm1d), 
                     "instance"  : partial(nn.InstanceNorm1d),
-                    "spectral"  : partial(nn.utils.spectral_norm),
                     "layer"     : partial(nn.LayerNorm)
                 }
         norm = type_norm.get(type, partial(nn.BatchNorm1d))
         return norm
+
+    def weight_regularization_type(self,type):
+        type_regularization={
+                    "spectral"   : partial(nn.utils.spectral_norm),
+                    "orthogonal" : partial(nn.utils.parametrizations.orthogonal)
+                }
+        regularization = type_regularization.get(type, partial(nn.utils.spectral_norm))
+        return regularization
 
     @property
     def number_parameter(self):
