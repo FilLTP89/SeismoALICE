@@ -185,19 +185,23 @@ class Explode(Module):
         return x.view(-1,*self.shape)
 
 
-def cnn1d(in_channels,out_channels,\
-    act=LeakyReLU(1.0,inplace=True),is_weight_regularization=False,\
-    bn=True,ker=7,std=4,pad=0, regularization_weight= partial(torch.nn.utils.spectral_norm),\
-    normalization=partial(BatchNorm1d),dil=1,grp=1,dpc=0.1,wn=False,dev=tdev("cpu"),bias = False, *args, **kwargs):
+def cnn1d(in_channels,out_channels,act=LeakyReLU(1.0,inplace=True),
+            use_weight_regularization=False,bn=True,ker=7,std=4,pad=0, 
+            regularization_weight= partial(torch.nn.utils.spectral_norm),\
+            normalization=partial(BatchNorm1d),dil=1,grp=1,dpc=0.1,wn=False,dev=tdev("cpu"),
+            bias = False, *args, **kwargs):
 
     block = [Conv1d(in_channels=in_channels,out_channels=out_channels,\
             kernel_size=ker,stride=std,padding=pad,dilation=dil,groups=grp,bias=bias)]
     
     #weight regularization for the block CNN
-    if is_weight_regularization:
+    if use_weight_regularization:
         block = [regularization_weight(copy.deepcopy(block[0]))]
     
     # type of normalization for  block CNN
+    # It is recommanded to use BatchNorm1d for Generators(Encoder/ Decoder) 
+    # to acheive better performance during the Training. 
+    # Use InstanceNorm1d, LayerNorm, etc ... in discriminator case only
     if bn:
         if isinstance(normalization,nn.InstanceNorm1d):
             block.append(normalization(out_channels, affine=True))
@@ -210,20 +214,16 @@ def cnn1d(in_channels,out_channels,\
         block.append(AddNoise(dev=dev))
     return block
 
-def cnn1dt(in_channels,out_channels,\
-           act=LeakyReLU(1.0),spectral_norm=False,
-           bn=True,ker=2,std=2,pad=0,opd=0,normalization=partial(BatchNorm1d),\
-           dil=1,grp=1,dpc=0.1, bias=False, *args, **kwargs):
+def cnn1dt(in_channels,out_channels,act=LeakyReLU(1.0),use_weight_regularization=False,
+           bn=True,ker=2,std=2,pad=0,opd=0,regularization_weight= partial(torch.nn.utils.spectral_norm),
+           normalization=partial(BatchNorm1d),dil=1,grp=1,dpc=0.1, bias=False, *args, **kwargs):
 
-    block = [ConvTranspose1d(in_channels=in_channels,\
-                             out_channels=out_channels,\
-                             kernel_size=ker,stride=std,\
-                             output_padding=opd,padding=pad,\
-                             dilation=dil,groups=grp,\
-                             bias=bias)]
+    block = [ConvTranspose1d(in_channels=in_channels,out_channels=out_channels,\
+                kernel_size=ker,stride=std,output_padding=opd,padding=pad,\
+                dilation=dil,groups=grp,bias=bias)]
     
-    if spectral_norm:
-        block = [torch.nn.utils.spectral_norm(copy.deepcopy(block[0]))]
+    if use_weight_regularization:
+        block = [regularization_weight(copy.deepcopy(block[0]))]
     
     if bn:
         if isinstance(normalization,nn.InstanceNorm1d):
@@ -235,14 +235,8 @@ def cnn1dt(in_channels,out_channels,\
     block.append(Dpout(dpc=dpc))
     return block
 
-def DenseBlock(in_channels,out_channels,\
-               act=[Sigmoid()],dpc=0.1,bias=False):
-
-    block = [Linear(in_channels,\
-                       out_channels,\
-                       bias=bias),
-            act,Dpout(dpc=dpc)]
-    
+def DenseBlock(in_channels,out_channels,act=[Sigmoid()],dpc=0.1,bias=False):
+    block = [Linear(in_channels, out_channels,bias=bias),act,Dpout(dpc=dpc)]
     return block
 
 
@@ -258,27 +252,24 @@ class PatchCNNBlock(nn.Module):
             nn.BatchNorm1d(out_channels),
             nn.LeakyReLU(0.2),
         )
-
     def forward(self, x):
         return self.conv(x)
     
 
 class ConvBlock(Module):
-    def __init__(self, ni, no, ker, std, bias=False,
-                 act = None, bn=True, normalization = partial(BatchNorm1d), 
-                 pad=None, dpc=None, dil = 1,*args, **kwargs):
+    def __init__(self, ni, no, ker, std, bias=False,use_weight_regularization=False,
+        act = None, bn=True, regularization_weight= partial(torch.nn.utils.spectral_norm),
+        normalization = partial(BatchNorm1d), pad=None, dpc=None, dil = 1,*args, **kwargs):
         super(ConvBlock,self).__init__()
         if pad is None: pad = ks//2//stride
 
-        self.ann = [Conv1d(in_channels = ni, 
-                    out_channels= no, 
-                    kernel_size=ker, stride = std, 
-                    padding=pad, bias=bias, 
-                    dilation = dil)]
+        self.ann = [Conv1d(in_channels = ni, out_channels= no, kernel_size=ker, stride = std, 
+                    padding=pad, bias=bias, dilation = dil)]
+
+        if use_weight_regularization:
+            self.ann = [regularization_weight(copy.deepcopy(self.ann[0]))]
 
         if bn:
-            if normalization == torch.nn.utils.spectral_norm:
-                self.ann = [normalization(copy.deepcopy(self.ann[0]))]
             if isinstance(normalization,InstanceNorm1d):
                 self.ann+= [normalization(no, affine=True)]
             else:
