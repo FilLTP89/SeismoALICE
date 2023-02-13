@@ -345,8 +345,8 @@ def setup():
 
 from torch.utils.data import Sampler
 import torch
-from torch._six import int_classes as _int_classes
-
+#from torch._six import int_classes as _int_classes
+_int_classes = int
 class RandomSamplerNew(Sampler):
 
     def __init__(self, data_source, replacement=False, num_samples=None):
