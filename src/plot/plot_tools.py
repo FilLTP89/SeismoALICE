@@ -743,6 +743,67 @@ def plot_generate_hybrid(Qec,Pdc,Ghz,dev,vtm,trn_set,pfx='hybrid',outf='./imgs')
 #             cnt += 1
 
             # filtered signals
+def plot_distribution(tag,z_calc,z_tar, save=False):
+    
+    z_calc = z_calc.cpu().data.numpy().copy()
+    z_tar  = z_tar.cpu().data.numpy().copy()
+    
+    batch, v_size, *others = z_calc.shape
+    plt.figure(figsize=(6,6))
+    fig, ax = plt.subplots(1, v_size)
+    
+    for i in range(v_size):
+        ax[i].hist(z_calc[0,i,:], bins=30, density=True, label='calc',fc=(0.8, 0, 0, 1))
+        ax[i].hist(z_tar[0,i,:], bins=30, density=True, label='tar',fc=(1., 0.8, 0, 0.5))
+        ax[i].legend(loc = "lower right",frameon=False)
+        ax[i].set_xlim([-5.,5.])
+        ax[i].set_ylim([0,1.])
+        ax[i].set_xlabel(f'{tag}-{i}')
+    if save:
+        plt.savefig(f'{tag}.png')
+    return fig
+
+def plot_spatial_rep(tag, z,index, save=False):
+    z = z.cpu().data.numpy().copy()
+    fig = plt.figure(figsize=(6,6)) 
+    plt.scatter(z[0,index[0],:],z[0,index[1],:])
+    plt.xlabel(tag)
+    plt.xlim(-4,4)
+    plt.ylim(-4,4)
+    if save:
+        fig.savefig('file_{tag}.png')
+    
+    return fig
+
+def get_histogram(Fy, Gy, trn_set):
+    Fy.eval(),Gy.eval()
+    fig = []
+    data_vld_loader,lat_vld_loader = trn_set
+    for b, (batch_data, batch_latent) in enumerate(zip(data_vld_loader,lat_vld_loader)):
+        y, *others  = batch_data
+        zyx, zyy    = batch_latent
+        y           = y.to(app.DEVICE, non_blocking = True)
+        zyx, zyy    = zyx.to(app.DEVICE, non_blocking = True), zyy.to(app.DEVICE, non_blocking = True)
+        wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std': 1.0})
+        zyy_cal     =  Fy(zcat(y,wny))
+
+        fig.append(plot_distribution(tag='zlf',z_calc=zyy_cal, z_tar=zyy))
+        
+    return fig
+
+def get_latent_rep(Fy, Gy, trn_set):
+    Fy.eval(),Gy.eval()
+    fig = []
+    for b, batch_data in enumerate(trn_set):
+        y, *others  = batch_data
+        y           = y.to(app.DEVICE)
+        if b>=1:
+            break
+        wny,*others = noise_generator(y.shape,y.shape,app.DEVICE,{'mean':0., 'std': 1.0})
+        zyy, zxy    =  Fy(zcat(y,wny))
+        fig.append(plot_spatial_rep(tag='zhf z0/z1',z=zyy,index = [0,1]))
+        # fig.append(plot_spatial_rep(tag='zhf z0/z2',z=zyy,index = [0,2]))
+    return fig
 
 
 def plot_error(error, outf):
@@ -1135,13 +1196,11 @@ def plot_of_fake_broadband_signal(Fyx,Gy,vld_loader,dataroot):
     return figure
 
 
-
-
 def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='trial',
     outf='./imgs',save = True, Qed=None,std=None):
     
     dev = app.DEVICE
-    data_tst_loader, lat_tst_loader = trn_set
+    trn_set
 
     Qec.eval(),Pdc.eval()
     Qec.to(dev),Pdc.to(dev)
@@ -1164,11 +1223,10 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
         if Qed is not None:
             Qed.eval()
 
-        for idx, (batch_data, batch_latent) in enumerate(zip(data_tst_loader, lat_tst_loader)):
+        for idx, batch_data in enumerate(trn_set):
             #_,xt_data,zt_data,_,_,_,_ = batch
             app.logger.debug("Plotting signals ...")
             xt_data,xf_data,*other  = batch_data
-            zyx, zyy                = batch_latent
 
             if torch.isnan(torch.max(xt_data)):
                 app.logger.debug("your model contain nan value "
@@ -1318,11 +1376,10 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             
     elif 'filtered' in tag:
         rndm_args = {'mean': 0., 'std': 1.0} if std == None else {'mean':0., 'std':std}
-        for _,(batch_data, batch_latent) in enumerate(zip(data_tst_loader, lat_tst_loader)):
+        for _,batch_data in enumerate(trn_set):
             # _,xf_data,_,zf_data,_,_,_,*other = batch
             # xt_data,xf_data,zt_data,zf_data,_,_,_,*other = batch
             xt_data,xf_data,*other = batch_data
-            zyx, zyy               = batch_latent
             # _,xf_data,zf_data,*other = batch
             # tweaked value
             Xt = Variable(xt_data).to(dev, non_blocking=True)
@@ -1410,7 +1467,7 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             random_args = {'mean':0., 'std':std}
         # pass
 
-        for _,(batch_data, batch_latent) in enumerate(zip(data_tst_loader, lat_tst_loader)):
+        for _,batch_data in enumerate(trn_set):
             #_,xt_data,zt_data,_,_,_,_ = batch
             app.logger.debug("Plotting signals ...")
 
@@ -1420,7 +1477,6 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             #     _,xt_data,*other = batch
             else:
                 xt_data,xf_data,*other = batch_data
-                zyx, zyy               = batch_latent
             # xt_data,zt_data,*other = batch
             if torch.isnan(torch.max(xt_data)):
                 app.logger.debug("your model contain nan value "
@@ -1435,8 +1491,8 @@ def plot_generate_classic(tag, Qec, Pdc, trn_set, opt=None, vtm = None, pfx='tri
             # breakpoint()
             Xt  = Variable(xf_data).to(dev, non_blocking=True)
             Xf  = Variable(xf_data).to(dev, non_blocking=True)
-            zyy = Variable(zyy).to(dev, non_blocking=True)
-            zyx = Variable(zyx).to(dev, non_blocking=True)
+            
+            
             # zt = Variable(zt_data).to(dev, non_blocking=True)
             nch, nz = 4,128
             wnx,*others = noise_generator(Xt.shape,[Xt.shape[0],nch, nz],dev,random_args)
@@ -2275,8 +2331,8 @@ def z_correlation_matrix(df,figname,cov=None,prc=None):
         #plt.savefig(figname+".eps",format='eps',bbox_inches='tight',dpi = 500)
         plt.close()
 
-def z_histogram(zt,zm,figname):
-    print("plot histogram ...")
+def z_histogram(zt,zm,figname,save=False):
+    app.logger.debug("plot histogram ...")
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
     zt = zt.stack().reset_index()
@@ -2292,7 +2348,7 @@ def z_histogram(zt,zm,figname):
     ax1.plot(zi,np.exp(-zi**2/2.)/np.sqrt(2.*np.pi),lw=4,color='gold')
     #import pdb
     #pdb.set_trace()
-    print("[!]Mean of Variable zm ", zm.mean().values)
+    app.logger.debug("[!]Mean of Variable zm ", zm.mean().values)
     ax1.axvline(x=zm.mean()[0],lw=4,color='cornflowerblue')
     ax1.axvline(x=zm.mean()[0]+zm.std().values[0],lw=2,color='cornflowerblue',ls='--')
     ax1.axvline(x=zm.mean()[0]-zm.std().values[0],lw=2,color='cornflowerblue',ls='--')
@@ -2304,9 +2360,13 @@ def z_histogram(zt,zm,figname):
     ax1.set_xticks(list(np.linspace(-5.0,5.0,11)))
     plt.title(r'A-posteriori distribution',fontsize=22)
     plt.legend(fontsize=20)
-    plt.savefig(figname+".png",format='png',bbox_inches='tight',dpi = 500)
-    #plt.savefig(figname+".eps",format='eps',bbox_inches='tight',dpi = 500)
+
+    if save:
+        plt.savefig(figname+".png",format='png',bbox_inches='tight',dpi = 500)
+        #plt.savefig(figname+".eps",format='eps',bbox_inches='tight',dpi = 500)
     plt.close()
+
+    return fig
 
 def discriminate_broadband_xz(DsXd,Dszd,Ddxz,Xd,Xdr,zd,zdr):
     
