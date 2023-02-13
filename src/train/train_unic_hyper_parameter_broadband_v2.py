@@ -899,11 +899,12 @@ class trainer(object):
     
         losses['Gloss_rec_zxy'].append(Gloss_rec_zxy.tolist())
 
-    def generate_latent_variable(self,batch,nzd = 384,nzf = 128):
-        zyy  = torch.zeros([batch,nzd]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
-        zxx  = torch.zeros([batch,nzd]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
-        zyx  = torch.zeros([batch,nzf]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
-        zxy  = torch.zeros([batch,nzf]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
+    def generate_latent_variable(self, batch, nch_zd,nzd, nch_zf = 128,nzf = 128):
+        zyy  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
+        zxx  = torch.zeros([batch,nch_zd,nzd]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
+
+        zyx  = torch.zeros([batch,nch_zf,nzf]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
+        zxy  = torch.zeros([batch,nch_zf,nzf]).normal_(mean=0,std=self.std).to(app.DEVICE, non_blocking = True)
         return zyy, zyx, zxx, zxy
 
     # @profile
