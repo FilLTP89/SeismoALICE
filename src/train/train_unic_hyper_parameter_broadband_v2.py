@@ -316,8 +316,8 @@ class trainer(object):
                 else:
                     flagF=False
 
-        self.writer_debug_encoder.add_graph(next(iter(self.Fxy.children())),torch.randn(128,6,4096).cuda())
-        self.writer_debug_decoder.add_graph(next(iter(self.Gy.children())),(torch.randn(128,128).cuda(), torch.randn(128,384).cuda()))
+        #self.writer_debug_encoder.add_graph(next(iter(self.Fxy.children())),torch.randn(128,6,4096).cuda())
+        #self.writer_debug_decoder.add_graph(next(iter(self.Gy.children())),(torch.randn(128,128).cuda(), torch.randn(128,384).cuda()))
         # self.writer_hparams_graph_encoder.add_graph(next(iter(self.F_.children())),torch.randn(10,6,4096).cuda())
         # self.writer_hparams_graph_decoder.add_graph(next(iter(self.Gy.children())), (torch.randn(10,4,128).cuda(),torch.randn(10,4,128).cuda()))
         self.bce_loss = BCE(reduction='mean').cuda()
@@ -932,7 +932,8 @@ class trainer(object):
 
             app.logger.info(f'Tensorboard Writer setted up for trial {self.trial.number} ...')
 
-        nzd, nzf = 384, 128
+        nch_zd, nzd = 4,128
+        nch_zf, nzf = 4,128
         bar = trange(0,self.opt.niter)
 
         # if self.trial != None:
@@ -944,7 +945,12 @@ class trainer(object):
                 y   = y.to(app.DEVICE, non_blocking = True)
                 x   = x.to(app.DEVICE, non_blocking = True)
                 
-                zyy,zyx, *other = self.generate_latent_variable(batch=len(y),nzd=nzd,nzf=nzf)
+                zyy,zyx, *other = self.generate_latent_variable(
+                        batch=len(y),
+                        nzd=nzd,
+                        nzf=nzf,
+                        nch_zd=nch_zd, 
+                        nch_zf=nch_zf)
                 if torch.isnan(torch.max(y)):
                     app.logger.debug("your model contain nan value "
                         "this signals will be withdrawn from the training "
@@ -967,8 +973,7 @@ class trainer(object):
             Dloss = '{:>5.3f}'.format(np.mean(np.array(self.losses_train['Dloss'][-b:-1])))
             Gloss_zxy = '{:>5.3f}'.format(np.mean(np.array(self.losses_train['Gloss_rec_zxy'][-b:-1])))
             # self.writer_debug.add_scalars('Loss/Main',{'Dloss':Dloss,'Gloss':Gloss},epoch)
-            # bar.set_postfix(Gloss = Gloss, Dloss = Dloss)
-
+            # bar.set_postfix(Gloss = Gloss, Dloss = Dloss
             # In validation dataset
             for b_val, batch in enumerate(self.vld_loader):
                 for _ in range(1):
