@@ -363,6 +363,7 @@ class trainer(object):
     def discriminate_yz(self,y,yr,z,zr):
         # Discriminate real
         wny,wnz,*others = noise_generator(y.shape,z.shape,app.DEVICE,{'mean':0., 'std':self.std})
+        breakpoint()
         ftz         = self.Dzb(zcat(zr,wnz)) #--OK : no batchNorm
         ftx         = self.Dy(zcat(y,wny)) # --OK : with batchNorm
         zrc         = zcat(ftx,ftz)
