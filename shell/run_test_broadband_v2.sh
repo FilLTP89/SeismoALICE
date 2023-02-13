@@ -5,8 +5,8 @@
 #SBATCH --mem=100GB
 #SBATCH --time=24:00:00
 #SBATCH --partition=gpup100
-#SBATCH --output=oinfo.txt
-#SBATCH --error=pinfo.txt 
+#SBATCH --output=oinfo_v2.txt
+#SBATCH --error=pinfo_v2.txt 
 #SBATCH --mail-type=FAIL
 #SBATCH --export=NONE 
 ## 
@@ -28,7 +28,7 @@ python ./src/aae/aae_drive_unic_tweaked_multi_branch_broadband_v2.py \
     --actions='./action/actions_unic.txt' --strategy='./strategy/strategy_unic.txt' \
     --save_checkpoint=400 \
     --summary_dir='./runs_both/broadband/zyy4v2/'\
-    --root_checkpoint='./network/bb/zyy24/nsy1280/hack/dummy-7'\
+    --root_checkpoint='./network/bb/zyy4v2/'\
     --config='./config/unic-zyy4-zxy4-split-v2.json' 
 #python -m torch.distributed.launch  --nnodes=2 --node=1 --master_addr $MASTER_ADDR --master_port 8390 ./src/aae/ddp/aae_unic_ddp.py --dataroot='./database/tweaked/data/test/nsy12800/' --dataset='nt4096_ls128_nzf8_nzd32.pth' --cutoff=30. --imageSize=4096 --latentSize=64 --niter=4001 --cuda --nodes=2 --local_rank=1 --ngpu=2 --ip_address=$ip1 --nzd=16 --nzf=8 --rlr=0.0020338064625882507 --glr=0.0202756041182898 --outf='./imgs_bb_ls64_nf8_nzd32/unic/config_27/ter/broadband/classic/zyy16/nsy12800/' --workers=8 --nsy=1280 --batchSize=256 --actions='./action/actions_unic.txt' --strategy='./strategy/strategy_unic.txt' --save_checkpoint=1000 --root_checkpoint='./network/bb_ls64_nf8_nzd32/unic/config_27/ter/broadband/classic/zyy16/nsy12800/' --config='./config/bb_ls64/test/ndz32/tentative_tweaked_unic_27_ter_test_1.json'
 

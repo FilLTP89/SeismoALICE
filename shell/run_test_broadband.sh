@@ -4,7 +4,7 @@
 #SBATCH --gres=gpu:2
 #SBATCH --mem=100GB
 #SBATCH --time=24:00:00
-#SBATCH --partition=gpup100
+#SBATCH --partition=gpu
 #SBATCH --output=oinfo.txt
 #SBATCH --error=pinfo.txt 
 #SBATCH --mail-type=FAIL
@@ -21,10 +21,10 @@ python ./src/aae/aae_drive_unic_tweaked_multi_branch_broadband.py \
     --dataset='nt4096_ls64_nzf16_nzd32.pth' \
     --cutoff=30. --imageSize=4096 --latentSize=64 \
     --niter=5001 --cuda --nodes=1 \
-    --local_rank=0 --ngpu=4 --ip_address=$ip1 --nzd=16 --nzf=8 \
+    --local_rank=0 --ngpu=2 --ip_address=$ip1 --nzd=16 --nzf=8 \
     --rlr=0.00025164314945158394 --glr=0.006187098496095162 --manualSeed=123\
     --outf='./imgs_bb_ls64_nf8_nzd32/unic/config_27/ter/unic/classic/zyy24/nsy1280/' \
-    --workers=8 --nsy=1280 --batchSize=128 \
+    --workers=8 --nsy=12800 --batchSize=256 \
     --actions='./action/actions_unic.txt' --strategy='./strategy/strategy_unic.txt' \
     --save_checkpoint=400 \
     --summary_dir='./runs_both/broadband/zyy4/'\

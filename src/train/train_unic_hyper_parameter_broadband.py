@@ -679,8 +679,8 @@ class trainer(object):
         # because we want to minimize the autoencoder. The equation is as follow :
         #       min (E[log(Dyz(y,F(y)))] + E[log(1 - Dyz(G(z),z))])
         #       REM : the BCE loss function  has already added the " - " in the calculation.
-        Gloss_ali_y =  -(self.bce_loss(Dreal_yz,o1l(Dreal_yz))+\
-                            self.bce_loss(Dfake_yz,o0l(Dfake_yz)))
+        Gloss_ali_y =  (self.bce_loss(Dreal_yz,o0l(Dreal_yz))+\
+                            self.bce_loss(Dfake_yz,o1l(Dfake_yz)))
 
         # Since, it's hard for the marginal distribution to get good saddle piont and a high 
         # complexe place, the ALI loss will hardly find the good solution. To help in this case, 
@@ -688,11 +688,11 @@ class trainer(object):
         # The marginal loss on y is as follow :  
         #       min (E[log(1 - Dy(G(z)))])
         _ , Dfake_y = self.discriminate_marginal_y(y,y_gen)
-        Gloss_marginal_y = -(self.bce_loss(Dfake_y,o0l(Dfake_y)))
+        Gloss_marginal_y = (self.bce_loss(Dfake_y,o1l(Dfake_y)))
         # The marginal loss on zd is as follow : 
         #       min (E[log(1 - Dzd(F(x)])
         _, Dfake_zd = self.discriminate_marginal_zd(zd_inp,zd_gen)
-        Gloss_marginal_zd= -(self.bce_loss(Dfake_zd,o0l(Dfake_zd)))
+        Gloss_marginal_zd= (self.bce_loss(Dfake_zd,o1l(Dfake_zd)))
 
         # 2. Let's generate the reconstructions, i.e G(F(y)) and F(G(z)). This calulation will 
         # be necessary to cycle consistency loss and also here for the reconstruction losses.
@@ -713,13 +713,13 @@ class trainer(object):
         # A L1 norm is help full; so is computed by:
         #       || x - G(F(z))      ||
         _,Dfake_yy      = self.discriminate_yy(y,y_rec)
-        Gloss_cycle_y   = -self.bce_loss(Dfake_yy,o0l(Dfake_yy)) 
+        Gloss_cycle_y   = self.bce_loss(Dfake_yy,o1l(Dfake_yy)) 
         Gloss_rec_y     = torch.mean(torch.abs(y-y_rec))
         # In for the z we have tpo satisfy : 
         #       E[log(1-Dzyy(y, G(F(y))))]
         #       || z - F(G(y))      ||
         _,Dfake_zzd     = self.discriminate_zzb(zd_inp,zd_rec)
-        Gloss_cycle_zd  = -self.bce_loss(Dfake_zzd,o0l(Dfake_zzd))
+        Gloss_cycle_zd  = self.bce_loss(Dfake_zzd,o1l(Dfake_zzd))
         Gloss_rec_zd    = torch.mean(torch.abs(zd_inp-zd_rec))
 
         # Part II.- Training the Filtered signals
@@ -750,15 +750,15 @@ class trainer(object):
         # So the equations that we need to satisfy :
         #       min (E[log(Dxz(x,F|(x)_zxy))] + E[log(1 - Dxz(G(zxy),zxy))])
         Dxz,Dzx     = self.discriminate_xz(x,_x_gen,zxy,zxy_gen)
-        Gloss_ali_x = -(self.bce_loss(Dxz,o1l(Dxz))+self.bce_loss(Dzx,o0l(Dzx)))
+        Gloss_ali_x = (self.bce_loss(Dxz,o0l(Dxz))+self.bce_loss(Dzx,o1l(Dzx)))
         # Now we compute the loss on the marginal of x. What we want is to satisfy:
         #       min E[log(Dx(x,G(F|(x)_zxy,0)))]
         _ , Dfake_x = self.discriminate_marginal_x(x,_x_gen)
-        Gloss_marginal_x = -(self.bce_loss(Dfake_x,o0l(Dfake_x)))
+        Gloss_marginal_x = (self.bce_loss(Dfake_x,o1l(Dfake_x)))
         # We compute the loss on the marginal of zxy. The equation to be satisfied is: 
         #       min E[log(Dzxy(zxy,F(G(zxy,0))))
         _ ,Dfake_zf = self.discriminate_marginal_zxy(zxy, zxy_gen)
-        Gloss_marginal_zf= -(self.bce_loss(Dfake_zf,o0l(Dfake_zf)))
+        Gloss_marginal_zf= (self.bce_loss(Dfake_zf,o1l(Dfake_zf)))
 
         # 2. This second time we generate the reconstuction G(F|(x)_zxy,0) and F|(G(x))_zxy
         # We add noise to x and we concatenate z as cat(zxy,0), because we dont want x to 
@@ -775,7 +775,7 @@ class trainer(object):
         # is, as follow : 
         #       E[log(1 - Dzzf(zxy,F(G(zxy,0))))]
         _, Dfake_zf          = self.discriminate_zzf(zxy, zxy_rec)
-        Gloss_cycle_zxy      = -self.bce_loss(Dfake_zf, o0l(Dfake_zf))
+        Gloss_cycle_zxy      = self.bce_loss(Dfake_zf, o1l(Dfake_zf))
         # To insure indepenace of zxy fro zy we do that in the L1 loss. 
         #       || zxy  - F(G(zxy,N(0,I)))  ||
         Gloss_rec_zxy        = torch.mean(torch.abs(zxy - zxy_fake))
@@ -784,7 +784,7 @@ class trainer(object):
         #       E[log(1-Dxx(x,G(F|(x)_zxy,0)))]
         #       || x    - G(F|(zxy),0)      ||
         _, Dfake_x           = self.discriminate_xx(x,x_rec)
-        Gloss_cycle_x        = -self.bce_loss(Dfake_x, o0l(Dfake_x))
+        Gloss_cycle_x        = self.bce_loss(Dfake_x, o1l(Dfake_x))
         Gloss_rec_x          = torch.mean(torch.abs(x - x_rec))
         # This loss is 0 of HF of x signal
         #       || F|(G(zxy,0))_zxx         ||
